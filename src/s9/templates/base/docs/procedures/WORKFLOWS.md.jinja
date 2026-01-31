@@ -1,0 +1,552 @@
+# Development Workflows
+
+Step-by-step workflows for common development tasks in {{ project_name }}.
+
+
+## Adding a New Feature
+
+**Typical flow when implementing a new feature:**
+
+```
+You: "Add rate limiting to external MCP calls"
+
+Manager:
+1. @architect - Plan the rate limiting approach
+   → Architect creates design document with options
+   → Presents recommendation (sliding window vs token bucket, etc.)
+
+2. [You approve the plan]
+
+3. @builder - Implement rate limiting + tests
+   → Builder writes code in src/{{ project_name_underscore }}/rate_limit.py
+   → Builder writes tests in tests/test_rate_limit.py
+   → Builder runs `make qa` to verify
+   → Builder updates task artifact with progress
+   → Builder commits with conventional format
+
+4. @tester - Test rate limiting functionality
+   → Tester runs all tests
+   → Tester tries manual scenarios (10 rapid calls, mixed services, etc.)
+   → Tester reports findings
+
+5. @documentarian - Update docs with rate limit config
+   → Documentarian updates README.md
+   → Documentarian updates .env.example
+   → Documentarian updates guides/AGENTS.md if new patterns
+   → Documentarian commits changes
+
+6. @inspector - Review for any issues
+   → Inspector checks code quality
+   → Inspector validates security
+   → Inspector ensures consistency
+   → Inspector confirms documentation complete
+
+Result: Feature complete with code, tests, and docs ✅
+```
+
+**Key points:**
+- Each agent commits their work incrementally
+- Manager coordinates but doesn't code
+- Builder writes both code AND tests
+- Tester validates, doesn't write tests
+- Documentation happens in parallel with implementation
+
+
+---
+
+
+## Fixing a Bug
+
+**Typical flow when fixing a bug:**
+
+```
+You: "Database queries sometimes hang forever"
+
+Manager:
+1. @tester - Reproduce the bug
+   → Tester creates minimal reproduction
+   → Tester documents steps to trigger
+   → Tester identifies conditions (connection pool exhausted)
+
+2. @builder - Fix timeout handling + add test
+   → Builder adds timeout configuration
+   → Builder adds test that reproduces bug
+   → Builder verifies test fails before fix
+   → Builder implements fix
+   → Builder verifies test passes after fix
+   → Builder updates task artifact with implementation steps
+   → Builder commits: "fix(database): add query timeout handling [Agent: Builder] [Task: ID]"
+
+3. @tester - Verify fix works
+   → Tester runs new test
+   → Tester retries original reproduction steps
+   → Tester confirms bug is fixed
+   → Tester tries edge cases
+
+4. @documentarian - Update guides if new pattern discovered
+   → Documentarian adds to guides/AGENTS.md if pattern learned
+   → Documentarian updates troubleshooting if common issue
+
+Result: Bug fixed with test to prevent regression ✅
+```
+
+**Key points:**
+- Always reproduce first
+- Always add test that would catch the bug
+- Update AGENTS.md with lessons learned
+- Commit fix separately from test
+
+
+---
+
+
+## Code Review
+
+**Typical flow when reviewing code:**
+
+```
+You: "Review the authentication code"
+
+Manager:
+1. @inspector - Audit auth code for issues
+   → Inspector scans src/{{ project_name_underscore }}/auth/ for issues
+   → Inspector checks for:
+     - Security issues (hardcoded secrets, weak validation)
+     - Inconsistencies with project patterns
+     - Missing documentation
+     - Missing tests
+     - Performance issues
+   → Inspector reports findings with specific locations
+
+2. [Inspector reports findings]
+   → Inspector: "Found 3 issues:
+     1. Token expiration not timezone-aware (auth/service.py:45)
+     2. No test for expired tokens (tests/test_auth.py missing case)
+     3. Missing docstring on verify_token() function"
+
+3. @builder - Fix any issues found
+   → Builder fixes timezone handling
+   → Builder adds expired token test
+   → Builder adds docstring
+   → Builder runs `make qa`
+   → Builder commits: "fix(auth): use timezone-aware token expiration [Agent: Builder]"
+
+4. @documentarian - Update docs if needed
+   → Documentarian adds token expiration to README if not documented
+   → Documentarian updates .env.example if new config
+
+Result: Issues identified and fixed ✅
+```
+
+**Key points:**
+- Inspector doesn't fix, just reports
+- Builder fixes with tests
+- Each fix is a separate commit
+- Re-review after fixes if major changes
+
+
+---
+
+
+## Phase Implementation
+
+**Typical flow when implementing a phase:**
+
+```
+You: "Start Phase 9: Integration Testing"
+
+Manager:
+1. Manager reads .opencode/planning/build.md
+   → Understands phase requirements
+   → Breaks down into tasks
+
+2. @architect - Review requirements and design approach
+   → Architect reads phase specification
+   → Architect proposes testing strategy
+   → Architect creates test plan document
+   → [You approve]
+
+3. @builder - Implement tests
+   → Builder creates test files in features/
+   → Builder writes BDD scenarios
+   → Builder implements step definitions
+   → Builder runs tests (expect some to fail initially)
+   → Builder fixes issues to make tests pass
+   → Builder updates task artifact with testing progress
+   → Builder commits incrementally as tests complete
+
+4. @tester - Run and validate
+   → Tester runs full test suite
+   → Tester validates all scenarios pass
+   → Tester tries edge cases
+   → Tester reports results
+
+5. @documentarian - Update status
+   → Documentarian updates planning/task-queue.md (mark tasks done)
+   → Documentarian updates planning/PROJECT_STATUS.md if phase complete
+   → Documentarian updates README.md current status
+   → Documentarian updates guides/AGENTS.md with patterns learned
+
+Result: Phase complete, planning docs updated ✅
+```
+
+**Key points:**
+- Follow planning/build.md specifications
+- Update planning/task-queue.md as you work on tasks
+- Update planning/PROJECT_STATUS.md when completing phases/milestones
+- Document patterns in guides/AGENTS.md
+- Mark phase complete only when all requirements met
+
+
+---
+
+
+## Code Cleanup / Refactoring
+
+**Typical flow when refactoring:**
+
+```
+You: "Find and remove duplicate code"
+
+Manager:
+1. @inspector - Scan codebase for duplication
+   → Inspector searches for repeated patterns
+   → Inspector identifies duplicated logic
+   → Inspector reports findings:
+     - 3 places with identical query validation logic
+     - 2 places with similar connection setup
+     - 5 places with duplicated error handling
+
+2. @inspector - Reports findings
+   → Inspector provides specific file/line numbers
+   → Inspector suggests consolidation approach
+   → Inspector prioritizes by impact
+
+3. @builder - Refactor
+   → Builder extracts common validation to database/validation.py
+   → Builder updates all call sites
+   → Builder ensures tests still pass
+   → Builder adds tests for extracted functions
+   → Builder commits: "refactor(database): extract common validation logic [Agent: Builder]"
+   → Builder repeats for each duplication
+
+4. @tester - Validate no regressions
+   → Tester runs full test suite
+   → Tester checks that behavior unchanged
+   → Tester confirms no performance regression
+
+Result: Code cleaner, more maintainable ✅
+```
+
+**Key points:**
+- Extract, don't rewrite
+- One refactoring per commit
+- Tests must pass after each refactoring
+- Commit message should explain "why refactor"
+
+
+---
+
+
+## Documentation Update
+
+**Typical flow when updating docs:**
+
+```
+You: "Update README with deployment instructions"
+
+Manager:
+1. @documentarian - Update README
+   → Documentarian reads existing README
+   → Documentarian adds deployment section
+   → Documentarian includes:
+     - Prerequisites
+     - Step-by-step instructions
+     - Configuration examples
+     - Troubleshooting common issues
+   → Documentarian maintains consistent style
+   → Documentarian updates table of contents if needed
+   → Documentarian commits: "docs(readme): add deployment instructions [Agent: Documentarian]"
+
+Result: Documentation updated ✅
+```
+
+**Key points:**
+- Documentarian owns all documentation
+- Keep style consistent across docs
+- Examples are better than explanations
+- Link to related docs
+
+
+---
+
+
+## Emergency Bug Fix
+
+**Fast track when production issue:**
+
+```
+You: "URGENT: Production queries failing with timeout"
+
+Manager:
+1. @tester - Reproduce immediately
+   → Tester tries to reproduce locally
+   → Tester checks recent changes
+   → Tester identifies trigger
+
+2. @builder - Fast fix + test
+   → Builder implements fix
+   → Builder adds test
+   → Builder runs `make qa`
+   → Builder commits immediately
+
+3. @tester - Validate fix
+   → Tester confirms fix works
+   → Tester ready for deployment
+
+4. [Deploy to production]
+
+5. @documentarian - Post-mortem docs
+   → Documentarian adds to procedures/TROUBLESHOOTING.md
+   → Documentarian updates guides/AGENTS.md with lessons
+   → Documentarian documents root cause
+
+Result: Production fixed, knowledge captured ✅
+```
+
+**Key points:**
+- Speed matters but don't skip tests
+- Document lessons learned after fire is out
+- Update troubleshooting guide
+- Consider adding monitoring
+
+
+---
+
+
+## Performance Investigation
+
+**Typical flow when investigating performance:**
+
+```
+You: "Database queries are slow"
+
+Manager:
+1. @tester - Benchmark current performance
+   → Tester runs performance tests
+   → Tester measures query times
+   → Tester identifies slowest queries
+   → Tester profiles with pytest-benchmark
+
+2. @architect - Analyze and design solution
+   → Architect reviews query patterns
+   → Architect proposes solutions:
+     - Add connection pooling
+     - Add result caching
+     - Optimize query validation
+   → [You approve approach]
+
+3. @builder - Implement optimization
+   → Builder implements connection pooling
+   → Builder adds benchmarks
+   → Builder verifies improvement
+   → Builder commits with benchmark results
+
+4. @tester - Validate improvement
+   → Tester re-runs benchmarks
+   → Tester confirms performance gains
+   → Tester checks no regressions
+
+5. @documentarian - Document optimization
+   → Documentarian updates guides/AGENTS.md
+   → Documentarian adds to design/performance.md (if needed)
+
+Result: Performance improved, benchmarks prove it ✅
+```
+
+**Key points:**
+- Always benchmark before optimizing
+- Measure improvement with data
+- Don't optimize without profiling first
+- Document performance considerations
+
+
+---
+
+
+## Multi-Agent Parallel Work
+
+**When multiple agents work simultaneously:**
+
+```
+You: "Implement authentication system"
+
+Manager delegates in parallel:
+
+@architect → Design auth architecture (30 min)
+@builder → Set up project structure (15 min)
+@documentarian → Research auth best practices (30 min)
+
+[All work in parallel, no conflicts]
+
+Then sequential:
+
+@architect → Present design
+[You approve]
+
+@builder → Implement TokenService (commits)
+@builder → Implement AuthMiddleware (commits)
+@builder → Add tests (commits)
+
+@tester → Validate implementation
+@documentarian → Document configuration
+@inspector → Security review
+
+Result: Fast completion through parallelization ✅
+```
+
+**Key points:**
+- Architect and Documentarian can work in parallel
+- Builder works sequentially (code → tests)
+- Each agent commits their own work
+- No one waits for others unnecessarily
+
+
+---
+
+
+## Tips for Efficient Workflows
+
+### 1. Start with Planning
+Always let Architect plan before Builder codes (except trivial changes).
+
+### 2. Commit Incrementally
+Each agent commits their portion as they complete it, not at the end.
+
+### 3. Tests with Implementation
+Builder writes tests as part of implementation, not after.
+
+### 4. Parallel When Possible
+Architect and Documentarian can work while Builder codes.
+
+### 5. Inspector at End
+Inspector reviews after implementation is complete.
+
+### 6. Update Task Artifacts Always
+Every significant change gets documented in the task artifact with implementation steps, files changed, and verification results.
+
+
+---
+
+
+## Common Patterns
+
+### Pattern: Design → Build → Test → Document
+Most common for new features.
+
+### Pattern: Reproduce → Fix → Test → Document
+Most common for bugs.
+
+### Pattern: Scan → Report → Fix → Validate
+Most common for cleanup/refactoring.
+
+### Pattern: Benchmark → Design → Optimize → Measure
+Most common for performance work.
+
+
+---
+
+
+## Maintaining PROJECT_STATUS.md
+
+**Purpose**: Keep the executive status document in sync with actual project state.
+
+### When to Update PROJECT_STATUS.md
+
+Agents should update PROJECT_STATUS.md when completing work that affects:
+
+**1. Phase Completion**
+- Mark phases as complete/partial in "Phase Status Overview" table
+- Update completion percentages
+- Example: "Phase 8 (Slack Bot) now 100% complete"
+
+**2. Key Metrics**
+- Test counts: "All 245 tests passing" (was 232)
+- Coverage: "70% coverage" (was 67%)
+- Documentation pages: "30+ pages" (was 25+)
+
+**3. What's Complete**
+- Add newly completed major features to the checklist
+- Example: "✅ ServiceRegistry - Centralized service lifecycle management"
+
+**4. What's In Progress**
+- Move completed items from in-progress to completed
+- Add new high-priority work that's starting
+- Keep this section current (update weekly)
+
+**5. Known Issues & Blockers**
+- Add new critical blockers
+- Remove resolved blockers
+- Update technical debt items
+- Example: Remove "ServiceRegistry health checks needed" after H012 complete
+
+**6. Milestones**
+- Check off completed milestones in "Next Milestones" section
+- Add new milestones as project evolves
+
+### When NOT to Update
+
+**Don't update PROJECT_STATUS.md for:**
+- Small bug fixes
+- Documentation typos
+- Code refactoring
+- Minor improvements
+- Routine testing
+- Pattern additions to AGENTS.md
+
+**Rule of thumb:** If it's not worth mentioning to a stakeholder, don't add it to PROJECT_STATUS.md
+
+### Update Process
+
+1. **Read first**: Check current state to avoid conflicts
+2. **Update relevant sections**: Usually 1-2 sections, not the whole file
+3. **Keep it high-level**: Executive summary, not implementation details
+4. **Be accurate**: Update metrics based on actual `make qa` output
+5. **Commit separately**: Update PROJECT_STATUS.md in a dedicated commit or with your feature commit
+
+### Example Updates
+
+**After completing Phase 8:**
+```markdown
+| **Phase 8: Slack Bot**         | ✅ Done         | 100%       | Core bot, web demo, security reviewed                      |
+```
+
+**After adding 13 new tests:**
+```markdown
+| **Tests Passing** | 245/245 (100%) | 100% | ✅ |
+```
+
+**After ServiceRegistry migration:**
+```markdown
+- ✅ **ServiceRegistry** - Centralized service lifecycle management
+```
+
+### Who Updates
+
+- **Documentarian**: Most updates (owns planning docs)
+- **Builder**: When completing major features/phases
+- **Architect**: When completing architectural milestones
+- **Tester**: When test counts or coverage changes significantly
+- **Inspector**: When resolving critical issues/blockers
+- **Manager**: Coordination and milestone tracking
+
+---
+
+
+## Related Documentation
+
+- **Commit format**: See `procedures/COMMIT_GUIDELINES.md`
+- **Task workflow**: See `procedures/TASK_WORKFLOW.md`
+- **Troubleshooting**: See `procedures/TROUBLESHOOTING.md`
+- **Development patterns**: See `guides/AGENTS.md`
+- **Agent definitions**: See `agents/*.md`

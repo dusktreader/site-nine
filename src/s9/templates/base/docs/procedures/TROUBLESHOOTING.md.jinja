@@ -1,0 +1,746 @@
+# Troubleshooting Guide
+
+This guide covers common issues when developing {{ project_name }} and how to resolve them.
+
+
+---
+
+
+## Agent Questions
+
+### "Which agent should I use?"
+
+**Answer**: Ask the **Manager** agent.
+
+The Manager is designed to route tasks to the appropriate specialized agent. Just describe what you want to accomplish:
+
+```
+"Add rate limiting to database queries"
+"Fix the timeout bug"
+"Review authentication for security issues"
+```
+
+The Manager will delegate to the right agent(s).
+
+### "The agent doesn't know about pattern X"
+
+**Answer**: Check if it's documented in `.opencode/guides/AGENTS.md`.
+
+Agents are instructed to read `AGENTS.md` for development patterns. If a pattern isn't there:
+
+1. Figure out the pattern yourself (or with the agent)
+2. Document it in `AGENTS.md` for future reference
+3. The next agent invocation will have that knowledge
+
+
+---
+
+
+## Test Failures
+
+### Tests are failing after changes
+
+**Diagnosis**:
+
+```bash
+# Run specific test with verbose output
+uv run pytest tests/test_feature.py -v
+
+# Even more detail
+uv run pytest tests/test_feature.py -vv
+
+# Run single test function
+uv run pytest tests/test_feature.py::test_function_name -vv
+```
+
+**Common causes**:
+
+1. **Docker services not running** (for integration tests):
+   ```bash
+   make docker/up
+   make qa/test-integration
+   ```
+
+2. **Dependencies out of sync**:
+   ```bash
+   uv sync
+   ```
+
+3. **Database schema changed**:
+   ```bash
+   make docker/down
+   make docker/up  # Rebuilds databases with new schema
+   ```
+
+4. **Code formatting issues**:
+   ```bash
+   make qa/format  # Auto-fix formatting
+   ```
+
+### Integration tests fail but unit tests pass
+
+**Answer**: Integration tests require Docker services.
+
+```bash
+# Start Docker services
+make docker/up
+
+# Verify services are running
+make docker/ps
+
+# Run integration tests
+make qa/test-integration
+
+# View service logs if issues
+make docker/logs
+```
+
+### "Database lock" errors in tests
+
+**Cause**: DuckDB allows only one writer at a time.
+
+**Solution**: Tests should use:
+- Separate database files (use pytest `tmp_path` fixture)
+- Write queue for concurrent writes
+- Serial execution for write operations
+
+**Example**:
+```python
+@pytest.fixture
+async def knowledge_service(tmp_path):
+    db_path = tmp_path / "test.duckdb"
+    service = KnowledgeService(str(db_path))
+    await service.initialize()
+    yield service
+    await service.close()
+```
+
+
+---
+
+
+## Make Commands
+
+### "Make command not working"
+
+**Solution**: Check available commands:
+
+```bash
+make help  # Shows all available commands with descriptions
+```
+
+**Common commands**:
+```bash
+make qa                      # Run all quality checks
+make qa/test                 # Unit tests only
+make qa/test-integration     # Integration tests (needs docker)
+make qa/format               # Auto-format code
+make qa/lint                 # Run linter
+make dev                     # Run {{ project_type }} locally
+make docker/up               # Start Docker services
+make docker/down             # Stop Docker services
+```
+
+### "make qa fails"
+
+**Diagnosis**:
+
+Run each QA component separately to identify the issue:
+
+```bash
+make qa/test        # Unit tests
+make qa/lint        # Ruff linting
+make qa/typecheck   # Type checking
+```
+
+**Common issues**:
+
+1. **Linting failures**: `make qa/format && make qa/lint`
+2. **Type errors**: Check basedpyright output, fix type hints
+3. **Test failures**: See "Test Failures" section above
+
+
+---
+
+
+## Docker Issues
+
+### Docker containers won't start
+
+**Diagnosis**:
+
+```bash
+# Check container status
+make docker/ps
+
+# View logs
+make docker/logs
+
+# View logs for specific service
+docker compose logs mcp-server
+docker compose logs postgres
+docker compose logs mysql
+```
+
+**Common causes**:
+
+1. **Ports already in use**:
+   - Check if ports 5432 (postgres), 3306 (mysql), 8080 (MCP) are free
+   - Stop conflicting services or change ports in `docker-compose.yaml`
+
+2. **Docker daemon not running**:
+   ```bash
+   # macOS
+   open -a Docker
+   
+   # Linux
+   sudo systemctl start docker
+   ```
+
+3. **Build cache issues**:
+   ```bash
+   make docker/rebuild  # Clean rebuild
+   ```
+
+### "Database connection refused" in tests
+
+**Cause**: Database containers not fully started.
+
+**Solution**:
+
+```bash
+# Ensure containers are running
+make docker/up
+
+# Wait a few seconds for databases to initialize
+sleep 5
+
+# Run tests
+make qa/test-integration
+```
+
+### Docker volumes have stale data
+
+**Solution**: Clean rebuild with volume removal:
+
+```bash
+make docker/down
+docker compose down -v  # Remove volumes
+make docker/up
+```
+
+
+---
+
+
+## Configuration Issues
+
+### ".env file not loaded"
+
+**Cause**: Pydantic Settings automatically loads `.env` from the current directory.
+
+**Solution**:
+
+1. Ensure `.env` exists in project root:
+   ```bash
+   ls -la .env
+   ```
+
+2. If not, copy from template:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Verify environment variables are set:
+   ```python
+   from {{ project_name_underscore }}.config import Settings
+   settings = Settings()
+   print(settings.model_dump())
+   ```
+
+### "Configuration validation error"
+
+**Cause**: Missing or invalid environment variables.
+
+**Diagnosis**:
+
+```bash
+# Check which variables are required
+grep "Field(" src/{{ project_name_underscore }}/config.py
+
+# Check .env.example for correct format
+cat .env.example
+```
+
+**Solution**: Update `.env` with correct values matching `.env.example` format.
+
+### Database configuration not working
+
+**Check variable names match `config.py`**:
+
+```bash
+# Correct format (from .env.example)
+DB_AUTHORING__ENABLED=true
+DB_AUTHORING__HOST=localhost
+DB_AUTHORING__PORT=5432
+
+# Pydantic converts to nested config:
+# DatabaseConfig(
+#     authoring=DatabaseSettings(
+#         enabled=True,
+#         host="localhost",
+#         port=5432,
+#     )
+# )
+```
+
+
+---
+
+
+## Dependency Issues
+
+### "Module not found" errors
+
+**Solution**: Sync dependencies:
+
+```bash
+uv sync
+```
+
+### "Conflicting dependencies"
+
+**Solution**: Let `uv` resolve conflicts:
+
+```bash
+uv sync --upgrade
+```
+
+### New dependency needed
+
+**Add it properly**:
+
+```bash
+# Runtime dependency
+uv add package-name
+
+# Development dependency
+uv add --dev package-name
+
+# With extras
+uv add "package-name[extra]"
+```
+
+
+---
+
+
+## External {{ project_type }} Issues
+
+### "External {{ project_type }} connection failed"
+
+**Diagnosis**:
+
+Check server registration and configuration:
+
+```python
+# List registered servers
+from {{ project_name_underscore }}.external_mcp import external_mcp_manager
+print(external_mcp_manager.get_registered_servers())
+```
+
+**Common causes**:
+
+1. **Environment variables not set**:
+   - Check `.env` for `JIRA_API_TOKEN`, `CONFLUENCE_API_TOKEN`, etc.
+   - Verify tokens are valid (see Atlassian token section below)
+
+2. **Server not enabled in config**:
+   - Check `.env` for `*_MCP_ENABLED=true`
+
+3. **Network issues**:
+   - Verify API base URLs are correct
+   - Check firewall/proxy settings
+
+### Atlassian authentication fails (401 Unauthorized)
+
+**Cause**: Using wrong type of API token.
+
+**Solution**: Use **simple API token** (NOT OAuth app token):
+
+1. Go to https://id.atlassian.com/manage-profile/security/api-tokens
+2. Click "Create API token"
+3. Copy the token (shown once!)
+4. Add to `.env`:
+   ```bash
+   JIRA_USERNAME=your-email@company.com  # Must be email!
+   JIRA_API_TOKEN=ATATT3xFfGF0...        # Simple token
+   ```
+
+**Validation**:
+
+```bash
+# Test credentials
+curl -u "your-email@company.com:YOUR_API_TOKEN" \
+  https://your-company.atlassian.net/rest/api/3/myself
+```
+
+See `.opencode/guides/AGENTS.md` Pattern #12 for complete details.
+
+### GitHub {{ project_type }} issues
+
+**Current status**: GitHub integration uses direct API integration (PyGithub), not {{ project_type }}.
+
+**Reason**: GitHub {{ project_type }} has 628 npm dependencies (too heavy for Docker).
+
+**If implementing GitHub features**: Use PyGithub library directly instead of {{ project_type }}.
+
+
+---
+
+
+## Database Query Issues
+
+### "Query validation failed"
+
+**Cause**: Query contains non-SELECT operations.
+
+**Solution**: Only SELECT queries are allowed (read-only access).
+
+Blocked operations:
+- INSERT, UPDATE, DELETE
+- DROP, ALTER, TRUNCATE
+- GRANT, REVOKE
+- CREATE, RENAME
+
+**Use parameterized queries**:
+```python
+# Good
+query = "SELECT * FROM users WHERE id = :user_id"
+params = {"user_id": 123}
+
+# Bad (validation fails)
+query = "DELETE FROM users WHERE id = 123"
+```
+
+### "Query timeout"
+
+**Cause**: Query exceeds configured timeout (default 30s).
+
+**Solutions**:
+
+1. **Optimize the query** (add indexes, reduce scope)
+2. **Increase timeout for specific database**:
+   ```bash
+   DB_AUTHORING__QUERY_TIMEOUT_SECONDS=60
+   ```
+3. **Check database performance** (slow replica, network issues)
+
+### "Too many rows returned"
+
+**Cause**: Result exceeds row limit (default 10,000 rows).
+
+**Solutions**:
+
+1. **Add LIMIT clause** to query
+2. **Increase row limit** for specific database:
+   ```bash
+   DB_AUTHORING__MAX_RESULT_ROWS=50000
+   ```
+3. **Refine query** to be more specific
+
+
+---
+
+
+## Rate Limiting Issues
+
+### "Rate limit exceeded" errors
+
+**Cause**: Tool calls exceed configured rate limit.
+
+**Check current limits**:
+
+```python
+# Via MCP tool
+crol_get_rate_limit_stats()
+
+# Example output:
+{
+  "database": {"allowed": 127, "blocked": 5, "avg_wait_time_ms": 800.2},
+  "jira": {"allowed": 8, "blocked": 2, "avg_wait_time_ms": 1200.5}
+}
+```
+
+**Solutions**:
+
+1. **Increase rate limits** in `.env`:
+   ```bash
+   RATE_LIMIT_DATABASE_PER_MINUTE=100  # Default 50
+   RATE_LIMIT_JIRA_PER_MINUTE=20       # Default 10
+   ```
+
+2. **Optimize call patterns** (batch operations, cache results)
+
+3. **Disable rate limiting** (not recommended for production):
+   ```bash
+   RATE_LIMIT_ENABLED=false
+   ```
+
+
+---
+
+
+## Knowledge Base Issues
+
+### "Knowledge base query returns nothing"
+
+**Diagnosis**:
+
+```python
+# Check what's actually stored
+from {{ project_name_underscore }}.knowledge.service import KnowledgeService
+service = KnowledgeService("~/.{{ project_name_hyphen }}/knowledge.duckdb")
+await service.initialize()
+
+# Search with minimal filters
+results = await service.search_insights()  # No filters = all results
+print(len(results))
+```
+
+**Common causes**:
+
+1. **No data saved yet** - Save some insights first
+2. **Filters too restrictive** - Try broader search
+3. **Wrong field names** - Check field names match schema
+
+### S3 sync issues
+
+**Diagnosis**:
+
+```bash
+# Check AWS credentials
+aws sts get-caller-identity
+
+# Check S3 bucket access
+aws s3 ls s3://your-bucket-name/
+```
+
+**Common causes**:
+
+1. **AWS credentials not configured**:
+   ```bash
+   # Configure AWS SSO
+   aws configure sso
+   
+   # Or use environment variables
+   export AWS_PROFILE=your-profile
+   ```
+
+2. **Bucket doesn't exist**: Create it first
+3. **S3 disabled**: Check `.env` for `KNOWLEDGE_BASE_S3_ENABLED=true`
+
+
+---
+
+
+## Token Authentication Issues
+
+### "Unauthorized (401)" when calling {{ project_type }} over HTTP
+
+**Cause**: Missing or invalid authentication token.
+
+**Solution**: Create and use token:
+
+```bash
+# Create token
+{{ project_name_hyphen }}-token create mytoken --description "Development token"
+
+# Copy the token output (crol_...)
+# Use in HTTP request header:
+curl -H "Authorization: Bearer crol_..." http://localhost:4096/...
+```
+
+### Token revocation not taking effect
+
+**Cause**: Server restart required for revocation.
+
+**Solution**:
+
+```bash
+# Revoke token
+{{ project_name_hyphen }}-token revoke mytoken
+
+# Restart server
+make docker/restart  # If using Docker
+# OR
+# Restart your local dev server
+```
+
+**Why**: Token database is loaded once at startup (trade-off for simplicity).
+
+
+---
+
+
+## Slack Bot Issues
+
+### Slack bot not responding
+
+**Diagnosis**:
+
+```bash
+# Check bot logs
+make docker/logs slack-bot
+
+# Check OpenCode server logs
+make docker/logs opencode-server
+```
+
+**Common causes**:
+
+1. **Bot not invited to channel**:
+   - Invite bot to channel: `/invite @{{ project_name_hyphen }}`
+
+2. **Socket Mode tokens incorrect**:
+   - Check `.env` for `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN`
+   - Tokens must match Slack app configuration
+
+3. **OpenCode server not running**:
+   ```bash
+   # Check service status
+   make docker/ps
+   
+   # Restart if needed
+   make docker/restart
+   ```
+
+### "Channel not allowed" error
+
+**Cause**: Channel not in whitelist.
+
+**Solution**: Add channel to `.env`:
+
+```bash
+SLACK_ALLOWED_CHANNELS=incidents,engineering-alerts,your-channel-name
+```
+
+
+---
+
+
+## LSP/Editor Issues
+
+### Import resolution errors in IDE
+
+**Cause**: IDE doesn't know about `.venv/` Python path.
+
+**Solution**: Configure IDE Python interpreter:
+
+**VSCode**:
+1. Cmd+Shift+P → "Python: Select Interpreter"
+2. Choose `.venv/bin/python`
+
+**PyCharm**:
+1. Preferences → Project → Python Interpreter
+2. Add interpreter → Existing environment
+3. Select `.venv/bin/python`
+
+**Verify**:
+```bash
+which python  # Should show .venv/bin/python
+python --version  # Should show 3.12+
+```
+
+### Type checking errors
+
+**Run basedpyright**:
+
+```bash
+make qa/typecheck
+```
+
+**Common issues**:
+- Missing type hints → Add type annotations
+- Incorrect types → Fix type hints
+- Missing imports → Add imports
+
+
+---
+
+
+## Performance Issues
+
+### Server startup is slow
+
+**Cause**: External {{ project_type }}s (`uvx`, `npx`) install dependencies on first use.
+
+**Expected behavior**:
+- First call to external server: ~60 seconds (dependency install)
+- Subsequent calls: ~1-2 seconds
+
+**Not a bug**: This is the trade-off for not bundling dependencies in Docker image.
+
+### Queries are slow
+
+**Diagnosis**:
+
+1. **Check query execution time** in logs
+2. **Profile the query** using `EXPLAIN ANALYZE` (if supported)
+3. **Check database load** (replica lag, connection pool exhaustion)
+
+**Solutions**:
+- Add database indexes
+- Optimize query (reduce joins, add filters)
+- Increase connection pool size (`.env`: `DB_*__POOL_SIZE`)
+
+
+---
+
+
+## Getting Help
+
+### None of these solutions work?
+
+1. **Check logs**:
+   ```bash
+   # Server logs
+   make docker/logs
+   
+   # Specific service
+   docker compose logs mcp-server
+   ```
+
+2. **Check AGENTS.md** for development patterns:
+   ```bash
+   cat .opencode/guides/AGENTS.md
+   ```
+
+3. **Search task artifacts** for related work:
+   ```bash
+   grep -i "keyword" .opencode/data/tasks/*.md
+   # Or use pm CLI
+   cd .opencode/scripts && ./pm changelog --since YYYY-MM-DD
+   ```
+
+4. **Ask the Manager agent**: Describe the issue, the agent can help troubleshoot.
+
+
+---
+
+
+## Still Stuck?
+
+**File locations for debugging**:
+
+| Issue Type | Check File |
+|------------|------------|
+| Configuration | `.env`, `src/{{ project_name_underscore }}/config.py`, `.env.example` |
+| Database | `src/{{ project_name_underscore }}/database/service.py`, `docker-compose.yaml` |
+| Tests | `tests/`, `features/`, `pytest.ini` |
+| Dependencies | `pyproject.toml`, `uv.lock` |
+| Docker | `docker-compose.yaml`, `Dockerfile.dev` |
+| Development patterns | `.opencode/guides/AGENTS.md` |
+| Change history | Run `pm changelog` or check `.opencode/data/tasks/` |
+
+**Remember**: The Manager agent is designed to help. Just describe your issue!

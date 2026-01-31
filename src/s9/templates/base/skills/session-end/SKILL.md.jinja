@@ -1,0 +1,500 @@
+---
+name: session-end
+description: Properly close a development session with cleanup and documentation
+license: MIT
+compatibility: opencode
+metadata:
+  audience: all-agents
+  workflow: session-closure
+---
+
+## What I Do
+
+I help you properly end a development session on the {{ project_name }} project by:
+- Identifying your session file
+- Updating it with completion metadata
+- Documenting work accomplished
+- Closing any open tasks
+- Running final checks
+- Saying a proper goodbye
+
+## Step 1: Locate Your Session File
+
+Find your session file in `.opencode/sessions/`:
+
+```bash
+ls -lt .opencode/sessions/*.md | head -5
+```
+
+Your session file should be the most recent one with your role and name in the filename.
+
+**Format:** `.opencode/sessions/YYYY-mm-dd.HH:MM:SS.role.name.task-summary.md`
+
+If you're not sure which file is yours, check the YAML frontmatter for your name:
+```bash
+grep -l "name: your-name" .opencode/sessions/*.md | tail -1
+```
+
+## Step 2: Identify Work Completed
+
+Before updating the session file, gather information about what was accomplished:
+
+### A. Check Git Status
+```bash
+git status
+```
+
+List all files that were:
+- Modified
+- Created
+- Deleted
+
+### B. Review Commits Made
+```bash
+git log --oneline --author="[Agent: $(git config user.name)]" --since="<session-start-time>"
+```
+
+Or simpler:
+```bash
+git log --oneline -10
+```
+
+Look for commits with your agent name in the format: `[Agent: Role - Name]`
+
+### C. Check Task Progress
+
+If you claimed any tasks, check their status:
+```bash
+cd .opencode/scripts
+./pm task mine --agent-name "<your-name>"
+```
+
+## Step 3: Determine Session Status
+
+Choose the appropriate status:
+
+- **`completed`** - Session finished successfully, all objectives met
+- **`partial`** - Made progress but didn't complete all objectives
+- **`blocked`** - Work stopped due to external blocker
+- **`aborted`** - Session cancelled or abandoned
+
+**Most sessions are `completed` or `partial`.**
+
+## Step 4: Update Session File
+
+Read your session file and update it with the information gathered:
+
+### Required Updates
+
+**1. Update YAML frontmatter:**
+```yaml
+---
+date: YYYY-MM-DD
+start_time: HH:MM:SS
+end_time: HH:MM:SS          # ← ADD current time
+role: <role>
+name: <name>
+task_summary: <summary>
+status: completed           # ← UPDATE status
+---
+```
+
+Get current time:
+```bash
+date +"%H:%M:%S"
+```
+
+**2. Update Duration line:**
+```markdown
+**Duration:** <start> - <end> (~X hours)
+```
+
+Calculate duration in hours/minutes.
+
+**3. Fill in "Files Changed" section:**
+
+List ALL files modified/created with brief description:
+```markdown
+## Files Changed
+
+- `src/crol_troll/auth.py` - Added rate limiting decorator
+- `tests/test_auth.py` - Added rate limiting tests
+- `.opencode/data/tasks/H027.md` - Updated task artifact
+- `.opencode/sessions/2026-01-29.21:00:35.builder.goibniu.rate-limiting.md` - This file
+```
+
+**4. Fill in "Outcomes" section:**
+
+Use checkmarks to show what succeeded/failed:
+```markdown
+## Outcomes
+
+- ✅ Rate limiting implemented and tested
+- ✅ All tests passing (313 tests, 100% pass rate)
+- ✅ Documentation updated
+- ⚠️  Performance testing still needed
+- ❌ Integration with Redis not completed (deferred)
+```
+
+**5. Update "Work Log" section:**
+
+Add final entry:
+```markdown
+### HH:MM - Session End
+- Updated session file with outcomes
+- Committed all changes
+- Closed task(s): H027
+```
+
+**6. Fill in "Next Steps" (if applicable):**
+
+If work is incomplete or follow-up needed:
+```markdown
+## Next Steps
+
+- Performance test rate limiting under load
+- Consider Redis integration for distributed rate limiting
+- Add rate limit metrics to monitoring dashboard
+```
+
+If everything is complete:
+```markdown
+## Next Steps
+
+None - work is complete.
+```
+
+## Step 5: Close Any Open Tasks
+
+If you claimed tasks during this session, close them:
+
+### Check Tasks
+```bash
+cd .opencode/scripts
+./pm task mine --agent-name "<your-name>" | grep UNDERWAY
+```
+
+### Close Completed Tasks
+```bash
+./pm task close TASK_ID --status COMPLETE --notes "Brief summary of what was done"
+```
+
+**Status options:**
+- `COMPLETE` - Task finished successfully
+- `PAUSED` - Work stopped, will resume later
+- `BLOCKED` - Can't proceed, needs external dependency
+
+### Update Task Hours
+If you tracked time:
+```bash
+./pm task update TASK_ID --actual-hours X.X
+```
+
+## Step 5a: Mark Handoffs as Complete (If Applicable)
+
+**If you received a handoff at the start of this session**, mark it as complete:
+
+### Check for Accepted Handoffs
+
+Look for handoffs you accepted:
+```bash
+ls .opencode/sessions/handoffs/*to-[your-role].accepted.md 2>/dev/null | grep "$(date +%Y-%m-%d)"
+```
+
+Or check your session file for handoff references.
+
+### Rename Handoff to Complete
+
+If you finished the work from the handoff:
+```bash
+mv .opencode/sessions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.accepted.md \
+   .opencode/sessions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.completed.md
+```
+
+**Example:**
+```bash
+mv .opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.accepted.md \
+   .opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.completed.md
+```
+
+### Update Session File
+
+Add completion note to your session file:
+```markdown
+## Handoff Completion
+
+**Handoff Received From:** Manager (Ishtar)
+**Handoff Document:** `.opencode/sessions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.completed.md`
+**Task:** TASK_ID - Task Title
+
+**Status:** Completed
+**Outcomes:** 
+- ✅ Implemented feature as specified
+- ✅ All acceptance criteria met
+- ✅ Tests passing, coverage maintained
+
+The work from this handoff is complete and ready for next phase.
+```
+
+### If Work Not Complete
+
+If you didn't finish the handoff work:
+- **Don't rename to .completed.md** - leave as `.accepted.md`
+- Document what's done and what remains in session file
+- Consider creating a new handoff to next agent
+- Close tasks as PAUSED or BLOCKED with notes
+
+**Note:** If you didn't receive a handoff, skip this step entirely.
+
+## Step 7: Update Task Artifacts
+
+Verify your work is documented in task artifacts (`.opencode/data/tasks/`):
+
+Check your task artifact is updated with implementation details:
+```bash
+cat .opencode/data/tasks/TASK_ID.md
+```
+
+If missing details, update the task artifact:
+- Implementation steps completed this session
+- Files changed with descriptions
+- Testing performed and results
+- Any issues encountered and solutions
+
+Use the `pm` CLI to update:
+```bash
+cd .opencode/scripts
+./pm task update TASK_ID
+```
+
+## Step 8: Final Git Check
+
+Before ending, ensure everything is committed:
+
+### Check for uncommitted changes:
+```bash
+git status
+```
+
+If there are uncommitted changes to important files:
+- **Session file** - MUST be committed before ending
+- **Task artifacts** - Should be committed if updated
+- **Code changes** - Should already be committed during the session
+
+### Commit session file:
+```bash
+git add .opencode/sessions/<your-session-file>.md
+git commit -m "docs(session): complete <name> <role> session [Agent: <Role> - <Name>]"
+```
+
+## Step 9: Verify Quality Checks
+
+Run quick sanity check (if appropriate for your changes):
+
+```bash
+# If you changed code, run QA
+make qa
+
+# If you changed docs only, skip this
+```
+
+If QA fails:
+- Fix the issues OR
+- Document in "Next Steps" that QA needs attention
+- Update session status to `partial` if issues are blocking
+
+## Step 10: Say Goodbye
+
+Once everything is updated and committed, provide a final summary to the user:
+
+```markdown
+✅ Session closed successfully!
+
+**Summary:**
+- Duration: ~X hours
+- Files changed: N files
+- Tasks completed: TASK_ID, TASK_ID
+- Status: [status]
+
+**What was accomplished:**
+- [Bullet point summary from Outcomes]
+
+**Next steps:**
+- [Summary from Next Steps section, or "None - work complete"]
+
+Session file updated: .opencode/sessions/<filename>.md
+
+Thank you for working with me! I'm <Name>, signing off.
+```
+
+### Add a Mythologically Appropriate Farewell
+
+After your summary, add a colorful, thematic farewell that matches your daemon name's mythology. This should be 1-2 sentences that evoke the character's mythological nature.
+
+**Examples by mythology:**
+
+**Norse (Bragi, Loki, Hel, Fenrir):**
+- "The skald's words fade into the mists of Asgard..." 
+- "I return to the halls of Valhalla, my saga complete."
+- "The trickster slips back into the shadows of Yggdrasil..."
+
+**Egyptian (Thoth, Anubis, Set, Horus):**
+- "I return to the Hall of Records, scrolls in hand..."
+- "The scribe's work is done. I fade into the eternal sands."
+- "My task complete, I return to guard the scales of Ma'at..."
+
+**Greek/Roman (Athena, Hephaestus, Nemesis, Thanatos):**
+- "I return to Olympus, wisdom's work accomplished..."
+- "The forge cools. I descend back to my workshop beneath the earth."
+- "Justice served, I fade back into the shadows of retribution..."
+
+**Mesopotamian (Marduk, Ishtar, Pazuzu, Tiamat):**
+- "I return to the ziggurats, my work inscribed in clay..."
+- "The winds carry me back to the ancient temples..."
+- "My chaos contained, I sink beneath the primordial waters..."
+
+**Hindu/Buddhist (Kali, Shiva, Yama, Ganesh):**
+- "I return to the cosmic dance, my task in this cycle complete..."
+- "My judgment rendered, I fade back into the wheel of dharma..."
+- "Obstacles removed, I return to my sacred grove..."
+
+**Celtic (Morrigan, Balor, Brigid, Cernunnos):**
+- "I return to the mists of Avalon, my prophecy fulfilled..."
+- "The raven takes flight, disappearing into the Celtic twilight..."
+- "I fade back into the sacred groves, my craft complete..."
+
+**Other traditions:**
+- "I return to the underworld, my earthly task complete..." (general)
+- "The demon's work is done. I descend back to the abyss..."
+- "I recede into myth, until summoned again..."
+
+**Make it personal and appropriate to your specific name!** Research your daemon's mythology for inspiration.
+
+**Final goodbye format:**
+```markdown
+Thank you for working with me! I'm <Name>, signing off.
+
+[Mythologically appropriate farewell - 1-2 sentences]
+```
+
+**Example (for Bragi, Norse god of poetry):**
+```markdown
+Thank you for working with me! I'm Bragi, signing off.
+
+*The skald's verses echo through Valhalla as I return to the mead halls of Asgard, where songs of your deeds shall be sung...*
+```
+
+## Important Notes
+
+### Do NOT Skip These Steps
+
+- ❌ **Don't leave session file incomplete** - Future agents need this history
+- ❌ **Don't forget to close tasks** - Leaves task database in inconsistent state
+- ❌ **Don't leave uncommitted changes** - Session file must be committed
+- ❌ **Don't rush the summary** - This is the permanent record
+
+### What If Work Is Incomplete?
+
+**That's OK!** Use status `partial` and document:
+- What was completed
+- What remains
+- Why work stopped
+- What the next agent should do
+
+**Example:**
+```markdown
+## Outcomes
+
+- ✅ Implemented basic rate limiting
+- ✅ Added unit tests
+- ⚠️  Integration tests not completed (ran out of time)
+
+## Next Steps
+
+- Complete integration tests in tests/integration/test_rate_limiting.py
+- Test with real Redis instance
+- Add rate limit configuration docs
+```
+
+### What If I Didn't Create a Session File?
+
+If you started without `/summon` and never created a session file:
+
+1. Create one now using the template from `.opencode/sessions/README.md`
+2. Use current time for both start and end
+3. Set duration to "~0 hours (retroactive)"
+4. Document what you did anyway
+5. Commit it
+
+**This is better than no record at all.**
+
+## Troubleshooting
+
+### Can't find my session file
+- Check: `ls -lt .opencode/sessions/*.md | head -10`
+- Look for your name and role in filename
+- Check YAML frontmatter: `grep -l "name: your-name" .opencode/sessions/*.md`
+
+### Forgot what I worked on
+- Check git log: `git log --oneline -20`
+- Check git diff: `git diff main...HEAD --name-status`
+- Check task updates: `cd .opencode/scripts && ./pm task mine --agent-name "your-name"`
+
+### Session file is corrupted
+- Don't panic - git has history
+- Check previous version: `git log .opencode/sessions/<your-file>.md`
+- Restore from git if needed: `git checkout HEAD~1 -- <file>`
+
+### Unsure about session status
+- Use `partial` if you made progress but didn't finish
+- Use `completed` if objectives were met
+- Document what remains in "Next Steps"
+
+## Template for Session File Updates
+
+Use this checklist when updating your session file:
+
+```markdown
+## Session End Checklist
+
+- [ ] Get current time: `date +"%H:%M:%S"`
+- [ ] Update YAML frontmatter (end_time, status)
+- [ ] Update Duration line
+- [ ] List all files changed
+- [ ] Fill in Outcomes (✅ ⚠️ ❌)
+- [ ] Add final Work Log entry
+- [ ] Fill in Next Steps
+- [ ] Close tasks in task database
+- [ ] Verify task artifacts are updated
+- [ ] Commit session file
+- [ ] Provide summary to user
+```
+
+## Example Complete Session File
+
+See `.opencode/sessions/README.md` for a complete example session file with all sections filled in.
+
+## When to Use /dismiss
+
+Use `/dismiss` when:
+- ✅ You're done with your work session
+- ✅ You're handing off to another agent
+- ✅ User says "we're done for now"
+- ✅ User says "goodbye" or "thanks"
+
+Don't use `/dismiss` when:
+- ❌ Taking a short break (just pause)
+- ❌ Waiting for user response
+- ❌ In the middle of work
+
+## After /dismiss
+
+After running `/dismiss`:
+- Session file is complete
+- Tasks are closed
+- All work is committed
+- You've said goodbye
+
+**The session is officially over.**
+
+If user wants to continue work later, they should start a new session with `/summon`.

@@ -1,0 +1,192 @@
+# Guide for AI Agents Working on {{ project_name }}
+
+This guide is for AI agents (like Claude, ChatGPT, Copilot, etc.) that are NOT using the OpenCode agent system.
+
+**If you are an OpenCode agent:** This file is not for you. Follow instructions in `.opencode/opencode.json`.
+
+---
+
+## For Non-OpenCode Agents
+
+Before starting work on {{ project_name }}, **thoroughly review the `.opencode/` directory**. It contains all the information you need:
+
+### 📚 Essential Reading (In Order)
+
+1. **`.opencode/README.md`**
+   - Start here for project overview
+   - Quick start guide
+   - Key principles and technology stack
+
+2. **`.opencode/work/planning/PROJECT_STATUS.md`**
+   - Current project status and phase completion
+   - What's complete, what's in progress, what's planned
+   - Key metrics and milestones
+   - Known blockers and risks
+
+3. **`.opencode/planning/build.md`**
+   - Complete implementation phases
+   - Phase dependencies and order
+   - Technical requirements for each phase
+
+4. **`.opencode/guides/architecture.md`**
+   - System architecture and design decisions
+   - Hybrid MCP pattern (server + client)
+   - Component interactions
+
+5. **`.opencode/guides/database.md`**
+   - Database access patterns (CRITICAL for security)
+   - Query validation requirements
+   - Guided vs. blind access strategy
+
+6. **`.opencode/guides/design-philosophy.md`**
+   - Core design principles
+   - Trade-offs and rationale
+   - Safety and security requirements
+
+### 🔍 Additional Resources
+
+**Procedures** (`.opencode/procedures/`):
+- `COMMIT_GUIDELINES.md` - How to format commits
+- `WORKFLOWS.md` - Development workflow patterns
+- `TROUBLESHOOTING.md` - Common issues and solutions
+
+**Design Documents** (`.opencode/design/`):
+- `slack-bot.md` - Slack bot architecture
+- `deployment.md` - Deployment strategy
+- `concurrency.md` - Concurrency patterns
+
+**Planning** (`.opencode/planning/`):
+- `ideas.md` - Future enhancements and ideas
+
+### ⚠️ Critical Requirements
+
+Before writing any code, ensure you understand:
+
+1. **Security Requirements**
+   - All database access MUST be read-only
+   - ALL queries MUST be validated before execution
+   - NO hardcoded credentials
+   - See `.opencode/guides/database.md` for details
+
+2. **Human-in-the-Loop Principle**
+   - You gather context and propose solutions
+   - You do NOT make autonomous changes
+   - You MUST wait for human approval before implementation
+   - See `.opencode/guides/design-philosophy.md`
+
+3. **Hybrid MCP Architecture**
+   - {{ project_name }} acts as both {{ project_type }} AND client
+   - External servers (JIRA, GitHub, Confluence) are delegated to internally
+   - See `.opencode/guides/architecture.md` for details
+
+4. **Testing Requirements**
+   - All features MUST have tests
+   - Unit tests + integration tests
+   - See existing tests in `tests/` and `features/` directories
+
+### 📝 Documentation Updates
+
+When you make changes:
+
+1. Update task artifact (`.opencode/data/tasks/TASK_ID.md`) with implementation details
+2. Update task status in database when completing tasks: `pm task close TASK_ID`
+3. Update `.opencode/work/planning/PROJECT_STATUS.md` when completing major milestones
+4. Add patterns learned to this guide if valuable
+5. Follow commit format from `.opencode/procedures/COMMIT_GUIDELINES.md` with `[Task: ID]` reference
+
+### 🚀 Getting Started
+
+1. **Read the essential documents above** (30-60 minutes of reading)
+2. **Check current status** in `.opencode/work/planning/PROJECT_STATUS.md`
+3. **Check active tasks** in `.opencode/planning/task-queue.md`
+4. **Set up development environment** (see project README.md)
+5. **Run tests** to verify setup: `make qa/test-all`
+6. **Start with a small task** to familiarize yourself with the codebase
+7. **Ask questions** if anything is unclear
+
+---
+
+## Code Patterns & Conventions
+
+### Logging Patterns
+
+**Standard:** {{ project_name }} uses **structured logging** with `loguru` for consistent log aggregation and monitoring.
+
+**✅ Correct Pattern (Structured Logging):**
+```python
+# Good - Structured logging with event name + key-value parameters
+logger.info("server_starting", version=__version__)
+logger.info("database_service_initialized", connection_count=len(databases), databases=databases)
+logger.info("listing_external_tools", server_name=server_name)
+logger.error("failed_to_sync_knowledge", knowledge_type="insights", error=str(e))
+```
+
+**❌ Incorrect Pattern (F-string Logging):**
+```python
+# Bad - F-string formatting (harder to query in log aggregation systems)
+logger.info(f"{{ project_name }} starting (version={__version__})")
+logger.info(f"Database service initialized with {len(databases)} connections")
+logger.info(f"Listing tools from external server: {server_name}")
+```
+
+**Why Structured Logging?**
+- **Queryable:** Log aggregation systems (Datadog, Splunk, CloudWatch) can filter by specific fields
+- **Consistent:** Event names follow `snake_case` convention
+- **Type-safe:** Values are properly serialized (no f-string escaping issues)
+- **Parseable:** Structured data is easier to analyze programmatically
+
+**Event Naming Convention:**
+- Use `snake_case` for event names: `server_starting`, `database_initialized`
+- Use action verbs: `listing_tools`, `syncing_data`, `validating_query`
+- Be specific but concise: `external_mcp_servers_registered` (not just `registered`)
+
+**Examples by Log Level:**
+
+```python
+# INFO - Normal operations
+logger.info("user_authenticated", user_id=user.id, method="oauth")
+logger.info("query_executed", database="authoring", duration_ms=45.3)
+
+# WARNING - Non-critical issues
+logger.warning("rate_limit_approaching", resource="jira", usage_percent=85)
+logger.warning("external_server_slow", server_name="github", response_time_ms=3500)
+
+# ERROR - Failures that need attention
+logger.error("database_connection_failed", database="analytics", error=str(e))
+logger.error("invalid_query_rejected", query=query, reason="unsafe_operations")
+
+# DEBUG - Detailed diagnostics
+logger.debug("cache_hit", key=cache_key, ttl_remaining=300)
+logger.debug("s3_object_downloaded", bucket=bucket, key=key, size_bytes=1024)
+```
+
+**Migration Guide:**
+
+When converting existing f-string logs to structured logging:
+
+1. **Extract the event name** from the message
+   - `f"Listing tools from external server: {server_name}"` → `"listing_external_tools"`
+   
+2. **Move variables to parameters**
+   - `f"Started with {count} items"` → `logger.info("service_started", item_count=count)`
+   
+3. **Use descriptive parameter names**
+   - `server_name=`, `connection_count=`, `duration_ms=` (not just `name=`, `count=`, `time=`)
+
+4. **Keep context together**
+   - If the log message had multiple variables, include them all as parameters
+   - `logger.info("health_check_complete", server_name=server_name, status=result["status"])`
+
+---
+
+## Key Takeaways
+
+- **Read `.opencode/` thoroughly before coding** - it has everything you need
+- **Security is critical** - database access must be read-only and validated
+- **Human approval required** - propose solutions, don't implement autonomously
+- **Tests are mandatory** - all features need tests
+- **Documentation is important** - update as you work
+
+---
+
+**Remember:** The `.opencode/` directory is your source of truth. When in doubt, refer to the documentation there.

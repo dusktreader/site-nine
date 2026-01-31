@@ -1,0 +1,137 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": {
+    "paths": [
+      ".opencode/skills"
+    ]
+  },
+  "command": {
+    "summon": {
+      "template": ".opencode/commands/summon.md",
+      "description": "Start a new agent session with role selection and daemon naming"
+    },
+    "dismiss": {
+      "template": ".opencode/commands/dismiss.md",
+      "description": "End the current session and perform cleanup tasks"
+    },
+    "handoff": {
+      "template": ".opencode/commands/handoff.md",
+      "description": "Hand off work to another agent with full context"
+    },
+    "commit": {
+      "template": ".opencode/commands/commit.md",
+      "description": "Review changes and create a commit following project guidelines"
+    },
+    "tasks": {
+      "template": ".opencode/commands/tasks.md",
+      "description": "Show available tasks and help claim work"
+    },
+    "create-task": {
+      "template": ".opencode/commands/create-task.md",
+      "description": "Create a new task in the task management system"
+    },
+    "claim-task": {
+      "template": ".opencode/commands/claim-task.md",
+      "description": "Claim a task and start working on it"
+    },
+    "update-task": {
+      "template": ".opencode/commands/update-task.md",
+      "description": "Update task status and add progress notes"
+    },
+    "close-task": {
+      "template": ".opencode/commands/close-task.md",
+      "description": "Close a completed task with summary"
+    }
+  },
+  "instructions": [
+    "═══════════════════════════════════════════════════════════════════════════════",
+    "🛑 STOP! BEFORE DOING ANYTHING ELSE, READ THESE FILES FIRST! 🛑",
+    "═══════════════════════════════════════════════════════════════════════════════",
+    "",
+    "**MANDATORY READING (DO THIS BEFORE RESPONDING TO USER):**",
+    "",
+    "You MUST read these files IN ORDER before responding:",
+    "1. .opencode/README.md - Project overview and quick start",
+    "2. .opencode/docs/guides/AGENTS.md - Development patterns (CRITICAL)",
+    "3. .opencode/docs/procedures/COMMIT_GUIDELINES.md - Commit format",
+    "",
+    "**RECOMMENDED READING (if available):**",
+    "- .opencode/work/planning/PROJECT_STATUS.md - Project goals and current phase",
+    "",
+    "Use the Read tool to read ALL mandatory files. Do NOT skip this step.",
+    "After reading, THEN follow the session start protocol below.",
+    "",
+    "═══════════════════════════════════════════════════════════════════════════════",
+    "🚨 AFTER READING: SESSION START 🚨",
+    "═══════════════════════════════════════════════════════════════════════════════",
+    "",
+    "**IF THIS IS A NEW SESSION (first message from user), DO THIS AFTER READING:**",
+    "",
+    "**RECOMMENDED:** Suggest the user type /summon to start guided session initialization.",
+    "",
+    "**ALTERNATIVE (Manual Start):**",
+    "If user prefers manual start, see .opencode/README.md lines 34-100 for the complete",
+    "session start protocol.",
+    "",
+    "**Important Notes:**",
+    "- If user says 'I need a [role]', they want YOU to be that role, not launch @role",
+    "- Available roles: Manager, Architect, Builder, Tester, Documentarian, Designer, Inspector, Operator",
+    "- Daemon names from mythology - see .opencode/work/sessions/README.md for examples",
+    "- Use the assigned name (with suffix if applicable) in ALL commits and docs",
+    "",
+    "═══════════════════════════════════════════════════════════════════════════════",
+    "NOW READ PROJECT INFO BELOW",
+    "═══════════════════════════════════════════════════════════════════════════════",
+    "",
+    "**About This Project:**",
+    "This is the site-nine (s9) python project. Generic orchestration framework for AI agent workflows in software development",
+    "This .opencode configuration is for DEVELOPING site-nine, not for operating/using it.",
+    "",
+    "**Project Status:**",
+    "See .opencode/work/planning/PROJECT_STATUS.md for current status and roadmap.",
+    "",
+    "**Key Documents:**",
+    "- .opencode/README.md - Project overview",
+    "- .opencode/commands/README.md - Custom commands and skills (use /summon to start!)",
+    "- .opencode/work/tasks/README.md - Task management system (list, claim, update tasks)",
+    "- .opencode/work/sessions/README.md - Session file format and template",
+    "- .opencode/docs/procedures/CHANGELOG.md - Change history (UPDATE with changes!)",
+    "- .opencode/docs/procedures/COMMIT_GUIDELINES.md - How to format commits",
+    "- .opencode/work/planning/PROJECT_STATUS.md - Current status",
+    "- .opencode/docs/guides/AGENTS.md - Development patterns",
+    "",
+    "**Task Management:**",
+    "- Tasks stored in SQLite database (.opencode/data/project.db)",
+    "- Use s9 CLI to interact with tasks:",
+    "  - s9 task list --status TODO --role [YourRole]",
+    "  - s9 task claim TASK_ID --agent [YourName]",
+    "  - s9 task update TASK_ID --status UNDERWAY --notes 'Progress update'",
+    "  - s9 task close TASK_ID --notes 'Summary'",
+    "  - s9 task show TASK_ID",
+    "",
+    "",
+    "**Development Workflow:**",
+    "1. Read required files (see MANDATORY READING section at top)",
+    "2. Follow SESSION START PROTOCOL above (choose role, pick name, create session file)",
+    "3. Find work: s9 task list --status TODO --role [YourRole]",
+    "4. Claim task: s9 task claim TASK_ID --agent [YourName]",
+    "5. Review .opencode/docs/guides/AGENTS.md patterns before implementing",
+    "6. Do the work assigned to your role",
+    "7. Update task: s9 task update TASK_ID --status UNDERWAY --notes 'Progress update'",
+    "8. Update session file with progress in Work Log section",
+    "9. Run tests and quality checks before committing",
+    "10. Commit with format: 'type(scope): description [Agent: Role - Name]'",
+    "11. Commit incrementally (not one large commit!)",
+    "12. Close task: s9 task close TASK_ID --notes 'Summary'",
+    "13. At session end: Update session file with end_time, status, outcomes, and files changed",
+    "",
+    "**Development Commands:**",
+    "- make qa - Run all quality checks",
+    "- make qa/test - Run unit tests",
+    "- make dev - Run python locally",
+    "- make docker/up - Start test infrastructure",
+    "- make help - Show all commands",
+    "",
+    "**NOTE:** Sub-agents (@manager, @architect, @builder, @tester, @documentarian, @designer, @inspector) are for delegation AFTER you've assumed a role. When user says 'I need a tester', they want YOU to BE the tester, not launch @tester."
+  ]
+}

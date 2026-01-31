@@ -1,0 +1,182 @@
+# Development Procedures
+
+Step-by-step operational procedures for {{ project_name }} development.
+
+
+## 📋 Procedures
+
+### Session Tracking (sessions/ directory)
+
+**Individual session files with daemon names, role, and timing metadata**
+
+Each development session creates a separate file:
+- **Format:** `YYYY-mm-dd.HH:MM:SS.role.name.task-summary.md`
+- **Names:** Daemon names from mythology (Lucifer, Azazel, Mephistopheles, Seraphina, Iblis, Ravana, Loki, etc.)
+- **Disambiguation:** If name used before, append roman numeral (`-ii`, `-iii`, `-iv`)
+- **Metadata:** Date, times, role, daemon name, status (completed/failed/aborted/in-progress)
+- **Content:** Objective, work log, files changed, outcomes, next steps
+
+Session tracking provides:
+- Self-documenting filenames (all key info visible)
+- Chronological work history
+- Easy discovery by date/role/name/task
+- Complete context for each development session
+- Fun thematic naming convention
+
+**Use when:** Starting a session (create file), during session (update work log), ending session (mark complete)
+
+**REQUIRED:** Every agent must create a session file at start and update at end!
+
+**See:** `.opencode/sessions/README.md` for template, daemon name examples, and guidelines
+
+
+### COMMIT_GUIDELINES.md
+**Conventional Commits format with agent attribution**
+
+Complete reference for:
+- Commit message format (type, scope, agent attribution)
+- All conventional commit types (feat, fix, refactor, docs, test, chore, perf, style, ci)
+- Examples for each agent type
+- Git best practices
+- Common mistakes to avoid
+
+**Use when:** Making commits, unsure about commit format
+
+
+### TASK_WORKFLOW.md
+**Task artifact workflow and management**
+
+Complete guide to task-first development workflow:
+- How to claim and update tasks using `pm` CLI
+- Task artifact structure and required sections
+- When and how to update task artifacts
+- Relationship between commits, tasks, and sessions
+- Best practices for task documentation
+
+**Use when:** Starting work on a task, documenting implementation progress
+
+
+### WORKFLOWS.md
+**Common development workflows and patterns**
+
+Complete workflow documentation for:
+- Adding features (full agent coordination)
+- Fixing bugs
+- Code review process
+- Phase implementation
+- Code cleanup/refactoring
+- Documentation updates
+- Emergency fixes
+- Performance investigation
+- Multi-agent parallel work
+- Common patterns and tips
+
+**Use when:** Coordinating multi-agent work, planning development tasks
+
+
+### TROUBLESHOOTING.md
+**Comprehensive troubleshooting guide**
+
+Solutions for common issues:
+- Agent selection and usage
+- Test failures and debugging
+- Docker container issues
+- Configuration problems
+- Database query errors
+- Rate limiting issues
+- External {{ project_type }} connection failures
+- Authentication and token issues
+- Slack bot problems
+- IDE/LSP issues
+- Performance problems
+
+**Use when:** Something isn't working, need to debug issues
+
+
+---
+
+
+## 🎯 Purpose
+
+Procedures are **step-by-step how-tos** for specific development tasks:
+- Exact format to follow
+- Checklists and templates
+- Operational guidelines
+- Process documentation
+
+**Contrast with Guides:**
+- **Guides** (`.opencode/guides/`) - Patterns, principles, architecture, "why"
+- **Procedures** (`.opencode/procedures/`) - Steps, formats, checklists, "how"
+
+
+---
+
+
+## 🚀 Quick Reference
+
+### Making a Commit
+
+1. Make changes
+2. Run `make qa`
+3. Update task artifact (`.opencode/data/tasks/TASK_ID.md`) with implementation details
+4. Commit:
+   ```bash
+   git commit -m "type(scope): description [Agent: Type & Name]" -m "" -m "[Task: TASK_ID]"
+   ```
+
+**Example:**
+```bash
+git commit -m "feat(rate-limit): add database rate limiting [Agent: Builder - Azazel]" -m "" -m "[Task: H027]"
+git commit -m "docs(readme): update agent introduction [Agent: Documentarian - Seraphina-iii]" -m "" -m "[Task: D015]"
+```
+
+**See:** `COMMIT_GUIDELINES.md` for complete format reference
+
+
+### Updating Task Artifacts
+
+Task artifacts are the single source of truth for work done. Update them as you work:
+
+```bash
+# View your current task
+cd .opencode/scripts
+./pm task show TASK_ID
+
+# Update task status
+./pm task update TASK_ID --status in_progress
+
+# Close task when complete
+./pm task close TASK_ID
+```
+
+**Task artifact should include:**
+- Implementation steps (chronological log of what you did)
+- Files changed (with descriptions of changes)
+- Testing performed (commands run, results)
+- Solutions implemented (how you solved problems)
+- Git commits (list of commit SHAs related to this task)
+
+**See:** `TASK_WORKFLOW.md` for complete workflow documentation
+
+
+---
+
+
+## 📚 Future Procedures
+
+As the project grows, add procedures for:
+- **TESTING.md** - How to run tests, write new tests, debug test failures (partially covered in TROUBLESHOOTING.md)
+- **DEPLOYMENT.md** - Step-by-step deployment process
+- **RELEASE.md** - How to create releases, version bumping
+- **CODE_REVIEW.md** - Code review checklist and process (partially covered in WORKFLOWS.md)
+
+
+---
+
+
+## 🧭 Related Documentation
+
+- **Guides**: See `.opencode/guides/` for development patterns
+- **Planning**: See `.opencode/planning/` for roadmap and status
+- **Design**: See `.opencode/design/` for feature designs
+- **README**: See `.opencode/README.md` for overview

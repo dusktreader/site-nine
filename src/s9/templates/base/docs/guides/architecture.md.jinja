@@ -1,0 +1,2151 @@
+# Implementation Proposal: {{ project_name }} {{ project_type }}
+
+
+## Overview
+
+This {{ project_type }} enables AI agents to **investigate and propose fixes** for customer-reported issues (CROLs). The system
+follows a strict **human-in-the-loop** model where agents gather context and make recommendations, but humans make all
+final decisions.
+
+
+### Design Philosophy
+
+**Agents as Assistants**: The system is designed to augment human engineers, not replace them. Agents handle
+time-consuming data gathering and pattern matching, while humans provide judgment, approval, and accountability.
+
+**Required Human Touchpoints:**
+1. After agent diagnosis → Human validates findings
+2. After fix proposal → Human reviews and approves
+3. Before implementation → Human decides to proceed
+4. After deployment → Human verifies success
+
+---
+
+
+## Technical Architecture
+
+### Technology Stack
+
+- **Package Management**: uv (automatically installs Python 3.12+)
+- **Runtime**: Python 3.12+
+- **MCP Framework**: FastMCP (https://github.com/jlowin/fastmcp)
+- **MCP Client**: Python MCP SDK with client capabilities (`mcp[client]`)
+- **Project Structure**: Based on xerox-python template
+- **Database Access**:
+  - **SQLAlchemy** (async, core mode) - **unified interface for all database types**
+  - Benefits: Single API for PostgreSQL, MySQL, and SQLite; connection pooling; dialect abstraction
+  - Drivers: `asyncpg` (PostgreSQL), `aiomysql` (MySQL), `aiosqlite` (SQLite)
+- **HTTP Client**: `httpx` (async)
+- **External MCP Delegation**: Internal MCP client connections to external servers
+  - **JIRA/Confluence**: Delegate to Atlassian {{ project_type }}s via subprocess + MCP client
+  - **GitHub**: Delegate to official GitHub {{ project_type }} via subprocess + MCP client
+  - **Process Management**: `asyncio-subprocess` for managing external server lifecycles
+- **Knowledge Base**: DuckDB (local index) + S3 (durable storage)
+  - DuckDB for fast JSON querying and analytics
+  - S3 for durability and version history
+  - Python packages: `duckdb`, `boto3`
+- **Configuration**: `pydantic-settings`
+- **Testing**: `pytest`, `pytest-asyncio`, `pytest-cov`, `pytest-bdd`, `pytest-benchmark`
+- **Linting/Formatting**: `ruff`, `basedpyright`
+
+
+### Integration Strategy
+
+**Hybrid MCP Architecture**: {{ project_name }} acts as both an {{ project_type }} (exposing tools) and an MCP client (delegating to external servers). This approach:
+- Provides a **single point of configuration** for AI clients
+- Reduces client complexity (one server instead of four)
+- Enables **orchestration** across services (e.g., query DB → update JIRA)
+- Leverages **official implementations** (no custom API wrappers to maintain)
+- Gets **automatic updates** as external servers improve
+
+**External Delegation**: For JIRA, GitHub, and Confluence:
+- Launch external {{ project_type }}s as subprocesses
+- Connect via MCP client protocol (stdio)
+- Dynamically discover and proxy their tools
+- Manage lifecycle (startup, health checks, shutdown)
+
+**Custom Implementation**: For functionality not available in existing {{ project_type }}s:
+- Database queries (guided read-only access to production replicas)
+- Knowledge base (CROL-specific learning and insights)
+- Cross-service workflows and orchestration
+
+
+### {{ project_type }} Structure
+
+Based on xerox-python template:
+
+```
+{{ project_name_hyphen }}-mcp/
+├── src/
+│   ├── {{ project_name_underscore }}/
+│   │   ├── __init__.py
+│   │   ├── version.py
+│   │   ├── py.typed
+│   │   ├── server.py              # Fast{{ project_type }} + entrypoint
+│   │   ├── config.py              # All Pydantic settings and configs
+│   │   ├── logger.py              # Logging configuration
+│   │   ├── database/              # Production database access
+│   │   │   ├── __init__.py
+│   │   │   ├── queries.py         # Database query MCP tools + validation
+│   │   │   └── service.py         # DatabaseService - connection pool manager
+│   │   ├── knowledge/             # Knowledge base (DuckDB + S3)
+│   │   │   ├── __init__.py
+│   │   │   ├── queries.py         # Knowledge base MCP tools
+│   │   │   └── service.py         # KnowledgeService - DuckDB + S3 manager
+│   │   └── models/
+│   │       ├── __init__.py
+│   │       └── types.py           # Pydantic models for data
+│   └── slack_bot/                 # Slack bot (Phase 8)
+│       ├── __init__.py
+│       ├── __main__.py            # Entry point (python -m slack_bot)
+│       ├── bot.py                 # Main Slack bot app (slack-bolt)
+│       ├── opencode_client.py     # OpenCode HTTP API client
+│       ├── handlers.py            # Event handlers (mentions, commands)
+│       ├── formatters.py          # Slack Block Kit formatting
+│       └── config.py              # Slack bot configuration
+├── tests/                          # Unit tests (pytest)
+│   ├── __init__.py
+│   ├── conftest.py                 # Shared pytest fixtures
+│   ├── {{ project_name_underscore }}/                 # {{ project_type }} unit tests
+│   │   ├── __init__.py
+│   │   ├── conftest.py
+│   │   ├── test_server.py
+│   │   ├── database/               # Mirrors src/{{ project_name_underscore }}/database/
+│   │   │   ├── __init__.py
+│   │   │   ├── test_queries.py
+│   │   │   └── test_service.py
+│   │   └── knowledge/              # Mirrors src/{{ project_name_underscore }}/knowledge/
+│   │       ├── __init__.py
+│   │       ├── test_queries.py
+│   │       └── test_service.py
+│   └── slack_bot/                  # Slack bot unit tests
+│       ├── __init__.py
+│       ├── test_bot.py
+│       ├── test_opencode_client.py
+│       └── test_handlers.py
+│
+├── features/                       # Integration tests (pytest-bdd)
+│   ├── {{ project_name_underscore }}/                 # {{ project_type }} integration tests
+│   │   ├── database_integration.feature
+│   │   ├── external_mcp_integration.feature
+│   │   ├── atlassian_mcp_integration.feature
+│   │   ├── docker_integration.feature
+│   │   └── step_definitions/
+│   │       ├── __init__.py
+│   │       ├── conftest.py         # Integration test fixtures
+│   │       ├── test_database_integration.py
+│   │       ├── test_external_mcp_integration.py
+│   │       ├── test_atlassian_mcp_integration.py
+│   │       └── test_docker_integration.py
+│   │
+│   └── slack_bot/                  # Slack bot integration tests
+│       ├── slack_integration.feature
+│       ├── opencode_integration.feature
+│       ├── end_to_end.feature
+│       └── step_definitions/
+│           ├── __init__.py
+│           ├── conftest.py         # Slack integration fixtures
+│           ├── test_slack_integration.py
+│           ├── test_opencode_integration.py
+│           └── test_end_to_end.py
+│
+├── knowledge-base/                 # DuckDB storage directory
+├── docs/
+│   ├── mkdocs.yaml
+│   └── source/
+├── .github/
+│   └── workflows/
+│       ├── main.yml               # CI/CD
+│       └── docs.yml
+├── pyproject.toml                 # Defines entrypoint via [project.scripts]
+├── uv.lock
+├── README.md
+└── .env.example
+```
+
+**Entrypoint Configuration**: The `pyproject.toml` file defines entrypoints for both packages:
+
+```toml
+[project.scripts]
+{{ project_name_hyphen }} = "{{ project_name_underscore }}.server:main"
+slack-bot = "slack_bot.bot:main"
+```
+
+This allows running:
+```bash
+# {{ project_type }}
+uv run {{ project_name_hyphen }}
+
+# Slack bot (when implemented)
+uv run slack-bot
+```
+
+## Hybrid MCP Architecture
+
+**{{ project_name }} is a hybrid {{ project_type }}**: It acts as both an **{{ project_type }}** (exposing tools to AI clients) and an **MCP client** (delegating to other {{ project_type }}s internally).
+
+```
+┌─────────────────┐
+│ Claude Desktop  │
+│   or OpenCode   │
+└────────┬────────┘
+         │ (connects to single {{ project_type }})
+         ↓
+┌─────────────────────────────────────────┐
+│         {{ project_name }} {{ project_type }}           │
+│  ┌───────────────────────────────────┐  │
+│  │    {{ project_type }} (exposes tools)     │  │
+│  │  • query_database                 │  │
+│  │  • search_knowledge               │  │
+│  │  • jira_* (delegated)             │  │
+│  │  • github_* (delegated)           │  │
+│  │  • confluence_* (delegated)       │  │
+│  └───────────────────────────────────┘  │
+│  ┌───────────────────────────────────┐  │
+│  │   MCP Client (internal)           │  │
+│  │   Connects to & manages:          │  │
+│  │   • JIRA {{ project_type }}               │  │
+│  │   • GitHub {{ project_type }}             │  │
+│  │   • Confluence {{ project_type }}         │  │
+│  └───────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+```
+
+**Benefits**:
+- ✅ **Single point of configuration**: All credentials in {{ project_name }}'s config
+- ✅ **Simplified client setup**: Only one server to configure
+- ✅ **Orchestration capability**: Can combine operations across services
+- ✅ **Custom + delegated tools**: Direct database/knowledge access + proxied external services
+
+
+## Direct MCP Tools (Custom Implementation)
+
+These tools are implemented directly in {{ project_name }} and provide functionality not available in existing {{ project_type }}s.
+
+
+### 1. Database Tools
+
+These tools provide **guided** read-only access to production database replicas. Instead of blind SQL execution, the agent
+has access to schema context, common query templates, and business documentation stored in the knowledge base.
+
+**Design Philosophy**: Don't make the agent discover everything from scratch. Provide contextual guidance.
+
+#### `crol_query_database`
+```python
+from fastmcp import FastMCP
+from enum import StrEnum, auto
+from typing import Any
+
+mcp = FastMCP("CROL Assistant")
+
+class DatabaseName(StrEnum):
+    """Supported database names"""
+    AUTHORING = auto()
+    DELIVERY = auto()
+    ASSIGNMENTS = auto()
+    ANALYTICS = auto()
+
+@mcp.tool()
+async def crol_query_database(
+    database: DatabaseName,
+    query: str,
+    params: dict[str, Any] | None = None
+) -> dict:
+    """
+    Execute a SELECT query on a read-only database replica.
+
+    **IMPORTANT**: Before writing custom queries, use crol_get_saved_queries() to find
+    pre-built, validated queries that may already solve your need. Custom queries should
+    only be written when no existing template fits.
+
+    Args:
+        database: Target database (authoring, delivery, assignments, analytics)
+        query: SQL SELECT query with named parameters (use :param_name syntax)
+        params: Optional query parameters as dictionary (e.g., {"user_id": 123})
+
+    Returns:
+        Query results with rows and metadata
+
+    Example:
+        # Check for saved queries first!
+        saved = await crol_get_saved_queries(use_case="user_activity")
+
+        # If no saved query exists, write custom:
+        query = "SELECT * FROM users WHERE id = :user_id"
+        params = {"user_id": 123}
+    """
+    db_service = DatabaseService()
+    return await db_service.execute_query(database, query, params or {})
+```
+
+**Safety**:
+- Only SELECT statements allowed
+- Query validation to prevent injection
+- Connection to read-only replicas
+- Named parameters via SQLAlchemy `text()` prevent SQL injection
+- Query timeout limits (configurable via `Settings.limit_query_time_ms`)
+- Result size limits (configurable via `Settings.limit_result_rows`)
+
+
+#### `crol_get_table_schema`
+```python
+from sqlalchemy import inspect
+
+@mcp.tool()
+async def crol_get_table_schema(database: DatabaseName, table: str) -> dict:
+    """
+    Get schema information for a database table including business context.
+
+    This combines technical schema (from SQLAlchemy reflection) with business documentation
+    (from knowledge base) to help understand what the data means and how tables relate.
+
+    Args:
+        database: Target database
+        table: Table name
+
+    Returns:
+        Schema information with:
+        - Technical details: columns, types, indexes, constraints
+        - Business context: what the table stores, common use cases
+        - Relationship hints: which tables this commonly joins with
+        - Known issues: any gotchas or quirks (from knowledge base)
+    """
+    db_service = DatabaseService()
+    knowledge_service = KnowledgeService()
+
+    # Use SQLAlchemy Inspector for database-agnostic schema introspection
+    async with db_service.connection() as conn:
+        inspector = inspect(conn)
+
+        columns = []
+        for col in inspector.get_columns(table):
+            columns.append({
+                "name": col["name"],
+                "type": str(col["type"]),
+                "nullable": col["nullable"],
+                "default": col.get("default"),
+            })
+
+        indexes = []
+        for idx in inspector.get_indexes(table):
+            indexes.append({
+                "name": idx["name"],
+                "columns": idx["column_names"],
+                "unique": idx["unique"],
+            })
+
+        foreign_keys = []
+        for fk in inspector.get_foreign_keys(table):
+            foreign_keys.append({
+                "name": fk.get("name"),
+                "columns": fk["constrained_columns"],
+                "referred_table": fk["referred_table"],
+                "referred_columns": fk["referred_columns"],
+            })
+
+    # Get business context from knowledge base
+    schema_doc = await knowledge_service.get_schema_documentation(database, table)
+    insights = await knowledge_service.get_insights("database_table", f"{database}.{table}")
+
+    return {
+        "table": table,
+        "database": database,
+        "technical_schema": {
+            "columns": columns,
+            "indexes": indexes,
+            "foreign_keys": foreign_keys,
+        },
+        "business_context": schema_doc or {
+            "description": "No documentation available. Consider adding after investigation.",
+            "common_uses": [],
+            "related_tables": [],
+        },
+        "known_issues": [
+            {
+                "title": insight["insight"]["title"],
+                "description": insight["insight"]["description"],
+                "impact": insight["insight"]["impact"],
+            }
+            for insight in insights
+        ] if insights else [],
+    }
+```
+
+
+#### `crol_get_saved_queries`
+```python
+@mcp.tool()
+async def crol_get_saved_queries(
+    use_case: str | None = None,
+    database: DatabaseName | None = None,
+    search: str | None = None
+) -> list[dict]:
+    """
+    Retrieve pre-built, validated query templates.
+
+    These queries have been:
+    - Written by experienced engineers during past investigations
+    - Tested and validated against production data
+    - Documented with clear use cases and parameters
+    - Optimized for performance
+
+    **Always check here first** before writing custom queries!
+
+    Args:
+        use_case: Filter by use case (e.g., "user_activity", "assignment_status")
+        database: Filter by target database
+        search: Free-text search across query names and descriptions
+
+    Returns:
+        List of query templates with:
+        - name: Short identifier
+        - description: What it does and when to use it
+        - query: SQL template (may have :parameters)
+        - parameters: Expected parameters and their types
+        - example_usage: Sample parameter values
+        - performance_notes: Expected execution time, result size
+
+    Example:
+        # Find queries for checking user activity
+        queries = await crol_get_saved_queries(use_case="user_activity")
+
+        # Use a saved query
+        template = queries[0]
+        result = await crol_query_database(
+            database=template["database"],
+            query=template["query"],
+            params={"user_id": 12345, "days": 30}
+        )
+    """
+    knowledge_service = KnowledgeService()
+    return await knowledge_service.get_saved_queries(use_case, database, search)
+```
+
+
+### 2. Knowledge Base Tools
+
+These tools provide CROL-specific knowledge accumulation and learning - functionality unique to this system.
+
+See `knowledge-base.md` for detailed documentation. Core tools include:
+
+
+#### `crol_record_insight`
+```python
+from enum import StrEnum, auto
+
+class ComponentType(StrEnum):
+    """Types of system components"""
+    DATABASE_TABLE = auto()
+    API_ENDPOINT = auto()
+    SERVICE = auto()
+    CODE_MODULE = auto()
+    CONFIG = auto()
+
+class InsightCategory(StrEnum):
+    """Categories of insights"""
+    RACE_CONDITION = auto()
+    EDGE_CASE = auto()
+    PERFORMANCE = auto()
+    CONFIG = auto()
+    DEPENDENCY = auto()
+    OTHER = auto()
+
+class ImpactLevel(StrEnum):
+    """Impact severity levels"""
+    LOW = auto()
+    MEDIUM = auto()
+    HIGH = auto()
+    CRITICAL = auto()
+
+@mcp.tool()
+async def crol_record_insight(
+    component_type: ComponentType,
+    component_name: str,
+    category: InsightCategory,
+    title: str,
+    description: str,
+    impact: ImpactLevel,
+    current_ticket_id: str,
+    tags: list[str] | None = None
+) -> dict:
+    """
+    Record a discovered insight about a system component.
+
+    Args:
+        component_type: Type of component (database_table, api_endpoint, etc.)
+        component_name: Name of the specific component
+        category: Insight category (race_condition, edge_case, etc.)
+        title: Brief title describing the insight
+        description: Detailed description
+        impact: Severity level (low, medium, high, critical)
+        current_ticket_id: JIRA ticket where this was discovered
+        tags: Optional tags for categorization
+
+    Returns:
+        Saved insight with ID
+    """
+    knowledge_service = KnowledgeService()
+    return await knowledge_service.record_insight(
+        component_type, component_name, category, title,
+        description, impact, current_ticket_id, tags or []
+    )
+```
+
+
+#### `crol_get_insights`
+```python
+@mcp.tool()
+async def crol_get_insights(
+    component_type: ComponentType,
+    component_name: str
+) -> list[dict]:
+    """
+    Retrieve known insights about a system component.
+
+    Args:
+        component_type: Type of component
+        component_name: Name of the component
+
+    Returns:
+        List of insights for this component
+    """
+    knowledge_service = KnowledgeService()
+    return await knowledge_service.get_insights(component_type, component_name)
+```
+
+
+#### `crol_save_query`
+```python
+@mcp.tool()
+async def crol_save_query(
+    name: str,
+    description: str,
+    query: str,
+    database: DatabaseName,
+    use_case: list[str],
+    parameters: dict[str, str] | None = None,
+    example_params: dict[str, Any] | None = None,
+    performance_notes: str | None = None,
+    tags: list[str] | None = None
+) -> dict:
+    """
+    Save a validated, useful database query as a reusable template.
+
+    After validating that a custom query works well and will be useful in future
+    investigations, save it so other engineers (and future agents) can benefit.
+
+    Args:
+        name: Short identifier (e.g., "user_recent_activity")
+        description: What the query does and when to use it
+        query: The SQL query (use :param_name for parameters)
+        database: Target database
+        use_case: Use cases (e.g., ["user_activity", "troubleshooting"])
+        parameters: Parameter definitions (e.g., {"user_id": "integer", "days": "integer"})
+        example_params: Example parameter values for documentation
+        performance_notes: Expected execution time, result size, index usage
+        tags: Optional tags for categorization
+
+    Returns:
+        Saved query with ID
+
+    Example:
+        await crol_save_query(
+            name="user_recent_activity",
+            description="Get user's recent activity across all tables. Useful for investigating user-reported issues.",
+            query='''
+                SELECT event_type, event_time, details
+                FROM user_events
+                WHERE user_id = :user_id
+                  AND event_time > NOW() - INTERVAL ':days days'
+                ORDER BY event_time DESC
+                LIMIT 100
+            ''',
+            database=DatabaseName.ANALYTICS,
+            use_case=["user_activity", "troubleshooting"],
+            parameters={"user_id": "integer", "days": "integer (default 30)"},
+            example_params={"user_id": 12345, "days": 30},
+            performance_notes="Fast (~200ms). Uses user_events_user_id_time_idx.",
+            tags=["user", "activity", "events"]
+        )
+    """
+    knowledge_service = KnowledgeService()
+    return await knowledge_service.save_query(
+        name, description, query, database, use_case,
+        parameters or {}, example_params or {},
+        performance_notes, tags or []
+    )
+```
+
+
+#### `crol_document_schema`
+```python
+@mcp.tool()
+async def crol_document_schema(
+    database: DatabaseName,
+    table: str,
+    description: str,
+    common_uses: list[str],
+    related_tables: list[dict[str, str]],
+    column_notes: dict[str, str] | None = None,
+    performance_tips: list[str] | None = None
+) -> dict:
+    """
+    Add or update business context documentation for a database table.
+
+    This helps future investigations by explaining what data means and how it's used.
+    Think of this as inline documentation for your database schema.
+
+    Args:
+        database: Target database
+        table: Table name
+        description: What this table stores (business context, not technical)
+        common_uses: Common query patterns or use cases for this table
+        related_tables: Tables that commonly join with this one
+            Format: [{"table": "assignments", "relationship": "submissions belong to assignments"}]
+        column_notes: Important notes about specific columns
+            Format: {"status": "Values: pending, submitted, graded. NULL means deleted"}
+        performance_tips: Performance considerations
+            (e.g., "Use assignment_id index for queries", "Large table, always filter by date")
+
+    Returns:
+        Saved documentation with metadata
+
+    Example:
+        await crol_document_schema(
+            database=DatabaseName.ASSIGNMENTS,
+            table="assignment_submissions",
+            description="Stores student submission attempts for assignments. Each row is one submission version (students can resubmit).",
+            common_uses=[
+                "Find all submissions for an assignment",
+                "Get student's latest submission for grading",
+                "Check submission history for academic integrity"
+            ],
+            related_tables=[
+                {"table": "assignments", "relationship": "submissions.assignment_id -> assignments.id"},
+                {"table": "students", "relationship": "submissions.student_id -> students.id"},
+                {"table": "submission_files", "relationship": "files.submission_id -> submissions.id"}
+            ],
+            column_notes={
+                "status": "pending | submitted | graded | returned. NULL = deleted by student",
+                "submitted_at": "UTC timestamp. Can be null for draft/pending submissions",
+                "grade": "Only populated after status = 'graded'"
+            },
+            performance_tips=[
+                "Always use assignment_id in WHERE clause (uses assignment_submissions_assignment_idx)",
+                "Large table (10M+ rows). Add date filters when possible",
+                "Joining to submission_files can be slow without proper indexes"
+            ]
+        )
+    """
+    knowledge_service = KnowledgeService()
+    return await knowledge_service.document_schema(
+        database, table, description, common_uses, related_tables,
+        column_notes or {}, performance_tips or []
+    )
+```
+
+
+#### `crol_search_knowledge`
+```python
+from enum import StrEnum, auto
+
+class KnowledgeType(StrEnum):
+    """Types of knowledge in the knowledge base"""
+    INSIGHTS = auto()
+    PATTERNS = auto()
+    QUERIES = auto()
+    WISDOM = auto()
+
+@mcp.tool()
+async def crol_search_knowledge(
+    query: str,
+    types: list[KnowledgeType] | None = None
+) -> list[dict]:
+    """
+    Full-text search across all accumulated knowledge.
+
+    Args:
+        query: Search query
+        types: Optional filter by knowledge types
+
+    Returns:
+        List of matching knowledge items (insights, patterns, queries, wisdom)
+    """
+    knowledge_service = KnowledgeService()
+    return await knowledge_service.search_knowledge(query, types)
+```
+
+
+## Delegated MCP Tools (External Servers)
+
+{{ project_name }} acts as an **MCP client** internally, connecting to and delegating requests to external {{ project_type }}s. This provides a unified interface while leveraging existing, well-maintained implementations.
+
+### Architecture
+
+{{ project_name }} manages the lifecycle of external {{ project_type }}s:
+
+1. **Startup**: Launch external {{ project_type }} processes (JIRA, GitHub, Confluence)
+2. **Connection**: Establish MCP client connections to each server
+3. **Discovery**: Enumerate available tools from each server
+4. **Proxying**: Expose external tools through {{ project_name }}'s interface
+5. **Delegation**: Forward tool calls to appropriate external server
+6. **Shutdown**: Clean up external server processes
+
+### Implementation Strategy
+
+**MCP Client Library**: Use the Python MCP SDK's client capabilities to connect to external servers.
+
+```python
+# In server.py
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+import asyncio
+
+class ExternalMCPManager:
+    """Manages connections to external {{ project_type }}s"""
+
+    def __init__(self, config):
+        self.config = config
+        self.sessions = {}  # server_name -> ClientSession
+        self.processes = {}  # server_name -> subprocess
+
+    async def start_jira_server(self):
+        """Launch and connect to JIRA {{ project_type }}"""
+        server_params = StdioServerParameters(
+            command="npx",
+            args=["-y", "@atlassian/mcp-server-jira"],
+            env={
+                "JIRA_URL": self.config.jira_url,
+                "JIRA_EMAIL": self.config.jira_email,
+                "JIRA_API_TOKEN": self.config.jira_api_token,
+            }
+        )
+
+        # Launch server and establish connection
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                self.sessions["jira"] = session
+
+                # Discover available tools
+                tools = await session.list_tools()
+                return tools
+
+    async def call_tool(self, server_name: str, tool_name: str, arguments: dict):
+        """Delegate tool call to external server"""
+        session = self.sessions[server_name]
+        result = await session.call_tool(tool_name, arguments)
+        return result
+```
+
+**Tool Proxying**: Dynamically expose external tools through {{ project_name }}'s MCP interface.
+
+```python
+# In server.py
+from fastmcp import FastMCP
+
+mcp = FastMCP("{{ project_name }}")
+external_manager = ExternalMCPManager(config)
+
+async def setup_external_servers():
+    """Initialize external {{ project_type }}s and register their tools"""
+
+    # Start JIRA server
+    jira_tools = await external_manager.start_jira_server()
+    for tool in jira_tools:
+        # Register each JIRA tool as a {{ project_name }} tool
+        register_external_tool(mcp, "jira", tool)
+
+    # Start GitHub server
+    github_tools = await external_manager.start_github_server()
+    for tool in github_tools:
+        register_external_tool(mcp, "github", tool)
+
+    # Start Confluence server
+    confluence_tools = await external_manager.start_confluence_server()
+    for tool in confluence_tools:
+        register_external_tool(mcp, "confluence", tool)
+
+def register_external_tool(mcp_server, server_name: str, tool_spec):
+    """Register an external tool as a {{ project_name }} tool"""
+
+    @mcp_server.tool(name=tool_spec.name, description=tool_spec.description)
+    async def external_tool(**kwargs):
+        """Proxy tool call to external server"""
+        return await external_manager.call_tool(
+            server_name,
+            tool_spec.name,
+            kwargs
+        )
+```
+
+### External {{ project_type }}s
+
+**JIRA Server** (`@atlassian/mcp-server-jira`):
+- `jira_search_issues`: JQL search
+- `jira_get_issue`: Fetch issue details
+- `jira_add_comment`: Add comment to issue
+- `jira_transition_issue`: Change issue status
+- `jira_update_issue`: Update issue fields
+
+**GitHub Server** (`@modelcontextprotocol/server-github`):
+- `github_search_code`: Search code across repositories
+- `github_get_file_contents`: Read file content
+- `github_list_commits`: Get commit history
+- `github_create_issue`: Create new issue
+- `github_create_pull_request`: Create PR
+
+**Confluence Server** (`@atlassian/mcp-server-confluence`):
+- `confluence_search`: Search pages and content
+- `confluence_get_page`: Fetch page content
+- `confluence_list_spaces`: List available spaces
+- `confluence_get_space`: Get space details
+
+### Benefits of Delegation
+
+1. **Maintenance**: Official servers are maintained by Atlassian, GitHub, etc.
+2. **Features**: Automatically get new features as servers are updated
+3. **Authentication**: Leverage official authentication implementations
+4. **API Coverage**: Complete API coverage without reimplementation
+5. **Unified Interface**: Single {{ project_type }} for AI clients to connect to
+
+
+## Configuration
+
+{{ project_name }} requires configuration for:
+1. **Database connections** (read-only replicas)
+2. **External {{ project_type }}s** (JIRA, GitHub, Confluence) - credentials for internal delegation
+3. **Knowledge base** (DuckDB + S3)
+4. **Security settings** (query validation, timeouts, etc.)
+
+### Environment Variables
+
+```bash
+
+
+# Database Connections (Read-Only Replicas)
+DATABASE_URL_AUTHORING=postgresql://readonly_user:<secret>@authoring-ro.db.internal:5432/authoring
+DATABASE_URL_DELIVERY=postgresql://readonly_user:<secret>@delivery-ro.db.internal:5432/delivery
+DATABASE_URL_ASSIGNMENTS=mysql://readonly_user:<secret>@assignments-ro.db.internal:3306/assignments
+DATABASE_URL_ANALYTICS=postgresql://readonly_user:<secret>@analytics-ro.db.internal:5432/analytics
+
+# Background Auto-Learning (Optional - per database)
+DB_DELIVERY__AUTO_LEARN=true                # Enable auto-learning for delivery DB
+DB_DELIVERY__AUTO_LEARN_SAMPLE_SIZE=100     # Rows to sample per table (default: 100)
+DB_DELIVERY__AUTO_LEARN_MAX_TABLES=10       # Max tables to analyze (null = all)
+
+
+# JIRA (for internal MCP delegation)
+JIRA_HOST=https://jira.company.com
+JIRA_EMAIL=bot@company.com
+JIRA_API_TOKEN=<secret>
+JIRA_PROJECT_KEY=CROL
+
+
+# GitHub (for internal MCP delegation)
+GITHUB_TOKEN=<secret>
+GITHUB_ORG=company-org
+
+
+# Confluence (for internal MCP delegation)
+CONFLUENCE_HOST=https://confluence.company.com
+CONFLUENCE_EMAIL=bot@company.com
+CONFLUENCE_API_TOKEN=<secret>
+
+
+# Knowledge Base
+KNOWLEDGE_BASE_DUCKDB_PATH=/var/lib/{{ project_name_hyphen }}/knowledge_base.duckdb
+KNOWLEDGE_BASE_S3_BUCKET=crol-knowledge-base
+KNOWLEDGE_BASE_S3_PREFIX=knowledge/
+KNOWLEDGE_BASE_AWS_REGION=us-east-1
+# AWS credentials via standard AWS credential chain (IAM role, env vars, etc.)
+
+
+# Query Limits
+LIMIT_QUERY_TIME_MS=30000
+LIMIT_RESULT_ROWS=10000
+
+
+# Logging
+LOG_LEVEL=info
+AUDIT_LOG_PATH=/var/log/{{ project_name_hyphen }}-mcp/audit.log
+```
+
+
+### Configuration with Pydantic Settings
+
+```python
+from pydantic import Field, SecretStr, PostgresDsn, MySQLDsn
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class JiraConfig(BaseSettings):
+    """JIRA service configuration"""
+    host: str
+    email: str
+    api_token: SecretStr
+    project_key: str = "CROL"
+
+
+class GitHubConfig(BaseSettings):
+    """GitHub service configuration"""
+    token: SecretStr
+    org: str
+
+
+class ConfluenceConfig(BaseSettings):
+    """Confluence service configuration"""
+    host: str
+    email: str
+    api_token: SecretStr
+
+
+class KnowledgeBaseConfig(BaseSettings):
+    """Knowledge base storage configuration"""
+    duckdb_path: str = "/var/lib/{{ project_name_hyphen }}/knowledge_base.duckdb"
+    s3_bucket: str
+    s3_prefix: str = "knowledge/"
+    aws_region: str = "us-east-1"
+    sync_on_startup: bool = True  # Load from S3 on startup
+    sync_interval_minutes: int = 5  # How often to sync with S3
+
+
+class Settings(BaseSettings):
+    """Main application settings"""
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix_case_sensitive=False,
+    )
+
+    # Database URLs (standard SQLAlchemy format)
+    database_url_authoring: PostgresDsn
+    database_url_delivery: PostgresDsn
+    database_url_assignments: MySQLDsn
+    database_url_analytics: PostgresDsn
+
+    # Service configurations
+    jira: JiraConfig
+    github: GitHubConfig
+    confluence: ConfluenceConfig
+
+    # Knowledge base
+    knowledge_base: KnowledgeBaseConfig
+
+    # Query limits
+    limit_query_time_ms: int = 30000
+    limit_result_rows: int = 10000
+
+    # Logging
+    log_level: str = "INFO"
+    audit_log_path: str = "/var/log/{{ project_name_hyphen }}-mcp/audit.log"
+
+
+# Global settings instance
+settings = Settings()
+```
+
+
+## Knowledge Base Architecture
+
+### Storage Strategy: DuckDB + S3
+
+The knowledge base uses a **hybrid approach** combining local performance with cloud durability:
+
+**Components:**
+- **S3 (Source of Truth)**: All knowledge stored as JSON files in S3 for durability and version history
+- **DuckDB (Local Index)**: Fast queryable index for immediate access and analytics
+- **Sync Layer**: Keeps DuckDB in sync with S3
+
+### Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      {{ project_type }} Instance                    │
+│                                                             │
+│  ┌────────────────┐         ┌─────────────────────────┐     │
+│  │ Knowledge      │ writes  │   DuckDB (Local)        │     │
+│  │ Service        ├────────►│   knowledge_base.duckdb │     │
+│  │                │ reads   │   - Fast queries        │     │
+│  │                │◄────────┤   - JSON analytics      │     │
+│  └───────┬────────┘         └──────────┬──────────────┘     │
+│          │                             │                    │
+│          │ async sync                  │ load on startup    │
+│          ▼                             ▼                    │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Sync Layer (boto3)                      │   │
+│  └─────────────────────┬────────────────────────────────┘   │
+└────────────────────────┼────────────────────────────────────┘
+                         │
+                         │ read/write
+                         ▼
+              ┌──────────────────────┐
+              │   S3 Bucket          │
+              │   crol-knowledge/    │
+              │                      │
+              │   insights/          │
+              │     ├─ {id}.json     │
+              │   patterns/          │
+              │     ├─ {id}.json     │
+              │   queries/           │
+              │     ├─ {id}.json     │
+              │   wisdom/            │
+              │     ├─ {id}.json     │
+              └──────────────────────┘
+```
+
+### Implementation Pattern
+
+```python
+import duckdb
+import boto3
+import json
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+
+class KnowledgeService:
+    def __init__(self, config: KnowledgeBaseConfig):
+        self.config = config
+        self.s3_client = boto3.client('s3', region_name=config.aws_region)
+        self.conn = duckdb.connect(config.duckdb_path)
+        self.executor = ThreadPoolExecutor(max_workers=4)
+
+        # Initialize tables
+        self._init_tables()
+
+        # Load from S3 on startup
+        if config.sync_on_startup:
+            self._sync_from_s3()
+
+    def _init_tables(self):
+        """Create DuckDB tables for knowledge storage"""
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS insights (
+                id VARCHAR PRIMARY KEY,
+                component STRUCT(type VARCHAR, name VARCHAR, repository VARCHAR),
+                insight STRUCT(category VARCHAR, title VARCHAR, description VARCHAR, impact VARCHAR),
+                context STRUCT(discoveredBy VARCHAR, discoveredDate TIMESTAMP, occurrenceCount INTEGER),
+                metadata STRUCT(tags VARCHAR[], relatedDocs VARCHAR[], relatedCode VARCHAR[]),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS patterns (
+                id VARCHAR PRIMARY KEY,
+                pattern STRUCT(symptoms VARCHAR[], indicators JSON),
+                rootCause STRUCT(category VARCHAR, description VARCHAR, affectedComponents VARCHAR[]),
+                solution STRUCT(shortTerm VARCHAR, longTerm VARCHAR),
+                history STRUCT(firstSeen TIMESTAMP, lastSeen TIMESTAMP, occurrences VARCHAR[], resolved BOOLEAN),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Create full-text search index
+        self.conn.execute("INSTALL fts; LOAD fts;")
+
+    def _sync_from_s3(self):
+        """Load all knowledge from S3 into DuckDB"""
+        for knowledge_type in ['insights', 'patterns', 'queries', 'wisdom']:
+            prefix = f"{self.config.s3_prefix}{knowledge_type}/"
+
+            # DuckDB can read JSON directly from S3!
+            s3_path = f"s3://{self.config.s3_bucket}/{prefix}*.json"
+
+            self.conn.execute(f"""
+                INSERT OR REPLACE INTO {knowledge_type}
+                SELECT * FROM read_json_auto('{s3_path}')
+            """)
+
+    async def save_insight(self, insight: dict) -> str:
+        """Save insight to both S3 and DuckDB"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            self.executor,
+            self._sync_save_insight,
+            insight
+        )
+
+    def _sync_save_insight(self, insight: dict) -> str:
+        """Synchronous save operation"""
+        insight_id = insight['id']
+
+        # 1. Write to S3 (source of truth)
+        s3_key = f"{self.config.s3_prefix}insights/{insight_id}.json"
+        self.s3_client.put_object(
+            Bucket=self.config.s3_bucket,
+            Key=s3_key,
+            Body=json.dumps(insight),
+            ContentType='application/json'
+        )
+
+        # 2. Update DuckDB index
+        self.conn.execute("""
+            INSERT OR REPLACE INTO insights
+            SELECT * FROM read_json_auto(?)
+        """, [json.dumps(insight)])
+
+        return insight_id
+
+    async def search_insights(self, component_name: str = None,
+                             category: str = None,
+                             full_text: str = None) -> list[dict]:
+        """Search insights with various filters"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            self.executor,
+            self._sync_search_insights,
+            component_name,
+            category,
+            full_text
+        )
+
+    def _sync_search_insights(self, component_name: str = None,
+                             category: str = None,
+                             full_text: str = None) -> list[dict]:
+        """Synchronous search operation"""
+        query = "SELECT * FROM insights WHERE 1=1"
+        params = []
+
+        if component_name:
+            query += " AND component.name = ?"
+            params.append(component_name)
+
+        if category:
+            query += " AND insight.category = ?"
+            params.append(category)
+
+        if full_text:
+            # Use DuckDB full-text search
+            query += " AND fts_main_insights.match_bm25(?)"
+            params.append(full_text)
+
+        result = self.conn.execute(query, params)
+        return [dict(row) for row in result.fetchall()]
+```
+
+### Benefits of This Approach
+
+1. **Durability**: S3 provides 99.999999999% durability
+2. **Version History**: S3 versioning tracks all changes
+3. **Fast Queries**: DuckDB provides millisecond query times
+4. **JSON Native**: DuckDB excels at nested JSON querying
+5. **Analytics**: Easy to run analytical queries on knowledge patterns
+6. **Backup/Restore**: S3 handles backups automatically
+7. **Multi-Instance**: Multiple {{ project_type }}s can share same S3 bucket
+8. **Cost Effective**: S3 is cheap for document storage
+
+### Sync Strategy
+
+**On Startup:**
+- Load all JSON from S3 into DuckDB
+- Takes seconds even with thousands of entries
+
+**On Write:**
+- Write to S3 immediately (source of truth)
+- Update DuckDB index synchronously
+- Both operations or neither (consistency)
+
+**Periodic Sync:**
+- Optional: Background task to refresh from S3 every N minutes
+- Handles cases where multiple servers write to S3
+
+### Future Enhancements
+
+- **Incremental Sync**: Only sync changed files (track last modified)
+- **Read-Through Cache**: Check DuckDB first, fall back to S3
+- **Write-Back Cache**: Batch writes to S3 for performance
+- **Parquet Format**: Store as Parquet in S3 for even better compression
+- **Semantic Search**: Add vector embeddings for similarity search
+
+---
+
+
+## Background Auto-Learning
+
+### Overview
+
+{{ project_name }} includes **automatic database schema learning** that runs as a background task during server startup. This feature automatically explores configured databases, discovers their schemas, and saves findings to the knowledge base - helping agents understand database structure without manual documentation.
+
+### How It Works
+
+**DatabaseLearningService** automatically:
+1. Connects to each configured database with `auto_learn=true`
+2. Discovers tables, columns, data types, and relationships
+3. Samples data to understand patterns and values
+4. Saves schema documentation to the knowledge base
+5. Makes schemas queryable via `crol_search_knowledge`
+
+**Non-Blocking Design**:
+- Learning runs as a background task after server starts
+- {{ project_type }} accepts requests immediately (doesn't wait for learning)
+- Server startup remains fast (~2.5-3s with auto-learning enabled)
+- Learning completes asynchronously without blocking investigations
+
+### Configuration
+
+Enable auto-learning per database using environment variables:
+
+```bash
+# Enable auto-learning for a database
+DB_<NAME>__AUTO_LEARN=true                # Enable/disable auto-learning
+DB_<NAME>__AUTO_LEARN_SAMPLE_SIZE=100     # Rows to sample per table (default: 100)
+DB_<NAME>__AUTO_LEARN_MAX_TABLES=10       # Max tables to analyze (null = all tables)
+```
+
+**Example Configuration** (`.env` or `.env.test-autolearn`):
+
+```bash
+# Delivery database with auto-learning enabled
+DB_DELIVERY__CONNECTION_STRING=sqlite:///data/delivery.db
+DB_DELIVERY__AUTO_LEARN=true
+DB_DELIVERY__AUTO_LEARN_SAMPLE_SIZE=50
+DB_DELIVERY__AUTO_LEARN_MAX_TABLES=5
+```
+
+### Implementation
+
+**Files:**
+- `src/{{ project_name_underscore }}/database/learning.py` - DatabaseLearningService implementation
+- `src/{{ project_name_underscore }}/server.py` - Startup integration (`_start_background_learning()`, `_learn_database_background()`)
+- `src/{{ project_name_underscore }}/knowledge/service.py` - `save_learned_schema()` method for persisting discoveries
+
+**Startup Flow:**
+
+```python
+async def main():
+    # 1. Initialize database service
+    database_service = DatabaseService(config.databases)
+    
+    # 2. Initialize knowledge service
+    knowledge_service = KnowledgeService(config.knowledge_base)
+    
+    # 3. Start {{ project_type }} (non-blocking)
+    server = Server("{{ project_name_hyphen }}")
+    
+    # 4. Start background learning (non-blocking)
+    await _start_background_learning(
+        database_service=database_service,
+        knowledge_service=knowledge_service
+    )
+    
+    # 5. Server ready - accept requests immediately
+    await server.run()
+```
+
+**Background Learning Task:**
+
+```python
+async def _learn_database_background(
+    db_name: str,
+    database_service: DatabaseService,
+    knowledge_service: KnowledgeService
+) -> None:
+    """Learn database schema in background and save to knowledge base"""
+    
+    logger.info("background_learning_started", database=db_name)
+    
+    # Discover schema
+    learning_service = database_service.get_learning_service(db_name)
+    schema = await learning_service.learn_schema()
+    
+    # Save to knowledge base
+    await knowledge_service.save_learned_schema(
+        database=db_name,
+        schema=schema
+    )
+    
+    logger.info(
+        "background_learning_completed",
+        database=db_name,
+        table_count=len(schema.tables)
+    )
+```
+
+### Performance Characteristics
+
+**Startup Time:**
+- Without auto-learning: ~2.0s
+- With auto-learning enabled: ~2.5-3.0s
+- Background learning: 2-10s depending on database size
+
+**Learning Time** (depends on configuration):
+- Small database (5 tables): ~2-3 seconds
+- Medium database (20 tables): ~5-8 seconds
+- Large database (100+ tables): ~20-30 seconds (use `MAX_TABLES` to limit)
+
+**Resource Usage:**
+- Minimal: Uses existing database connections from pool
+- Configurable: Limit tables and sample size to control impact
+- Safe: Read-only queries, no schema modifications
+
+### Use Cases
+
+**Bootstrap New Databases:**
+```bash
+# Add new database with auto-learning
+DB_ANALYTICS__CONNECTION_STRING=postgresql://...
+DB_ANALYTICS__AUTO_LEARN=true
+```
+
+On next server startup, {{ project_name }} automatically learns the analytics database schema and saves it to the knowledge base.
+
+**Keep Documentation Current:**
+- Auto-learning runs on every server restart
+- Picks up schema changes automatically
+- No manual documentation updates needed
+- Agents always have current schema information
+
+**Speed Up First-Time Investigations:**
+- New agents can immediately query schema info
+- No need to manually explore database structure
+- Reduces time from "I need to query this DB" to "I know what tables exist"
+- Example: `crol_search_knowledge(query="page_views table columns")`
+
+**Understand Data Patterns:**
+- Sample data shows typical values and formats
+- Helps agents construct better queries
+- Identifies enum values, ID formats, date ranges
+- Example: Discovers that `user_id` uses UUID format
+
+### What Gets Learned
+
+**Schema Information:**
+- Table names and descriptions
+- Column names and data types
+- Primary keys and foreign keys
+- Indexes and constraints
+- Column nullability
+
+**Data Patterns** (from sampling):
+- Typical values and ranges
+- Enum/categorical values
+- Date format patterns
+- ID format patterns (UUID, sequential, etc.)
+- String length patterns
+
+**Sample Query** (stored in knowledge base):
+
+```json
+{
+  "type": "database_schema",
+  "database": "delivery",
+  "table": "page_views",
+  "schema": {
+    "columns": [
+      {"name": "id", "type": "INTEGER", "nullable": false, "primary_key": true},
+      {"name": "user_id", "type": "VARCHAR", "nullable": false, "pattern": "UUID"},
+      {"name": "page_url", "type": "TEXT", "nullable": false},
+      {"name": "viewed_at", "type": "TIMESTAMP", "nullable": false},
+      {"name": "duration_ms", "type": "INTEGER", "nullable": true}
+    ],
+    "sample_values": {
+      "user_id": ["550e8400-e29b-41d4-a716-446655440000", ...],
+      "duration_ms": [1250, 3400, 890, null]
+    },
+    "row_count": 15234
+  },
+  "learned_at": "2026-01-29T16:00:00Z"
+}
+```
+
+### Querying Learned Schemas
+
+Agents can query learned schemas using standard knowledge base tools:
+
+```python
+# Search for specific table
+result = await session.call_tool(
+    "crol_search_knowledge",
+    {"query": "page_views table schema"}
+)
+
+# Find tables related to users
+result = await session.call_tool(
+    "crol_search_knowledge",
+    {"query": "user authentication tables"}
+)
+
+# Get all schemas for a database
+result = await session.call_tool(
+    "crol_get_insights",
+    {"component_name": "database.delivery"}
+)
+```
+
+### Disabling Auto-Learning
+
+Auto-learning is opt-in per database:
+
+```bash
+# Disable auto-learning (default)
+DB_PRODUCTION__AUTO_LEARN=false
+
+# Or omit the variable entirely
+# DB_PRODUCTION__AUTO_LEARN not set = disabled
+```
+
+**When to Disable:**
+- Production databases (reduce startup load)
+- Very large databases (hundreds of tables)
+- Databases with sensitive data (privacy concerns)
+- Development databases with frequently changing schemas
+
+**Alternatives:**
+- Manual documentation in knowledge base
+- Use `crol_get_table_schema` tool for on-demand schema discovery
+- Document schemas in external docs and reference them
+
+### Testing
+
+**Test Script:** `test_background_learning.py`
+
+Validates:
+- ✅ Server starts fast (< 5s with auto-learning)
+- ✅ Background learning doesn't block server
+- ✅ Schemas successfully learned and saved
+- ✅ Learned schemas are queryable
+
+**Example Test Run:**
+
+```bash
+uv run test_background_learning.py
+
+# Output:
+# ✅ Server started in 2.68s
+# ✅ Background learning completed (2 tables learned)
+# ✅ Schemas saved to knowledge base
+# ✅ Schemas queryable via crol_search_knowledge
+```
+
+### Future Enhancements
+
+**Planned Improvements:**
+- **Incremental Learning**: Only re-learn changed tables
+- **Scheduled Updates**: Re-learn schemas periodically (e.g., daily)
+- **Schema Diff Detection**: Alert when schemas change
+- **Relationship Discovery**: Automatically detect foreign key relationships
+- **Query Suggestion**: Suggest queries based on learned patterns
+- **Privacy Filtering**: Exclude sensitive columns from learning
+
+---
+
+
+## Security Considerations
+
+
+### Database Security
+
+1. **Read-Only Replicas**: All database connections must be to read-only replicas
+2. **Prepared Statements**: Use parameterized queries to prevent SQL injection
+3. **Query Validation**:
+   - Whitelist allowed SQL keywords (SELECT, FROM, WHERE, JOIN, etc.)
+   - Block DML/DDL statements (INSERT, UPDATE, DELETE, DROP, etc.)
+   - Validate table names against allowed list
+4. **Connection Pooling**: Limit concurrent connections per database
+5. **Timeouts**: Enforce query execution timeouts
+6. **Result Limits**: Cap result set sizes
+
+
+### API Security
+
+1. **Authentication**: All service API tokens stored securely (environment variables, secrets manager)
+2. **Rate Limiting**: Implement rate limits for API calls with aiocache
+3. **Audit Logging**: Log all queries and API calls with timestamps and user context using structlog
+4. **Access Control**: Verify agent permissions before executing sensitive operations
+5. **Secrets Management**: Use AWS Secrets Manager, HashiCorp Vault, or similar
+6. **SecretStr**: Use Pydantic's SecretStr type to prevent accidental logging of secrets
+
+
+### {{ project_type }} Security
+
+1. **Transport Security**: Use secure transport for MCP communication (stdio by default)
+2. **Input Validation**: Validate all tool inputs with Pydantic models
+3. **Output Sanitization**: Sanitize sensitive data in responses
+4. **Error Handling**: Don't expose internal details in error messages (use custom exception handlers)
+
+
+## Deployment
+
+### Local Development
+
+**Using Makefile** (recommended):
+
+The project uses a Makefile for common development tasks. Follow the **full Makefile pattern from `assess-cdc-aws`**, which includes:
+- Color-coded output (RED, GREEN, YELLOW, BLUE, TEAL, GRAY, CLEAR, ITALIC)
+- Organized sections with `## ====` headers and `## ----` subheaders
+- `.ONESHELL` and proper shell configuration
+- Guard targets for validation (e.g., `_guard_env`, `_confirm`)
+- Pretty-printed help using awk with `PRINT_HELP_PREAMBLE`
+- Comprehensive `.PHONY` declarations
+
+**Reference**: See `/Users/tucker.beck/src/mhe/assess-cdc-aws/Makefile` for the full pattern.
+
+**Common targets**:
+
+```bash
+# Show available commands
+make help
+
+# Install dependencies
+make install
+
+# Run tests
+make test
+
+# Run tests with coverage
+make test-coverage
+
+# Type checking
+make typecheck
+
+# Lint code
+make lint
+
+# Format code
+make fmt
+
+# Run all checks (test + typecheck + lint)
+make check
+
+# Run the server in development mode
+make dev
+
+# Clean build artifacts
+make clean
+```
+
+**Manual commands** (if not using Makefile):
+
+```bash
+# Install dependencies
+uv sync
+
+# Run in development mode
+uv run {{ project_name_hyphen }}
+
+# Run tests
+uv run pytest
+
+# Type checking
+uv run basedpyright src/
+```
+
+
+### Integration with Code Agents
+
+**OpenCode Configuration** (`~/.opencode/config.json`):
+```json
+{
+  "mcpServers": {
+    "{{ project_name_hyphen }}": {
+      "command": "uv",
+      "args": ["run", "{{ project_name_hyphen }}"],
+      "cwd": "/path/to/{{ project_name_hyphen }}-mcp"
+    }
+  }
+}
+```
+
+**Claude Desktop Configuration**:
+```json
+{
+  "mcpServers": {
+    "{{ project_name_hyphen }}": {
+      "command": "uv",
+      "args": ["run", "{{ project_name_hyphen }}"],
+      "cwd": "/path/to/{{ project_name_hyphen }}-mcp"
+    }
+  }
+}
+```
+
+
+## Testing Strategy
+
+### BDD/Gherkin Tests with pytest-bdd
+
+Following the pattern from `assess-authoring-api`, we use **pytest-bdd** (Python's Cucumber equivalent) for behavior-driven development testing with Gherkin feature files.
+
+**Directory Structure**:
+```
+{{ project_name_hyphen }}-mcp/
+├── features/
+│   ├── database/
+│   │   ├── query_database.feature
+│   │   └── get_table_schema.feature
+│   ├── knowledge/
+│   │   ├── search_knowledge.feature
+│   │   └── record_insight.feature
+│   ├── delegation/
+│   │   ├── jira_integration.feature
+│   │   └── github_integration.feature
+│   └── step_definitions/
+│       ├── database_steps.py
+│       ├── knowledge_steps.py
+│       ├── delegation_steps.py
+│       ├── mcp_server_steps.py
+│       └── conftest.py  # pytest-bdd fixtures and hooks
+└── tests/
+    └── unit/  # Traditional pytest unit tests
+```
+
+**Example Feature File** (`features/database/query_database.feature`):
+```gherkin
+Feature: Query Database Tool
+
+  Background:
+    Given the {{ project_name }} {{ project_type }} is running
+    And the authoring database is available
+
+  Scenario: Query authoring database successfully
+    When I execute the "query_database" tool with parameters:
+      | parameter | value                              |
+      | database  | authoring                          |
+      | query     | SELECT * FROM users LIMIT 10       |
+    Then the tool execution should succeed
+    And I should receive 10 rows
+    And the response time should be under 1000ms
+    And the results should include columns:
+      | column    |
+      | id        |
+      | username  |
+      | email     |
+
+  Scenario: Query with SQL injection attempt is blocked
+    When I execute the "query_database" tool with parameters:
+      | parameter | value                                    |
+      | database  | authoring                                |
+      | query     | SELECT * FROM users; DROP TABLE users;-- |
+    Then the tool execution should fail
+    And the error message should contain "Invalid SQL"
+    And no database modifications should occur
+
+  Scenario: Query timeout is enforced
+    When I execute the "query_database" tool with parameters:
+      | parameter | value                                |
+      | database  | analytics                            |
+      | query     | SELECT pg_sleep(60) FROM large_table |
+    Then the tool execution should fail within 31 seconds
+    And the error message should contain "timeout"
+```
+
+**Example Step Definitions** (`features/step_definitions/database_steps.py`):
+```python
+import pytest
+from pytest_bdd import scenarios, given, when, then, parsers
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+import time
+
+# Load all scenarios from database feature files
+scenarios('../database/')
+
+@given('the {{ project_name }} {{ project_type }} is running')
+def mcp_server_running(mcp_server):
+    """Fixture that starts the {{ project_type }} (defined in conftest.py)"""
+    assert mcp_server.is_running()
+
+@given('the authoring database is available')
+def authoring_db_available(test_database):
+    """Fixture that sets up test database (defined in conftest.py)"""
+    assert test_database.is_connected('authoring')
+
+@when(parsers.parse('I execute the "{tool_name}" tool with parameters:\n{params}'))
+def execute_tool_with_params(context, tool_name, params):
+    """Execute MCP tool with parsed parameters from table"""
+    param_dict = {}
+    for row in params.split('\n')[1:]:  # Skip header
+        if '|' in row:
+            cols = [c.strip() for c in row.split('|')[1:-1]]
+            if len(cols) == 2:
+                param_dict[cols[0]] = cols[1]
+
+    context.start_time = time.time()
+    try:
+        context.result = context.mcp_client.call_tool(tool_name, param_dict)
+        context.error = None
+    except Exception as e:
+        context.result = None
+        context.error = e
+    context.execution_time = time.time() - context.start_time
+
+@then('the tool execution should succeed')
+def tool_execution_succeeds(context):
+    assert context.error is None
+    assert context.result is not None
+
+@then(parsers.parse('I should receive {count:d} rows'))
+def check_row_count(context, count):
+    assert len(context.result.get('rows', [])) == count
+
+@then(parsers.parse('the response time should be under {max_ms:d}ms'))
+def check_response_time(context, max_ms):
+    assert context.execution_time * 1000 < max_ms
+```
+
+**pytest-bdd Configuration** (`pytest.ini`):
+```ini
+[pytest]
+testpaths = features tests
+python_files = test_*.py *_test.py
+python_classes = Test*
+python_functions = test_*
+bdd_features_base_dir = features/
+markers =
+    integration: Integration tests that require external services
+    unit: Fast unit tests
+    security: Security-focused tests
+    performance: Performance/load tests
+asyncio_mode = auto
+```
+
+
+### Additional Test Types
+
+1. **Unit Tests** (`tests/unit/`): Test individual services and utilities with pytest
+   ```python
+   import pytest
+   from {{ project_name_underscore }}.services.database import DatabaseService
+
+   @pytest.mark.unit
+   @pytest.mark.asyncio
+   async def test_build_query():
+       service = DatabaseService()
+       query = service.build_safe_query("SELECT * FROM users WHERE id = ?", [123])
+       assert "DROP" not in query.upper()
+   ```
+
+2. **Integration Tests**: Feature files marked with `@integration` tag for tests requiring real services
+
+3. **Security Tests**: Feature files in `features/security/` with scenarios for:
+   - SQL injection prevention
+   - Query timeout enforcement
+   - Read-only transaction validation
+   - Result size limiting
+
+4. **Performance Tests**: Using pytest-benchmark for query optimization validation
+   ```python
+   @pytest.mark.performance
+   def test_query_performance(benchmark):
+       result = benchmark(execute_complex_query)
+       assert result.stats.mean < 1.0  # 1 second max
+   ```
+
+### Running Tests
+
+```bash
+# Run all BDD feature tests
+make test-features
+
+# Run specific feature
+pytest features/database/query_database.feature
+
+# Run with tags
+pytest -m "unit and not integration"
+
+# Run with coverage
+pytest --cov={{ project_name_underscore }} --cov-report=html
+
+# Run performance benchmarks
+pytest -m performance --benchmark-only
+```
+
+---
+
+
+## Future Enhancements
+
+The following features are not part of the current MVP but may be added post-launch:
+
+### Dynamic Database Discovery
+
+**Purpose**: Allow databases to be added/removed without code changes using AWS Systems Manager Parameter Store or AWS Secrets Manager.
+
+**Current State (MVP)**:
+- Static database configuration via environment variables
+- Fixed database names: `authoring`, `delivery`, `assignments`, `analytics`
+- Simple, reliable, easy to test locally
+
+**Future Enhancement**:
+- Dynamic discovery of databases from AWS SSM Parameter Store or AWS Secrets Manager
+- Add new databases by creating parameters/secrets (no code deployment)
+- Automatic credential rotation with AWS RDS integration
+- Environment-specific configurations (dev/staging/prod)
+
+**Implementation Approaches**:
+
+**Option 1: AWS Systems Manager Parameter Store (Hierarchical)**
+```
+/{{ project_name_hyphen }}/databases/authoring/host -> "authoring-ro.db.internal"
+/{{ project_name_hyphen }}/databases/authoring/port -> "5432"
+/{{ project_name_hyphen }}/databases/authoring/password -> SecureString
+...
+```
+
+**Option 2: AWS Secrets Manager (Recommended)**
+```json
+Secret Name: {{ project_name_hyphen }}/databases
+{
+  "authoring": {
+    "host": "authoring-ro.db.internal",
+    "port": 5432,
+    "database": "authoring",
+    "user": "readonly_user",
+    "password": "***"
+  },
+  "new_database": { ... }  // Add without code changes!
+}
+```
+
+**Benefits**:
+- ✅ Add/remove databases without redeployment
+- ✅ Credentials never in code or version control
+- ✅ IAM-based access control
+- ✅ Automatic credential rotation (with RDS integration)
+- ✅ CloudTrail audit trail
+- ✅ Environment isolation
+
+**Implementation**:
+- Add `DatabaseConfigSource` enum (`ENV`, `AWS_SSM`, `AWS_SECRETS`)
+- Implement `Settings.load_databases()` method
+- Dynamically build database URL dictionary at startup
+- Add boto3 dependency
+
+See `agent-context/ideas.md` for detailed implementation approach.
+
+
+### Production Deployment
+
+**Purpose**: Deploy {{ project_name }} in production environments (Docker, Kubernetes, etc.)
+
+**Current State (MVP)**:
+- Local development only
+- Run with `uv run {{ project_name_hyphen }}`
+- Configured via `.env` file
+
+**Future Enhancement**: Production deployment infrastructure
+
+**Docker Container**:
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies
+RUN uv sync --frozen --no-dev
+
+# Copy application code
+COPY src ./src
+
+# Run the {{ project_type }}
+CMD ["uv", "run", "{{ project_name_hyphen }}"]
+```
+
+**Kubernetes Deployment**:
+- Deploy as a service in the cluster
+- Use ConfigMaps for non-sensitive config
+- Use Secrets for API tokens and database passwords
+- Configure resource limits and health checks
+- Use init containers to validate database connections
+- Set readiness and liveness probes
+
+
+### Monitoring and Observability
+
+**Purpose**: Production monitoring, metrics, alerting, and dashboards
+
+**Current State (MVP)**:
+- Basic logging with Python logging
+- No metrics collection
+- No alerting
+
+**Future Enhancement**: Full observability stack
+
+**Metrics** (using prometheus-client):
+- Tool invocation counts
+- Query execution times
+- API response times
+- Error rates
+
+**Logging** (using structlog):
+- Structured logs for all operations
+- Audit trail for compliance
+- Centralized log aggregation
+
+**Alerting**:
+- High error rates (via Prometheus Alertmanager)
+- Slow queries (> 10s)
+- API rate limit approaches
+- Database connection failures
+
+**Dashboards** (Grafana):
+- Real-time usage statistics
+- Performance metrics
+- Error analysis
+
+
+### Slack Bot Integration (Optional)
+
+**Purpose**: Provide Slack-based interface for triggering CROL investigations and receiving real-time progress updates.
+
+**Architecture**: The Slack bot uses OpenCode's official HTTP server API as an intermediary, rather than custom MCP tools or direct integration.
+
+```
+┌──────────────┐     Slack Events API    ┌──────────────┐
+│    Slack     │ ───────────────────────→ │  Slack Bot   │
+│  Workspace   │                          │  (Python)    │
+└──────────────┘                          └──────┬───────┘
+                                                 │
+                                                 │ HTTP REST API
+                                                 │ + SSE (streaming)
+                                                 ↓
+                                          ┌──────────────────┐
+                                          │ OpenCode Server  │
+                                          │ (opencode serve) │
+                                          └──────┬───────────┘
+                                                 │
+                                                 │ MCP stdio protocol
+                                                 ↓
+                                          ┌──────────────────┐
+                                          │  {{ project_name }} MCP  │
+                                          │     Server       │
+                                          └──────────────────┘
+```
+
+**Why This Design:**
+- ✅ Uses OpenCode's official HTTP server (`opencode serve`) - no custom HTTP transport needed
+- ✅ Leverages OpenCode's agent capabilities (context management, tool orchestration, streaming)
+- ✅ Slack bot is simple HTTP client + event handler (slack-bolt framework)
+- ✅ Server-Sent Events (SSE) enable real-time progress updates in Slack threads
+- ✅ No changes required to {{ project_name }} {{ project_type }} (remains stdio-based)
+
+**User Experience:**
+```
+User in Slack: @{{ project_name_hyphen }} investigate JIRA issue CROL-1234
+
+Bot creates thread:
+├─ [Working] Starting investigation for CROL-1234...
+├─ [Tool] Fetching issue details from JIRA...
+├─ [Result] Found issue: "Users unable to submit assignment"
+├─ [Tool] Querying database for submission logs...
+├─ [Result] Found 15 failed submissions in last hour
+├─ [Tool] Analyzing error patterns...
+└─ [Complete] Investigation complete! Summary:
+    • 15 users affected
+    • Root cause: Database connection timeout
+    • Recommendation: Increase connection pool size
+    [View Details] [Create Incident Report]
+```
+
+**Implementation Components:**
+
+1. **OpenCode HTTP Server** (official, no customization needed)
+   - REST API: `/session`, `/event`, `/prompt_async`
+   - Server-Sent Events (SSE) for streaming responses
+   - Session management with conversation context
+   - Already configured to connect to {{ project_name }} via stdio
+
+2. **Slack Bot** (custom implementation)
+   - Framework: `slack-bolt` (official Slack SDK for Python)
+   - HTTP Client: `httpx` for OpenCode API calls
+   - SSE Client: `sse-client` or `httpx-sse` for streaming
+   - Event handlers:
+     - `@app.event("app_mention")` - Handle @{{ project_name_hyphen }} mentions
+     - `@app.command("/crol")` - Slash command for investigations
+     - `@app.event("message")` - Thread replies for follow-up questions
+   - Responsibilities:
+     - Parse Slack events and extract user intent
+     - Create OpenCode session via HTTP API
+     - Send prompts to OpenCode asynchronously
+     - Stream progress updates from SSE endpoint to Slack thread
+     - Format responses with Slack Block Kit
+     - Handle errors gracefully
+
+**Dependencies:**
+```bash
+# Add Slack bot dependencies to existing project
+uv add slack-bolt httpx httpx-sse
+```
+
+**Project Structure Benefits:**
+- ✅ Single repository with shared tooling (uv, ruff, basedpyright, pytest)
+- ✅ Single `pyproject.toml` with two entrypoints
+- ✅ Shared dependencies and version management
+- ✅ Unified CI/CD pipeline
+- ✅ Tests in parallel directory structure (`tests/{{ project_name_underscore }}/`, `tests/slack_bot/`)
+
+**Deployment:**
+```yaml
+# docker-compose.yaml
+version: '3.8'
+services:
+  opencode-server:
+    image: opencode:latest
+    command: opencode serve --port 4096
+    volumes:
+      - ./opencode-config:/root/.opencode
+    networks:
+      - crol-network
+
+  slack-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.slack-bot
+    command: uv run slack-bot
+    environment:
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - OPENCODE_API_URL=http://opencode-server:4096
+    depends_on:
+      - opencode-server
+    networks:
+      - crol-network
+```
+
+**Dockerfile.slack-bot:**
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Copy uv and install dependencies
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
+
+# Copy source code (both packages)
+COPY src ./src
+
+# Run Slack bot
+CMD ["uv", "run", "slack-bot"]
+```
+
+**Security Considerations:**
+- Slack workspace verification (verify signing secret)
+- User authorization (map Slack user ID to permissions)
+- Channel whitelist (only allow bot in approved channels)
+- Rate limiting per user
+- Audit logging for all investigations
+- Sensitive data filtering in responses
+
+**See Also:** `agent-context/slack-bot-design.md` for complete implementation specification.
+
+**Status:** Core system component (Phase 8 in build plan) - primary user interface for CROL investigations.
+
+
+### {{ project_name }} HTTP Mode (Future Enhancement)
+
+**Purpose**: Enable direct HTTP access to {{ project_name }}'s MCP tools (bypassing OpenCode).
+
+**Current State (MVP)**: {{ project_name }} is stdio-only. All clients (OpenCode, Claude Desktop, Slack bot) connect via stdio or through OpenCode's HTTP server.
+
+**Future Enhancement**: Add HTTP transport to {{ project_name }} for direct API access.
+
+**Use Cases:**
+- Web-based dashboards accessing {{ project_name }} tools directly
+- Backend services needing direct tool access (no agent orchestration)
+- Custom clients that don't need OpenCode's agent capabilities
+- Load balancing across multiple {{ project_name }} instances
+
+**Architecture:**
+```
+┌──────────────────┐     HTTPS + JWT     ┌──────────────────────┐
+│  External Client │ ───────────────────→ │ Reverse Proxy (nginx)│
+└──────────────────┘                      └──────────┬───────────┘
+                                                     │
+                                                     ↓
+                                          ┌──────────────────────┐
+                                          │  {{ project_name }} HTTP     │
+                                          │  Transport Layer     │
+                                          │  - SSE for messages  │
+                                          │  - POST /mcp         │
+                                          │  - JWT validation    │
+                                          └──────────┬───────────┘
+                                                     │
+                                                     ↓
+                                          ┌──────────────────────┐
+                                          │  {{ project_name }} MCP Core │
+                                          │  (existing tools)    │
+                                          └──────────────────────┘
+```
+
+**Key Differences from Slack Bot Approach:**
+
+| Aspect | Slack Bot (Recommended MVP) | HTTP Mode (Future) |
+|--------|----------------------------|-------------------|
+| **Client** | Slack bot → OpenCode HTTP → {{ project_name }} stdio | Direct HTTP clients → {{ project_name }} HTTP |
+| **Orchestration** | OpenCode manages agent behavior | Client handles orchestration |
+| **Authentication** | Slack workspace + OpenCode session | JWT tokens (McGraw Hill Token Service) |
+| **Use Case** | Slack-based investigations | Direct API access, dashboards |
+| **Complexity** | Low (reuse OpenCode HTTP) | High (implement HTTP transport) |
+| **Implementation** | Phase 8 (core component) | Future enhancement |
+
+**Implementation Requirements:**
+- Add FastAPI or Starlette for HTTP server
+- Implement MCP-over-HTTP transport (SSE + POST)
+- Integrate McGraw Hill Token Service for JWT authentication
+- Add client ID whitelisting and authorization
+- Implement rate limiting and quotas
+- Add TLS termination (nginx/traefik)
+- Create client SDK for easier integration
+
+**Status:** Not planned for MVP. Consider after Slack bot proves valuable.
+
+**See Also:** `agent-context/deployment-planning.md` for detailed HTTP mode design and authentication patterns.
+
+
+### Alternative Slack Integration: MCP Tools for Slack Search (Not Recommended)
+
+**Purpose**: Provide MCP tools for agents to search Slack messages during investigations (not a Slack bot).
+
+**Implementation Approach**:
+- Use `slack-sdk` for API access
+- Build custom MCP tools (no official Slack {{ project_type }} exists)
+- Implement strict security controls (channel whitelist, read-only access)
+
+**Tools to Implement**:
+- `crol_search_slack_messages`: Search messages by keyword, date range, or channel
+- `crol_get_slack_thread`: Retrieve full thread context for incident discussions
+- `crol_find_similar_incidents`: Find similar past incidents in Slack channels
+
+**Security Considerations**:
+- Channel whitelist to prevent access to sensitive channels
+- No write/post capabilities
+- Audit all Slack queries
+- Rate limiting to respect Slack API limits
+
+**Configuration Example**:
+```bash
+# .env
+SLACK_BOT_TOKEN=<secret>
+SLACK_ALLOWED_CHANNELS=incidents,engineering-alerts,on-call
+```
+
+**Why Not Recommended:**
+This approach treats Slack as a data source (search only), not as a user interface. It's less valuable than the Slack bot approach because:
+- ❌ Engineers must still use OpenCode or Claude Desktop as primary interface
+- ❌ No team visibility into ongoing investigations
+- ❌ No conversation history in Slack
+- ✅ Simpler implementation (just MCP tools)
+- ✅ Can coexist with Slack bot approach
+
+**Status:** Lower priority than Slack bot. Consider if Slack search is valuable during investigations.
+
+
+### Other Potential Enhancements
+
+- **Real-time Collaboration**: Allow multiple agents/engineers to work on same CROL
+- **Advanced Analytics**: Pattern detection, ML-based incident classification
+- **Monitoring Integration**: Direct integration with Datadog, New Relic, Grafana
+- **Custom Dashboards**: Web UI for CROL analytics and knowledge base exploration
+- **Automated Testing**: Generate test cases based on CROL patterns
+- **Performance Profiling**: Integration with APM tools for performance analysis
