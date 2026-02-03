@@ -53,7 +53,7 @@ class Role(str, Enum):
     @classmethod
     def from_string(cls, value: str) -> "Role":
         """Convert string to Role enum (case-insensitive)"""
-        value_title = value.title()
+        _value_title = value.title()
         for member in cls:
             if member.value.lower() == value.lower():
                 return member

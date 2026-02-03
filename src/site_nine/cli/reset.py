@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
-from pathlib import Path
 
 import typer
 from rich.console import Console
@@ -72,7 +70,7 @@ def reset_command(
     task_count = db.execute_query("SELECT COUNT(*) as count FROM tasks")[0]["count"]
     dep_count = db.execute_query("SELECT COUNT(*) as count FROM task_dependencies")[0]["count"]
 
-    console.print(f"[yellow]Data to be deleted:[/yellow]")
+    console.print("[yellow]Data to be deleted:[/yellow]")
     console.print(f"  • {agent_count} agent sessions")
     console.print(f"  • {task_count} tasks")
     console.print(f"  • {dep_count} task dependencies")

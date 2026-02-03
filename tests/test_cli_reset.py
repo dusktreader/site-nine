@@ -77,12 +77,12 @@ def test_reset_deletes_all_data(initialized_project: Path):
     task_manager = TaskManager(db)
 
     # Create agents
-    session_id1 = agent_manager.start_session(
+    _ = agent_manager.start_session(
         name="agent1",
         role="Builder",
         task_summary="Task 1",
     )
-    session_id2 = agent_manager.start_session(
+    _ = agent_manager.start_session(
         name="agent2",
         role="Designer",
         task_summary="Task 2",
@@ -133,7 +133,7 @@ def test_reset_deletes_session_files(initialized_project: Path):
     db = Database(db_path)
     manager = AgentSessionManager(db)
 
-    session_id = manager.start_session(
+    _session_id = manager.start_session(
         name="test-agent",
         role="Builder",
         task_summary="test-task",
@@ -207,7 +207,7 @@ def test_reset_resets_daemon_usage_counts(initialized_project: Path):
     db = Database(db_path)
     manager = AgentSessionManager(db)
 
-    session_id = manager.start_session(
+    _session_id = manager.start_session(
         name="azazel",
         role="Builder",
         task_summary="test-task",

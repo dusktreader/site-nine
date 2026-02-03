@@ -52,7 +52,7 @@ class TaskManager:
         tasks = [Task(**row) for row in rows]
 
         # Sort by priority (descending), then by task ID components
-        from site_nine.tasks.task_ids import PRIORITY_CODES, ROLE_PREFIXES, TASK_ID_PATTERN
+        from site_nine.tasks.task_ids import TASK_ID_PATTERN
 
         priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
 

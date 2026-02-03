@@ -146,7 +146,7 @@ def check_command(
                 console.print(f"      {pattern}")
             checks_warning += 1
         else:
-            console.print(f"  [green]✓[/green] All recommended .gitignore patterns present")
+            console.print("  [green]✓[/green] All recommended .gitignore patterns present")
             checks_passed += 1
     console.print()
 

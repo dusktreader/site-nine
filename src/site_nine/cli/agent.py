@@ -535,7 +535,7 @@ def _detect_session_via_recency(
                 age = int(time.time() - mtime)
                 console.print(f"  [green]{session_file.stem}[/green] ({slug}) - {age}s ago")
                 console.print(f"    {title}\n")
-            except:
+            except Exception:
                 pass
 
         console.print("[yellow]Run with: s9 agent rename-tui <name> <role> --session-id <id>[/yellow]")
@@ -552,7 +552,7 @@ def _detect_session_via_recency(
         age = int(time.time() - mtime)
         console.print(f"[yellow]No session modified in last 3 seconds. Using most recent ({age}s ago).[/yellow]")
         console.print(f"[yellow]Session: {session_id}[/yellow]")
-        console.print(f"[yellow]If this is wrong, pass --session-id explicitly[/yellow]\n")
+        console.print("[yellow]If this is wrong, pass --session-id explicitly[/yellow]\n")
         logger.debug("session_auto_detected_fallback", session_id=session_id, age_seconds=age)
         return session_id
 
@@ -665,7 +665,6 @@ def list_opencode_sessions() -> None:
     Shows session IDs and titles to help identify which session to rename.
     Use the session ID with: s9 agent rename-tui <name> <role> --session-id <id>
     """
-    import hashlib
 
     try:
         opencode_dir = get_opencode_dir()
