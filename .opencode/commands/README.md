@@ -25,22 +25,26 @@ Together, they provide a powerful way to standardize and simplify common develop
 
 **Purpose:** Initialize a new development session with proper role selection and daemon naming.
 
-**Purpose:** Initialize a new development session with proper role selection and daemon naming.
-
 **Usage:**
 ```
 /summon
+/summon <role>
 ```
 
+**Examples:**
+- `/summon` - Interactive mode: asks you to choose a role
+- `/summon operator` - Direct mode: starts an Operator session immediately
+- `/summon builder` - Direct mode: starts a Builder session immediately
+
 **What it does:**
-1. Asks you to choose a role (Administrator, Architect, Builder, Tester, etc.)
+1. (If no role provided) Asks you to choose a role (Administrator, Architect, Builder, Tester, etc.)
 2. Suggests a daemon name from mythology appropriate to your role
 3. Checks for name conflicts with existing sessions
 4. Creates a session file with proper metadata
 5. Reads essential project documentation
 6. Shows available tasks for your role
 
-**Example interaction:**
+**Example interaction (interactive mode):**
 ```
 User: /summon
 
@@ -67,23 +71,28 @@ Agent: ✅ Session initialized!
 
 I'm Goibniu, your Builder agent for this session.
 
-Before we begin, I need to read the essential project documentation:
-1. .opencode/README.md - Project overview
-2. .opencode/work/planning/PROJECT_STATUS.md - Current status
-3. .opencode/guides/AGENTS.md - Development patterns
-4. .opencode/procedures/COMMIT_GUIDELINES.md - Commit format
-
-[Agent reads files...]
-
-I've reviewed the project documentation. Here's what I can help with:
-
-Current Project Status: ~80% complete, 11 HIGH priority tasks available
-
-To find Builder tasks:
-cd .opencode/tasks && ./tasks.py list --status TODO --role Builder
-
-What would you like me to work on?
+[Session continues...]
 ```
+
+**Example interaction (direct mode):**
+```
+User: /summon operator
+
+Agent: I suggest the name "hemera" for this Operator session.
+(Hemera is the Greek goddess of day)
+
+Would you like to use this name, or choose a different one?
+
+User: yes
+
+Agent: ✅ Session initialized!
+
+I'm Hemera, your Operator agent for this session.
+
+[Session continues...]
+```
+
+**Pro tip:** Use direct mode (`/summon <role>`) to skip the role selection and start working faster!
 
 ---
 

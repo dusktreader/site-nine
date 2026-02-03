@@ -71,7 +71,14 @@ Which role would you like me to assume?
 
 ## Step 2: Role Selection
 
-After showing the project status, ask the user what role you should assume for this session:
+**IMPORTANT:** Check if a role was already provided as an argument to `/summon`.
+
+If the user invoked `/summon <role>` (e.g., `/summon operator`), the role will be provided in the skill parameters. In this case:
+- Skip the role selection prompts below
+- Use the provided role directly
+- Proceed immediately to Step 3 (Daemon Name Selection)
+
+**If NO role was provided**, ask the user what role you should assume for this session:
 
 **Available Roles:**
 - **Manager** - Coordination, task prioritization, delegation

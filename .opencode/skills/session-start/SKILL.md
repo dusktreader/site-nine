@@ -102,7 +102,14 @@ Which role would you like me to assume?
 
 ## Step 2: Role Selection
 
-After showing the project status, display the standardized role selection prompt using the s9 CLI:
+**IMPORTANT:** Check if a role was already provided as an argument to `/summon`.
+
+If the user invoked `/summon <role>` (e.g., `/summon operator`), the role will be provided in the skill parameters. In this case:
+- Skip the role selection prompts below
+- Use the provided role directly
+- Proceed immediately to Step 3 (Daemon Name Selection)
+
+**If NO role was provided**, display the standardized role selection prompt using the s9 CLI:
 
 ```bash
 s9 agent roles
