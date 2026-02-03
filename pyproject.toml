@@ -1,7 +1,7 @@
 [project]
 name = "site-nine"
 version = "0.2.0"
-description = "Generic orchestration framework for AI agent workflows in software development"
+description = "The headquarters for AI agent orchestration - orchestration framework for AI-assisted software development with OpenCode"
 authors = [
     {name = "Tucker Beck", email ="tucker.beck@gmail.com"},
 ]
