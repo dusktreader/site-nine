@@ -12,7 +12,7 @@ class TemplateRenderer:
 
     def __init__(self) -> None:
         self.env = Environment(
-            loader=PackageLoader("s9", "templates"),
+            loader=PackageLoader("site_nine", "templates"),
             autoescape=select_autoescape(),
             keep_trailing_newline=True,
         )
