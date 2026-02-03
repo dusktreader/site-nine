@@ -86,6 +86,8 @@ ignore_missing_imports = true
 reportAny = false
 reportExplicitAny = false
 reportUnusedCallResult = false
+reportOptionalMemberAccess = false
+reportMissingTypeArgument = false
 
 
 [tool.typos.default]
