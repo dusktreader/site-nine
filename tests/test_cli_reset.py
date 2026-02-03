@@ -2,10 +2,10 @@
 
 from pathlib import Path
 
-from s9.agents.sessions import AgentSessionManager
-from s9.cli.main import app
-from s9.core.database import Database
-from s9.tasks.manager import TaskManager
+from site_nine.agents.sessions import AgentSessionManager
+from site_nine.cli.main import app
+from site_nine.core.database import Database
+from site_nine.tasks.manager import TaskManager
 from typer.testing import CliRunner
 
 runner = CliRunner()

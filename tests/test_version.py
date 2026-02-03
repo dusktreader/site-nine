@@ -1,7 +1,7 @@
 from importlib.metadata import PackageNotFoundError
 from unittest import mock
 
-from s9.version import (
+from site_nine.version import (
     __version__,
     get_version,
     get_version_from_metadata,

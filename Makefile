@@ -1,7 +1,7 @@
 .ONESHELL:
 .DEFAULT_GOAL:=help
 SHELL:=/bin/bash
-PACKAGE_TARGET:=src/s9
+PACKAGE_TARGET:=src/site_nine
 
 
 # ==== Helpers =========================================================================================================

@@ -1,6 +1,6 @@
 """site-nine CLI commands"""
 
-from s9.cli.main import app
+from site_nine.cli.main import app
 
 __all__ = ["app", "main"]
 

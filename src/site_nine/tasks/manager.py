@@ -1,8 +1,8 @@
 """Task management"""
 
-from s9.core.database import Database
-from s9.tasks.models import Task
-from s9.tasks.task_ids import (
+from site_nine.core.database import Database
+from site_nine.tasks.models import Task
+from site_nine.tasks.task_ids import (
     format_task_id,
     get_next_task_number,
     parse_task_id,
@@ -52,7 +52,7 @@ class TaskManager:
         tasks = [Task(**row) for row in rows]
 
         # Sort by priority (descending), then by task ID components
-        from s9.tasks.task_ids import PRIORITY_CODES, ROLE_PREFIXES, TASK_ID_PATTERN
+        from site_nine.tasks.task_ids import PRIORITY_CODES, ROLE_PREFIXES, TASK_ID_PATTERN
 
         priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
 

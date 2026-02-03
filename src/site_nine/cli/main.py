@@ -6,7 +6,7 @@ from rich.console import Console
 from typerdrive import add_cache_subcommand, add_settings_subcommand, handle_errors, set_typerdrive_config
 from typerdrive.logging.commands import add_logs_subcommand
 
-from s9.core.settings import SiteNineSettings
+from site_nine.core.settings import SiteNineSettings
 
 # Configure typerdrive
 set_typerdrive_config(app_name="site-nine")
@@ -45,13 +45,13 @@ def version() -> None:
 # Imports are at the end to avoid circular imports
 def _register_subcommands() -> None:
     """Register CLI subcommands"""
-    from s9.cli import agent, config, edit, name, task, template
-    from s9.cli.changelog import changelog_command
-    from s9.cli.check import check_command
-    from s9.cli.dashboard import dashboard_command
-    from s9.cli.doctor import doctor_command
-    from s9.cli.init import init_command
-    from s9.cli.reset import reset_command
+    from site_nine.cli import agent, config, edit, name, task, template
+    from site_nine.cli.changelog import changelog_command
+    from site_nine.cli.check import check_command
+    from site_nine.cli.dashboard import dashboard_command
+    from site_nine.cli.doctor import doctor_command
+    from site_nine.cli.init import init_command
+    from site_nine.cli.reset import reset_command
 
     app.command(name="init")(init_command)
     app.command(name="dashboard")(dashboard_command)

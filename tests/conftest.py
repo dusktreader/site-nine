@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 from typing import Generator
 
 import pytest
-from s9.core.database import Database
+from site_nine.core.database import Database
 
 
 @pytest.fixture
@@ -63,7 +63,7 @@ def project_dir(temp_dir: Path) -> Generator[Path, None, None]:
 @pytest.fixture
 def initialized_project(temp_dir: Path) -> Generator[Path, None, None]:
     """Create an initialized project for testing CLI commands"""
-    from s9.cli.main import app
+    from site_nine.cli.main import app
     from typer.testing import CliRunner
 
     project = temp_dir / "test-project"

@@ -1,6 +1,6 @@
 """Tests for configuration wizard and config management"""
 
-from s9.core.config import (
+from site_nine.core.config import (
     AgentRoleConfig,
     CustomizationConfig,
     FeaturesConfig,

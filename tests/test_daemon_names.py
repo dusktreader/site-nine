@@ -1,6 +1,6 @@
 """Tests for daemon name management"""
 
-from s9.core.daemon_names import get_names_by_role, load_daemon_names, suggest_name
+from site_nine.core.daemon_names import get_names_by_role, load_daemon_names, suggest_name
 
 
 def test_load_daemon_names():

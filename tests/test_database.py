@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from s9.core.database import Database
+from site_nine.core.database import Database
 
 
 def test_database_init(temp_dir: Path):
@@ -74,7 +74,7 @@ def test_execute_update(test_db: Database):
 def test_get_session(temp_dir):
     """Test getting a database session"""
 
-    from s9.core.database import Database
+    from site_nine.core.database import Database
 
     db_path = temp_dir / "test.db"
     db = Database(db_path)

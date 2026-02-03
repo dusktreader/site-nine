@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-from s9.cli.main import app
-from s9.core.config import HQueueConfig
-from s9.core.templates import TemplateRenderer
+from site_nine.cli.main import app
+from site_nine.core.config import HQueueConfig
+from site_nine.core.templates import TemplateRenderer
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -192,7 +192,7 @@ def test_init_command_populates_daemon_names(project_dir: Path):
     assert result.exit_code == 0, f"Command failed: {result.stdout}"
 
     # Check database has daemon names
-    from s9.core.database import Database
+    from site_nine.core.database import Database
 
     db = Database(project_dir / ".opencode" / "data" / "project.db")
     daemon_names = db.execute_query("SELECT COUNT(*) as count FROM daemon_names")
@@ -372,7 +372,7 @@ def test_init_with_typescript_project(project_dir: Path):
 
 def test_template_renderer_list_templates():
     """Test listing all available templates"""
-    from s9.core.templates import TemplateRenderer
+    from site_nine.core.templates import TemplateRenderer
 
     renderer = TemplateRenderer()
     templates = renderer.list_templates()
@@ -388,7 +388,7 @@ def test_template_renderer_list_templates():
 
 def test_get_default_context():
     """Test getting default template context"""
-    from s9.core.templates import get_default_context
+    from site_nine.core.templates import get_default_context
 
     context = get_default_context("test-project")
 
