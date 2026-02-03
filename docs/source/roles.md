@@ -253,3 +253,4 @@ Not sure which role to use? Ask yourself:
 - **Documenting project history and decisions?** → Historian
 
 For more details on working with agents, see the [CLI Reference](reference.md) and [Usage Guide](usage.md).
+
