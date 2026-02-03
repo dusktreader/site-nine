@@ -27,17 +27,16 @@ clean:  ## Clean up build artifacts and other junk
 
 
 # ==== Quality Control =================================================================================================
-.PHONY: qa/test
+.PHONY: qa
 qa: qa/full  ## Shortcut for qa/full
 
 .PHONY: qa/test
 qa/test:  ## Run the tests
-	uv run python -m pytest
+	uv run pytest
 
 .PHONY: qa/types
 qa/types:  ## Run static type checks
-	uv run mypy ${PACKAGE_TARGET} tests --pretty
-	uv run basedpyright ${PACKAGE_TARGET} tests
+	uv run ty check ${PACKAGE_TARGET} tests
 
 .PHONY: qa/lint
 qa/lint:  ## Run linters
@@ -56,21 +55,21 @@ qa/format:  ## RUn code formatter
 
 # ==== Documentation ===================================================================================================
 .PHONY: docs
-docs: docs/serve  ## Shortcut for docs/serve
+docs: docs/build  ## Shortcut for docs/build
 
 .PHONY: docs/build
 docs/build:  ## Build the documentation
-	uv run python -m mkdocs build --config-file=docs/mkdocs.yaml
+	uv run mkdocs build --config-file=docs/mkdocs.yaml
 
 .PHONY: docs/serve
 docs/serve:  ## Build the docs and start a local dev server
-	uv run python -m mkdocs serve --config-file=docs/mkdocs.yaml --dev-addr=localhost:10000 --watch docs/source --livereload
+	uv run mkdocs serve --config-file=docs/mkdocs.yaml --dev-addr=localhost:10000
 
 
 # ==== Other Commands ==================================================================================================
 .PHONY: publish
 publish: confirm
-	@if [[ "$$(git rev-parse --abbrev-ref HEAD)" != "main" ]] then \
+	@if [[ "$$(git rev-parse --abbrev-ref HEAD)" != "main" ]]; then \
 		echo "You must be on the main branch to publish." && exit 1; \
 	fi
 	@git tag v$$(uv version --short) && git push origin v$$(uv version --short)

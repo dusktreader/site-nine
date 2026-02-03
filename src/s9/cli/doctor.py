@@ -87,8 +87,9 @@ def doctor_command(
     if orphaned_tasks:
         for task in orphaned_tasks:
             issue = f"Task {task['id']}: references non-existent agent_id {task['agent_id']}"
+            task_id = task["id"]
 
-            def fix_fn(task_id=task["id"]):
+            def fix_fn():
                 db.execute_update("UPDATE tasks SET agent_id = NULL WHERE id = :id", {"id": task_id})
 
             issues_found.append(("foreign_key", "fixable", issue, fix_fn))
@@ -109,8 +110,10 @@ def doctor_command(
     if invalid_deps:
         for dep in invalid_deps:
             issue = f"Dependency: {dep['task_id']} → {dep['depends_on_task_id']} references non-existent task(s)"
+            task_id = dep["task_id"]
+            depends_on = dep["depends_on_task_id"]
 
-            def fix_fn(task_id=dep["task_id"], depends_on=dep["depends_on_task_id"]):
+            def fix_fn():
                 db.execute_update(
                     "DELETE FROM task_dependencies WHERE task_id = :task_id AND depends_on_task_id = :depends_on",
                     {"task_id": task_id, "depends_on": depends_on},
@@ -140,8 +143,10 @@ def doctor_command(
         for task in unclosed_tasks:
             issue = f"Task {task['id']}: status is {task['status']} but missing closed_at timestamp"
             now = datetime.now(timezone.utc).isoformat()
+            task_id = task["id"]
+            timestamp = now
 
-            def fix_fn(task_id=task["id"], timestamp=now):
+            def fix_fn():
                 db.execute_update(
                     "UPDATE tasks SET closed_at = :timestamp WHERE id = :id", {"timestamp": timestamp, "id": task_id}
                 )
@@ -191,8 +196,10 @@ def doctor_command(
         for session in unended_sessions:
             issue = f"Agent #{session['id']} ({session['name']}): status is {session['status']} but missing end_time"
             now = datetime.now(timezone.utc).isoformat()
+            session_id = session["id"]
+            timestamp = now
 
-            def fix_fn(session_id=session["id"], timestamp=now):
+            def fix_fn():
                 db.execute_update(
                     "UPDATE agents SET end_time = :timestamp WHERE id = :id", {"timestamp": timestamp, "id": session_id}
                 )
@@ -215,8 +222,9 @@ def doctor_command(
     if wrongly_ended:
         for session in wrongly_ended:
             issue = f"Agent #{session['id']} ({session['name']}): status is {session['status']} but has end_time"
+            session_id = session["id"]
 
-            def fix_fn(session_id=session["id"]):
+            def fix_fn():
                 db.execute_update("UPDATE agents SET end_time = NULL WHERE id = :id", {"id": session_id})
 
             issues_found.append(("agent_session", "fixable", issue, fix_fn))
@@ -261,8 +269,10 @@ def doctor_command(
     if wrong_counts:
         for name_info in wrong_counts:
             issue = f"Name '{name_info['name']}': usage_count is {name_info['usage_count']} but actual count is {name_info['actual_count']}"
+            name = name_info["name"]
+            count = name_info["actual_count"]
 
-            def fix_fn(name=name_info["name"], count=name_info["actual_count"]):
+            def fix_fn():
                 db.execute_update(
                     "UPDATE daemon_names SET usage_count = :count WHERE name = :name", {"count": count, "name": name}
                 )
@@ -287,8 +297,10 @@ def doctor_command(
     if wrong_dates:
         for name_info in wrong_dates:
             issue = f"Name '{name_info['name']}': last_used_at doesn't match actual usage"
+            name = name_info["name"]
+            date = name_info["actual_last_used"]
 
-            def fix_fn(name=name_info["name"], date=name_info["actual_last_used"]):
+            def fix_fn():
                 db.execute_update(
                     "UPDATE daemon_names SET last_used_at = :date WHERE name = :name", {"date": date, "name": name}
                 )
@@ -337,7 +349,7 @@ def doctor_command(
     console.print("═" * 70)
 
     # Summary
-    fixable_issues = [i for i in issues_found if i[1] == "fixable"]
+    fixable_issues = [i for i in issues_found if i[1] == "fixable" and i[3] is not None]
     warning_issues = [i for i in issues_found if i[1] == "warning"]
     error_issues = [i for i in issues_found if i[1] == "error"]
 
@@ -367,10 +379,10 @@ def doctor_command(
         console.print("🔧 [bold cyan]Applying fixes...[/bold cyan]")
         console.print()
 
-        for category, severity, issue, fix_fn in fixable_issues:
-            if fix_fn:
+        for category, severity, issue, fix_func in fixable_issues:
+            if fix_func is not None:
                 try:
-                    fix_fn()
+                    fix_func()
                     issues_fixed.append(issue)
                     console.print(f"[green]✓[/green] Fixed: {issue}")
                 except Exception as e:

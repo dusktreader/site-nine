@@ -31,11 +31,9 @@ changelog = "https://github.com/dusktreader/site-nine/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
-    "basedpyright~=1.28",
     "ipython~=8.18",
     "mkdocs-material~=9.6",
     "mkdocstrings[python]~=0.29",
-    "mypy~=1.15",
     "pyclean~=3.1",
     "pygments~=2.19",
     "pytest~=8.3",
@@ -43,6 +41,7 @@ dev = [
     "pytest-pretty~=1.2",
     "pytest-random-order~=1.1",
     "ruff~=0.11",
+    "ty~=0.0",
     "typos~=1.31",
 ]
 
@@ -70,24 +69,6 @@ src = ["src/s9", "tests"]
 
 [tool.ruff.format]
 docstring-code-format = true
-
-
-[tool.mypy]
-pretty = true
-files = ["src/s9", "tests"]
-check_untyped_defs = true
-
-[[tool.mypy.overrides]]
-module = []
-ignore_missing_imports = true
-
-
-[tool.basedpyright]
-reportAny = false
-reportExplicitAny = false
-reportUnusedCallResult = false
-reportOptionalMemberAccess = false
-reportMissingTypeArgument = false
 
 
 [tool.typos.default]
