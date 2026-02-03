@@ -83,10 +83,10 @@ def test_init_command_renders_all_templates(project_dir: Path):
     assert (opencode_dir / "opencode.json").exists()
 
     # Check agent roles
-    agents_dir = opencode_dir / "agents"
+    agents_dir = opencode_dir / "docs" / "agents"
     assert agents_dir.exists()
     expected_agents = [
-        "manager",
+        "administrator",
         "architect",
         "builder",
         "tester",
@@ -99,7 +99,7 @@ def test_init_command_renders_all_templates(project_dir: Path):
         assert (agents_dir / f"{agent}.md").exists(), f"Missing agent: {agent}"
 
     # Check guides
-    guides_dir = opencode_dir / "guides"
+    guides_dir = opencode_dir / "docs" / "guides"
     assert guides_dir.exists()
     assert (guides_dir / "AGENTS.md").exists()
     assert (guides_dir / "architecture.md").exists()
@@ -107,7 +107,7 @@ def test_init_command_renders_all_templates(project_dir: Path):
     assert (guides_dir / "README.md").exists()
 
     # Check procedures
-    procedures_dir = opencode_dir / "procedures"
+    procedures_dir = opencode_dir / "docs" / "procedures"
     assert procedures_dir.exists()
     assert (procedures_dir / "COMMIT_GUIDELINES.md").exists()
     assert (procedures_dir / "WORKFLOWS.md").exists()
@@ -133,21 +133,19 @@ def test_init_command_renders_all_templates(project_dir: Path):
     skills_dir = opencode_dir / "skills"
     assert skills_dir.exists()
     assert (skills_dir / "session-start" / "SKILL.md").exists()
-    assert (skills_dir / "session-start" / "daemon-names.md").exists()
     assert (skills_dir / "session-end" / "SKILL.md").exists()
     assert (skills_dir / "handoff-workflow" / "SKILL.md").exists()
     assert (skills_dir / "task-management" / "SKILL.md").exists()
     assert (skills_dir / "tasks-report" / "SKILL.md").exists()
 
     # Check sessions
-    sessions_dir = opencode_dir / "sessions"
+    sessions_dir = opencode_dir / "work" / "sessions"
     assert sessions_dir.exists()
     assert (sessions_dir / "README.md").exists()
     assert (sessions_dir / "TEMPLATE.md").exists()
 
     # Check empty directories
-    assert (opencode_dir / "planning").exists()
-    assert (opencode_dir / "scripts").exists()
+    assert (opencode_dir / "work" / "planning").exists()
 
 
 def test_init_command_renders_project_name_in_templates(project_dir: Path):
@@ -267,32 +265,31 @@ def test_template_renderer_renders_all_jinja_templates(temp_dir: Path):
     templates = [
         "base/README.md.jinja",
         "base/opencode.json.jinja",
-        "base/agents/manager.md.jinja",
-        "base/agents/architect.md.jinja",
-        "base/agents/builder.md.jinja",
-        "base/agents/tester.md.jinja",
-        "base/agents/documentarian.md.jinja",
-        "base/agents/designer.md.jinja",
-        "base/agents/inspector.md.jinja",
-        "base/agents/operator.md.jinja",
-        "base/guides/AGENTS.md.jinja",
-        "base/guides/architecture.md.jinja",
-        "base/guides/design-philosophy.md.jinja",
-        "base/guides/README.md.jinja",
-        "base/procedures/COMMIT_GUIDELINES.md.jinja",
-        "base/procedures/WORKFLOWS.md.jinja",
-        "base/procedures/TROUBLESHOOTING.md.jinja",
-        "base/procedures/TASK_WORKFLOW.md.jinja",
-        "base/procedures/README.md.jinja",
+        "base/docs/agents/administrator.md.jinja",
+        "base/docs/agents/architect.md.jinja",
+        "base/docs/agents/builder.md.jinja",
+        "base/docs/agents/tester.md.jinja",
+        "base/docs/agents/documentarian.md.jinja",
+        "base/docs/agents/designer.md.jinja",
+        "base/docs/agents/inspector.md.jinja",
+        "base/docs/agents/operator.md.jinja",
+        "base/docs/guides/AGENTS.md.jinja",
+        "base/docs/guides/architecture.md.jinja",
+        "base/docs/guides/design-philosophy.md.jinja",
+        "base/docs/guides/README.md.jinja",
+        "base/docs/procedures/COMMIT_GUIDELINES.md.jinja",
+        "base/docs/procedures/WORKFLOWS.md.jinja",
+        "base/docs/procedures/TROUBLESHOOTING.md.jinja",
+        "base/docs/procedures/TASK_WORKFLOW.md.jinja",
+        "base/docs/procedures/README.md.jinja",
         "base/commands/README.md.jinja",
         "base/skills/session-start/SKILL.md.jinja",
-        "base/skills/session-start/daemon-names.md.jinja",
         "base/skills/session-end/SKILL.md.jinja",
         "base/skills/handoff-workflow/SKILL.md.jinja",
         "base/skills/task-management/SKILL.md.jinja",
         "base/skills/tasks-report/SKILL.md.jinja",
-        "base/sessions/README.md.jinja",
-        "base/sessions/TEMPLATE.md.jinja",
+        "base/work/sessions/README.md.jinja",
+        "base/work/sessions/TEMPLATE.md.jinja",
     ]
 
     for template_name in templates:
@@ -347,7 +344,7 @@ def test_init_without_pm_system(project_dir: Path):
     opencode_dir = project_dir / ".opencode"
 
     # Task workflow should still exist (it's always created)
-    assert (opencode_dir / "procedures" / "TASK_WORKFLOW.md").exists()
+    assert (opencode_dir / "docs" / "procedures" / "TASK_WORKFLOW.md").exists()
 
 
 def test_init_with_typescript_project(project_dir: Path):
