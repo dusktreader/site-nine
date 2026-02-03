@@ -212,6 +212,32 @@ Nammu - Calm infrastructure maintainer who handles deployment and operations
 
 ---
 
+## Historian
+
+![Mimir](images/mimir.png){ align=left width="300" }
+
+/// caption
+Mimir - Wise chronicler who documents project history and preserves institutional knowledge
+///
+
+**When to Use**
+
+- **CHANGELOG maintenance** - Recording changes and updates for users
+- **Decision documentation** - Capturing why decisions were made
+- **Retrospectives** - Analyzing completed work and extracting lessons
+- **Git history analysis** - Generating reports from commit history
+- **Knowledge preservation** - Ensuring critical information isn't lost
+
+**Best Practices**
+
+- Focus on the "why" behind decisions, not just the "what"
+- Review completed tasks and extract patterns worth documenting
+- Keep CHANGELOG entries user-focused and understandable
+- Link decisions to their context (ADRs, issues, discussions)
+- Make history searchable and accessible for future team members
+
+---
+
 ## Choosing the Right Role
 
 Not sure which role to use? Ask yourself:
@@ -224,5 +250,6 @@ Not sure which role to use? Ask yourself:
 - **Designing user interfaces?** → Designer
 - **Reviewing code or security?** → Inspector
 - **Deploying or managing infrastructure?** → Operator
+- **Documenting project history and decisions?** → Historian
 
 For more details on working with agents, see the [CLI Reference](reference.md) and [Usage Guide](usage.md).

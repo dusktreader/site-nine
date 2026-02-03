@@ -28,7 +28,7 @@ extra_css:
   - stylesheets/extra.css
 watch:
   - source
-  - ../src/s9
+  - ../src/site_nine/
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
