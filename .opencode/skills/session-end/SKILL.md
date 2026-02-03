@@ -8,6 +8,14 @@ metadata:
   workflow: session-closure
 ---
 
+## Important: CLI Tool Usage
+
+**CRITICAL:** This project uses the `s9` CLI executable throughout these instructions.
+- **CLI executable:** `s9` (use in bash commands)
+- **Python module:** `site_nine` (use in Python imports: `from site_nine import ...`)
+
+All commands in this skill use the `s9` executable via bash. You should NOT attempt to import an `s9` module in Python code.
+
 ## What I Do
 
 I help you properly end a development session on the s9 project by:
@@ -503,4 +511,8 @@ After running `/dismiss`:
 
 **The session is officially over.**
 
-If Director wants to continue work later, they should start a new session with `/summon`.
+If Director wants to continue work later, they should:
+1. Start a fresh chat session with `/new`
+2. Then initialize a new agent session with `/summon`
+
+This ensures each agent session begins in a clean OpenCode chat context.
