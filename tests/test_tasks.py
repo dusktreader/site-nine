@@ -12,7 +12,7 @@ def test_create_task(test_db: Database):
         title="Test task",
         role="Builder",
         priority="HIGH",
-        category="Testing",
+        category="testing",
         description="Test description",
     )
 
