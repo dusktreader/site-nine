@@ -45,8 +45,11 @@ make qa/test-all
 > [!TIP]
 > **RECOMMENDED: Use the `/summon` command to start a new session!**
 > 
-> Type `/summon` and the agent will guide you through role selection, daemon naming,
-> session file creation, and documentation reading automatically.
+> Type `/summon` for interactive mode (agent asks for role), or use `/summon <role>` 
+> to start directly with a specific role (e.g., `/summon operator`, `/summon builder`).
+> 
+> The agent will guide you through daemon naming, session file creation, and 
+> documentation reading automatically.
 > 
 > See `.opencode/docs/commands/README.md` for details about the `/summon` command.
 
@@ -58,10 +61,11 @@ make qa/test-all
 
 **Session Start Protocol:**
 
-1. **Director invokes:** `/summon` command
+1. **Director invokes:** `/summon` command (or `/summon <role>` to skip role selection)
 
-2. Agent asks: **"Which role should I assume?"**
+2. Agent asks: **"Which role should I assume?"** (skipped if role provided)
    - Administrator, Architect, Builder, Tester, Documentarian, Designer, or Inspector
+   - **Pro tip:** Use `/summon operator` to start an Operator session immediately
 
 3. Agent suggests or asks for a **daemon name** (from any religion's mythology)
    - **Prefer unused names first** - use `s9 name suggest <Role>` to get unused name suggestions
@@ -102,6 +106,14 @@ Agent: I see "Thoth" has been used 3 times already. I could suggest "Thoth-iv" (
        or I could pick an unused name like "Seshat" (Egyptian goddess of writing and wisdom)?
 User: Let's go with Seshat
 Agent: Great! I'm Seshat, your Documentarian agent. What would you like me to work on?
+```
+
+**Example (Direct Mode - Skip Role Selection):**
+```
+User: /summon operator
+Agent: I suggest "Hemera" (Greek goddess of day). Would you like to use this name?
+User: yes
+Agent: Great! I'm Hemera, your Operator agent. What would you like me to work on?
 ```
 
 ### During Development
