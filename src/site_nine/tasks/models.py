@@ -24,3 +24,4 @@ class Task:
     created_at: str
     updated_at: str
     file_path: str
+    epic_id: str | None = None  # Epic this task belongs to (or None if standalone)

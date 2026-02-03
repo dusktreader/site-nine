@@ -8,6 +8,45 @@ metadata:
   workflow: session-initialization
 ---
 
+## Important: CLI Tool Usage
+
+**CRITICAL:** This project uses the `s9` CLI executable throughout these instructions.
+- **CLI executable:** `s9` (use in bash commands)
+- **Python module:** `site_nine` (use in Python imports: `from site_nine import ...`)
+
+All commands in this skill use the `s9` executable via bash. You should NOT attempt to import an `s9` module in Python code.
+
+### Installation Check
+
+Before running any `s9` commands, verify it's properly installed:
+
+```bash
+s9 --help
+```
+
+**If this command fails with "command not found" or "ModuleNotFoundError":**
+
+The most common cause is a stale `uv tool` installation. Fix it with:
+
+```bash
+uv tool uninstall site-nine
+uv tool install --editable .
+```
+
+Then verify:
+```bash
+s9 --help
+```
+
+**Why this happens:** If site-nine was previously installed with the old module name `s9`, the entry point script may still reference the old import path. Reinstalling with `uv tool install --editable .` fixes this.
+
+**Alternative if s9 is not available:** You can also use:
+```bash
+uv run s9 --help
+```
+
+This runs s9 using the project's virtual environment instead of the globally installed tool.
+
 ## Step 1: Show Current Project Status
 
 **FIRST**, before asking for role selection, show the Director what work is available.

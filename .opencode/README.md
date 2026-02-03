@@ -10,6 +10,15 @@ This directory contains OpenCode agent configuration for **developing** the s9 p
 ### First Time Setup
 
 ```bash
+# Install site-nine in editable mode (REQUIRED for development)
+uv sync
+
+# Install as uv tool (recommended for CLI access)
+uv tool install --editable .
+
+# Verify installation
+s9 --help
+
 # Configure environment (optional - Docker works without .env)
 cp .env.example .env
 # Edit .env if you need custom configuration
@@ -608,6 +617,17 @@ Use Inspector for:
 
 
 ## Troubleshooting (Quick Reference)
+
+**s9 command not found or ModuleNotFoundError?**
+```bash
+# Reinstall with uv tool
+uv tool uninstall site-nine
+uv tool install --editable .
+s9 --help  # Verify it works
+```
+**Why this happens**: Stale installations from when the module was named `s9` instead of `site_nine`.
+
+**Alternative**: Use `uv run s9` to run from project virtual environment instead of global tool.
 
 **Tests failing?**
 ```bash
