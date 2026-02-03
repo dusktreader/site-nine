@@ -11,8 +11,8 @@ from loguru import logger
 from rich.console import Console
 from typerdrive import handle_errors
 
-from s9.core.database import Database
-from s9.core.paths import get_opencode_dir, validate_path_within_project
+from site_nine.core.database import Database
+from site_nine.core.paths import get_opencode_dir, validate_path_within_project
 
 console = Console()
 

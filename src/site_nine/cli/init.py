@@ -6,11 +6,11 @@ import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from s9.core.config import HQueueConfig
-from s9.core.daemon_names import load_daemon_names
-from s9.core.database import Database
-from s9.core.templates import TemplateRenderer
-from s9.core.wizard import run_wizard
+from site_nine.core.config import HQueueConfig
+from site_nine.core.daemon_names import load_daemon_names
+from site_nine.core.database import Database
+from site_nine.core.templates import TemplateRenderer
+from site_nine.core.wizard import run_wizard
 
 console = Console()
 

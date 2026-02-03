@@ -1,7 +1,7 @@
 [project]
 name = "site-nine"
 version = "0.2.0"
-description = "Generic orchestration framework for AI agent workflows in software development"
+description = "The headquarters for AI agent orchestration - orchestration framework for AI-assisted software development with OpenCode"
 authors = [
     {name = "Tucker Beck", email ="tucker.beck@gmail.com"},
 ]
@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-s9 = "s9.cli:main"
+s9 = "site_nine.cli:main"
 
 
 [project.urls]
@@ -53,7 +53,7 @@ package = true
 [tool.pytest.ini_options]
 addopts = [
     "--random-order",
-    "--cov=src/s9",
+    "--cov=src/site_nine",
     "--cov-report=term-missing",
     "--cov-fail-under=49",
     "--cov-report=xml:.coverage.xml",
@@ -64,7 +64,7 @@ addopts = [
 
 [tool.ruff]
 line-length = 120
-src = ["src/s9", "tests"]
+src = ["src/site_nine", "tests"]
 
 
 [tool.ruff.format]
@@ -75,14 +75,6 @@ docstring-code-format = true
 extend-ignore-identifiers-re = []
 
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/s9"]
-
-
-[tool.hatch.metadata]
-allow-direct-references = true
-
-
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv-build>=0.1.0"]
+build-backend = "uv_build"

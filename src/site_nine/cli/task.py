@@ -11,9 +11,9 @@ from rich.console import Console
 from rich.table import Table
 from typerdrive import handle_errors
 
-from s9.core.database import Database
-from s9.core.paths import get_opencode_dir, validate_path_within_project
-from s9.tasks import TaskManager
+from site_nine.core.database import Database
+from site_nine.core.paths import get_opencode_dir, validate_path_within_project
+from site_nine.tasks import TaskManager
 
 app = typer.Typer(help="Manage tasks")
 console = Console()
@@ -53,7 +53,7 @@ class Role(str, Enum):
     @classmethod
     def from_string(cls, value: str) -> "Role":
         """Convert string to Role enum (case-insensitive)"""
-        value_title = value.title()
+        _value_title = value.title()
         for member in cls:
             if member.value.lower() == value.lower():
                 return member
@@ -376,7 +376,7 @@ def report(
         console.print("[red]Error: project.db not found. Run 's9 init' first.[/red]")
         raise typer.Exit(1)
 
-    from s9.core.database import Database
+    from site_nine.core.database import Database
 
     db = Database(db_path)
 
@@ -479,7 +479,7 @@ def search(
         console.print("[red]Error: project.db not found. Run 's9 init' first.[/red]")
         raise typer.Exit(1)
 
-    from s9.core.database import Database
+    from site_nine.core.database import Database
 
     db = Database(db_path)
 
@@ -576,7 +576,7 @@ def next(
         console.print("[red]Error: project.db not found. Run 's9 init' first.[/red]")
         raise typer.Exit(1)
 
-    from s9.core.database import Database
+    from site_nine.core.database import Database
 
     db = Database(db_path)
 
@@ -719,7 +719,7 @@ def add_dependency(
         console.print("[red]Error: project.db not found. Run 's9 init' first.[/red]")
         raise typer.Exit(1)
 
-    from s9.core.database import Database
+    from site_nine.core.database import Database
 
     db = Database(db_path)
 

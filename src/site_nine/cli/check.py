@@ -11,8 +11,8 @@ from rich.panel import Panel
 from rich.table import Table
 from typerdrive import handle_errors
 
-from s9.core.database import Database
-from s9.core.paths import get_opencode_dir
+from site_nine.core.database import Database
+from site_nine.core.paths import get_opencode_dir
 
 console = Console()
 
@@ -146,7 +146,7 @@ def check_command(
                 console.print(f"      {pattern}")
             checks_warning += 1
         else:
-            console.print(f"  [green]✓[/green] All recommended .gitignore patterns present")
+            console.print("  [green]✓[/green] All recommended .gitignore patterns present")
             checks_passed += 1
     console.print()
 

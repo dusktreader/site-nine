@@ -5,7 +5,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
 
-from s9.core.config import HQueueConfig
+from site_nine.core.config import HQueueConfig
 
 console = Console()
 

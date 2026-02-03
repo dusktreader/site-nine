@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
-from pathlib import Path
 
 import typer
 from rich.console import Console
@@ -11,8 +9,8 @@ from rich.panel import Panel
 from rich.prompt import Confirm
 from typerdrive import handle_errors
 
-from s9.core.database import Database
-from s9.core.paths import get_opencode_dir
+from site_nine.core.database import Database
+from site_nine.core.paths import get_opencode_dir
 
 console = Console()
 
@@ -72,7 +70,7 @@ def reset_command(
     task_count = db.execute_query("SELECT COUNT(*) as count FROM tasks")[0]["count"]
     dep_count = db.execute_query("SELECT COUNT(*) as count FROM task_dependencies")[0]["count"]
 
-    console.print(f"[yellow]Data to be deleted:[/yellow]")
+    console.print("[yellow]Data to be deleted:[/yellow]")
     console.print(f"  • {agent_count} agent sessions")
     console.print(f"  • {task_count} tasks")
     console.print(f"  • {dep_count} task dependencies")

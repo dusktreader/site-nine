@@ -1,7 +1,7 @@
 """Tests for task management"""
 
-from s9.core.database import Database
-from s9.tasks import TaskManager
+from site_nine.core.database import Database
+from site_nine.tasks import TaskManager
 
 
 def test_create_task(test_db: Database):

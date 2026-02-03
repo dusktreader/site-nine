@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from s9.core.database import Database
-from s9.core.paths import validate_path_within_project
+from site_nine.core.database import Database
+from site_nine.core.paths import validate_path_within_project
 
 
 @dataclass

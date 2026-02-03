@@ -1,7 +1,7 @@
 """Tests for agent session management"""
 
-from s9.agents.sessions import AgentSessionManager
-from s9.core.database import Database
+from site_nine.agents.sessions import AgentSessionManager
+from site_nine.core.database import Database
 
 
 def test_start_session(test_db: Database):

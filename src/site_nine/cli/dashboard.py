@@ -2,14 +2,13 @@
 
 import typer
 from rich.console import Console
-from rich.layout import Layout
 from rich.panel import Panel
 from rich.table import Table
 
-from s9.agents.sessions import AgentSessionManager
-from s9.core.database import Database
-from s9.core.paths import get_opencode_dir
-from s9.tasks import TaskManager
+from site_nine.agents.sessions import AgentSessionManager
+from site_nine.core.database import Database
+from site_nine.core.paths import get_opencode_dir
+from site_nine.tasks import TaskManager
 
 console = Console()
 

@@ -3,7 +3,7 @@
 from pathlib import Path
 from unittest.mock import patch
 
-from s9.cli.main import app
+from site_nine.cli.main import app
 from typer.testing import CliRunner
 
 runner = CliRunner()

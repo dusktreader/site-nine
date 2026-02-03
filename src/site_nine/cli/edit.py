@@ -10,7 +10,7 @@ import typer
 from rich.console import Console
 from typerdrive import handle_errors
 
-from s9.core.paths import get_opencode_dir
+from site_nine.core.paths import get_opencode_dir
 
 app = typer.Typer(help="Edit bootstrapped configuration and documentation files")
 console = Console()

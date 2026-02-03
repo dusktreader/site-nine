@@ -1,7 +1,7 @@
 """Tests for path utilities"""
 
 import pytest
-from s9.core.paths import (
+from site_nine.core.paths import (
     PathTraversalError,
     find_opencode_dir,
     get_opencode_dir,

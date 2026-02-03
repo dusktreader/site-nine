@@ -1,7 +1,6 @@
 """Task ID utilities and validation"""
 
 import re
-from typing import Literal
 
 # Role prefix mapping
 ROLE_PREFIXES = {
@@ -46,7 +45,7 @@ def validate_task_id(task_id: str) -> tuple[bool, str | None]:
     """
     match = TASK_ID_PATTERN.match(task_id)
     if not match:
-        return False, f"Invalid format. Expected: PREFIX-PRIORITY-NUMBER (e.g., OPR-H-0001)"
+        return False, "Invalid format. Expected: PREFIX-PRIORITY-NUMBER (e.g., OPR-H-0001)"
 
     prefix, priority_code, number = match.groups()
 
@@ -62,7 +61,7 @@ def validate_task_id(task_id: str) -> tuple[bool, str | None]:
     # Validate number range
     num = int(number)
     if num < 1 or num > 9999:
-        return False, f"Number must be between 0001 and 9999"
+        return False, "Number must be between 0001 and 9999"
 
     return True, None
 
@@ -112,7 +111,7 @@ def format_task_id(role: str, priority: str, number: int) -> str:
         raise ValueError(f"Invalid priority: {priority}")
 
     if number < 1 or number > 9999:
-        raise ValueError(f"Number must be between 1 and 9999")
+        raise ValueError("Number must be between 1 and 9999")
 
     return f"{prefix}-{priority_code}-{number:04d}"
 
