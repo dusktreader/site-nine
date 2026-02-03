@@ -6,7 +6,7 @@ Site-nine provides specialized agent roles, each represented by a daemon from an
 
 ## Administrator
 
-![Mephistopheles](images/mephistopheles.png){ align=left width="300" }
+![Mephistopheles](../images/mephistopheles.png){ align=left width="300" }
 
 /// caption
 Mephistopheles - Commanding strategist who coordinates projects and manages delegation
@@ -32,7 +32,7 @@ Mephistopheles - Commanding strategist who coordinates projects and manages dele
 
 ## Architect
 
-![Kothar](images/kothar.png){ align=right width="300" }
+![Kothar](../images/kothar.png){ align=right width="300" }
 
 /// caption
 Kothar - Master designer who creates system architectures and technical decisions
@@ -58,7 +58,7 @@ Kothar - Master designer who creates system architectures and technical decision
 
 ## Builder
 
-![Azazel](images/azazel.png){ align=left width="300" }
+![Azazel](../images/azazel.png){ align=left width="300" }
 
 /// caption
 Azazel - Creative craftsperson who implements features and writes code
@@ -84,7 +84,7 @@ Azazel - Creative craftsperson who implements features and writes code
 
 ## Tester
 
-![Eris](images/eris.png){ align=right width="300" }
+![Eris](../images/eris.png){ align=right width="300" }
 
 /// caption
 Eris - Mischievous chaos-bringer who finds bugs and edge cases through creative testing
@@ -110,7 +110,7 @@ Eris - Mischievous chaos-bringer who finds bugs and edge cases through creative 
 
 ## Documentarian
 
-![Nabu](images/nabu.png){ align=left width="300" }
+![Nabu](../images/nabu.png){ align=left width="300" }
 
 /// caption
 Nabu - Scholarly recorder who writes comprehensive documentation and guides
@@ -136,7 +136,7 @@ Nabu - Scholarly recorder who writes comprehensive documentation and guides
 
 ## Designer
 
-![Astarte](images/astarte.png){ align=right width="300" }
+![Astarte](../images/astarte.png){ align=right width="300" }
 
 /// caption
 Astarte - Elegant creator who designs beautiful user interfaces and experiences
@@ -162,7 +162,7 @@ Astarte - Elegant creator who designs beautiful user interfaces and experiences
 
 ## Inspector
 
-![Argus](images/argus.png){ align=left width="300" }
+![Argus](../images/argus.png){ align=left width="300" }
 
 /// caption
 Argus - Watchful guardian who performs code reviews and security audits
@@ -188,7 +188,7 @@ Argus - Watchful guardian who performs code reviews and security audits
 
 ## Operator
 
-![Nammu](images/nammu.png){ align=right width="300" }
+![Nammu](../images/nammu.png){ align=right width="300" }
 
 /// caption
 Nammu - Calm infrastructure maintainer who handles deployment and operations
@@ -214,7 +214,7 @@ Nammu - Calm infrastructure maintainer who handles deployment and operations
 
 ## Historian
 
-![Mimir](images/mimir.png){ align=left width="300" }
+![Mimir](../images/mimir.png){ align=left width="300" }
 
 /// caption
 Mimir - Wise chronicler who documents project history and preserves institutional knowledge
