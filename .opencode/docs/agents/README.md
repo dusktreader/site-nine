@@ -98,6 +98,7 @@ This directory contains agent role definitions for developing site-nine itself.
 Before starting work:
 - `.opencode/README.md` - Project overview
 - `.opencode/docs/guides/AGENTS.md` - Development patterns
+- `.opencode/docs/guides/TASK_SIZING.md` - **How to size tasks (use t-shirt sizes, not time estimates)**
 - `.opencode/docs/guides/architecture.md` - System design
 - `.opencode/docs/procedures/COMMIT_GUIDELINES.md` - Commit format
 
@@ -133,6 +134,9 @@ git commit -m "fix(database): handle missing task files [Agent: Builder - Azazel
 If working on a task, update the task file:
 ```markdown
 # .opencode/work/tasks/BLD-H-0003.md
+
+## Size
+**L** (Large - significant feature with testing requirements)
 
 ## Implementation Steps
 1. Added CLI command for task dependencies
@@ -216,8 +220,10 @@ src/s9/
 
 ### For Architect
 - Read `guides/architecture.md` for system design
+- Read `guides/TASK_SIZING.md` for how to size tasks
 - Document design decisions
 - Create clear technical specifications
+- Use t-shirt sizes (XS, S, M, L, XL, XXL) for effort estimates, not time
 - Consider future extensibility
 
 ### For Builder

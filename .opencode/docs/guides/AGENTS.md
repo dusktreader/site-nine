@@ -17,7 +17,12 @@ Before starting work on site-nine, **thoroughly review the `.opencode/` director
    - Quick start guide
    - Key principles and technology stack
 
-2. **`.opencode/work/planning/PROJECT_STATUS.md`**
+2. **`.opencode/docs/guides/TASK_SIZING.md`**
+   - **IMPORTANT:** How to size tasks using t-shirt sizes (XS, S, M, L, XL, XXL)
+   - **DO NOT use time estimates** (hours, days, weeks)
+   - Describes scope and complexity, not duration
+
+3. **`.opencode/work/planning/PROJECT_STATUS.md`**
    - Current project status and phase completion
    - What's complete, what's in progress, what's planned
    - Key metrics and milestones
