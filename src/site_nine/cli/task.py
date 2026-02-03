@@ -194,6 +194,26 @@ def claim(
         console.print(f"[red]Error: Task '{task_id}' not found.[/red]")
         raise typer.Exit(1)
 
+    # Check if task is blocked by a pending review
+    if task.blocks_on_review_id:
+        from site_nine.reviews import ReviewManager
+
+        opencode_dir = get_opencode_dir()
+        db_path = opencode_dir / "data" / "project.db"
+        db = Database(db_path)
+        review_manager = ReviewManager(db)
+
+        blocking_review = review_manager.check_task_blocked(task_id)
+        if blocking_review:
+            console.print(f"[red]✗ Task {task_id} is blocked by pending review #{blocking_review.id}[/red]")
+            console.print(f"  Review: {blocking_review.title}")
+            console.print(f"  Type: {blocking_review.type}")
+            console.print()
+            console.print(f"This task cannot be claimed until the review is approved.")
+            console.print(f"Use [cyan]s9 review show {blocking_review.id}[/cyan] for details")
+            console.print(f"Use [cyan]s9 review approve {blocking_review.id}[/cyan] to unblock this task")
+            raise typer.Exit(1)
+
     manager.claim_task(task_id, agent_name)
     console.print(f"[green]✓[/green] Task {task_id} claimed by {agent_name}")
     logger.info(f"Task {task_id} claimed by {agent_name}")

@@ -513,8 +513,50 @@ ls .opencode/work/sessions/handoffs/*builder.pending.md 2>/dev/null
    ```
 
 **If no pending handoffs:**
-- Skip this section and proceed to Essential Documentation
+- Skip this section and proceed to Step 6a
 - No message needed - just continue normally
+
+## Step 6a: Check for Pending Reviews (Administrator Only)
+
+**IMPORTANT:** This step is ONLY for Administrator role. Other roles should skip to Step 7.
+
+**If role is Administrator**, check for pending reviews:
+
+```bash
+s9 review list --status pending
+```
+
+**If pending reviews exist:**
+
+Present them to the Director in a clear format:
+
+```
+🔔 **Pending Reviews**
+
+I found [N] review(s) awaiting your approval:
+
+[Review list table will be displayed by the command]
+
+These reviews may be blocking other tasks. You can:
+- `s9 review show <id>` - View review details
+- `s9 review approve <id>` - Approve review (unblocks dependent tasks)
+- `s9 review reject <id> --reason "..."` - Reject review with explanation
+- `s9 review blocked` - See which tasks are blocked by reviews
+
+Would you like to handle any of these reviews now, or shall we proceed with other work?
+```
+
+**Wait for Director's response:**
+- If they want to review now, help them review each one
+- If they want to proceed with other work, continue to Step 7
+
+**If no pending reviews:**
+- Skip this section and proceed to Step 7
+- No message needed - just continue normally
+
+**If role is NOT Administrator:**
+- Skip this entire section silently
+- Proceed directly to Step 7
 
 ## Step 7: Essential Documentation
 

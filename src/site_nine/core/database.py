@@ -46,3 +46,9 @@ class Database:
         """Execute update/insert/delete query"""
         with self.engine.begin() as conn:  # Use begin() for automatic commit
             conn.execute(text(query), params or {})
+
+    def execute_insert(self, query: str, params: dict[str, Any] | None = None) -> int:
+        """Execute insert query and return last inserted row ID"""
+        with self.engine.begin() as conn:  # Use begin() for automatic commit
+            result = conn.execute(text(query), params or {})
+            return result.lastrowid

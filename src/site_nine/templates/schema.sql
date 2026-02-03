@@ -1,10 +1,12 @@
 -- Crol Troll Project Management Database Schema
 -- Created: 2026-01-30
+-- Updated: 2026-02-03 (Added epics)
 -- 
 -- This database manages:
 -- 1. Tasks - Development work tracking
--- 2. Names - Daemon names for agent sessions
--- 3. Agents - Agent session tracking
+-- 2. Epics - Task grouping and organization
+-- 3. Names - Daemon names for agent sessions
+-- 4. Agents - Agent session tracking
 
 -- ============================================================================
 -- DAEMON NAMES TABLE
@@ -73,6 +75,68 @@ BEGIN
 END;
 
 -- ============================================================================
+-- EPICS TABLE
+-- ============================================================================
+-- Epics are organizational containers for grouping related tasks
+CREATE TABLE epics (
+    id TEXT PRIMARY KEY,              -- EPC-[P]-[NNNN] format (e.g., EPC-H-0001)
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL              -- Computed from subtasks via triggers
+        CHECK(status IN ('TODO', 'UNDERWAY', 'COMPLETE', 'ABORTED')),
+    priority TEXT NOT NULL
+        CHECK(priority IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')),
+    aborted_reason TEXT,              -- Only if manually aborted
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at TEXT,                -- Auto-set when all tasks complete
+    aborted_at TEXT,                  -- Set when manually aborted
+    file_path TEXT NOT NULL           -- .opencode/work/epics/EPC-H-0001.md
+);
+
+CREATE INDEX idx_epics_status ON epics(status);
+CREATE INDEX idx_epics_priority ON epics(priority);
+CREATE INDEX idx_epics_created ON epics(created_at);
+
+-- Trigger to update updated_at timestamp
+CREATE TRIGGER update_epics_timestamp
+AFTER UPDATE ON epics
+FOR EACH ROW
+BEGIN
+    UPDATE epics SET updated_at = datetime('now') WHERE id = NEW.id;
+END;
+
+-- ============================================================================
+-- REVIEWS TABLE
+-- ============================================================================
+-- Tracks review requests for tasks, designs, code, and other artifacts
+CREATE TABLE reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL                    -- Type of review
+        CHECK(type IN ('code', 'task_completion', 'design', 'general')),
+    status TEXT NOT NULL DEFAULT 'pending' -- Review status
+        CHECK(status IN ('pending', 'approved', 'rejected')),
+    task_id TEXT,                         -- Associated task (optional, not all reviews are task-related)
+    title TEXT NOT NULL,                  -- Brief title of what's being reviewed
+    description TEXT,                     -- Detailed description of review request
+    requested_by TEXT,                    -- Daemon name who requested review
+    requested_at TEXT NOT NULL DEFAULT (datetime('now')),
+    reviewed_by TEXT,                     -- Who completed the review (e.g., 'Director')
+    reviewed_at TEXT,                     -- When review was completed
+    outcome_reason TEXT,                  -- Why approved/rejected
+    artifact_path TEXT,                   -- Path to artifact being reviewed (PR, file, ADR, etc.)
+    
+    -- Foreign keys
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL
+);
+
+-- Indexes for performance
+CREATE INDEX idx_reviews_status ON reviews(status);
+CREATE INDEX idx_reviews_type ON reviews(type);
+CREATE INDEX idx_reviews_task_id ON reviews(task_id);
+CREATE INDEX idx_reviews_requested_at ON reviews(requested_at);
+
+-- ============================================================================
 -- TASKS TABLE
 -- ============================================================================
 -- Main tasks table (ported from original task management system)
@@ -102,6 +166,12 @@ CREATE TABLE tasks (
     description TEXT,                     -- Detailed description of what needs to be done and why
     notes TEXT,                           -- Progress notes and updates
 
+    -- Epic relationship
+    epic_id TEXT,                         -- Epic this task belongs to (or NULL if standalone)
+
+    -- Review blocking
+    blocks_on_review_id INTEGER,          -- Review that must be approved before task can be claimed
+
     -- Metadata
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -114,8 +184,10 @@ CREATE TABLE tasks (
     CHECK(closed_at IS NULL OR status IN ('COMPLETE', 'ABORTED', 'PAUSED')),
     CHECK(paused_at IS NULL OR status = 'PAUSED'),
     
-    -- Foreign key to agents table
-    FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE SET NULL
+    -- Foreign keys
+    FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE SET NULL,
+    FOREIGN KEY (epic_id) REFERENCES epics(id) ON DELETE RESTRICT,
+    FOREIGN KEY (blocks_on_review_id) REFERENCES reviews(id) ON DELETE SET NULL
 );
 
 -- Task dependencies
@@ -133,6 +205,8 @@ CREATE INDEX idx_tasks_priority ON tasks(priority);
 CREATE INDEX idx_tasks_role ON tasks(role);
 CREATE INDEX idx_tasks_agent_name ON tasks(agent_name);
 CREATE INDEX idx_tasks_agent_id ON tasks(agent_id);
+CREATE INDEX idx_tasks_epic_id ON tasks(epic_id);
+CREATE INDEX idx_tasks_blocks_on_review ON tasks(blocks_on_review_id);
 CREATE INDEX idx_tasks_updated ON tasks(updated_at);
 CREATE INDEX idx_tasks_created ON tasks(created_at);
 
@@ -142,6 +216,69 @@ AFTER UPDATE ON tasks
 FOR EACH ROW
 BEGIN
     UPDATE tasks SET updated_at = datetime('now') WHERE id = NEW.id;
+END;
+
+-- Trigger to update epic status when task status changes
+CREATE TRIGGER update_epic_status_on_task_change
+AFTER UPDATE OF status ON tasks
+WHEN NEW.epic_id IS NOT NULL
+BEGIN
+    UPDATE epics SET 
+        status = (
+            CASE
+                -- All tasks complete = epic complete
+                WHEN NOT EXISTS (
+                    SELECT 1 FROM tasks 
+                    WHERE epic_id = NEW.epic_id AND status != 'COMPLETE'
+                ) THEN 'COMPLETE'
+                
+                -- Any task active = epic underway
+                WHEN EXISTS (
+                    SELECT 1 FROM tasks 
+                    WHERE epic_id = NEW.epic_id 
+                    AND status IN ('UNDERWAY', 'BLOCKED', 'REVIEW', 'PAUSED')
+                ) THEN 'UNDERWAY'
+                
+                -- All tasks TODO = epic todo
+                ELSE 'TODO'
+            END
+        ),
+        completed_at = (
+            CASE 
+                WHEN NOT EXISTS (
+                    SELECT 1 FROM tasks 
+                    WHERE epic_id = NEW.epic_id AND status != 'COMPLETE'
+                ) THEN datetime('now')
+                ELSE NULL
+            END
+        ),
+        updated_at = datetime('now')
+    WHERE id = NEW.epic_id AND status != 'ABORTED';
+    -- Don't auto-update aborted epics
+END;
+
+-- Trigger to update epic status when task is inserted
+CREATE TRIGGER update_epic_status_on_task_insert
+AFTER INSERT ON tasks
+WHEN NEW.epic_id IS NOT NULL
+BEGIN
+    UPDATE epics SET 
+        status = (
+            CASE
+                WHEN NOT EXISTS (
+                    SELECT 1 FROM tasks 
+                    WHERE epic_id = NEW.epic_id AND status != 'COMPLETE'
+                ) THEN 'COMPLETE'
+                WHEN EXISTS (
+                    SELECT 1 FROM tasks 
+                    WHERE epic_id = NEW.epic_id 
+                    AND status IN ('UNDERWAY', 'BLOCKED', 'REVIEW', 'PAUSED')
+                ) THEN 'UNDERWAY'
+                ELSE 'TODO'
+            END
+        ),
+        updated_at = datetime('now')
+    WHERE id = NEW.epic_id AND status != 'ABORTED';
 END;
 
 -- ============================================================================

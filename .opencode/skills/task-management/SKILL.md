@@ -8,6 +8,14 @@ metadata:
   workflow: task-lifecycle
 ---
 
+## Important: CLI Tool Usage
+
+**CRITICAL:** This project uses the `s9` CLI executable throughout these instructions.
+- **CLI executable:** `s9` (use in bash commands)
+- **Python module:** `site_nine` (use in Python imports: `from site_nine import ...`)
+
+All commands in this skill use the `s9` executable via bash. You should NOT attempt to import an `s9` module in Python code.
+
 ## What I Do
 
 I provide comprehensive instructions for managing tasks in the s9 task database. This skill covers the complete task lifecycle:

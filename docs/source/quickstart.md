@@ -109,7 +109,15 @@ Then execute the summon command to start an agent session:
 /summon
 ```
 
-This will guide you through selecting an agent role (Builder, Tester, Architect, etc.) and choosing a daemon name from mythology. Once summoned, you can talk to your agent naturally through conversation.
+Or specify a role directly to skip the role selection step:
+
+```
+/summon operator
+/summon builder
+/summon tester
+```
+
+This will guide you through selecting an agent role (Builder, Tester, Architect, etc.) if not provided, and choosing a daemon name from mythology. Once summoned, you can talk to your agent naturally through conversation.
 
 
 ## Working with Your Agent in OpenCode

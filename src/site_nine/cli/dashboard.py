@@ -80,6 +80,9 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
             for task in all_tasks:
                 task_counts[task.status] = task_counts.get(task.status, 0) + 1
 
+            # Count tasks blocked by reviews
+            blocked_by_review_count = sum(1 for task in all_tasks if task.blocks_on_review_id is not None)
+
             # Print header
             project_name = opencode_dir.parent.name
             console.print(Panel(f"[bold cyan]site-nine Dashboard[/bold cyan] - {project_name}", style="white on blue"))
@@ -90,6 +93,8 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
             console.print(f"  Total tasks: [bold]{sum(task_counts.values())}[/bold]")
             console.print(f"  In progress: [bold yellow]{task_counts['UNDERWAY']}[/bold yellow]")
             console.print(f"  Completed: [bold green]{task_counts['COMPLETE']}[/bold green]")
+            if blocked_by_review_count > 0:
+                console.print(f"  [red]Blocked by reviews: {blocked_by_review_count}[/red]")
 
             # Active agents table
             console.print("\n")

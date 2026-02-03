@@ -25,3 +25,4 @@ class Task:
     updated_at: str
     file_path: str
     epic_id: str | None = None  # Epic this task belongs to (or None if standalone)
+    blocks_on_review_id: int | None = None  # Review that must be approved before task can be claimed
