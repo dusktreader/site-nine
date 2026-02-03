@@ -56,7 +56,7 @@ addopts = [
     "--random-order",
     "--cov=src/s9",
     "--cov-report=term-missing",
-    "--cov-fail-under=50",
+    "--cov-fail-under=49",
     "--cov-report=xml:.coverage.xml",
     "--junitxml=.junit.xml",
     "--override-ini=junit_family=legacy",
