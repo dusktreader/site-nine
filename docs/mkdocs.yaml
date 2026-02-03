@@ -1,0 +1,68 @@
+site_name: site-nine documentation
+site_url: http://dusktreader.github.io/site-nine
+repo_url: https://github.com/dusktreader/site-nine
+docs_dir: source
+theme:
+  name: material
+  font:
+    code: Fira Code
+  features:
+    - navigation.expand
+    - navigation.footer
+    - navigation.tracking
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+extra_css:
+  - stylesheets/extra.css
+watch:
+  - source
+  - ../src/s9
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Agent Roles: roles.md
+  - Directory Structure: structure.md
+  - Advanced Topics: advanced.md
+  - CLI Reference: reference.md
+plugins:
+  search:
+    lang: en
+  mkdocstrings:
+    default_handler: python
+    handlers:
+      python:
+        paths: [..]
+        options:
+          heading_level: 3
+          show_root_heading: true
+          separate_signature: true
+          show_signature_annotations: true
+          show_source: false
+          docstring_style: google
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite:
+  - pymdownx.snippets:
+  - pymdownx.superfences:
+  - pymdownx.details:
+  - pymdownx.blocks.caption:
+  - admonition:
+  - attr_list:
+  - md_in_html:
+  - toc:
+      permalink: true

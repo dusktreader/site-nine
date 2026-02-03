@@ -1,0 +1,54 @@
+/* Custom styles for agent role images */
+
+/* Float the entire figure based on the image alignment inside */
+figure:has(img[align="left"]) {
+    float: left;
+    margin: 0 2.5em 1.5em 0;
+    max-width: 300px;
+}
+
+figure:has(img[align="right"]) {
+    float: right;
+    margin: 0 0 1.5em 2.5em;
+    max-width: 300px;
+}
+
+/* Remove float from images since figure handles it */
+figure img[align="left"],
+figure img[align="right"] {
+    float: none;
+    width: 300px;
+    height: auto;
+    display: block;
+}
+
+figure figcaption {
+    text-align: center;
+    font-style: italic;
+    margin-top: 8px;
+    font-size: 0.9em;
+    word-wrap: break-word;
+}
+
+/* Logo styling for index page */
+.s9-logo {
+    display: block;
+    margin: 2em auto;
+    width: 600px;
+    height: auto;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    figure:has(img[align="left"]),
+    figure:has(img[align="right"]) {
+        float: none;
+        display: block;
+        margin: 1em auto;
+        max-width: 300px;
+    }
+    
+    .s9-logo {
+        width: 400px;
+    }
+}

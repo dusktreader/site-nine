@@ -1,0 +1,89 @@
+# {{ project_name }} - Project Status
+
+**Project:** {{ project_name }}
+**Type:** {{ project_type | default("Software Development") }}
+**Initialized:** {{ date }}
+
+---
+
+## 🎯 Project Goals
+
+[Describe what you're building and why]
+
+Example:
+- Build a user authentication system
+- Implement real-time notifications
+- Create admin dashboard
+
+---
+
+## 🏗️ Current Phase
+
+**Phase:** [e.g., "Initial Development", "Feature Complete", "Production Ready"]
+
+**Status:** [Brief description of current state]
+
+**Focus Areas:**
+- [What the team is working on now]
+- [Key priorities for this phase]
+
+---
+
+## 🔑 Key Decisions
+
+[Record important architectural and technical decisions here]
+
+Example:
+- {{ date }}: Chose SQLite for task database (simplicity over scale)
+- {{ date }}: Using Python 3.12+ (type hints, modern features)
+- {{ date }}: Adopted s9 for agent orchestration
+
+---
+
+## 🚧 External Blockers
+
+[Note any blockers from outside the team]
+
+None currently.
+
+---
+
+## 📊 Real-Time Metrics
+
+For current task status, active agents, and recent activity:
+
+```bash
+# Show comprehensive project overview
+s9 dashboard
+
+# List active tasks
+s9 task list --active-only
+
+# Show active agent sessions
+s9 agent list --active-only
+
+# Create/claim/update tasks
+s9 task --help
+```
+
+---
+
+## 📝 Notes
+
+This file captures strategic context and high-level project state.
+For operational details and real-time metrics, use the `s9` CLI commands above.
+
+**Update this file when:**
+- ✅ Project goals change
+- ✅ Major architectural decisions are made
+- ✅ Phase transitions occur
+- ✅ External blockers are added/removed
+
+**Don't update this file for:**
+- ❌ Daily task status changes (use dashboard)
+- ❌ Individual task progress (use task commands)
+- ❌ Agent session tracking (use agent commands)
+
+---
+
+**Last updated:** {{ date }}

@@ -1,0 +1,126 @@
+# Development Guides
+
+Essential guides for developing {{ project_name }} {{ project_type }}.
+
+
+## 📚 Core Guides
+
+### AGENTS.md ⭐ START HERE
+**Development patterns, lessons learned, and best practices**
+
+This is THE most important document for agents. It contains:
+- Observed patterns and preferences
+- Common pitfalls and solutions
+- Architecture decisions with rationale
+- Phase-by-phase implementation notes
+- Technology stack details
+- What worked, what didn't, and why
+
+**When to read:** Before starting any development work
+
+
+### architecture.md
+**System architecture and technical design**
+
+Comprehensive technical overview:
+- Hybrid MCP pattern (server + client)
+- Component architecture
+- Data flow and integration points
+- Technology choices and rationale
+- System constraints and trade-offs
+
+**When to read:** When understanding system design or making architectural changes
+
+
+### database.md
+**Database access patterns and practices**
+
+Complete guide to database integration:
+- Read-only access patterns
+- Query validation and safety
+- Connection pooling
+- Per-database configuration
+- Schema documentation workflows
+- Guided access approach
+
+**When to read:** When working with database features or adding new database connections
+
+
+### knowledge-base.md
+**Knowledge base system design**
+
+DuckDB + S3 hybrid storage:
+- System design and rationale
+- Schema design (insights, queries, patterns)
+- Usage patterns
+- S3 sync strategy
+- Query patterns and performance
+
+**When to read:** When working with knowledge base features or understanding how insights are stored
+
+
+### design-philosophy.md
+**Trade-offs and design principles**
+
+Why we made the choices we made:
+- Safety first principle
+- Human-in-the-loop philosophy
+- Guided access over blind execution
+- Security considerations
+- Performance vs. safety trade-offs
+- Testing requirements
+
+**When to read:** When making design decisions or understanding project priorities
+
+
+## 🎯 How to Use These Guides
+
+### For New Agents
+1. **Start with AGENTS.md** - Learn patterns and lessons
+2. **Read architecture.md** - Understand the system
+3. **Read relevant guides** - database.md, knowledge-base.md as needed
+4. **Reference design-philosophy.md** - When making decisions
+
+### For Specific Tasks
+- **Adding features**: AGENTS.md → relevant guide → design-philosophy.md
+- **Fixing bugs**: AGENTS.md → relevant guide
+- **Architecture changes**: architecture.md → design-philosophy.md
+- **Database work**: database.md → AGENTS.md
+- **Knowledge base work**: knowledge-base.md → AGENTS.md
+
+### For Understanding Context
+- **"Why was it done this way?"** → design-philosophy.md
+- **"How does X work?"** → architecture.md or specific guide
+- **"What patterns should I follow?"** → AGENTS.md
+
+
+## 🔄 Keeping Guides Updated
+
+All agents should update these guides when:
+- A new pattern emerges
+- An architectural decision is made
+- A lesson is learned (what worked, what didn't)
+- A technology is added or changed
+- A significant feature is implemented
+
+**Update the task artifact** when making changes to these guides, documenting what was changed and why.
+
+
+## 📖 Quick Reference
+
+| Task | Primary Guide | Supporting Guides |
+|------|---------------|-------------------|
+| Adding database features | database.md | AGENTS.md, architecture.md |
+| Knowledge base work | knowledge-base.md | AGENTS.md, architecture.md |
+| Architecture changes | architecture.md | design-philosophy.md, AGENTS.md |
+| Bug fixes | AGENTS.md | Relevant guide |
+| New features | AGENTS.md | design-philosophy.md, relevant guide |
+| Design decisions | design-philosophy.md | architecture.md, AGENTS.md |
+
+
+## 🧭 Related Documentation
+
+- **Planning**: See `.opencode/planning/` for roadmap and status
+- **Design Docs**: See `.opencode/design/` for specific feature designs
+- **Session History**: See `.opencode/sessions/` for implementation summaries
+- **Agent Definitions**: See `.opencode/agents/` for agent roles

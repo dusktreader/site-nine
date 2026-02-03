@@ -1,0 +1,465 @@
+---
+name: tasks-report
+description: Display task queue report with current status and priorities
+license: MIT
+compatibility: opencode
+metadata:
+  audience: all-agents
+  workflow: task-viewing
+---
+
+## What I Do
+
+I generate and display a comprehensive task report showing:
+- Total task count
+- Tasks by priority (CRITICAL, HIGH, MEDIUM, LOW)
+- Task status (TODO, UNDERWAY, BLOCKED, etc.)
+- Agent assignments
+- Creation dates
+- Quick summary of active work
+
+This gives you a bird's-eye view of all project work.
+
+## Task Management Systems
+
+**NEW: Unified PM System (Recommended)**
+
+The new `pm` script provides unified management:
+
+```bash
+cd .opencode/scripts
+
+# Generate report (active tasks only)
+./pm task report --active-only
+
+# List tasks with filters
+./pm task list --role Builder --active-only
+./pm task list --status TODO --priority HIGH
+```
+
+**Legacy System (Still Available)**
+
+The original task system is still available:
+
+```bash
+cd .opencode/tasks
+
+# Generate report
+./tasks.py report --active-only
+
+# List tasks
+./tasks.py list --role Builder --active-only
+```
+
+> **Note:** Both systems work independently. The instructions below apply to both systems as the commands are nearly identical. For the new PM system, use `./pm task` instead of `./tasks.py`.
+
+## When to Use Me
+
+Use this skill when:
+- ✅ User types `/tasks`
+- ✅ User asks "what tasks are available?"
+- ✅ User asks "show me the task queue"
+- ✅ Starting a session and want to see available work
+- ✅ Planning work and need to understand current state
+
+**Note:** For a comprehensive project overview including active sessions and project stats, use the dashboard instead:
+```bash
+cd .opencode/scripts && ./pm dashboard
+```
+
+Don't use when:
+- ❌ User wants to claim/update a specific task (use `/claim-task` or `/update-task`)
+- ❌ User wants to create a new task (use `/create-task`)
+- ❌ User wants overall project status (use dashboard)
+
+## Prerequisites
+
+- Task database exists at `.opencode/tasks/tasks.db`
+- Python and tasks.py CLI are available
+
+## Step-by-Step Instructions
+
+### Alternative: Use Dashboard (Recommended for Full Context)
+
+If the user wants comprehensive project status (not just tasks), use the dashboard:
+
+```bash
+cd .opencode/scripts
+./pm dashboard [--compact] [--role ROLE]
+```
+
+This shows:
+- Active agent sessions
+- Available tasks by priority
+- Blocked/paused tasks
+- Recent completions
+- Project stats
+
+The dashboard is particularly useful when starting a session or planning work.
+
+### Step 1: Generate the Report
+
+**Option A: New PM System (Recommended)**
+
+```bash
+cd .opencode/scripts
+./pm task report --active-only
+```
+
+**Option B: Legacy System**
+
+```bash
+cd .opencode/tasks
+./tasks.py report --active-only
+```
+
+**What this does:**
+- Queries the SQLite database for active tasks only
+- Excludes COMPLETE and ABORTED tasks
+- Groups tasks by priority (CRITICAL, HIGH, MEDIUM, LOW)
+- Shows status, role, title, agent, and creation date
+- Displays total active task count
+
+**Expected output:**
+A nicely formatted table with box-drawing characters showing:
+- TODO tasks (available to claim)
+- UNDERWAY tasks (currently being worked on)
+- BLOCKED tasks (need attention)
+- PAUSED tasks (temporarily stopped)
+- REVIEW tasks (awaiting review)
+
+**Note:** If the user explicitly wants to see all tasks including completed ones, use:
+```bash
+cd .opencode/tasks && ./tasks.py report
+```
+
+### Step 2: Parse and Summarize
+
+After displaying the report, provide a quick summary for the user.
+
+**Count tasks by status:**
+- Count TODO tasks (available work)
+- Count UNDERWAY tasks (in progress)
+- Count BLOCKED tasks (need attention)
+- Count COMPLETE tasks (done)
+
+**Identify key information:**
+- How many tasks for the user's current role?
+- What's the highest priority TODO task?
+- Are there any BLOCKED tasks that need unblocking?
+- Are there CRITICAL tasks that need immediate attention?
+
+### Step 3: Display to User
+
+Show the full report followed by a summary:
+
+```
+[Full markdown report here]
+
+---
+
+**Summary:**
+- **Total tasks:** 59
+- **TODO (available):** 5 tasks
+- **UNDERWAY (active):** 2 tasks
+- **BLOCKED:** 1 task (H001 needs attention)
+- **COMPLETE:** 51 tasks
+
+**For your role ([Role]):**
+- 3 TODO tasks available
+- Highest priority: H036 - Security Review of Gateway Authentication
+
+**Critical attention needed:**
+- H001 (BLOCKED) - Create Slack Bot Setup Guide - blocked by external dependency
+
+**Recommendations:**
+- Consider claiming H036 (HIGH priority, Inspector role)
+- Review H001 blocker and determine if it can be unblocked
+```
+
+### Step 4: Offer Next Actions
+
+Based on the report, suggest what the user might want to do:
+
+**If TODO tasks exist for their role:**
+```
+Would you like to:
+1. Claim one of these tasks? (Use `/claim-task`)
+2. See details on a specific task? (Use `cd .opencode/tasks && ./tasks.py show TASK_ID`)
+3. Filter tasks? (I can show just TODO, just HIGH priority, etc.)
+```
+
+**If no TODO tasks for their role:**
+```
+No TODO tasks for [Role] right now. You could:
+1. Check other roles for work that needs doing
+2. Work on BLOCKED tasks to unblock them
+3. Create new tasks if you identify work (Use `/create-task`)
+```
+
+**If CRITICAL or BLOCKED tasks exist:**
+```
+⚠️ Attention needed:
+- CRITICAL task C004 requires immediate action
+- BLOCKED task H001 needs to be unblocked
+
+Would you like me to show details on these?
+```
+
+### Step 5: Filter Options (Optional)
+
+If the user wants to filter the report, offer these options:
+
+**Filter by status:**
+```bash
+cd .opencode/tasks && ./tasks.py list --status TODO
+cd .opencode/tasks && ./tasks.py list --status UNDERWAY
+cd .opencode/tasks && ./tasks.py list --status BLOCKED
+```
+
+**Filter by role:**
+```bash
+cd .opencode/tasks && ./tasks.py list --role Builder
+cd .opencode/tasks && ./tasks.py list --role Tester
+```
+
+**Filter by priority:**
+```bash
+cd .opencode/tasks && ./tasks.py list --priority CRITICAL
+cd .opencode/tasks && ./tasks.py list --priority HIGH
+```
+
+**Combine filters:**
+```bash
+cd .opencode/tasks && ./tasks.py list --status TODO --role Builder --priority HIGH
+```
+
+Show the filtered results and ask if they want to see more or claim a task.
+
+## Important Notes
+
+### About the Report
+
+- **Live data** - Report shows current database state
+- **Active tasks only** - By default excludes COMPLETE and ABORTED tasks
+- **Sorted by priority** - CRITICAL first, then HIGH, MEDIUM, LOW
+- **Formatted tables** - Uses box-drawing characters for clean display in terminal
+- **Timestamps** - Created dates help understand task age
+- **All tasks option** - Use `./tasks.py report` (without --active-only) to see completed tasks too
+
+### About Task Status
+
+**Active statuses:**
+- `TODO` - Available to claim
+- `UNDERWAY` - Currently being worked on
+- `REVIEW` - Awaiting code review
+
+**Blocked statuses:**
+- `BLOCKED` - Can't proceed, external dependency
+- `PAUSED` - Temporarily stopped
+
+**Terminal statuses:**
+- `COMPLETE` - Successfully finished
+- `ABORTED` - Cancelled or obsolete
+
+### About Priority Levels
+
+**CRITICAL (C###):**
+- Blocking issues
+- Security vulnerabilities
+- P0 bugs
+- Immediate action required
+
+**HIGH (H###):**
+- Important features
+- P1 bugs
+- Should be done within sprint
+
+**MEDIUM (M###):**
+- Nice-to-have features
+- Improvements
+- Next sprint priority
+
+**LOW (L###):**
+- Polish
+- Documentation
+- Minor issues
+- Backlog
+
+### About Agent Assignment
+
+- `-` means unclaimed (available)
+- Agent name means claimed/in progress
+- Multiple agents means work was handed off
+
+### When to Use Related Commands
+
+**After viewing report:**
+- `/claim-task` - Claim a TODO task you see
+- `/update-task` - Update a task you're working on
+- `/close-task` - Close a task when done
+- `/create-task` - Create new task if work is missing
+
+**For specific task details:**
+```bash
+cd .opencode/tasks && ./tasks.py show TASK_ID
+```
+
+This shows full details including description, notes, dependencies.
+
+## Examples
+
+### Example 1: Starting a Session
+
+**User:** `/tasks`
+
+**Agent:**
+```
+Generating task report...
+
+[Nicely formatted table with box-drawing characters showing active tasks only]
+
+---
+
+**Summary:**
+- **Total active tasks:** 7
+- **TODO (available):** 3 tasks
+- **UNDERWAY (active):** 1 task
+- **BLOCKED:** 1 task (H001 needs attention)
+
+**For your role (Tester):**
+- 1 TODO task: H003 - Validate Rate Limiting Functionality
+- 1 UNDERWAY: H035 - Full Stack Integration Testing (claimed by themis)
+
+**Recommendations:**
+You could claim H003 if you're ready to work on rate limiting validation.
+
+Would you like to:
+1. See details on H003? (`cd .opencode/tasks && ./tasks.py show H003`)
+2. Claim H003? (Use `/claim-task`)
+```
+
+### Example 2: Checking for Blocked Tasks
+
+**User:** `/tasks` 
+
+**Agent:** 
+```
+[Full report showing active tasks...]
+
+---
+
+**Summary:**
+- **Total active tasks:** 7
+- **BLOCKED:** 1 task ⚠️
+
+**Attention needed:**
+- H001 (BLOCKED) - Create Slack Bot Setup Guide
+  - Blocked by: External API key needed
+  - Assigned to: Documentarian
+  
+This task has been blocked for 2 days. Consider:
+- Can the blocker be resolved?
+- Should the task be postponed or aborted?
+- Is documentation available to unblock it?
+```
+
+### Example 3: Filtered View
+
+**User:** `/tasks` then "Show me just TODO high priority tasks"
+
+**Agent:**
+```bash
+cd .opencode/tasks && ./tasks.py list --status TODO --priority HIGH
+```
+
+Result:
+```
+TODO HIGH Priority Tasks:
+
+H003 - Validate Rate Limiting Functionality (Tester)
+H036 - Security Review of Gateway Authentication (Inspector)
+
+These are the available high-priority tasks ready to be claimed.
+
+Would you like details on either of these?
+```
+
+## Troubleshooting
+
+### "Database not found"
+- Ensure you're in the project root
+- Check `.opencode/tasks/tasks.db` exists
+- Run: `cd .opencode/tasks && ls tasks.db`
+
+### "tasks.py not found"
+- Ensure you're in project root or specify full path
+- Run: `cd .opencode/tasks && ./tasks.py report --format markdown`
+
+### "No tasks shown"
+- Database might be empty
+- Check: `cd .opencode/tasks && ./tasks.py list`
+- If truly empty, tasks need to be created
+
+### Report is very long
+- With --active-only, should only show active work (much shorter)
+- If still too long, offer more specific filters
+- Use `./tasks.py list --status TODO` to see only available tasks
+- Focus summary on actionable work
+
+## Quick Reference
+
+**Full report:**
+```bash
+# Active tasks only (default - recommended)
+cd .opencode/tasks && ./tasks.py report --active-only
+
+# All tasks including completed (if explicitly requested)
+cd .opencode/tasks && ./tasks.py report
+```
+
+**Filtered reports:**
+```bash
+# Active tasks only (TODO, UNDERWAY, BLOCKED)
+./tasks.py list --active-only
+
+# By status
+./tasks.py list --status TODO
+./tasks.py list --status UNDERWAY
+
+# By role
+./tasks.py list --role Builder
+./tasks.py list --role Tester
+
+# By priority  
+./tasks.py list --priority HIGH
+./tasks.py list --priority CRITICAL
+
+# Combined filters
+./tasks.py list --status TODO --role Builder --priority HIGH
+```
+
+**Task details:**
+```bash
+./tasks.py show TASK_ID
+```
+
+## See Also
+
+**New PM System:**
+- `.opencode/scripts/README.md` - Quick start guide for unified PM system
+- `.opencode/data/README.md` - Complete PM system reference (includes dashboard documentation)
+- `.opencode/commands/tasks.md` - `/tasks` command
+
+**Dashboard Command:**
+- Use `./pm dashboard` for comprehensive project overview
+- Includes active sessions, task queue, blockers, and stats
+- Better for starting sessions or getting full context
+
+**Legacy Task System:**
+- `.opencode/tasks/README.md` - Task system documentation
+- `.opencode/skills/task-management/SKILL.md` - Task lifecycle management
+
+**Related Commands:**
+- `/claim-task` - Claim a task from the report
+- `/create-task` - Create new tasks

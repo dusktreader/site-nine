@@ -1,0 +1,88 @@
+[project]
+name = "site-nine"
+version = "0.2.0"
+description = "Generic orchestration framework for AI agent workflows in software development"
+authors = [
+    {name = "Tucker Beck", email ="tucker.beck@gmail.com"},
+]
+readme = "README.md"
+license-files = ["LICENSE.md"]
+
+requires-python = ">=3.12, <3.15"
+dependencies = [
+    "typer>=0.12.0",
+    "typerdrive>=0.8.0",
+    "rich>=13.0.0",
+    "jinja2>=3.1.0",
+    "pyyaml>=6.0.0",
+    "sqlalchemy>=2.0.0",
+    "tabulate>=0.9.0",
+]
+
+[project.scripts]
+s9 = "s9.cli:main"
+
+
+[project.urls]
+homepage = "https://github.com/dusktreader/site-nine"
+source = "https://github.com/dusktreader/site-nine"
+changelog = "https://github.com/dusktreader/site-nine/blob/main/CHANGELOG.md"
+
+
+[dependency-groups]
+dev = [
+    "ipython~=8.18",
+    "mkdocs-material~=9.6",
+    "mkdocstrings[python]~=0.29",
+    "pyclean~=3.1",
+    "pygments~=2.19",
+    "pytest~=8.3",
+    "pytest-cov~=6.0",
+    "pytest-pretty~=1.2",
+    "pytest-random-order~=1.1",
+    "ruff~=0.11",
+    "ty~=0.0",
+    "typos~=1.31",
+]
+
+
+[tool.uv]
+package = true
+
+
+[tool.pytest.ini_options]
+addopts = [
+    "--random-order",
+    "--cov=src/s9",
+    "--cov-report=term-missing",
+    "--cov-fail-under=49",
+    "--cov-report=xml:.coverage.xml",
+    "--junitxml=.junit.xml",
+    "--override-ini=junit_family=legacy",
+]
+
+
+[tool.ruff]
+line-length = 120
+src = ["src/s9", "tests"]
+
+
+[tool.ruff.format]
+docstring-code-format = true
+
+
+[tool.typos.default]
+extend-ignore-identifiers-re = []
+
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/s9"]
+
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

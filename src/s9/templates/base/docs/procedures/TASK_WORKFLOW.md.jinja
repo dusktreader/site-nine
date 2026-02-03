@@ -1,0 +1,867 @@
+# Task Workflow and Artifact Management
+
+## Overview
+
+This document describes the **task-first development workflow** for {{ project_name }}. All work should be organized around tasks, with task artifacts serving as the **single source of truth** for what was done.
+
+**Key Principle:** Task artifacts document the full journey - what was attempted, what worked, what didn't, and why. This creates a searchable knowledge base of project work.
+
+
+---
+
+
+## Task-First Development
+
+### Core Concepts
+
+1. **Task artifacts are the source of truth** - All significant work should be tracked in a task
+2. **Update as you go** - Document progress incrementally, not at the end
+3. **Commits reference tasks** - Every commit includes `[Task: ID]` to link code changes to context
+4. **No manual CHANGELOG** - History is reconstructed on-demand from task artifacts using `pm changelog`
+
+
+### When to Create a Task
+
+Create a task for:
+- ✅ New features or capabilities
+- ✅ Bug fixes requiring investigation
+- ✅ Refactoring or code cleanup
+- ✅ Documentation updates (significant ones)
+- ✅ Infrastructure changes
+- ✅ Performance optimization
+- ✅ Security improvements
+
+Don't create a task for:
+- ❌ Trivial typo fixes
+- ❌ Minor formatting changes
+- ❌ One-line documentation tweaks
+
+
+---
+
+
+## Using the pm CLI
+
+### Quick Reference
+
+```bash
+# Navigate to scripts directory
+cd .opencode/scripts
+
+# List all tasks
+./pm task list
+
+# List by status
+./pm task list --status todo
+./pm task list --status underway
+./pm task list --status complete
+
+# Show task details
+./pm task show TASK_ID
+
+# Create new task
+./pm task create
+
+# Claim a task
+./pm task claim TASK_ID
+
+# Update task status
+./pm task update TASK_ID --status underway
+
+# Close task
+./pm task close TASK_ID
+
+# Generate changelog
+./pm changelog
+./pm changelog --since 2026-01-01
+./pm changelog --format json
+```
+
+
+### Task Lifecycle
+
+```
+TODO → (claim) → UNDERWAY → (close) → COMPLETE
+         ↓                      ↑
+       PAUSED ←──────────────────┘
+         ↓
+      CANCELLED
+```
+
+
+---
+
+
+## Task Artifact Structure
+
+### Required Metadata (YAML frontmatter)
+
+Every task artifact starts with metadata:
+
+```markdown
+# Task ID: Title
+
+**Status:** TODO | UNDERWAY | PAUSED | COMPLETE | CANCELLED | BLOCKED
+**Priority:** CRITICAL | HIGH | MEDIUM | LOW
+**Role:** Builder | Tester | Architect | etc.
+**Category:** feature | bug | refactor | docs | infrastructure | test | chore
+**Agent:** [agent-name] (who is working/worked on this)
+**Claimed:** [ISO timestamp]
+**Actual Time:** [hours spent]
+**Closed:** [ISO timestamp]
+**Paused:** [ISO timestamp if paused]
+```
+
+### Required Sections
+
+#### 1. Objective
+
+**Purpose:** Clear, concise statement of what this task aims to achieve.
+
+**Guidelines:**
+- 1-2 sentences maximum
+- Focus on the "what" and "why"
+- Should be understandable without reading the full task
+
+**Example:**
+```markdown
+## Objective
+
+Implement rate limiting for database queries to prevent accidental DoS through runaway queries or malicious over-querying.
+```
+
+#### 2. Problem Statement
+
+**Purpose:** Detailed context about the problem or need that motivated this task.
+
+**Guidelines:**
+- Explain current state and why it's problematic
+- Include relevant background information
+- Mention what prompted this task (bug report, audit finding, feature request, etc.)
+- Can include code examples, error messages, or data
+
+**Example:**
+```markdown
+## Problem Statement
+
+**Current State:**
+The database query tool (`crol_query_database`) has no rate limiting. A user or agent could accidentally or maliciously execute hundreds of queries per minute, overwhelming the database.
+
+**Problems:**
+1. No protection against runaway queries (e.g., agent in a loop)
+2. No tracking of query frequency per user
+3. Database could be overwhelmed, affecting all users
+4. No visibility into query usage patterns
+
+**Impact:**
+- HIGH: Production database at risk
+- Could affect multiple users simultaneously
+- No way to identify abusive usage
+
+**Discovered in:** Security audit 2026-01-28 by Sekhmet (Tester)
+```
+
+#### 3. Required Changes (optional for bugs)
+
+**Purpose:** Specific technical changes needed to complete the task.
+
+**Guidelines:**
+- Break down into logical sections
+- Include code examples or pseudocode when helpful
+- Mention files or systems that will be affected
+- Reference any design documents or ADRs
+
+**Example:**
+```markdown
+## Required Changes
+
+### 1. Add Rate Limiter Service
+
+Create `src/{{ project_name_underscore }}/rate_limiter.py`:
+- Token bucket algorithm
+- Per-user tracking
+- Configurable limits (queries/minute, queries/hour)
+
+### 2. Integrate with Database Service
+
+Modify `src/{{ project_name_underscore }}/database/service.py`:
+- Check rate limit before executing query
+- Record query execution
+- Return 429 error if limit exceeded
+
+### 3. Add Configuration
+
+Update `.env.example`:
+```
+DATABASE_RATE_LIMIT_PER_MINUTE=10
+DATABASE_RATE_LIMIT_PER_HOUR=100
+```
+```
+
+#### 4. Implementation Steps
+
+**Purpose:** Chronological log of what was done during implementation.
+
+**Guidelines:**
+- Add entries as you work (don't wait until the end)
+- Include timestamp or phase markers
+- Document both successes and failures
+- Explain why decisions were made
+- Link to commits, PRs, or related tasks
+
+**Example:**
+```markdown
+## Implementation Steps
+
+### Phase 1: Research and Design (2 hours)
+1. Researched rate limiting algorithms
+   - Considered: Token bucket, Leaky bucket, Fixed window, Sliding window
+   - Chose token bucket for burstiness handling
+   
+2. Designed rate limiter interface
+   - Decided on async context manager pattern
+   - Will track per-user and per-resource
+   
+3. Created design document: `.opencode/architecture/rate-limiting.md`
+
+### Phase 2: Implementation (3 hours)
+4. Implemented `RateLimiter` class
+   - Token bucket algorithm with Redis backend
+   - Handles burst allowance
+   - Graceful degradation if Redis unavailable
+   
+5. Integrated with DatabaseService
+   - Added `@rate_limited` decorator
+   - Returns HTTP 429 with Retry-After header
+   
+6. Added configuration
+   - Environment variables for limits
+   - Per-resource configuration support
+
+### Phase 3: Testing (2 hours)
+7. Wrote unit tests
+   - Test token replenishment
+   - Test burst handling
+   - Test limit enforcement
+   - Test Redis failure scenarios
+   
+8. Wrote integration tests
+   - End-to-end query rate limiting
+   - Multiple users with different limits
+   - Verified Retry-After headers
+
+### Phase 4: Documentation (1 hour)
+9. Updated architecture docs
+10. Added rate limiting section to README
+11. Updated API documentation
+```
+
+#### 5. Files Changed
+
+**Purpose:** Complete list of files modified with descriptions of changes.
+
+**Guidelines:**
+- Group by type of change (created, modified, deleted)
+- Include brief description of what changed
+- Mention line counts for significant changes
+- Help future developers understand scope
+
+**Example:**
+```markdown
+## Files Changed
+
+### Created
+- `src/{{ project_name_underscore }}/rate_limiter.py` (+245 lines) - Token bucket rate limiter implementation
+- `tests/unit/test_rate_limiter.py` (+180 lines) - Unit tests for rate limiter
+- `tests/integration/test_database_rate_limiting.py` (+95 lines) - Integration tests
+- `.opencode/architecture/rate-limiting.md` - Design document
+
+### Modified
+- `src/{{ project_name_underscore }}/database/service.py` (+35 lines) - Integrated rate limiter
+- `src/{{ project_name_underscore }}/config.py` (+12 lines) - Added rate limit configuration
+- `.env.example` (+3 lines) - Added rate limit env vars
+- `README.md` (+15 lines) - Documented rate limiting feature
+- `docs/api.md` (+25 lines) - Documented rate limit errors and headers
+
+### Configuration
+- `pyproject.toml` (+1 line) - Added redis dependency
+- `docker-compose.yaml` (+8 lines) - Added Redis service
+```
+
+#### 6. Testing Performed
+
+**Purpose:** Document what testing was done and the results.
+
+**Guidelines:**
+- Include test commands run
+- Show test results (pass/fail counts)
+- Document manual testing steps
+- Include any issues found and fixed
+- Show verification of acceptance criteria
+
+**Example:**
+```markdown
+## Testing Performed
+
+### Unit Tests
+```bash
+pytest tests/unit/test_rate_limiter.py -v
+# 25 passed in 0.42s
+```
+
+All rate limiter logic tests pass:
+- ✅ Token replenishment works correctly
+- ✅ Burst allowance handled properly
+- ✅ Limit enforcement accurate
+- ✅ Redis failure degrades gracefully
+
+### Integration Tests
+```bash
+pytest tests/integration/test_database_rate_limiting.py -v
+# 12 passed in 3.21s
+```
+
+End-to-end scenarios validated:
+- ✅ Queries are rate limited per user
+- ✅ 429 status returned when limit exceeded
+- ✅ Retry-After header calculated correctly
+- ✅ Multiple users have independent limits
+
+### Manual Testing
+1. Started local stack: `make demo`
+2. Executed 15 queries rapidly via MCP
+3. Verified 11th query returned 429 error
+4. Waited 60 seconds
+5. Verified queries worked again
+
+### Performance Testing
+- Measured rate limiter overhead: ~2ms per query
+- Negligible impact on query performance
+- Redis connection pooling works well
+
+### QA Suite
+```bash
+make qa/test-all
+# ✅ All tests pass (315 tests)
+# ✅ Coverage: 87% (+2% from rate limiter code)
+# ✅ Type checking: pass
+# ✅ Linting: pass
+```
+```
+
+#### 7. Related Tasks (optional)
+
+**Purpose:** Link to dependent or related tasks.
+
+**Guidelines:**
+- List tasks this one depends on
+- List tasks that depend on this one
+- Mention follow-up tasks created
+- Link related work
+
+**Example:**
+```markdown
+## Related Tasks
+
+**Depends on:**
+- H024: Add Redis to Infrastructure (COMPLETE)
+
+**Blocks:**
+- H042: Implement Query Cost Analysis
+
+**Follow-ups created:**
+- H043: Add Rate Limiting to External MCP Calls
+- H044: Add Rate Limiting Dashboard
+
+**Related:**
+- H015: Database Query Validation (similar security concern)
+```
+
+#### 8. Git Commits
+
+**Purpose:** List commits related to this task for traceability.
+
+**Guidelines:**
+- Add commit SHAs and messages
+- Group by phase if helpful
+- Link commits to code changes
+
+**Example:**
+```markdown
+## Git Commits
+
+1. `a3f4d2e` - feat(rate-limit): add rate limiter service [Agent: Builder - Azazel]
+2. `b7e9c1a` - feat(rate-limit): integrate with database service [Agent: Builder - Azazel]
+3. `c2d8f4b` - test(rate-limit): add unit and integration tests [Agent: Tester - Sekhmet]
+4. `d9a3e7c` - docs(rate-limit): add architecture and API docs [Agent: Documentarian - Thoth-iii]
+5. `e4b2f8d` - chore(deps): add redis dependency [Agent: Builder - Azazel]
+
+[Task: H027]
+```
+
+#### 9. Solutions Implemented
+
+**Purpose:** High-level summary of the solution (filled in when task is complete).
+
+**Guidelines:**
+- 1-3 paragraphs maximum
+- Focus on the "how" not the "what"
+- Explain key decisions and trade-offs
+- Should be readable without technical details
+
+**Example:**
+```markdown
+## Solutions Implemented
+
+Implemented a token bucket rate limiter with Redis backend that tracks query execution per user per minute and per hour. The rate limiter uses a decorator pattern to wrap database query functions, checking limits before execution and returning HTTP 429 errors with Retry-After headers when limits are exceeded.
+
+The token bucket algorithm was chosen over fixed window to allow burst traffic while maintaining average rate limits. Redis provides distributed rate limiting across multiple server instances. If Redis is unavailable, the system degrades gracefully by logging warnings but allowing queries (fail-open approach for availability).
+
+Configuration is flexible with per-resource limits and environment variable overrides. The implementation adds ~2ms overhead per query, which is negligible compared to typical query execution time (50-200ms).
+```
+
+#### 10. Verification Results
+
+**Purpose:** Confirm acceptance criteria were met.
+
+**Guidelines:**
+- Check off each acceptance criterion
+- Provide evidence for each
+- Note any criteria not met and why
+
+**Example:**
+```markdown
+## Verification Results
+
+Acceptance criteria verified:
+
+- [x] Rate limiter service implemented with token bucket algorithm
+  - Verified: Code review of `src/{{ project_name_underscore }}/rate_limiter.py`
+  
+- [x] Integration with database service complete
+  - Verified: Integration tests pass, manual testing successful
+  
+- [x] Configuration via environment variables works
+  - Verified: Tested with different limit values
+  
+- [x] Returns 429 status with Retry-After header
+  - Verified: Integration test `test_rate_limit_exceeded_returns_429`
+  
+- [x] Unit tests with >80% coverage
+  - Verified: pytest shows 92% coverage for rate limiter code
+  
+- [x] Documentation updated
+  - Verified: Architecture doc, API docs, README all updated
+  
+- [x] QA suite passes
+  - Verified: `make qa/test-all` passes completely
+```
+
+#### 11. Key Learnings
+
+**Purpose:** Capture insights for future work.
+
+**Guidelines:**
+- What went well?
+- What was harder than expected?
+- What would you do differently?
+- What patterns emerged?
+- What gotchas should others know about?
+
+**Example:**
+```markdown
+## Key Learnings
+
+**What went well:**
+- Token bucket algorithm was straightforward to implement
+- Redis integration was smooth with existing connection pool
+- Decorator pattern made integration clean
+
+**Challenges:**
+- Had to handle Redis connection failures gracefully
+- Retry-After header calculation was tricky for sliding windows
+- Testing race conditions required careful setup
+
+**Would do differently:**
+- Should have considered distributed Redis earlier (needed for multi-instance deployment)
+- Could have used existing rate limiting library instead of custom implementation
+
+**Gotchas for future work:**
+- Redis keys need expiration times or they accumulate
+- Token bucket state must be atomic (used Redis WATCH/MULTI)
+- Burst allowance needs careful tuning based on actual usage patterns
+
+**Patterns:**
+- Decorator pattern worked well for cross-cutting concerns
+- Fail-open approach (allow on Redis failure) is good for availability
+- Logging with structured fields helps debugging rate limit issues
+```
+
+#### 12. Notes
+
+**Purpose:** Miscellaneous progress notes, questions, blockers.
+
+**Guidelines:**
+- Use this section while work is in progress
+- Can be rough notes and thoughts
+- Document blockers or open questions
+- Move important info to other sections when complete
+
+**Example:**
+```markdown
+## Notes
+
+**2026-01-28 14:30 - Initial Planning:**
+- Need to decide between rate limiting at API gateway vs. database service
+- Leaning toward database service for more granular control
+
+**2026-01-28 16:45 - Blocked:**
+- Waiting for Redis service to be added to infrastructure (Task H024)
+- Can proceed with implementation and testing against local Redis
+
+**2026-01-29 09:15 - Question:**
+- Should rate limits be per-user or per-API-key?
+- Decision: Per-user for now, can add per-key later if needed
+
+**2026-01-29 14:20 - Discovery:**
+- Found existing rate limiter in auth service, but it's HTTP-specific
+- Our database rate limiter needs different semantics (resource-based)
+
+**2026-01-29 18:00 - Completed:**
+- All acceptance criteria met
+- Ready to close task
+```
+
+
+---
+
+
+## Workflow: Claiming and Working on a Task
+
+### 1. Find and Claim a Task
+
+```bash
+# List available tasks
+cd .opencode/scripts
+./pm task list --status todo
+
+# Show task details to understand requirements
+./pm task show H027
+
+# Claim the task
+./pm task claim H027
+```
+
+### 2. Read the Task Artifact
+
+```bash
+# Read the full task artifact
+cat .opencode/data/tasks/H027.md
+
+# Understand:
+# - Objective: What needs to be done?
+# - Problem Statement: Why does this need to be done?
+# - Required Changes: What specifically needs to change?
+# - Acceptance Criteria: How will we know it's complete?
+```
+
+### 3. Start Work and Update Status
+
+```bash
+# Update status to UNDERWAY
+./pm task update H027 --status underway
+```
+
+### 4. Work and Document Progress
+
+As you work, update the task artifact incrementally:
+
+```bash
+# Open task artifact
+vim .opencode/data/tasks/H027.md
+
+# Add to Implementation Steps section:
+## Implementation Steps
+
+### Phase 1: Research (10:00-11:30)
+1. Investigated rate limiting algorithms
+2. Decided on token bucket approach
+3. Created design document
+
+### Phase 2: Implementation (11:30-14:00)
+4. Implemented RateLimiter class
+   - Used Redis for distributed state
+   - Token bucket with burst allowance
+...
+```
+
+**Best practice:** Update the task artifact at natural stopping points:
+- After completing a phase
+- Before taking a break
+- When encountering a blocker
+- When making a key decision
+- At end of day
+
+### 5. Make Commits with Task References
+
+```bash
+# Stage changes
+git add src/{{ project_name_underscore }}/rate_limiter.py tests/
+
+# Commit with task reference
+git commit -m "feat(rate-limit): add rate limiter service [Agent: Builder - Azazel]" -m "" -m "Implemented token bucket rate limiter with Redis backend." -m "" -m "[Task: H027]"
+```
+
+**Important:** Always include `[Task: ID]` in commit message to link commits to tasks.
+
+### 6. Update Task Artifact with File Changes
+
+After making changes, document them:
+
+```markdown
+## Files Changed
+
+### Created
+- `src/{{ project_name_underscore }}/rate_limiter.py` (+245 lines) - Rate limiter implementation
+
+### Modified
+- `src/{{ project_name_underscore }}/database/service.py` (+35 lines) - Integrated rate limiter
+```
+
+### 7. Test and Document Results
+
+```bash
+# Run tests
+pytest tests/unit/test_rate_limiter.py -v
+
+# Update task artifact:
+## Testing Performed
+
+### Unit Tests
+```bash
+pytest tests/unit/test_rate_limiter.py -v
+# 25 passed in 0.42s
+```
+All tests pass!
+```
+
+### 8. Complete the Task
+
+When all acceptance criteria are met:
+
+```bash
+# Fill in final sections of task artifact:
+# - Solutions Implemented (high-level summary)
+# - Verification Results (check off acceptance criteria)
+# - Key Learnings (insights for future)
+
+# Close the task
+./pm task close H027
+```
+
+### 9. Final Commit
+
+```bash
+# Commit the completed task artifact
+git add .opencode/data/tasks/H027.md
+git commit -m "docs(task): complete task H027 artifact [Agent: Builder - Azazel]" -m "" -m "[Task: H027]"
+```
+
+
+---
+
+
+## Workflow: Creating a New Task
+
+### When to Create a Task
+
+Create a task when you identify work that needs to be done:
+- User requests a feature
+- Bug discovered during testing
+- Technical debt identified
+- Documentation gap found
+- Infrastructure improvement needed
+
+### Using pm task create
+
+```bash
+cd .opencode/scripts
+./pm task create
+```
+
+This will prompt you for:
+- **Title:** Brief description (e.g., "Implement Rate Limiting for Database Queries")
+- **Priority:** CRITICAL | HIGH | MEDIUM | LOW
+- **Role:** Builder, Tester, Architect, Documentarian, etc.
+- **Category:** feature, bug, refactor, docs, infrastructure, test, chore
+
+The task will be created with:
+- A generated task ID (e.g., H042 for HIGH priority)
+- Status set to TODO
+- Empty template sections ready to fill in
+
+### Fill in Task Details
+
+After creation, edit the task artifact to add:
+
+1. **Objective:** Clear statement of what needs to be done
+2. **Problem Statement:** Why this is needed, current issues
+3. **Required Changes:** Specific technical changes
+4. **Acceptance Criteria:** How to know it's complete
+
+```bash
+# Edit the new task
+vim .opencode/data/tasks/H042.md
+```
+
+### Example Task Creation Flow
+
+```bash
+$ ./pm task create
+
+Title: Add query cost estimation before execution
+Priority: HIGH
+Role: Builder
+Category: feature
+
+Created task H042: Add query cost estimation before execution
+
+$ vim .opencode/data/tasks/H042.md
+
+# Fill in:
+## Objective
+Estimate and enforce query cost limits to prevent expensive queries from overwhelming the database.
+
+## Problem Statement
+Currently, any valid SELECT query can be executed, regardless of complexity...
+
+## Required Changes
+1. Add query parser to estimate cost
+2. Add configuration for cost limits
+3. Reject queries exceeding limits
+...
+
+## Acceptance Criteria
+- [ ] Query parser implemented
+- [ ] Cost estimation works for common query patterns
+- [ ] Configuration added
+...
+
+$ git add .opencode/data/tasks/H042.md
+$ git commit -m "docs(task): create task H042 for query cost estimation [Agent: Architect - Ptah]"
+```
+
+
+---
+
+
+## Best Practices
+
+### 1. Update as You Go
+
+❌ **Don't:** Wait until task is complete to document everything
+✅ **Do:** Update task artifact at natural stopping points
+
+**Why:** You'll forget details, decisions, and context if you wait.
+
+### 2. Document Failures Too
+
+❌ **Don't:** Only document what worked
+✅ **Do:** Document what you tried that didn't work and why
+
+**Why:** Saves future developers from repeating mistakes.
+
+### 3. Link Everything
+
+❌ **Don't:** Work on tasks without referencing them in commits
+✅ **Do:** Include `[Task: ID]` in every commit message
+
+**Why:** Creates traceability between code changes and business context.
+
+### 4. Fill in All Sections
+
+❌ **Don't:** Leave template sections empty
+✅ **Do:** Fill in all sections, even if briefly
+
+**Why:** Future developers need context to understand decisions.
+
+### 5. Write for Future You
+
+❌ **Don't:** Write cryptic notes only you understand today
+✅ **Do:** Write clear explanations future developers will understand
+
+**Why:** You'll need to understand this in 6 months when you don't remember the context.
+
+
+---
+
+
+## Generating Changelog
+
+Task artifacts are the source of truth. Generate changelogs on-demand:
+
+```bash
+cd .opencode/scripts
+
+# Generate full changelog
+./pm changelog
+
+# Generate changelog since date
+./pm changelog --since 2026-01-01
+
+# Generate JSON format
+./pm changelog --format json
+
+# Generate for specific date range
+./pm changelog --since 2026-01-01 --until 2026-01-31
+```
+
+The changelog is generated from:
+- Completed tasks in database
+- Task artifact content (Solutions Implemented, Files Changed)
+- Commit messages with `[Task: ID]` references
+
+
+---
+
+
+## FAQ
+
+### Q: Do I need a task for every commit?
+
+A: No, but every significant piece of work should have a task. Trivial fixes (typos, formatting) can be committed without tasks.
+
+### Q: What if I'm working on multiple tasks in parallel?
+
+A: That's fine! Just make sure each commit references the correct task with `[Task: ID]`.
+
+### Q: Can I update a task artifact after closing the task?
+
+A: Yes! Task artifacts are living documents. Add learnings, corrections, or follow-up notes anytime.
+
+### Q: What if requirements change mid-task?
+
+A: Update the task artifact! Change the Objective, Required Changes, or Acceptance Criteria sections to reflect new understanding.
+
+### Q: Should I create sub-tasks?
+
+A: Usually no. Break down work in the Implementation Steps section instead. Only create separate tasks if the work is independently valuable or assigned to different roles.
+
+### Q: How detailed should Implementation Steps be?
+
+A: Detailed enough that someone else could understand what you did and why. Include decisions, blockers, and discoveries.
+
+### Q: What's the difference between Notes and Implementation Steps?
+
+A: **Notes** are rough, in-progress thoughts. **Implementation Steps** is a cleaned-up chronological log. Move important notes to Implementation Steps when done.
+
+
+---
+
+
+## See Also
+
+- **`.opencode/procedures/COMMIT_GUIDELINES.md`** - Commit message format
+- **`.opencode/procedures/WORKFLOWS.md`** - Multi-agent workflows  
+- **`.opencode/guides/AGENTS.md`** - Agent-specific patterns
+- **`.opencode/README.md`** - Project overview

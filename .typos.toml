@@ -1,0 +1,16 @@
+[default.extend-words]
+# Norse mythology names
+Hel = "Hel"
+hel = "hel"
+
+# Mesopotamian/Sumerian deity name components
+nin = "nin"
+
+# Mayan deity names
+puch = "puch"
+
+# Business/Technical acronyms
+SME = "SME"  # Subject Matter Expert
+
+# Company names
+Hashi = "Hashi"  # HashiCorp

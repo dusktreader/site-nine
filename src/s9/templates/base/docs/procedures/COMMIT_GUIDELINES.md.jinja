@@ -1,0 +1,405 @@
+# Commit Guidelines for All Agents
+
+**All agents must follow these commit guidelines using Conventional Commits format with task-focused documentation.**
+
+
+## Core Principles
+
+1. **Commit incrementally** - Don't wait until everything is done
+2. **Document in task artifacts** - Update task files in `.opencode/data/tasks/` with progress
+3. **Use Conventional Commits** - Standard format with agent attribution
+4. **Test before commit** - Run `make qa` to ensure quality
+
+
+## When to Commit
+
+Commit after completing:
+- ✅ A logical unit of work (one feature, one bug fix, one refactoring)
+- ✅ Adding tests for a feature
+- ✅ Updating documentation
+- ✅ Making configuration changes
+
+**Don't wait!** Commit as you go, not one large commit at the end.
+
+
+## Commit Message Format (Conventional Commits)
+
+```
+type(scope): brief description [Agent: Type & Name] [Task: ID]
+
+Longer description if needed (explain why, not just what).
+
+- List key changes
+- Mention affected files/components
+- Reference task artifact for details
+
+See task artifact .opencode/data/tasks/TASK_ID.md for full context.
+```
+
+### Types (from Conventional Commits)
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `refactor:` - Code change that neither fixes a bug nor adds a feature
+- `docs:` - Documentation only changes
+- `test:` - Adding or updating tests
+- `chore:` - Changes to build process, dependencies, or auxiliary tools
+- `perf:` - Performance improvements
+- `style:` - Code style changes (formatting, missing semicolons, etc.)
+- `ci:` - CI/CD configuration changes
+
+### Scope (Optional but Recommended)
+The scope should describe the area of change:
+- `database` - Database-related changes
+- `mcp-tools` - MCP tool changes
+- `auth` - Authentication changes
+- `config` - Configuration changes
+- `slack-bot` - Slack bot changes
+- `knowledge` - Knowledge base changes
+- `rate-limit` - Rate limiting changes
+- etc.
+
+### Agent Attribution
+Always include agent type and name in the commit message:
+- `[Agent: Manager]`
+- `[Agent: Builder - Azazel]`
+- `[Agent: Architect]`
+- `[Agent: Tester - Mephistopheles]`
+- `[Agent: Designer - Seraphina-iii]` (include suffix if name has been used before)
+- `[Agent: OpenCode Assistant]`
+
+**Important**: If your agent name has a roman numeral suffix (e.g., `-ii`, `-iii`, `-iv`), include it in the attribution.
+
+### Task Reference
+Include the task ID if working on a specific task:
+- `[Task: H024]`
+- `[Task: M013]`
+- `[Task: C001]`
+
+
+## Examples
+
+### Good Commit Messages
+
+```
+feat(rate-limit): add rate limiting to database tools [Agent: Builder - Azazel] [Task: H015]
+
+Applied @rate_limited decorator to crol_query_database and
+crol_learn_database tools to protect databases from query overload.
+Added crol_get_rate_limit_stats monitoring tool.
+
+- server.py: Added rate_limited decorator (line 592, 688)
+- server.py: Added crol_get_rate_limit_stats tool (line 47)
+- test_server_rate_limiting.py: Added 3 integration tests
+
+See task artifact .opencode/data/tasks/H015.md for full context.
+```
+
+```
+docs(slack-bot): add setup guide for Slack integration [Agent: Documentarian - Seraphina-iii] [Task: H001]
+
+Created comprehensive setup guide with OAuth configuration,
+bot token creation, and channel setup instructions.
+
+- SLACK_SETUP_GUIDE.md: New file with step-by-step instructions
+- README.md: Added link to setup guide
+
+See task artifact .opencode/data/tasks/H001.md for full context.
+```
+
+```
+fix(auth): resolve token validation error [Agent: Builder - Lucifer] [Task: M016]
+
+Fixed issue where expired tokens were not being rejected.
+Added proper timestamp comparison with timezone awareness.
+
+- auth/service.py: Fixed token expiration check
+- tests/test_auth.py: Added expiration test case
+
+See task artifact .opencode/data/tasks/M016.md for full context.
+```
+
+```
+refactor(database): improve query validation performance [Agent: Builder] [Task: L004]
+
+Optimized query validation by compiling regexes once at module level
+instead of on every validation call. 3x performance improvement.
+
+- database/validation.py: Pre-compile regex patterns
+- tests/test_database.py: Added performance benchmark
+
+See task artifact .opencode/data/tasks/L004.md for full context.
+```
+
+```
+chore: cleanup redundant documentation files [Agent: OpenCode Assistant]
+
+Removed obsolete migration docs and duplicate session summaries.
+Reduced .opencode/ from 35 to 30 files.
+
+- Deleted MIGRATION_PLAN.md, MIGRATION_COMPLETE.md, VALIDATION_CHECKLIST.md
+- Deleted duplicate rate-limiting-application.md
+- Updated README files to remove references
+
+This was general cleanup, not tied to a specific task.
+```
+
+### Bad Commit Messages
+
+```
+Updated stuff
+```
+❌ No type, no scope, no agent, no context
+
+```
+feat: changes
+```
+❌ Too vague, no details, no agent
+
+```
+Fixed the bug
+```
+❌ No type prefix, no agent, doesn't say which bug
+
+
+## Task Artifact Updates
+
+**When working on a task, update the task artifact as you work!**
+
+Task artifacts are located in `.opencode/data/tasks/{TASK_ID}.md`
+
+### What to Update
+
+During your work, update these sections in the task artifact:
+
+1. **Implementation Steps** - Chronological log of what you did
+2. **Files Changed** - List of files modified with descriptions
+3. **Notes** - Any important observations or decisions
+4. **Testing Performed** - Tests run and results
+5. **Git Commits** - List of commit SHAs related to this task
+
+When completing the task:
+
+1. **Solutions Implemented** - High-level summary of what was done
+2. **Verification Results** - How acceptance criteria were met
+3. **Key Learnings** - Insights for future work
+
+### Example Task Artifact Update
+
+```markdown
+## Implementation Steps
+
+### Phase 1: Design (2026-01-30 10:00)
+1. Reviewed existing rate limiting code
+2. Identified 3 tools needing rate limits
+3. Designed decorator approach
+
+### Phase 2: Implementation (2026-01-30 11:00)
+4. Created @rate_limited decorator
+5. Applied to crol_query_database
+6. Applied to crol_learn_database
+7. Added monitoring tool
+
+### Phase 3: Testing (2026-01-30 14:00)
+8. Wrote 3 integration tests
+9. All tests passing (144 total)
+
+## Files Changed
+
+- `src/{{ project_name_underscore }}/server.py` - Applied @rate_limited decorator to query tools
+- `tests/test_server_rate_limiting.py` - Added 3 integration tests
+- `.opencode/data/tasks/H015.md` - This file (documentation)
+
+## Git Commits
+
+- abc123def - feat(rate-limit): add rate limiting to database tools
+- def456ghi - test(rate-limit): add integration tests
+```
+
+
+## Agent Coordination for Commits
+
+When multiple agents work together on a task:
+
+### Pattern 1: Sequential Work
+```
+feat(rate-limit): add design document [Agent: Architect] [Task: H015]
+# Commit ^
+
+feat(rate-limit): implement RateLimiter class [Agent: Builder] [Task: H015]
+# Commit ^
+
+feat(rate-limit): apply to database tools [Agent: Builder] [Task: H015]
+# Commit ^
+
+test(rate-limit): validate with 100 concurrent requests [Agent: Tester] [Task: H015]
+# Commit ^
+
+docs(rate-limit): update README with configuration [Agent: Documentarian] [Task: H015]
+# Commit ^
+```
+
+Each agent commits their portion incrementally. Don't wait for everyone to finish!
+
+### Pattern 2: Parallel Work
+If agents work on different files/components, they can commit in parallel:
+```
+feat(component-x): implement X component [Agent: Builder - Azazel] [Task: H020]
+feat(component-y): implement Y component [Agent: Builder - Lucifer-ii] [Task: H021]
+docs(readme): update feature list [Agent: Documentarian] [Task: M008]
+```
+
+### Pattern 3: Manager Coordinates
+```
+Manager delegates to Builder: "Implement rate limiting"
+feat(rate-limit): implement core rate limiter [Agent: Builder] [Task: H015]
+
+Manager delegates to Tester: "Validate rate limiting"
+test(rate-limit): add stress tests [Agent: Tester] [Task: H015]
+
+Manager delegates to Documentarian: "Document rate limiting"
+docs(rate-limit): add configuration guide [Agent: Documentarian] [Task: H015]
+```
+
+**Key:** Each agent commits their own work with clear messages and updates the shared task artifact.
+
+
+## Git Best Practices
+
+### Before Committing
+```bash
+# Run QA checks
+make qa
+
+# Check what will be committed
+git status
+git diff
+
+# Verify tests pass
+make qa/test-all
+```
+
+### Committing
+```bash
+# Stage files (including task artifact if you updated it)
+git add path/to/file.py
+git add .opencode/data/tasks/TASK_ID.md
+
+# Commit with message
+git commit -m "feat(scope): description [Agent: Type & Name] [Task: ID]"
+
+# Or use editor for longer message
+git commit
+```
+
+### After Committing
+```bash
+# Verify commit
+git log -1
+
+# Check status
+git status
+
+# Update task artifact with commit SHA
+echo "- $(git rev-parse --short HEAD) - commit message" >> .opencode/data/tasks/TASK_ID.md
+```
+
+
+## Common Mistakes to Avoid
+
+### ❌ One Giant Commit at the End
+```
+# Bad: Waiting until everything is done
+feat: implemented all of Phase 7 (47 files changed)
+```
+
+**Solution:** Commit incrementally as you complete each logical unit.
+
+### ❌ Vague Commit Messages
+```
+# Bad: No context
+Updated files
+Fixed stuff
+Changes
+```
+
+**Solution:** Be specific about what changed and why. Use conventional commits format.
+
+### ❌ Missing Agent Attribution
+```
+# Bad: No agent identified
+feat(database): add query validation
+```
+
+**Solution:** Always include `[Agent: Type & Name]` in the message.
+
+### ❌ Not Updating Task Artifact
+```
+# Commit without updating task artifact
+```
+
+**Solution:** Update `.opencode/data/tasks/TASK_ID.md` with implementation details as you work.
+
+### ❌ Committing Without Testing
+```
+# Commit before running make qa
+```
+
+**Solution:** Always run `make qa` before committing.
+
+### ❌ Wrong Conventional Commit Type
+```
+# Bad: Using generic type
+feat: updated docs
+```
+
+**Solution:** Use correct type - this should be `docs(scope): ...`
+
+
+## Workflow Summary
+
+1. **Claim task**: `cd .opencode/scripts && ./pm task claim TASK_ID --agent-name <name>`
+2. **Make changes** to code/docs/tests
+3. **Update task artifact** (.opencode/data/tasks/TASK_ID.md) with progress
+4. **Run `make qa`** to verify quality
+5. **Stage files**: `git add <files> .opencode/data/tasks/TASK_ID.md`
+6. **Commit**: `git commit -m "type(scope): description [Agent: Type & Name] [Task: ID]"`
+7. **Repeat** for next logical unit of work
+8. **Complete task**: `cd .opencode/scripts && ./pm task close TASK_ID`
+
+
+## Conventional Commits Quick Reference
+
+| Type | When to Use | Example |
+|------|-------------|---------|
+| `feat:` | New feature | `feat(database): add query timeout support` |
+| `fix:` | Bug fix | `fix(auth): resolve token expiration check` |
+| `refactor:` | Code improvement | `refactor(validation): optimize regex compilation` |
+| `docs:` | Documentation | `docs(readme): add setup instructions` |
+| `test:` | Tests | `test(rate-limit): add stress tests` |
+| `chore:` | Maintenance | `chore: update dependencies` |
+| `perf:` | Performance | `perf(query): add result caching` |
+| `style:` | Formatting | `style: apply ruff formatting` |
+| `ci:` | CI/CD | `ci: add GitHub Actions workflow` |
+
+
+## Questions?
+
+- **How often should I commit?** After each logical unit of work (feature, bug fix, test, doc update)
+- **Should I commit incomplete work?** Only if it's a logical checkpoint and doesn't break tests
+- **Multiple commits in one session?** Yes! Preferred over one large commit
+- **What if scope is unclear?** Either use a general scope or omit it: `feat: add new feature [Agent: Name]`
+- **Must I always include task ID?** Include it when working on a specific task. Omit for general maintenance/cleanup.
+
+
+## Reference
+
+- **Conventional Commits**: https://www.conventionalcommits.org/
+- **Task Management**: See `.opencode/data/README.md` for PM system documentation
+- **Task Workflow**: See `.opencode/procedures/TASK_WORKFLOW.md` (when created)
+- **Git basics**: https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository
+
+
+---
+
+**Remember:** Good commits and task artifact updates make it easy for future agents (and humans) to understand what
+changed and why. Use Conventional Commits format with agent attribution and task references for clarity and consistency!
