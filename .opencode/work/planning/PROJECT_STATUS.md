@@ -61,7 +61,7 @@ s9 dashboard
 s9 task list --active-only
 
 # Show active agent sessions
-s9 agent list --active-only
+s9 mission list --active-only
 
 # Create/claim/update tasks
 s9 task --help

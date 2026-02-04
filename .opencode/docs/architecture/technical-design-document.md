@@ -55,7 +55,7 @@ This document provides detailed technical specifications for refactoring site-ni
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         CLI Layer                                │
-│  s9 init, s9 task, s9 agent, s9 dashboard, s9 name, etc.       │
+│  s9 init, s9 task, s9 mission, s9 dashboard, s9 name, etc.       │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              │ uses

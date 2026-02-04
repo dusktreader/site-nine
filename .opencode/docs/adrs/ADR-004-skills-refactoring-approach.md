@@ -123,7 +123,7 @@ steps:
     prompt: "Which role would you like me to assume?"
     options:
       type: command
-      command: s9 agent roles
+      command: s9 mission roles
     validate: role-exists
     
   - id: suggest-daemon-name
@@ -142,7 +142,7 @@ steps:
     
   - id: register-agent
     type: command
-    command: s9 agent start {name} --role {role} --task "session-start"
+    command: s9 mission start {name} --role {role} --task "session-start"
     store: agent_id
     
   - id: share-mythology
@@ -154,7 +154,7 @@ steps:
       
   - id: rename-tui-session
     type: command
-    command: s9 agent rename-tui {name} {role}
+    command: s9 mission rename-tui {name} {role}
     optional: true  # Only works in tools with TUI API
     
   - id: check-handoffs

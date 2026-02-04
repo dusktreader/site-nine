@@ -56,8 +56,8 @@ When you encounter a broken `s9` command:
 
 ```bash
 s9 task create --role Operator --priority HIGH \
-  --title "Fix s9 agent start --session-file parameter" \
-  --description "Command: s9 agent start [name] --role [Role] --session-file [path]
+  --title "Fix s9 mission start --session-file parameter" \
+  --description "Command: s9 mission start [name] --role [Role] --session-file [path]
 
 Issue: The --session-file parameter doesn't exist but is documented in the session-start skill.
 
@@ -71,7 +71,7 @@ Error output:
 ╰──────────────────────────────────────────────────────────────────────────────╯
 
 Steps to reproduce:
-1. Run: s9 agent start myagent --role Builder --session-file '.opencode/work/sessions/test.md'
+1. Run: s9 mission start myagent --role Builder --session-file '.opencode/work/sessions/test.md'
 2. Observe the error
 
 Workaround: Use --task parameter instead, which exists and works."

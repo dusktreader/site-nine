@@ -48,7 +48,7 @@ steps:
     prompt: "Which role would you like me to assume?"
     options:
       type: command
-      command: s9 agent roles
+      command: s9 mission roles
     validate:
       type: enum
       values: [Administrator, Architect, Builder, Tester, Documentarian, Designer, Inspector, Operator]
@@ -79,7 +79,7 @@ steps:
   # Step 6: Register agent
   - id: register-agent
     type: command
-    command: s9 agent start {selected_name} --role {selected_role} --task "session-start"
+    command: s9 mission start {selected_name} --role {selected_role} --task "session-start"
     capture_output: true
     parse: json
     store_as: agent_data
@@ -87,7 +87,7 @@ steps:
   # Step 7: Optional step (tool-specific)
   - id: rename-tui
     type: command
-    command: s9 agent rename-tui {selected_name} {selected_role}
+    command: s9 mission rename-tui {selected_name} {selected_role}
     optional: true
     fail_silently: true
     when:

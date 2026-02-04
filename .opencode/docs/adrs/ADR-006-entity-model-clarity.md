@@ -358,7 +358,7 @@ That's it! One field update. The old mission stays in the database as historical
 
 **Breaking changes (no backward compatibility):**
 - ⚠️ All database queries using `agents` table must be updated
-- ⚠️ CLI commands must be updated (`s9 agent` → `s9 mission`)
+- ⚠️ CLI commands must be updated (`s9 mission` → `s9 mission`)
 - ⚠️ Existing session files require migration
 - ⚠️ All documentation must be rewritten
 - ⚠️ **No rollback strategy** - this is a one-way migration
@@ -467,7 +467,7 @@ This is a **breaking change** with no backward compatibility. Backup is for disa
 - Update display logic to capitalize persona names
 
 **Phase 4: CLI updates**
-- Update commands: `s9 agent` → `s9 mission`
+- Update commands: `s9 mission` → `s9 mission`
 - Update commands: `s9 name` → `s9 persona`
 - Update `s9 mission rename-tui` to accept codename parameter (3 positional args)
 - Add codename generation to mission creation
@@ -501,7 +501,7 @@ This is a **breaking change** with no backward compatibility. Backup is for disa
 **Backward compatibility:**
 - Session markdown files can keep old frontmatter (still works)
 - Gradual documentation updates (not all at once)
-- Consider CLI aliases (`s9 agent` → `s9 mission` for transition period)
+- Consider CLI aliases (`s9 mission` → `s9 mission` for transition period)
 
 ## Alternatives Considered
 
@@ -614,7 +614,7 @@ This is a **breaking change** with no backward compatibility. Backup is for disa
 - ✅ No `agent_name` references found in codebase
 
 **Breaking Changes:**
-- CLI commands changed: `s9 agent` → `s9 mission`
+- CLI commands changed: `s9 mission` → `s9 mission`
 - Database tables renamed: backward incompatible
 - Task fields changed: old databases need migration
 

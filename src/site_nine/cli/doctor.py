@@ -365,7 +365,7 @@ def doctor_command(
 
     if stale_missions:
         console.print(f"  [yellow]⚠[/yellow]  Found {len(stale_missions)} stale active missions (>48 hours inactive)")
-        console.print("  [cyan]💡 Consider using 's9 agent end <id>' to close abandoned missions[/cyan]")
+        console.print("  [cyan]💡 Consider using 's9 mission end <id>' to close abandoned missions[/cyan]")
     else:
         console.print("  [green]✓[/green] No stale active missions")
 

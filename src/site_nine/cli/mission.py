@@ -801,8 +801,8 @@ def _detect_session_via_recency(
             except Exception:
                 pass
 
-        console.print("[yellow]Run with: s9 agent rename-tui <name> <role> --session-id <id>[/yellow]")
-        console.print("[yellow]Or use: s9 agent list-opencode-sessions (to see all missions)[/yellow]")
+        console.print("[yellow]Run with: s9 mission rename-tui <name> <role> --session-id <id>[/yellow]")
+        console.print("[yellow]Or use: s9 mission list-opencode-sessions (to see all missions)[/yellow]")
         raise typer.Exit(1)
 
     else:
@@ -933,10 +933,10 @@ def generate_session_uuid() -> None:
     prevents race conditions when multiple sessions run session-start concurrently.
 
     Usage in session-start workflow:
-    1. Agent calls: s9 agent generate-session-uuid
+    1. Agent calls: s9 mission generate-session-uuid
     2. OpenCode captures the UUID output in this session's data
     3. Agent captures the UUID from output
-    4. Agent calls: s9 agent rename-tui <name> <role> --uuid-marker <uuid>
+    4. Agent calls: s9 mission rename-tui <name> <role> --uuid-marker <uuid>
     5. rename-tui searches session data for the UUID to identify this session
     """
     import uuid
@@ -946,7 +946,7 @@ def generate_session_uuid() -> None:
 
     # Output the marker - OpenCode will capture this in the session data
     console.print(f"[bold green]Session UUID:[/bold green] {session_uuid}")
-    console.print(f"[dim]Use this marker with: s9 agent rename-tui <name> <role> --uuid-marker {session_uuid}[/dim]")
+    console.print(f"[dim]Use this marker with: s9 mission rename-tui <name> <role> --uuid-marker {session_uuid}[/dim]")
 
     # Also output just the UUID for easy parsing
     console.print(session_uuid)
@@ -959,7 +959,7 @@ def list_opencode_sessions() -> None:
     """List OpenCode TUI missions for the current project
 
     Shows session IDs and titles to help identify which session to rename.
-    Use the session ID with: s9 agent rename-tui <name> <role> --session-id <id>
+    Use the session ID with: s9 mission rename-tui <name> <role> --session-id <id>
     """
 
     try:
@@ -1017,7 +1017,7 @@ def list_opencode_sessions() -> None:
         console.print("[yellow]No OpenCode missions found for this project.[/yellow]")
     else:
         console.print("[dim]To rename a session, use:[/dim]")
-        console.print("[dim]  s9 agent rename-tui <name> <role> --session-id <session-id>[/dim]\n")
+        console.print("[dim]  s9 mission rename-tui <name> <role> --session-id <session-id>[/dim]\n")
 
 
 @app.command("rename-tui")
@@ -1112,5 +1112,5 @@ def rename_tui(
     if multiple_sessions_detected:
         console.print("[yellow]⚠ Warning: Multiple active sessions detected.[/yellow]")
         console.print("[dim]If the wrong session was renamed, run:[/dim]")
-        console.print(f"[dim]  s9 agent list-opencode-sessions[/dim]")
-        console.print(f"[dim]  s9 agent rename-tui {name} {role} --session-id <correct-session-id>[/dim]")
+        console.print(f"[dim]  s9 mission list-opencode-sessions[/dim]")
+        console.print(f"[dim]  s9 mission rename-tui {name} {role} --session-id <correct-session-id>[/dim]")
