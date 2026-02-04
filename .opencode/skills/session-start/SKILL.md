@@ -83,6 +83,28 @@ Wait for the Director to respond with their role choice.
 
 ## Step 3: Persona Selection
 
+**IMPORTANT:** Check if the `--auto-name` flag was provided to `/summon`.
+
+If the user invoked `/summon <role> --auto-name`, automatically select the first unused persona name:
+
+1. Get suggestions:
+   ```bash
+   s9 name suggest <Role> --count 3
+   ```
+
+2. Select the first unused name from the suggestions
+
+3. Inform the user:
+   ```
+   ✅ Auto-selected persona: [name] ([mythology])
+   
+   [Brief 1-sentence description from suggestion]
+   ```
+
+4. Proceed directly to Step 4 (Register Mission)
+
+**If --auto-name flag was NOT provided:**
+
 Choose a persona name from mythology. **Prefer unused names!**
 
 **Get suggestions:**
