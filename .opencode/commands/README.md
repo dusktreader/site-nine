@@ -3,7 +3,7 @@
 This directory contains custom OpenCode commands that leverage skills for standardized workflows.
 
 > **Note on Task ID Format:** This document contains examples using the old task ID format (e.g., H027, H038). 
-> The current format is `PREFIX-PRIORITY-NUMBER` (e.g., OPR-H-0001, BLD-C-0005). 
+> The current format is `PREFIX-PRIORITY-NUMBER` (e.g., OPR-H-0001, ENG-C-0005). 
 > Task IDs are now **auto-generated** by the `s9 task create` command.
 > See `.opencode/skills/task-management/SKILL.md` for details.
 
@@ -29,15 +29,20 @@ Together, they provide a powerful way to standardize and simplify common develop
 ```
 /summon
 /summon <role>
+/summon <role> --auto-name
+/summon <role> --auto-assign
+/summon <role> --auto-name --auto-assign
 ```
 
 **Examples:**
-- `/summon` - Interactive mode: asks you to choose a role
-- `/summon operator` - Direct mode: starts an Operator session immediately
-- `/summon builder` - Direct mode: starts a Builder session immediately
+- `/summon` - Interactive mode: asks you to choose a role and persona name
+- `/summon operator` - Direct mode: starts an Operator session immediately with persona selection
+- `/summon operator --auto-name` - Fully automated: auto-selects first unused persona name
+- `/summon operator --auto-assign` - Automated task assignment: auto-claims and starts work on top priority task
+- `/summon operator --auto-name --auto-assign` - Fully automated: auto-selects persona and auto-assigns top priority task
 
 **What it does:**
-1. (If no role provided) Asks you to choose a role (Administrator, Architect, Builder, Tester, etc.)
+1. (If no role provided) Asks you to choose a role (Administrator, Architect, Engineer, Tester, etc.)
 2. Suggests a persona name from mythology appropriate to your role
 3. Checks for name conflicts with existing missions
 4. Creates a mission file with proper metadata
@@ -51,16 +56,16 @@ User: /summon
 Agent: Which role should I assume for this mission?
 - Administrator (coordination & delegation)
 - Architect (design & planning)
-- Builder (implementation)
+- Engineer (implementation)
 - Tester (validation & QA)
 - Documentarian (docs & guides)
 - Designer (UI/UX)
 - Inspector (review & audit)
 - Operator (deployment & infrastructure)
 
-User: Builder
+User: Engineer
 
-Agent: I suggest the persona "goibniu" for this Builder mission.
+Agent: I suggest the persona "goibniu" for this Engineer mission.
 (Goibniu is the Celtic god of metalworking and craft)
 
 Would you like to use this persona, or choose a different one?
@@ -69,7 +74,7 @@ User: That's perfect!
 
 Agent: ✅ Mission initialized!
 
-I'm Goibniu, your Builder persona for this mission.
+I'm Goibniu, your Engineer persona for this mission.
 
 [Session continues...]
 ```
@@ -214,9 +219,9 @@ What is the title of this task?
 User: Implement Rate Limiting for API Gateway
 
 Agent: What is the primary role for this task?
-- Administrator, Architect, Builder, Tester, etc.
+- Administrator, Architect, Engineer, Tester, etc.
 
-User: Builder
+User: Engineer
 
 Agent: Creating task H038...
 
@@ -225,7 +230,7 @@ Agent: Creating task H038...
 Task ID: H038
 Title: Implement Rate Limiting for API Gateway
 Priority: HIGH
-Role: Builder
+Role: Engineer
 Status: TODO
 
 Markdown file: .opencode/tasks/artifacts/H038.md
@@ -254,9 +259,9 @@ Markdown file: .opencode/tasks/artifacts/H038.md
 ```
 User: /claim-task
 
-Agent: I'm a Builder agent. Let me find available Builder tasks...
+Agent: I'm a Engineer agent. Let me find available Engineer tasks...
 
-Available Builder tasks (TODO):
+Available Engineer tasks (TODO):
 
 H038 - Implement Rate Limiting for API Gateway (HIGH)
 H040 - Add Database Connection Pooling (MEDIUM)
@@ -277,7 +282,7 @@ Agent: Claiming task H038...
 ✅ Task H038 claimed successfully!
 
 Status changed: TODO → UNDERWAY
-Claimed by: Goibniu (Builder)
+Claimed by: Goibniu (Engineer)
 Claimed at: 2026-01-29T15:30:00+00:00
 
 Task artifact: .opencode/tasks/artifacts/H038.md
@@ -437,7 +442,7 @@ Agent: Generating task report...
 
 | ID | Status | Role | Title | Agent | Created |
 |----|--------|------|-------|-------|---------|
-| L008 | TODO | Builder | Add SQL Injection Fuzzing Tests | - | 2026-01-30 |
+| L008 | TODO | Engineer | Add SQL Injection Fuzzing Tests | - | 2026-01-30 |
 
 ---
 
@@ -603,9 +608,9 @@ Your changes are now in the remote repository!
 
 **Example interaction:**
 ```
-User: /handoff Builder
+User: /handoff Engineer
 
-Agent (Administrator - Ishtar): Creating handoff to Builder...
+Agent (Administrator - Ishtar): Creating handoff to Engineer...
 
 Gathering current state...
 - Branch: feature/query-caching
@@ -613,7 +618,7 @@ Gathering current state...
 - Active task: None
 - Recent work: Created task H040, reviewed requirements
 
-What should the Builder focus on?
+What should the Engineer focus on?
 
 User: Implement database query caching for H040
 
@@ -622,7 +627,7 @@ Agent: Creating handoff document...
 ✅ Handoff created successfully!
 
 **From:** Administrator (Ishtar)
-**To:** Builder (any)
+**To:** Engineer (any)
 **Created:** 2026-01-29 16:30:00
 
 **Handoff Document:**
@@ -637,7 +642,7 @@ Agent: Creating handoff document...
 - Acceptance criteria: 7 items
 
 **For Next Persona:**
-When Builder starts with `/summon`, they'll be notified of this handoff
+When Engineer starts with `/summon`, they'll be notified of this handoff
 and can read the full context.
 
 **Your Options:**
@@ -656,10 +661,10 @@ Handoff document includes:
 ```
 
 **When to use:**
-- ✅ Administrator delegates implementation to Builder
-- ✅ Builder hands off to Tester for validation
-- ✅ Tester finds bugs and hands back to Builder
-- ✅ Builder completes feature and hands to Inspector for review
+- ✅ Administrator delegates implementation to Engineer
+- ✅ Engineer hands off to Tester for validation
+- ✅ Tester finds bugs and hands back to Engineer
+- ✅ Engineer completes feature and hands to Inspector for review
 - ✅ Any time work needs to transition between roles
 
 **What gets handed off:**

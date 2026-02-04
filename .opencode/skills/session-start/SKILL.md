@@ -321,6 +321,52 @@ What would you like me to help you with?
 What would you like me to help you with?
 ```
 
+## Step 11: Auto-Assign Task (If Requested)
+
+**IMPORTANT:** Check if the `--auto-assign` flag was provided to `/summon`.
+
+**Skip if:**
+- No `--auto-assign` flag was provided
+- No role was specified (auto-assign requires a role)
+
+**If the user invoked `/summon <role> --auto-assign`:**
+
+1. Query for the top priority TODO task for the role:
+   ```bash
+   s9 task list --role [Role] --status TODO
+   ```
+
+2. **If no TODO tasks exist:**
+   ```
+   ⚠️ No TODO tasks available for [Role] role to auto-assign.
+   
+   What would you like me to help you with?
+   ```
+   Stop here.
+
+3. **If TODO tasks exist:**
+   - Select the first task from the list (highest priority)
+   - Claim the task:
+     ```bash
+     s9 task claim [TASK-ID]
+     ```
+   
+4. **Inform the Director:**
+   ```
+   ✅ Auto-assigned task: [TASK-ID]
+   
+   **Title:** [Task title]
+   **Priority:** [Priority]
+   
+   I'm starting work on this task now.
+   ```
+
+5. **Begin work immediately:**
+   - Load any relevant documentation or context needed for the task
+   - Start implementing the task without waiting for further instruction
+   - Update todos to track progress
+   - Provide status updates as you work
+
 ## Important Notes
 
 - Use persona name in commits: `[Persona: Name - Role]` or `[Mission: codename]`
