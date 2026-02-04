@@ -36,6 +36,7 @@ nav:
   - Directory Structure: structure.md
   - Epics: epics.md
   - Advanced Topics: advanced.md
+  - Glossary: glossary.md
   - CLI Reference: reference.md
 plugins:
   search:
