@@ -1,77 +1,72 @@
 -- Crol Troll Project Management Database Schema
 -- Created: 2026-01-30
--- Updated: 2026-02-03 (Added epics)
+-- Updated: 2026-02-03 (Added epics, renamed to personas/missions per ADR-006)
 -- 
 -- This database manages:
 -- 1. Tasks - Development work tracking
 -- 2. Epics - Task grouping and organization
--- 3. Names - Daemon names for agent sessions
--- 4. Agents - Agent session tracking
+-- 3. Personas - Named identities with mythological backgrounds
+-- 4. Missions - Work assignments using personas
 
 -- ============================================================================
--- DAEMON NAMES TABLE
+-- PERSONAS TABLE
 -- ============================================================================
--- Stores daemon names from mythology organized by role
-CREATE TABLE daemon_names (
-    name TEXT PRIMARY KEY,                -- Daemon name (lowercase, e.g., 'atlas', 'terminus')
+-- Stores persona names from mythology organized by role
+CREATE TABLE personas (
+    name TEXT PRIMARY KEY,                -- Persona name (lowercase, e.g., 'atlas', 'terminus')
     role TEXT NOT NULL                    -- Primary role this name suits
         CHECK(role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
     mythology TEXT NOT NULL,              -- Mythology/religion origin (e.g., 'Greek', 'Roman', 'Norse')
     description TEXT NOT NULL,            -- Brief description of the deity/daemon
-    usage_count INTEGER NOT NULL DEFAULT 0, -- How many times this name has been used
-    last_used_at TEXT,                    -- ISO 8601 timestamp of last usage
+    mission_count INTEGER NOT NULL DEFAULT 0, -- How many times this name has been used
+    last_mission_at TEXT,                 -- ISO 8601 timestamp of last usage
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     
     -- Indexes
     CHECK(length(name) > 0)
 );
 
-CREATE INDEX idx_daemon_names_role ON daemon_names(role);
-CREATE INDEX idx_daemon_names_usage ON daemon_names(usage_count);
-CREATE INDEX idx_daemon_names_last_used ON daemon_names(last_used_at);
+CREATE INDEX idx_personas_role ON personas(role);
+CREATE INDEX idx_personas_usage ON personas(mission_count);
+CREATE INDEX idx_personas_last_used ON personas(last_mission_at);
 
 -- ============================================================================
--- AGENTS TABLE
+-- MISSIONS TABLE
 -- ============================================================================
--- Tracks agent sessions
-CREATE TABLE agents (
+-- Tracks missions (work assignments using personas)
+CREATE TABLE missions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,                   -- Full agent name with suffix (e.g., 'terminus', 'atlas-ii')
-    base_name TEXT NOT NULL,              -- Base name without suffix (e.g., 'terminus', 'atlas')
-    suffix TEXT,                          -- Roman numeral suffix (e.g., 'ii', 'iii') or NULL for first use
-    role TEXT NOT NULL                    -- Agent role for this session
+    persona_name TEXT NOT NULL,           -- Persona name (e.g., 'terminus', 'atlas')
+    role TEXT NOT NULL                    -- Persona role for this mission
         CHECK(role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
-    session_file TEXT NOT NULL,           -- Path to session file (e.g., '.opencode/sessions/2026-01-30.09:15:55.operator.terminus.expand-task-db.md')
-    session_date TEXT NOT NULL,           -- Session date (YYYY-MM-DD)
-    start_time TEXT NOT NULL,             -- Session start time (HH:MM:SS)
-    end_time TEXT,                        -- Session end time (HH:MM:SS) or NULL if in progress
-    status TEXT NOT NULL DEFAULT 'in-progress'  -- Session status
-        CHECK(status IN ('in-progress', 'paused', 'completed', 'failed', 'aborted')),
-    task_summary TEXT,                    -- Brief task summary
+    codename TEXT NOT NULL,               -- Mission codename (e.g., 'silent-phoenix', 'bold-shadow')
+    mission_file TEXT NOT NULL,           -- Path to mission file (e.g., '.opencode/work/missions/2026-01-30.09:15:55.operator.terminus.silent-phoenix.md')
+    start_time TEXT NOT NULL,             -- Mission start time (ISO 8601)
+    end_time TEXT,                        -- Mission end time (ISO 8601) or NULL if in progress
+    objective TEXT,                       -- Brief mission objective
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     
     -- Constraints
-    CHECK(length(name) > 0),
-    CHECK(length(base_name) > 0),
-    CHECK(length(session_file) > 0),
+    CHECK(length(persona_name) > 0),
+    CHECK(length(codename) > 0),
+    CHECK(length(mission_file) > 0),
     
-    -- Foreign key to daemon_names
-    FOREIGN KEY (base_name) REFERENCES daemon_names(name) ON DELETE RESTRICT
+    -- Foreign key to personas
+    FOREIGN KEY (persona_name) REFERENCES personas(name) ON DELETE RESTRICT
 );
 
-CREATE INDEX idx_agents_name ON agents(name);
-CREATE INDEX idx_agents_base_name ON agents(base_name);
-CREATE INDEX idx_agents_role ON agents(role);
-CREATE INDEX idx_agents_session_date ON agents(session_date);
-CREATE INDEX idx_agents_status ON agents(status);
+CREATE INDEX idx_missions_persona_name ON missions(persona_name);
+CREATE INDEX idx_missions_role ON missions(role);
+CREATE INDEX idx_missions_codename ON missions(codename);
+CREATE INDEX idx_missions_start_time ON missions(start_time);
 
 -- Trigger to update updated_at timestamp
-CREATE TRIGGER update_agents_timestamp
-AFTER UPDATE ON agents
+CREATE TRIGGER update_missions_timestamp
+AFTER UPDATE ON missions
 FOR EACH ROW
 BEGIN
-    UPDATE agents SET updated_at = datetime('now') WHERE id = NEW.id;
+    UPDATE missions SET updated_at = datetime('now') WHERE id = NEW.id;
 END;
 
 -- ============================================================================
@@ -152,9 +147,8 @@ CREATE TABLE tasks (
     category TEXT                         -- Task category (e.g., 'feature', 'bug-fix', 'documentation')
         CHECK(category IN ('feature', 'bug-fix', 'refactor', 'documentation', 'testing', 'infrastructure', 'security', 'performance', 'architecture', 'maintenance') OR category IS NULL),
 
-    -- Agent tracking
-    agent_name TEXT,                      -- Agent name who claimed this task (e.g., 'goibniu', 'thoth-iii', 'terminus')
-    agent_id INTEGER,                     -- Foreign key to agents table
+    -- Mission tracking
+    current_mission_id INTEGER,           -- Current mission working on this task (or NULL)
     claimed_at TEXT,                      -- ISO 8601 timestamp when task was claimed
     closed_at TEXT,                       -- ISO 8601 timestamp when task was closed (COMPLETE/ABORTED/PAUSED)
     paused_at TEXT,                       -- ISO 8601 timestamp when work was paused
@@ -185,7 +179,7 @@ CREATE TABLE tasks (
     CHECK(paused_at IS NULL OR status = 'PAUSED'),
     
     -- Foreign keys
-    FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE SET NULL,
+    FOREIGN KEY (current_mission_id) REFERENCES missions(id) ON DELETE SET NULL,
     FOREIGN KEY (epic_id) REFERENCES epics(id) ON DELETE RESTRICT,
     FOREIGN KEY (blocks_on_review_id) REFERENCES reviews(id) ON DELETE SET NULL
 );
@@ -203,8 +197,7 @@ CREATE TABLE task_dependencies (
 CREATE INDEX idx_tasks_status ON tasks(status);
 CREATE INDEX idx_tasks_priority ON tasks(priority);
 CREATE INDEX idx_tasks_role ON tasks(role);
-CREATE INDEX idx_tasks_agent_name ON tasks(agent_name);
-CREATE INDEX idx_tasks_agent_id ON tasks(agent_id);
+CREATE INDEX idx_tasks_current_mission ON tasks(current_mission_id);
 CREATE INDEX idx_tasks_epic_id ON tasks(epic_id);
 CREATE INDEX idx_tasks_blocks_on_review ON tasks(blocks_on_review_id);
 CREATE INDEX idx_tasks_updated ON tasks(updated_at);

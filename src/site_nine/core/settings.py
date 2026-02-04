@@ -15,10 +15,10 @@ class SiteNineSettings(BaseModel):
     enable_pm_system: bool = Field(default=True, description="Enable project management system")
     enable_session_tracking: bool = Field(default=True, description="Enable mission tracking")
     enable_commit_guidelines: bool = Field(default=True, description="Enable commit guidelines")
-    enable_daemon_naming: bool = Field(default=True, description="Enable persona system")
+    enable_persona_naming: bool = Field(default=True, description="Enable persona system")
 
     # Customization
-    daemon_names_theme: str = Field(default="mythology", description="Persona theme (mythology, tech, etc)")
+    persona_theme: str = Field(default="mythology", description="Persona theme (mythology, tech, etc)")
     template_dir: str = Field(default="", description="Custom template directory (empty = use default)")
 
     class Config:
@@ -29,6 +29,6 @@ class SiteNineSettings(BaseModel):
                 "project_name": "my-project",
                 "project_type": "python",
                 "enable_pm_system": True,
-                "daemon_names_theme": "mythology",
+                "persona_theme": "mythology",
             }
         }
