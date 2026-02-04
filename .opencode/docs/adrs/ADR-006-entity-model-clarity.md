@@ -1,9 +1,11 @@
 # ADR-006: Entity Model Clarity - Personas, Missions, and Agents
 
-**Status:** Proposed  
+**Status:** Accepted & Implemented  
 **Date:** 2026-02-03  
+**Implemented:** 2026-02-03 (Missions #38, #39)  
 **Deciders:** Tucker (Director), Hemera (Operator)  
-**Related Tasks:** OPR-H-0032  
+**Implementers:** Nereus (Mission #38 - Operator), Kuk (Mission #39 - Operator)  
+**Related Tasks:** OPR-H-0032 (COMPLETE), OPR-H-0047 (In Progress)  
 **Related ADRs:** ADR-005 (Backward Compatibility)
 
 ## Context
@@ -527,16 +529,103 @@ This is a **breaking change** with no backward compatibility. Backup is for disa
 
 ## Decision Status
 
-**Status:** Proposed (awaiting Director approval)
+**Status:** ✅ ACCEPTED & IMPLEMENTED
 
-**Next steps:**
-1. Director reviews and approves ADR
-2. Update OPR-H-0032 task with detailed implementation plan
-3. Create migration script (Phase 2)
-4. Execute migration with testing
+**Approval:**
+- Approved by: Tucker (Director)
+- Approval date: 2026-02-03
+- Implementation started: 2026-02-03
+
+**Implementation Timeline:**
+
+### Phase 1: Database Migration (Mission #38 - nereus)
+**Date:** 2026-02-03  
+**Commit:** 68b5598
+
+- ✅ Renamed tables: `agents` → `missions`, `daemon_names` → `personas`
+- ✅ Renamed fields: `usage_count` → `mission_count`, `last_used_at` → `last_mission_at`
+- ✅ Tasks table: removed `agent_name`, changed `agent_id` → `current_mission_id`
+- ✅ Missions table: removed `status` field, added `codename` field
+- ✅ Generated codenames for 39 existing missions using deterministic prime algorithm
+- ✅ Migrated 29 session markdown files to missions directory
+- ✅ Updated frontmatter: `name` → `persona`, added `codename` and `mission_id`
+
+### Phase 2: Python Code Refactoring (Mission #38 - nereus)
+**Date:** 2026-02-03  
+**Commits:** d0691e5, f0fe939
+
+- ✅ Core modules: personas.py, agent.py CLI, name.py CLI, init.py, reset.py
+- ✅ Skills documentation: session-start, session-end updated
+- ✅ Templates: mission frontmatter format updated
+- ✅ Settings: terminology updated
+- ✅ Doctor, check, config: health checks and validation updated
+
+### Phase 3: Final Python Fixes (Mission #39 - kuk)
+**Date:** 2026-02-03  
+**Commit:** 12b01a5
+
+- ✅ tasks/manager.py: Updated `list_tasks()` and `claim_task()` signatures
+- ✅ cli/task.py: All `--agent` flags → `--mission`, SQL queries updated
+- ✅ epics/manager.py: Updated `abort_epic()` to clear `current_mission_id`
+- ✅ cli/changelog.py: Queries and output updated
+- ✅ cli/doctor.py: Comment updated
+- ✅ Verified no remaining `agent_name` or `agent_id` references
+
+### Phase 4: Template & Documentation Updates (Mission #39 - kuk)
+**Date:** 2026-02-03  
+**Commits:** cc1ca42, 9bee5ce
+
+**Critical Template Fixes:**
+- ✅ schema.sql: Updated for new installations (daemon_names→personas, agents→missions)
+- ✅ settings.py: Field names updated (enable_daemon_naming→enable_persona_naming)
+- ✅ opencode.json.jinja: Directory paths fixed (sessions/→missions/)
+
+**Internal Documentation Updates:**
+- ✅ .opencode/README.md: 10 terminology updates
+- ✅ .opencode/skills/session-start/SKILL.md: 7 CLI command updates
+- ✅ .opencode/skills/session-end/SKILL.md: Removed --status flag
+- ✅ .opencode/docs/guides/architecture.md: Schema examples updated
+- ✅ .opencode/docs/procedures/README.md: 5 CLI examples updated
+- ✅ .opencode/commands/README.md: 20+ comprehensive updates
+
+**Public Documentation (In Progress):**
+- 🔄 Task OPR-H-0047 created for docs/ site updates (assigned to another operator)
+- 🔄 7 files pending: reference.md, quickstart.md, index.md, roles.md, structure.md, advanced.md, README.md
+
+## Implementation Results
+
+**Database State After Migration:**
+- 39 missions with auto-generated codenames
+- 0 status field mismatches (field removed from missions)
+- All 29 mission files migrated to new format
+- personas table fully populated with 145+ names
+
+**Code Impact:**
+- 0 references to `agent_name` or `agent_id` in Python code
+- All CLI commands use `s9 mission` syntax
+- All internal docs use consistent terminology
+- Templates generate correct schema for new installations
+
+**Testing Performed:**
+- ✅ `s9 task list` - Shows Mission column correctly
+- ✅ `s9 task show OPR-H-0032` - Displays without errors
+- ✅ `s9 task mine --mission 39` - Works with new parameter
+- ✅ `s9 doctor` - Runs without AttributeError
+- ✅ No `agent_name` references found in codebase
+
+**Breaking Changes:**
+- CLI commands changed: `s9 agent` → `s9 mission`
+- Database tables renamed: backward incompatible
+- Task fields changed: old databases need migration
+
+**Migration Success:**
+- ✅ Zero data loss
+- ✅ All missions preserved with historical context
+- ✅ No runtime errors after migration
+- ✅ Clean terminology throughout codebase
 
 ---
 
-**Approved by:** _Pending_  
-**Approval date:** _Pending_  
-**Implementation started:** _Pending_
+**Implementation complete:** 2026-02-03  
+**Total effort:** ~10 hours across 2 missions  
+**Status:** ✅ Fully operational with new entity model
