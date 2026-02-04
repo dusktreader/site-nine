@@ -13,8 +13,7 @@ class Task:
     priority: str
     role: str
     category: str | None
-    agent_name: str | None
-    agent_id: int | None
+    current_mission_id: int | None
     claimed_at: str | None
     closed_at: str | None
     paused_at: str | None

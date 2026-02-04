@@ -381,12 +381,12 @@ I am Marduk, the great god of Babylon who defeated the chaos dragon Tiamat by cr
 
 ## Step 5b: Rename OpenCode TUI Session
 
-After sharing your mythological background, rename the OpenCode TUI session to match your agent identity.
+After sharing your mythological background, rename the OpenCode TUI session to include your persona, role, and mission codename.
 
 **If you have multiple OpenCode sessions open**, first list them to find the correct one:
 
 ```bash
-s9 agent list-opencode-sessions
+s9 mission list-opencode-sessions
 ```
 
 This shows all OpenCode sessions for this project with their session IDs and last modification times.
@@ -394,35 +394,36 @@ This shows all OpenCode sessions for this project with their session IDs and las
 **Then rename the session:**
 
 ```bash
-s9 agent rename-tui <name> <Role> --session-id <session-id>
+s9 mission rename-tui <persona> <Role> <codename> --session-id <session-id>
 ```
 
 **If you only have ONE OpenCode session open**, you can omit the session ID and let it auto-detect:
 
 ```bash
-s9 agent rename-tui <name> <Role>
+s9 mission rename-tui <persona> <Role> <codename>
 ```
 
 **Example:**
 ```bash
-s9 agent rename-tui brigid Administrator
+s9 mission rename-tui brigid Administrator void-matrix
 ```
 
 **This command:**
-- Updates the OpenCode TUI session title to "<Name> - <Role>"
-- Makes it easy to identify which agent you're working with in `opencode session list`
+- Updates the OpenCode TUI session title to "<Persona> - <Role> - <codename>"
+- Makes it easy to identify which mission you're working with in `opencode session list`
 - Updates take effect immediately - no TUI restart needed
+- **Note:** Persona name is capitalized in the title (e.g., "Brigid" not "brigid")
 
 **After running the command, tell the Director:**
 ```
-✅ I've renamed your OpenCode session to "<Name> - <Role>" so you can easily find this conversation later!
+✅ I've renamed your OpenCode session to "<Persona> - <Role> - <codename>" so you can easily find this conversation later!
 ```
 
 **If the command fails or there are multiple sessions:**
-- Run `s9 agent list-opencode-sessions` to see available sessions
+- Run `s9 mission list-opencode-sessions` to see available sessions
 - Ask the Director which session ID to rename, or
-- Continue without renaming (it's not critical to the session)
-- the Director can rename manually later if needed
+- Continue without renaming (it's not critical to the mission)
+- The Director can rename manually later if needed
 
 ## Step 6: Check for Pending Handoffs
 

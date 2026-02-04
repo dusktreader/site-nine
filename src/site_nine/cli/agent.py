@@ -1,4 +1,4 @@
-"""Agent session management commands"""
+"""Mission management commands"""
 
 from __future__ import annotations
 
@@ -12,16 +12,16 @@ from rich.console import Console
 from rich.table import Table
 from typerdrive import handle_errors
 
-from site_nine.agents.sessions import AgentSessionManager
+from site_nine.missions import MissionManager
 from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
 
-app = typer.Typer(help="Manage agent sessions")
+app = typer.Typer(help="Manage missions")
 console = Console()
 
 
-def _get_manager() -> AgentSessionManager:
-    """Get agent session manager"""
+def _get_manager() -> MissionManager:
+    """Get mission manager"""
     try:
         opencode_dir = get_opencode_dir()
     except FileNotFoundError:
@@ -34,17 +34,17 @@ def _get_manager() -> AgentSessionManager:
         raise typer.Exit(1)
 
     db = Database(db_path)
-    return AgentSessionManager(db)
+    return MissionManager(db)
 
 
 @app.command()
-@handle_errors("Failed to start agent session")
+@handle_errors("Failed to start mission")
 def start(
     name: str = typer.Argument(..., help="Daemon name"),
     role: str = typer.Option(..., "--role", "-r", help="Agent role"),
     task: str = typer.Option("", "--task", "-t", help="Task summary"),
 ) -> None:
-    """Start a new agent session"""
+    """Start a new mission"""
     manager = _get_manager()
 
     # Validate and convert role to title case
@@ -63,190 +63,190 @@ def start(
         raise typer.Exit(1)
     role = role.title()
 
-    session_id = manager.start_session(name=name, role=role, task_summary=task)
+    mission_id = manager.start_mission(persona_name=name, role=role, objective=task)
 
-    console.print(f"[green]✓[/green] Started agent session #{session_id}")
-    console.print(f"  Name: {name}")
+    console.print(f"[green]✓[/green] Started mission #{mission_id}")
+    console.print(f"  Persona: {name}")
     console.print(f"  Role: {role}")
     if task:
-        console.print(f"  Task: {task}")
-    logger.info(f"Started agent session {session_id}: {name} ({role})")
+        console.print(f"  Objective: {task}")
+    logger.info(f"Started mission {mission_id}: {name} ({role})")
 
 
 @app.command()
-@handle_errors("Failed to list agent sessions")
+@handle_errors("Failed to list missions")
 def list(
-    active_only: bool = typer.Option(False, "--active-only", help="Show only active sessions"),
+    active_only: bool = typer.Option(False, "--active-only", help="Show only active missions"),
     role: str = typer.Option(None, "--role", "-r", help="Filter by role"),
 ) -> None:
-    """List agent sessions"""
+    """List missions"""
     manager = _get_manager()
 
     # Normalize role to title case for case-insensitive filtering
     if role:
         role = role.title()
 
-    sessions = manager.list_sessions(active_only=active_only, role=role)
+    missions = manager.list_missions(active_only=active_only, role=role)
 
-    if not sessions:
-        console.print("[yellow]No sessions found.[/yellow]")
+    if not missions:
+        console.print("[yellow]No missions found.[/yellow]")
         return
 
     table = Table(title="Agent Sessions")
     table.add_column("ID", style="cyan", justify="right")
-    table.add_column("Name", style="magenta")
+    table.add_column("Persona", style="magenta")
     table.add_column("Role", style="green")
-    table.add_column("Status", style="yellow")
+    table.add_column("Codename", style="yellow")
     table.add_column("Start Time", style="blue")
     table.add_column("End Time", style="blue")
 
-    for session in sessions:
+    for mission in missions:
         table.add_row(
-            str(session.id),
-            session.name,
-            session.role,
-            session.status,
-            session.start_time or "",
-            session.end_time or "",
+            str(mission.id),
+            mission.persona_name,
+            mission.role,
+            mission.codename,
+            mission.start_time or "",
+            mission.end_time or "",
         )
 
     console.print(table)
-    logger.debug(f"Listed {len(sessions)} agent sessions")
+    logger.debug(f"Listed {len(missions)} missions")
 
 
 @app.command()
-@handle_errors("Failed to show agent session")
+@handle_errors("Failed to show mission")
 def show(
-    agent_id: int = typer.Argument(..., help="Agent session ID"),
+    mission_id: int = typer.Argument(..., help="Mission ID"),
 ) -> None:
-    """Show agent session details"""
+    """Show mission details"""
     manager = _get_manager()
-    session = manager.get_session(agent_id)
+    session = manager.get_mission(mission_id)
 
     if not session:
-        console.print(f"[red]Error: Agent session #{agent_id} not found.[/red]")
+        console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
         raise typer.Exit(1)
 
     console.print(f"[bold]Agent Session #{session.id}[/bold]")
     console.print(f"  Name: {session.name}")
     console.print(f"  Base Name: {session.base_name}")
-    if session.suffix:
+    if mission.suffix:
         console.print(f"  Suffix: {session.suffix}")
     console.print(f"  Role: {session.role}")
     console.print(f"  Status: {session.status}")
     console.print(f"  Session Date: {session.session_date}")
     console.print(f"  Start Time: {session.start_time}")
-    if session.end_time:
+    if mission.end_time:
         console.print(f"  End Time: {session.end_time}")
     console.print(f"  Session File: {session.session_file}")
-    if session.task_summary:
-        console.print(f"  Task: {session.task_summary}")
-    logger.debug(f"Displayed details for agent session {agent_id}")
+    if mission.objective:
+        console.print(f"  Task: {session.objective}")
+    logger.debug(f"Displayed details for mission {mission_id}")
 
 
 @app.command()
-@handle_errors("Failed to end agent session")
+@handle_errors("Failed to end mission")
 def end(
-    agent_id: int = typer.Argument(..., help="Agent session ID"),
+    mission_id: int = typer.Argument(..., help="Mission ID"),
     status: str = typer.Option("completed", "--status", help="End status"),
 ) -> None:
-    """End an agent session"""
+    """End an mission"""
     manager = _get_manager()
 
     # Verify session exists
-    session = manager.get_session(agent_id)
+    session = manager.get_mission(mission_id)
     if not session:
-        console.print(f"[red]Error: Agent session #{agent_id} not found.[/red]")
+        console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
         raise typer.Exit(1)
 
-    manager.end_session(agent_id, status)
-    console.print(f"[green]✓[/green] Ended agent session #{agent_id} with status: {status}")
-    logger.info(f"Ended agent session {agent_id} with status: {status}")
+    manager.end_mission(mission_id, status)
+    console.print(f"[green]✓[/green] Ended mission #{mission_id} with status: {status}")
+    logger.info(f"Ended mission {mission_id} with status: {status}")
 
 
 @app.command()
-@handle_errors("Failed to pause agent session")
+@handle_errors("Failed to pause mission")
 def pause(
-    agent_id: int = typer.Argument(..., help="Agent session ID to pause"),
+    mission_id: int = typer.Argument(..., help="Mission ID to pause"),
     reason: str | None = typer.Option(None, "--reason", help="Reason for pausing"),
 ) -> None:
-    """Pause an active agent session"""
+    """Pause an active mission"""
     manager = _get_manager()
 
     # Verify session exists and is active
-    session = manager.get_session(agent_id)
+    session = manager.get_mission(mission_id)
     if not session:
-        console.print(f"[red]Error: Agent session #{agent_id} not found.[/red]")
+        console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
         raise typer.Exit(1)
 
-    if session.status != "in-progress":
+    if mission.status != "in-progress":
         console.print(
             f"[red]Error: Cannot pause session with status '{session.status}'. "
-            f"Only 'in-progress' sessions can be paused.[/red]"
+            f"Only 'in-progress' missions can be paused.[/red]"
         )
         raise typer.Exit(1)
 
-    manager.pause_session(agent_id)
-    console.print(f"[green]⏸️  Paused agent session #{agent_id} ({session.name})[/green]")
+    manager.pause_mission(mission_id)
+    console.print(f"[green]⏸️  Paused mission #{mission_id} ({session.name})[/green]")
 
     if reason:
         console.print(f"[dim]Reason: {reason}[/dim]")
 
-    console.print(f"[dim]Resume with: s9 agent resume {agent_id}[/dim]")
-    logger.info(f"Paused agent session {agent_id}")
+    console.print(f"[dim]Resume with: s9 agent resume {mission_id}[/dim]")
+    logger.info(f"Paused mission {mission_id}")
 
 
 @app.command()
-@handle_errors("Failed to resume agent session")
+@handle_errors("Failed to resume mission")
 def resume(
-    agent_id: int = typer.Argument(..., help="Agent session ID to resume"),
+    mission_id: int = typer.Argument(..., help="Mission ID to resume"),
 ) -> None:
-    """Resume a paused agent session"""
+    """Resume a paused mission"""
     manager = _get_manager()
 
     # Verify session exists and is paused
-    session = manager.get_session(agent_id)
+    session = manager.get_mission(mission_id)
     if not session:
-        console.print(f"[red]Error: Agent session #{agent_id} not found.[/red]")
+        console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
         raise typer.Exit(1)
 
-    if session.status != "paused":
+    if mission.status != "paused":
         console.print(
             f"[red]Error: Cannot resume session with status '{session.status}'. "
-            f"Only 'paused' sessions can be resumed.[/red]"
+            f"Only 'paused' missions can be resumed.[/red]"
         )
         raise typer.Exit(1)
 
-    manager.resume_session(agent_id)
-    console.print(f"[green]▶️  Resumed agent session #{agent_id} ({session.name})[/green]")
+    manager.resume_mission(mission_id)
+    console.print(f"[green]▶️  Resumed mission #{mission_id} ({session.name})[/green]")
     console.print("[dim]Status is now: in-progress[/dim]")
-    logger.info(f"Resumed agent session {agent_id}")
+    logger.info(f"Resumed mission {mission_id}")
 
 
 @app.command()
-@handle_errors("Failed to update agent session")
+@handle_errors("Failed to update mission")
 def update(
-    agent_id: int = typer.Argument(..., help="Agent session ID to update"),
-    task_summary: str | None = typer.Option(None, "--task", "-t", help="Update task summary"),
+    mission_id: int = typer.Argument(..., help="Mission ID to update"),
+    objective: str | None = typer.Option(None, "--task", "-t", help="Update task summary"),
     role: str | None = typer.Option(None, "--role", "-r", help="Update role"),
 ) -> None:
-    """Update agent session metadata"""
+    """Update mission metadata"""
     manager = _get_manager()
 
-    if not task_summary and not role:
+    if not objective and not role:
         console.print("[yellow]No updates specified. Use --task or --role[/yellow]")
         raise typer.Exit(0)
 
     # Verify session exists
-    session = manager.get_session(agent_id)
+    session = manager.get_mission(mission_id)
     if not session:
-        console.print(f"[red]Error: Agent session #{agent_id} not found.[/red]")
+        console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
         raise typer.Exit(1)
 
-    if session.status not in ["in-progress", "paused"]:
+    if mission.status not in ["in-progress", "paused"]:
         console.print(
             f"[red]Error: Cannot update session with status '{session.status}'. "
-            f"Only active or paused sessions can be updated.[/red]"
+            f"Only active or paused missions can be updated.[/red]"
         )
         raise typer.Exit(1)
 
@@ -267,20 +267,20 @@ def update(
             raise typer.Exit(1)
         role = role.title()
 
-    manager.update_session(agent_id, task_summary=task_summary, role=role)
+    manager.update_mission(mission_id, objective=objective, role=role)
 
-    console.print(f"[green]✓[/green] Updated agent session #{agent_id}")
-    if task_summary:
-        console.print(f"  Task: {task_summary}")
+    console.print(f"[green]✓[/green] Updated mission #{mission_id}")
+    if objective:
+        console.print(f"  Task: {objective}")
     if role:
         console.print(f"  Role: {role}")
-    logger.info(f"Updated agent session {agent_id}")
+    logger.info(f"Updated mission {mission_id}")
 
 
 def _find_current_opencode_session(project_root: Path) -> str | None:
     """
     Find the current OpenCode session by looking for the most recent
-    agent session file in session diffs.
+    mission file in session diffs.
 
     This is more reliable than using modification time alone, as it identifies
     which OpenCode session actually created/modified the agent's session file.
@@ -297,16 +297,16 @@ def _find_current_opencode_session(project_root: Path) -> str | None:
     if not session_diff_dir.exists():
         return None
 
-    # Find the most recent agent session file for this project
+    # Find the most recent mission file for this project
     # Try both old (.opencode/sessions) and new (.opencode/work/sessions) locations
-    sessions_dirs = [
-        project_root / ".opencode" / "work" / "sessions",
-        project_root / ".opencode" / "sessions",
+    missions_dirs = [
+        project_root / ".opencode" / "work" / "missions",
+        project_root / ".opencode" / "missions",
     ]
 
     session_files = []
-    for sessions_dir in sessions_dirs:
-        if sessions_dir.exists():
+    for missions_dir in missions_dirs:
+        if missions_dir.exists():
             session_files.extend(sessions_dir.glob("*.md"))
 
     if not session_files:
@@ -421,14 +421,14 @@ def _detect_session_via_diff_recency(
 
     # Check the most recently modified diffs (top 5 to handle multi-project scenarios)
     for diff_file in diff_files[:5]:
-        session_id = diff_file.stem
+        mission_id = diff_file.stem
 
         # Find the corresponding session file to verify project
         session_file = None
         for project_dir in session_storage.iterdir():
             if not project_dir.is_dir():
                 continue
-            candidate = project_dir / f"{session_id}.json"
+            candidate = project_dir / f"{mission_id}.json"
             if candidate.exists():
                 session_file = candidate
                 break
@@ -445,8 +445,8 @@ def _detect_session_via_diff_recency(
                 # Found it! This is our session
                 mtime = diff_file.stat().st_mtime
                 age_seconds = time.time() - mtime
-                logger.debug("session_detected_via_diff_recency", session_id=session_id, age_seconds=int(age_seconds))
-                return session_id
+                logger.debug("session_detected_via_diff_recency", mission_id=mission_id, age_seconds=int(age_seconds))
+                return mission_id
         except (json.JSONDecodeError, FileNotFoundError, PermissionError):
             continue
 
@@ -458,7 +458,7 @@ def _find_project_sessions(
     project_root: Path,
     session_storage: Path,
 ) -> list[tuple[Path, float]]:
-    """Find all OpenCode sessions for the current project
+    """Find all OpenCode missions for the current project
 
     Args:
         project_root: Project root directory
@@ -467,7 +467,7 @@ def _find_project_sessions(
     Returns:
         List of (session_file_path, modification_time) tuples
     """
-    project_sessions = []
+    project_missions = []
     for project_dir in session_storage.iterdir():
         if not project_dir.is_dir() or project_dir.name == "global":
             continue
@@ -493,8 +493,8 @@ def _detect_session_via_recency(
 ) -> str | None:
     """Detect current OpenCode session based on recent activity
 
-    Uses modification time to identify the most likely current session.
-    Handles multiple active sessions by prompting the user.
+    Uses modification time to identify the most likely current mission.
+    Handles multiple active missions by prompting the user.
 
     Args:
         project_root: Project root directory
@@ -504,26 +504,26 @@ def _detect_session_via_recency(
         Session ID (e.g., "ses_xxx") or None
 
     Raises:
-        typer.Exit: If multiple sessions are active and user needs to choose
+        typer.Exit: If multiple missions are active and user needs to choose
     """
     import time
 
     if not project_sessions:
-        console.print(f"[red]Error: No OpenCode sessions found for project {project_root.name}[/red]")
+        console.print(f"[red]Error: No OpenCode missions found for project {project_root.name}[/red]")
         raise typer.Exit(1)
 
-    # Find sessions modified in last 3 seconds (very recent activity)
-    very_recent_sessions = [(f, mt) for f, mt in project_sessions if time.time() - mt < 3]
+    # Find missions modified in last 3 seconds (very recent activity)
+    very_recent_missions = [(f, mt) for f, mt in project_sessions if time.time() - mt < 3]
 
     if len(very_recent_sessions) == 1:
         # Only one session active in the last 3 seconds - must be us!
-        session_id = very_recent_sessions[0][0].stem
-        logger.debug("session_auto_detected_single_active", session_id=session_id)
-        return session_id
+        mission_id = very_recent_sessions[0][0].stem
+        logger.debug("session_auto_detected_single_active", mission_id=mission_id)
+        return mission_id
 
     elif len(very_recent_sessions) > 1:
-        # Multiple sessions active - need user to specify
-        console.print("[yellow]Multiple active OpenCode sessions detected for this project.[/yellow]")
+        # Multiple missions active - need user to specify
+        console.print("[yellow]Multiple active OpenCode missions detected for this project.[/yellow]")
         console.print("[yellow]Please specify which session to rename:[/yellow]\n")
 
         for session_file, mtime in sorted(very_recent_sessions, key=lambda x: x[1], reverse=True):
@@ -539,7 +539,7 @@ def _detect_session_via_recency(
                 pass
 
         console.print("[yellow]Run with: s9 agent rename-tui <name> <role> --session-id <id>[/yellow]")
-        console.print("[yellow]Or use: s9 agent list-opencode-sessions (to see all sessions)[/yellow]")
+        console.print("[yellow]Or use: s9 agent list-opencode-sessions (to see all missions)[/yellow]")
         raise typer.Exit(1)
 
     else:
@@ -547,24 +547,24 @@ def _detect_session_via_recency(
         import time
 
         most_recent = max(project_sessions, key=lambda x: x[1])
-        session_id = most_recent[0].stem
+        mission_id = most_recent[0].stem
         mtime = most_recent[1]
         age = int(time.time() - mtime)
         console.print(f"[yellow]No session modified in last 3 seconds. Using most recent ({age}s ago).[/yellow]")
-        console.print(f"[yellow]Session: {session_id}[/yellow]")
+        console.print(f"[yellow]Session: {mission_id}[/yellow]")
         console.print("[yellow]If this is wrong, pass --session-id explicitly[/yellow]\n")
-        logger.debug("session_auto_detected_fallback", session_id=session_id, age_seconds=age)
-        return session_id
+        logger.debug("session_auto_detected_fallback", mission_id=mission_id, age_seconds=age)
+        return mission_id
 
 
 def _locate_session_file(
-    session_id: str,
+    mission_id: str,
     session_storage: Path,
 ) -> Path:
     """Locate the session JSON file for a given session ID
 
     Args:
-        session_id: OpenCode session ID (e.g., "ses_xxx")
+        mission_id: OpenCode session ID (e.g., "ses_xxx")
         session_storage: Path to OpenCode session storage directory
 
     Returns:
@@ -576,7 +576,7 @@ def _locate_session_file(
     for project_dir in session_storage.iterdir():
         if not project_dir.is_dir():
             continue
-        candidate = project_dir / f"{session_id}.json"
+        candidate = project_dir / f"{mission_id}.json"
         # Use try/except to handle race condition if file is deleted
         try:
             if candidate.exists():
@@ -585,7 +585,7 @@ def _locate_session_file(
             # File was deleted or became inaccessible between check and access
             continue
 
-    console.print(f"[red]Session file not found for {session_id}[/red]")
+    console.print(f"[red]Session file not found for {mission_id}[/red]")
     raise typer.Exit(1)
 
 
@@ -640,7 +640,7 @@ def _update_session_title(
             console.print(f"[dim]Previous title: {old_title}[/dim]")
             logger.info(
                 "opencode_session_renamed",
-                session_id=session_file.stem,
+                mission_id=session_file.stem,
                 old_title=old_title,
                 new_title=new_title,
             )
@@ -660,7 +660,7 @@ def _update_session_title(
 
 @app.command("list-opencode-sessions")
 def list_opencode_sessions() -> None:
-    """List OpenCode TUI sessions for the current project
+    """List OpenCode TUI missions for the current project
 
     Shows session IDs and titles to help identify which session to rename.
     Use the session ID with: s9 agent rename-tui <name> <role> --session-id <id>
@@ -679,7 +679,7 @@ def list_opencode_sessions() -> None:
         raise typer.Exit(1)
 
     # Find all session directories and check which ones match this project
-    console.print(f"\n[cyan]OpenCode sessions for {project_root.name}:[/cyan]\n")
+    console.print(f"\n[cyan]OpenCode missions for {project_root.name}:[/cyan]\n")
 
     found_any = False
     for project_dir in opencode_storage.iterdir():
@@ -694,7 +694,7 @@ def list_opencode_sessions() -> None:
                 session_dir = session_data.get("directory", "")
                 if session_dir and Path(session_dir).resolve() == project_root.resolve():
                     found_any = True
-                    session_id = session_data.get("id", session_file.stem)
+                    mission_id = session_data.get("id", session_file.stem)
                     title = session_data.get("title", "Untitled")
                     slug = session_data.get("slug", "")
 
@@ -710,7 +710,7 @@ def list_opencode_sessions() -> None:
                     else:
                         age = f"{int(age_seconds / 3600)}h ago"
 
-                    console.print(f"  [green]{session_id}[/green] ({slug}) - modified {age}")
+                    console.print(f"  [green]{mission_id}[/green] ({slug}) - modified {age}")
                     console.print(f"    {title}")
                     console.print()
 
@@ -718,7 +718,7 @@ def list_opencode_sessions() -> None:
                 continue
 
     if not found_any:
-        console.print("[yellow]No OpenCode sessions found for this project.[/yellow]")
+        console.print("[yellow]No OpenCode missions found for this project.[/yellow]")
     else:
         console.print("[dim]To rename a session, use:[/dim]")
         console.print("[dim]  s9 agent rename-tui <name> <role> --session-id <session-id>[/dim]\n")
@@ -729,11 +729,11 @@ def list_opencode_sessions() -> None:
 def rename_tui(
     name: str = typer.Argument(..., help="Agent daemon name"),
     role: str = typer.Argument(..., help="Agent role"),
-    session_id: str | None = typer.Option(None, "--session-id", "-s", help="OpenCode session ID (e.g., ses_xxx)"),
+    mission_id: str | None = typer.Option(None, "--session-id", "-s", help="OpenCode session ID (e.g., ses_xxx)"),
 ) -> None:
     """Rename the current OpenCode TUI session to match agent identity
 
-    If --session-id is provided, renames that specific session. Otherwise, attempts
+    If --session-id is provided, renames that specific mission. Otherwise, attempts
     to auto-detect the current session by finding the most recently active session
     diff file for this project.
     """
@@ -749,28 +749,28 @@ def rename_tui(
     session_diff_storage, session_storage = _find_opencode_storage()
 
     # Determine session ID: use provided or auto-detect
-    current_session_id = None
-    if session_id:
-        current_session_id = session_id
-        logger.debug("session_id_provided", session_id=session_id)
+    current_mission_id = None
+    if mission_id:
+        current_mission_id = mission_id
+        logger.debug("mission_id_provided", mission_id=mission_id)
     else:
         # Use diff file recency - the most reliable detection method
         # The active session continuously writes to its diff file
-        current_session_id = _detect_session_via_diff_recency(project_root, session_diff_storage, session_storage)
+        current_mission_id = _detect_session_via_diff_recency(project_root, session_diff_storage, session_storage)
 
         # If that somehow fails, fall back to session file recency
-        if not current_session_id:
+        if not current_mission_id:
             logger.debug("diff_recency_failed_fallback_to_session_recency")
-            project_sessions = _find_project_sessions(project_root, session_storage)
-            current_session_id = _detect_session_via_recency(project_root, project_sessions)
+            project_missions = _find_project_sessions(project_root, session_storage)
+            current_mission_id = _detect_session_via_recency(project_root, project_sessions)
 
-    # At this point, current_session_id should be set (or we would have exited)
-    if not current_session_id:
+    # At this point, current_mission_id should be set (or we would have exited)
+    if not current_mission_id:
         console.print("[red]Error: Failed to determine session ID[/red]")
         raise typer.Exit(1)
 
     # Locate the session file
-    session_file = _locate_session_file(current_session_id, session_storage)
+    session_file = _locate_session_file(current_mission_id, session_storage)
 
     # Update the session title
     new_title = f"{name.capitalize()} - {role}"

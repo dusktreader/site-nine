@@ -5,7 +5,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from site_nine.agents.sessions import AgentSessionManager
+from site_nine.missions import MissionManager
 from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
 from site_nine.tasks import TaskManager
@@ -14,7 +14,7 @@ console = Console()
 
 
 def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help="Filter tasks by role")) -> None:
-    """Show project dashboard with overview of agents and tasks"""
+    """Show project dashboard with overview of missions and tasks"""
     try:
         # Get database
         try:
@@ -29,7 +29,7 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
             raise typer.Exit(1)
 
         db = Database(db_path)
-        agent_manager = AgentSessionManager(db)
+        mission_manager = MissionManager(db)
         task_manager = TaskManager(db)
 
         # Get data
@@ -47,7 +47,7 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
             tasks_table.add_column("Title", style="magenta", max_width=40)
             tasks_table.add_column("Status", style="yellow")
             tasks_table.add_column("Priority", style="red")
-            tasks_table.add_column("Agent", style="blue")
+            tasks_table.add_column("Mission", style="blue")
 
             if available_tasks:
                 for task in available_tasks[:10]:  # Show top 10 most recent
@@ -56,7 +56,7 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
                         task.title,
                         task.status,
                         task.priority,
-                        task.agent_name or "",
+                        str(task.current_mission_id) if task.current_mission_id else "",
                     )
                 console.print(tasks_table)
             else:
@@ -65,7 +65,7 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
 
         else:
             # Show full dashboard when no role filter is active
-            active_agents = agent_manager.list_sessions(active_only=True)
+            active_missions = mission_manager.list_missions(active_only=True)
 
             # Count tasks by status
             task_counts = {
@@ -89,38 +89,38 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
 
             # Print quick stats
             console.print("\n[cyan]Quick Stats:[/cyan]")
-            console.print(f"  Active agents: [bold]{len(active_agents)}[/bold]")
+            console.print(f"  Active agents: [bold]{len(active_missions)}[/bold]")
             console.print(f"  Total tasks: [bold]{sum(task_counts.values())}[/bold]")
             console.print(f"  In progress: [bold yellow]{task_counts['UNDERWAY']}[/bold yellow]")
             console.print(f"  Completed: [bold green]{task_counts['COMPLETE']}[/bold green]")
             if blocked_by_review_count > 0:
                 console.print(f"  [red]Blocked by reviews: {blocked_by_review_count}[/red]")
 
-            # Active agents table
+            # Active missions table
             console.print("\n")
-            agent_table = Table(title="Active Agent Sessions", show_header=True, title_style="bold green")
-            agent_table.add_column("Name", style="magenta")
-            agent_table.add_column("Role", style="green")
-            agent_table.add_column("Start Time", style="blue")
-            agent_table.add_column("Task", style="white")
+            mission_table = Table(title="Active Agent Sessions", show_header=True, title_style="bold green")
+            mission_table.add_column("Name", style="magenta")
+            mission_table.add_column("Role", style="green")
+            mission_table.add_column("Start Time", style="blue")
+            mission_table.add_column("Task", style="white")
 
-            if active_agents:
-                for agent in active_agents:
-                    task_summary = (
-                        agent.task_summary[:50] + "..."
-                        if agent.task_summary and len(agent.task_summary) > 50
-                        else (agent.task_summary or "")
+            if active_missions:
+                for mission in active_missions:
+                    objective_display = (
+                        mission.objective[:50] + "..."
+                        if mission.objective and len(mission.objective) > 50
+                        else (mission.objective or "")
                     )
-                    agent_table.add_row(
-                        agent.name,
-                        agent.role,
-                        agent.start_time,
-                        task_summary,
+                    mission_table.add_row(
+                        mission.persona_name,
+                        mission.role,
+                        mission.start_time,
+                        objective_display,
                     )
             else:
-                agent_table.add_row("[dim]No active sessions[/dim]", "", "", "")
+                mission_table.add_row("[dim]No active sessions[/dim]", "", "", "")
 
-            console.print(agent_table)
+            console.print(mission_table)
 
             # Task summary table
             console.print("\n")
@@ -145,7 +145,7 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
             recent_tasks.add_column("Title", style="magenta", max_width=40)
             recent_tasks.add_column("Status", style="yellow")
             recent_tasks.add_column("Priority", style="red")
-            recent_tasks.add_column("Agent", style="blue")
+            recent_tasks.add_column("Mission", style="blue")
 
             for task in all_tasks[:10]:  # Show top 10 most recent
                 recent_tasks.add_row(
@@ -153,7 +153,7 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
                     task.title,
                     task.status,
                     task.priority,
-                    task.agent_name or "",
+                    str(task.current_mission_id) if task.current_mission_id else "",
                 )
 
             if not all_tasks:
