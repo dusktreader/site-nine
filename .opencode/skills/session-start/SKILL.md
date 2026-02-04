@@ -307,21 +307,25 @@ I am Marduk, the great god of Babylon who defeated the chaos dragon Tiamat by cr
 
 **Research your specific persona** and create something fun and appropriate!
 
-## Step 6: Generate Session UUID Marker
+## Step 6: Rename OpenCode TUI Session (2-step process)
 
-After sharing your mythological background, generate a unique UUID marker for reliable session detection.
+After sharing your mythological background, rename the OpenCode TUI session to match your agent identity.
 
-**IMPORTANT:** This step must be done BEFORE renaming the TUI session. The marker helps identify which OpenCode session is yours when multiple sessions are active.
+**⚠️ CRITICAL: This is a TWO-STEP process - you MUST do BOTH steps in sequence!**
+
+### Step 6a: Generate UUID Marker (REQUIRED FIRST)
+
+**This step is MANDATORY - do NOT skip it!**
 
 ```bash
 s9 mission generate-session-uuid
 ```
 
-**This command:**
+**What this does:**
 - Generates a unique UUID and outputs it to the console
 - OpenCode captures this output in this session's diff data
-- The UUID can then be used to reliably identify this specific session
-- **No files are created** - avoiding race conditions with concurrent sessions
+- The UUID reliably identifies THIS specific session (even with multiple sessions active)
+- **No files are created** - avoiding race conditions
 
 **Example output:**
 ```
@@ -330,71 +334,55 @@ Use this marker with: s9 mission rename-tui <name> <role> --uuid-marker session-
 session-marker-abc123def456
 ```
 
-**Capture the UUID from the output** (it appears on the last line). You'll use it in the next step.
+**IMPORTANT: Capture the UUID from the last line of output** - you'll use it in Step 6b (next).
 
-## Step 7: Rename OpenCode TUI Session
+### Step 6b: Rename with UUID Marker (REQUIRED SECOND)
 
-Now rename the OpenCode TUI session using the UUID marker from Step 6 for reliable detection.
-
-**Recommended approach (most reliable with multiple sessions):**
+**Now immediately use the UUID from Step 6a:**
 
 ```bash
-s9 mission rename-tui <persona> <Role> --uuid-marker <uuid-from-step-6>
+s9 mission rename-tui <persona> <Role> --uuid-marker <uuid-from-step-6a>
 ```
 
 **Example:**
 ```bash
-s9 mission rename-tui nut Operator --uuid-marker session-marker-abc123def456
+s9 mission rename-tui oceanus Operator --uuid-marker session-marker-abc123def456
 ```
 
-**This approach:**
+**Why this works:**
 - Uses the UUID marker to reliably identify YOUR specific OpenCode session
-- Works correctly even when multiple OpenCode sessions are active
-- Eliminates the "wrong session renamed" problem
+- Works correctly even when multiple OpenCode sessions are active simultaneously  
+- Eliminates the "wrong session renamed" problem completely
+- **100% reliable** when both steps are followed
 
-**Fallback approach (if UUID marker fails):**
-
-If the UUID-based detection fails, the command will automatically fall back to:
-1. Git diff correlation (matches recently edited files)
-2. Timestamp-based detection (most recent session for this project)
-
-**Alternative: Manual session ID specification:**
-
-If you have multiple OpenCode sessions and want to specify manually:
-
-```bash
-s9 mission list-opencode-sessions
-```
-
-Then use the specific session ID:
-
-```bash
-s9 mission rename-tui <persona> <Role> --session-id <session-id>
-```
-
-**This command:**
-- Updates the OpenCode TUI session title to "<Persona> - <Role>"
-- Makes it easy to identify which mission you're working with in `opencode session list`
-- Updates take effect immediately - no TUI restart needed
-- **Note:** Persona name is capitalized in the title (e.g., "Nut" not "nut")
-
-**After running the command, tell the Director:**
+**After successful rename, tell the Director:**
 ```
 ✅ I've renamed your OpenCode session to "<Persona> - <Role>" so you can easily find this conversation later!
 ```
 
-**If the command fails:**
-- The UUID marker may not have been captured in the session diff yet
-- The command will automatically fall back to other detection methods
-- If you still have issues, try: `s9 mission list-opencode-sessions` to manually select a session
+---
 
-## Step 8: Check for Pending Handoffs
+**Troubleshooting if Step 6b fails:**
+
+If the UUID marker isn't found, the command will automatically fall back to:
+1. Git diff correlation (matches recently edited files)
+2. Timestamp-based detection (most recent session for this project)
+
+**These fallbacks are less reliable** - they may rename the wrong session if multiple sessions are active!
+
+**Alternative: Manual session ID:**
+
+If you need to specify a session manually:
+1. List sessions: `s9 mission list-opencode-sessions`
+2. Rename specific session: `s9 mission rename-tui <persona> <Role> --session-id <session-id>`
+
+## Step 7: Check for Pending Handoffs
 
 **IMPORTANT:** Before reading documentation, check if there are pending handoffs for your role.
 
 **Check for pending handoffs:**
 ```bash
-ls .opencode/work/sessions/handoffs/*to-[your-role].pending.md 2>/dev/null
+ls .opencode/work/missions/handoffs/*to-[your-role].pending.md 2>/dev/null
 ```
 
 **Example for Builder role:**
@@ -480,7 +468,7 @@ ls .opencode/work/missions/handoffs/*builder.pending.md 2>/dev/null
 - Skip this section and proceed to Step 8
 - No message needed - just continue normally
 
-## Step 9: Check for Pending Reviews (Administrator Only)
+## Step 8: Check for Pending Reviews (Administrator Only)
 
 **IMPORTANT:** This step is ONLY for Administrator role. Other roles should skip to Step 9.
 
@@ -522,14 +510,14 @@ Would you like to handle any of these reviews now, or shall we proceed with othe
 - Skip this entire section silently
 - Proceed directly to Step 9
 
-## Step 10: Essential Documentation
+## Step 9: Essential Documentation
 
 After registering the mission (and accepting any handoffs), inform the Director you're ready:
 
 ```
 ✅ Mission initialized!
 
-I'm [Persona], your [Role] persona on mission "[codename]". I'm ready to help!
+I'm [Persona], your [Role] agent on mission "[codename]". I'm ready to help!
 
 What would you like me to work on?
 ```
@@ -553,7 +541,7 @@ What would you like me to work on?
 - Most tasks don't require all documentation
 - User gets to start working immediately
 
-## Step 11: Show Role-Specific Dashboard
+## Step 10: Show Role-Specific Dashboard
 
 After initialization is complete, automatically show the Director what tasks are available for their selected role.
 
