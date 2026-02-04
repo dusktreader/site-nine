@@ -506,7 +506,7 @@ def search(
 
     # Build query conditions
     search_term = f"%{keyword}%"
-    conditions = ["(title LIKE :search OR objective LIKE :search OR description LIKE :search OR notes LIKE :search)"]
+    conditions = ["(title LIKE :search OR description LIKE :search OR notes LIKE :search)"]
     params = {"search": search_term}
 
     if active_only:
@@ -534,7 +534,7 @@ def search(
     where_clause = " AND ".join(conditions)
 
     query = f"""
-        SELECT id, title, status, priority, role, current_mission_id, objective, created_at
+        SELECT id, title, status, priority, role, current_mission_id, created_at
         FROM tasks
         WHERE {where_clause}
         ORDER BY
