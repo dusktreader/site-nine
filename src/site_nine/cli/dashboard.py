@@ -89,7 +89,7 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
 
             # Print quick stats
             console.print("\n[cyan]Quick Stats:[/cyan]")
-            console.print(f"  Active agents: [bold]{len(active_missions)}[/bold]")
+            console.print(f"  Active missions: [bold]{len(active_missions)}[/bold]")
             console.print(f"  Total tasks: [bold]{sum(task_counts.values())}[/bold]")
             console.print(f"  In progress: [bold yellow]{task_counts['UNDERWAY']}[/bold yellow]")
             console.print(f"  Completed: [bold green]{task_counts['COMPLETE']}[/bold green]")
@@ -98,7 +98,7 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
 
             # Active missions table
             console.print("\n")
-            mission_table = Table(title="Active Agent Sessions", show_header=True, title_style="bold green")
+            mission_table = Table(title="Active Missions", show_header=True, title_style="bold green")
             mission_table.add_column("Name", style="magenta")
             mission_table.add_column("Role", style="green")
             mission_table.add_column("Start Time", style="blue")
@@ -118,7 +118,7 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
                         objective_display,
                     )
             else:
-                mission_table.add_row("[dim]No active sessions[/dim]", "", "", "")
+                mission_table.add_row("[dim]No active missions[/dim]", "", "", "")
 
             console.print(mission_table)
 
