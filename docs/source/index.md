@@ -8,7 +8,7 @@
 
 site-nine provides:
 
-- **Mission Management** - Track which AI personas are working on what, with specialized roles (Builder, Tester, Architect, etc.)
+- **Mission Management** - Track which AI personas are working on what, with specialized roles (Engineer, Tester, Architect, etc.)
 - **Task Management System** - SQLite-based project management with priorities and dependencies
 - **Persona System** - 145+ mythology-based persona names
 - **Multi-Persona Workflows** - Run multiple specialized personas in parallel OpenCode terminals
@@ -24,9 +24,9 @@ site-nine provides:
 ## Quick Links
 
 - [Quickstart Guide](quickstart.md) - Get started in 5 minutes
-- [Persona Roles](roles.md) - Learn about specialized persona types
+- [Working with Agents](agents/overview.md) - Learn about the agent system
 - [Advanced Topics](advanced.md) - Multi-persona workflows and patterns
-- [CLI Reference](reference.md) - Complete command documentation
+- [CLI Reference](cli/overview.md) - Complete command documentation
 - [GitHub Repository](https://github.com/dusktreader/site-nine)
 
 ## Requirements

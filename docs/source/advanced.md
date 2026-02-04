@@ -501,7 +501,7 @@ For large features spanning multiple tasks, use epics to track overall progress:
 4. **Coordination** - Easier to coordinate work across multiple personas
 5. **Tracking** - Track feature completion from start to finish
 
-See the [Epics guide](epics.md) for detailed information on working with epics.
+See the [Epics guide](epics/overview.md) for detailed information on working with epics.
 
 ### Check Task Status
 
@@ -571,7 +571,7 @@ See the [Epics guide](epics.md) for detailed information on working with epics.
 ## Next Steps
 
 - See [Agent Roles](agents/roles.md) for detailed role descriptions
-- Check [CLI Reference](reference.md) for available commands
+- Check [CLI Reference](cli/overview.md) for available commands
 - Review [Directory Structure](structure.md) to understand the .opencode layout
 
 ## Future: Agent API vs Human CLI

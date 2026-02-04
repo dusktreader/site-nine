@@ -64,7 +64,7 @@ features:
 persona_roles:
   - name: Administrator
     enabled: true
-  - name: Builder
+  - name: Engineer
     enabled: true
   - name: Tester
     enabled: true
@@ -113,11 +113,11 @@ Or specify a role directly to skip the role selection step:
 
 ```
 /summon operator
-/summon builder
+/summon engineer
 /summon tester
 ```
 
-This will guide you through selecting a persona role (Builder, Tester, Architect, etc.) if not provided, and choosing a persona name from mythology. Once summoned, you can talk to your persona naturally through conversation.
+This will guide you through selecting a persona role (Engineer, Tester, Architect, etc.) if not provided, and choosing a persona name from mythology. Once summoned, you can talk to your persona naturally through conversation.
 
 
 ## Working with Your Persona in OpenCode
@@ -134,13 +134,13 @@ Simply ask your persona to create tasks:
 **Persona (Administrator - Ishtar):**
 > I'll create that task for you.
 > 
-> ✓ Created task BLD-H-0001
+> ✓ Created task ENG-H-0001
 >   Title: Implement user authentication
 >   Priority: HIGH
->   Role: Builder
+>   Role: Engineer
 >   Status: TODO
 > 
-> The task has been added to the project database and is ready to be claimed by a Builder persona.
+> The task has been added to the project database and is ready to be claimed by a Engineer persona.
 
 ### Investigating Code
 
@@ -171,7 +171,7 @@ Direct personas to implement functionality:
 **You:**
 > Implement a password reset endpoint
 
-**Persona (Builder - Goibniu):**
+**Persona (Engineer - Goibniu):**
 > I'll implement a password reset endpoint for you. Let me break this down:
 > 
 > **Plan:**
@@ -226,7 +226,7 @@ Ask about tasks and progress:
 > 
 > | ID         | Priority | Role   | Title                          |
 > |------------|----------|--------|--------------------------------|
-> | BLD-H-0001 | HIGH     | Builder| Implement user authentication  |
+> | ENG-H-0001 | HIGH     | Engineer| Implement user authentication  |
 > | DOC-M-0002 | MEDIUM   | Docs   | Add API documentation          |
 > | TST-M-0003 | MEDIUM   | Tester | Add integration tests          |
 > 
@@ -250,10 +250,10 @@ Your persona can help you understand available commands and workflows:
 > 
 > This shows active personas, task summary, and recent activity.
 
-For complete command reference, see the [CLI Reference](reference.md) page.
+For complete command reference, see the [CLI Reference](cli/overview.md) page.
 
 ## Next Steps
 
 - **[Learn about the .opencode directory](structure.md)** - Understand what's inside and what you can safely edit
-- **[Explore persona roles](roles.md)** - See what each persona type specializes in
-- **[Read the usage guide](usage.md)** - Learn advanced workflows and patterns
+- **[Explore agent roles](agents/roles.md)** - See what each role specializes in
+- **[Read the CLI reference](cli/overview.md)** - Learn advanced commands and workflows

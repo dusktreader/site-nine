@@ -1,6 +1,8 @@
-# Persona Roles
+# Agent Roles
 
-Site-nine provides specialized persona roles, each represented by a figure from ancient mythology. Choose the appropriate role for your task to leverage specialized knowledge and capabilities.
+Site-nine provides 9 specialized agent roles, each focused on a specific type of software development work. When you start a mission, you choose the role that matches the work you need to do, and the agent brings expertise and best practices for that domain.
+
+Each role is represented by mythological personas that embody the role's character and purpose. The examples below showcase one persona per role to illustrate the concept.
 
 ---
 
@@ -51,12 +53,12 @@ Kothar - Master designer who creates system architectures and technical decision
 - Document decisions with ADRs
 - Think long-term about scalability
 - Review existing code before proposing changes
-- Create clear diagrams for Builders
+- Create clear diagrams for Engineers
 - Balance pragmatism with project needs
 
 ---
 
-## Builder
+## Engineer
 
 ![Azazel](../images/azazel.png){ align=left width="300" }
 
@@ -156,7 +158,7 @@ Astarte - Elegant creator who designs beautiful user interfaces and experiences
 - Use design systems and established patterns
 - Design for all users, including those with disabilities
 - Create low-fidelity prototypes before high-fidelity designs
-- Work with Builders to ensure designs are implementable
+- Work with Engineers to ensure designs are implementable
 
 ---
 
@@ -244,7 +246,7 @@ Not sure which role to use? Ask yourself:
 
 - **Coordinating work across personas?** → Administrator
 - **Designing system architecture?** → Architect
-- **Writing code and implementing features?** → Builder
+- **Writing code and implementing features?** → Engineer
 - **Creating or running tests?** → Tester
 - **Writing documentation?** → Documentarian
 - **Designing user interfaces?** → Designer
@@ -252,5 +254,5 @@ Not sure which role to use? Ask yourself:
 - **Deploying or managing infrastructure?** → Operator
 - **Documenting project history and decisions?** → Historian
 
-For more details on working with personas, see the [CLI Reference](reference.md) and [Usage Guide](usage.md).
+For more details on working with personas, see the [CLI Reference](../cli/overview.md).
 

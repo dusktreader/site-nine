@@ -1,7 +1,5 @@
 # Epics
 
-![Epic project management](images/epics.png){ align=right width="400" }
-
 Epics are organizational containers for grouping related tasks under larger initiatives. They help you manage complex
 projects by breaking them down into manageable subtasks while maintaining visibility of overall progress.
 
@@ -100,8 +98,8 @@ Subtasks:
 ┃ Task ID    ┃ Title                          ┃ Status     ┃ Role         ┃ Priority ┃
 ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━┩
 │ ARC-H-0015 │ Design auth architecture       │ ✅ COMPLETE│ Architect    │ HIGH     │
-│ BLD-H-0016 │ Implement login endpoint       │ ✅ COMPLETE│ Engineer      │ HIGH     │
-│ BLD-H-0017 │ Implement registration         │ 🔵 UNDERWAY│ Engineer      │ HIGH     │
+│ ENG-H-0016 │ Implement login endpoint       │ ✅ COMPLETE│ Engineer      │ HIGH     │
+│ ENG-H-0017 │ Implement registration         │ 🔵 UNDERWAY│ Engineer      │ HIGH     │
 │ TST-M-0018 │ Write auth tests               │ ⬜ TODO    │ Tester       │ MEDIUM   │
 │ DOC-M-0019 │ Document auth API              │ ⬜ TODO    │ Documentarian│ MEDIUM   │
 └────────────┴────────────────────────────────┴────────────┴──────────────┴──────────┘
@@ -129,7 +127,7 @@ needed!
 
 When the last task is completed:
 ```
-✓ Task BLD-H-0017 closed with status: COMPLETE
+✓ Task ENG-H-0017 closed with status: COMPLETE
 
 📋 Epic EPC-H-0001 status changed: UNDERWAY → COMPLETE
 ```
@@ -158,8 +156,8 @@ s9 epic abort EPC-H-0001 --reason "Requirements changed; switching to OAuth inst
 Epic: EPC-H-0001 - User Authentication System
 Subtasks that will be aborted:
   • ARC-H-0015 - Design auth architecture
-  • BLD-H-0016 - Implement login endpoint
-  • BLD-H-0017 - Implement registration
+  • ENG-H-0016 - Implement login endpoint
+  • ENG-H-0017 - Implement registration
   • TST-M-0018 - Write auth tests
   • DOC-M-0019 - Document auth API
 
@@ -294,8 +292,8 @@ Subtasks:
 ┃ Task ID    ┃ Title                          ┃ Status     ┃ Role         ┃ Priority ┃
 ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━┩
 │ ARC-H-0015 │ Design auth architecture       │ ✅ COMPLETE│ Architect    │ HIGH     │
-│ BLD-H-0016 │ Implement login endpoint       │ ✅ COMPLETE│ Engineer      │ HIGH     │
-│ BLD-H-0017 │ Implement registration         │ 🔵 UNDERWAY│ Engineer      │ HIGH     │
+│ ENG-H-0016 │ Implement login endpoint       │ ✅ COMPLETE│ Engineer      │ HIGH     │
+│ ENG-H-0017 │ Implement registration         │ 🔵 UNDERWAY│ Engineer      │ HIGH     │
 │ TST-M-0018 │ Write auth tests               │ ⬜ TODO    │ Tester       │ MEDIUM   │
 │ DOC-M-0019 │ Document auth API              │ ⬜ TODO    │ Documentarian│ MEDIUM   │
 └────────────┴────────────────────────────────┴────────────┴──────────────┴──────────┘
@@ -327,8 +325,8 @@ updated.
 | Task ID | Title | Status | Role | Priority |
 |---------|-------|--------|------|----------|
 | ARC-H-0015 | Design auth architecture | ✅ COMPLETE | Architect | HIGH |
-| BLD-H-0016 | Implement login endpoint | ✅ COMPLETE | Engineer | HIGH |
-| BLD-H-0017 | Implement registration | 🔵 UNDERWAY | Engineer | HIGH |
+| ENG-H-0016 | Implement login endpoint | ✅ COMPLETE | Engineer | HIGH |
+| ENG-H-0017 | Implement registration | 🔵 UNDERWAY | Engineer | HIGH |
 | TST-M-0018 | Write auth tests | ⬜ TODO | Tester | MEDIUM |
 | DOC-M-0019 | Document auth API | ⬜ TODO | Documentarian | MEDIUM |
 
@@ -388,7 +386,7 @@ s9 epic sync --epic EPC-H-0001
 
 **Good use cases:**
 
-- Features requiring multiple roles (architect → builder → tester → documentarian)
+- Features requiring multiple roles (architect → engineer → tester → documentarian)
 - Projects spanning multiple weeks
 - Work requiring coordination across 3+ tasks
 - Initiatives with clear milestones and deliverables
@@ -454,7 +452,7 @@ Set task priorities based on when they need to be completed, not just the epic's
 
 3. Set up dependencies if needed:
    ```bash
-   s9 task add-dependency BLD-H-0016 ARC-H-0015  # Backend depends on architecture
+   s9 task add-dependency ENG-H-0016 ARC-H-0015  # Backend depends on architecture
    ```
 
 4. Monitor progress:
@@ -473,7 +471,7 @@ If you realize related tasks should be grouped:
 
 2. Link existing tasks:
    ```bash
-   s9 task link BLD-H-0023 EPC-H-0002
+   s9 task link ENG-H-0023 EPC-H-0002
    s9 task link TST-M-0024 EPC-H-0002
    s9 task link DOC-M-0025 EPC-H-0002
    ```
@@ -484,10 +482,10 @@ Move task from one epic to another:
 
 ```bash
 # Unlink from old epic
-s9 task unlink BLD-H-0023
+s9 task unlink ENG-H-0023
 
 # Link to new epic
-s9 task link BLD-H-0023 EPC-H-0003
+s9 task link ENG-H-0023 EPC-H-0003
 ```
 
 
@@ -578,4 +576,4 @@ s9 task unlink TASK_ID
 s9 dashboard --epic EPIC_ID
 ```
 
-See the [CLI Reference](reference.md) for detailed parameter descriptions and examples.
+See the [CLI Reference](cli/overview.md) for detailed parameter descriptions and examples.

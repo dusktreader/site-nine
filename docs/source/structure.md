@@ -66,7 +66,7 @@ Historical record of missions. Each mission creates a log file here.
 
 ### `tasks/`
 
-Individual markdown files for each task, named by task ID (e.g., `BLD-H-0001.md`).
+Individual markdown files for each task, named by task ID (e.g., `ENG-H-0001.md`).
 
 !!! warning "Do Not Edit"
     Task files sync with the database. Create/update tasks using `s9 task` commands or ask your persona.
@@ -106,7 +106,7 @@ Instead of querying the database directly, ask your personas for information con
 > 
 > | ID         | Priority | Role   | Title                          | Persona  |
 > |------------|----------|--------|--------------------------------|----------|
-> | BLD-H-0003 | HIGH     | Builder| Implement rate limiting        | Azazel   |
+> | ENG-H-0003 | HIGH     | Engineer| Implement rate limiting        | Azazel   |
 > | TST-M-0007 | MEDIUM   | Tester | Add integration tests          | Eris     |
 > | DOC-L-0012 | LOW      | Docs   | Update README                  | Nabu     |
 
@@ -115,7 +115,7 @@ Instead of querying the database directly, ask your personas for information con
 
 **Persona:**
 > **Active Missions:**
-> - Azazel (Builder) - Started 2 hours ago - Working on rate limiting
+> - Azazel (Engineer) - Started 2 hours ago - Working on rate limiting
 > - Eris (Tester) - Started 45 minutes ago - Writing integration tests
 
 **You:**
@@ -123,7 +123,7 @@ Instead of querying the database directly, ask your personas for information con
 
 **Persona:**
 > **Most Active Persona Names:**
-> 1. Azazel - 12 missions (Builder)
+> 1. Azazel - 12 missions (Engineer)
 > 2. Eris - 8 missions (Tester)
 > 3. Kothar - 6 missions (Architect)
 > 4. Nabu - 5 missions (Documentarian)

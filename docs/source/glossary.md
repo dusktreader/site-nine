@@ -63,7 +63,7 @@ A specialized function that defines a persona's capabilities, responsibilities, 
 s9 dashboard --role Engineer
 ```
 
-**See also:** [Persona](#persona), [Task](#task), [Agent Roles documentation](roles.md)
+**See also:** [Persona](#persona), [Task](#task), [Agent Roles documentation](agents/roles.md)
 
 ---
 
@@ -190,7 +190,7 @@ s9 dashboard --epic EPC-H-0001
 s9 epic abort EPC-H-0001 --reason "Requirements changed"
 ```
 
-**See also:** [Task](#task), [Epic ID](#epic-id), [Epics documentation](epics.md)
+**See also:** [Task](#task), [Epic ID](#epic-id), [Epics documentation](epics/overview.md)
 
 ---
 
@@ -282,7 +282,7 @@ A structured identifier that uniquely identifies a task and encodes its role and
 - **ROLE** - 3-letter role prefix:
     - `ADM` - Administrator
     - `ARC` - Architect  
-    - `BLD` - Engineer (formerly Builder)
+    - `ENG` - Engineer (formerly Builder)
     - `TST` - Tester
     - `DOC` - Documentarian
     - `DSN` - Designer
@@ -299,7 +299,7 @@ A structured identifier that uniquely identifies a task and encodes its role and
 **Examples:**
 
 - `DOC-M-0056` - Documentarian task, MEDIUM priority, #56
-- `BLD-H-0002` - Engineer task, HIGH priority, #2
+- `ENG-H-0002` - Engineer task, HIGH priority, #2
 - `TST-C-0001` - Tester task, CRITICAL priority, #1
 
 **Benefits:**
@@ -582,14 +582,14 @@ A relationship between tasks where one task must be completed before another can
 
 **Usage:**
 ```bash
-# Add a dependency (BLD-H-0016 depends on ARC-H-0015)
-s9 task add-dependency BLD-H-0016 ARC-H-0015
+# Add a dependency (ENG-H-0016 depends on ARC-H-0015)
+s9 task add-dependency ENG-H-0016 ARC-H-0015
 
 # Remove a dependency
-s9 task remove-dependency BLD-H-0016 ARC-H-0015
+s9 task remove-dependency ENG-H-0016 ARC-H-0015
 
 # View task dependencies
-s9 task show BLD-H-0016
+s9 task show ENG-H-0016
 ```
 
 **Common patterns:**
@@ -668,7 +668,7 @@ s9 changelog --format json --output changelog.json
 - DOC-M-0056: Create glossary page in docs/
 
 ### Engineer
-- BLD-H-0002: Implement authentication API endpoints
+- ENG-H-0002: Implement authentication API endpoints
 
 ## 2026-02-03
 
@@ -676,7 +676,7 @@ s9 changelog --format json --output changelog.json
 - TST-H-0003: Write authentication test suite
 ```
 
-**See also:** [Task](#task), [Historian Role](roles.md#historian)
+**See also:** [Task](#task), [Historian Role](agents/roles.md#historian)
 
 ---
 
@@ -698,7 +698,7 @@ Typically in `docs/adr/` or `.opencode/planning/`, following a numbering convent
 - `0001-use-jwt-tokens.md`
 - `0002-choose-database-postgres.md`
 
-**See also:** [Architect Role](roles.md#architect)
+**See also:** [Architect Role](agents/roles.md#architect)
 
 ---
 
@@ -729,7 +729,7 @@ s9 task --help
 s9 epic create --help
 ```
 
-**See also:** [CLI Reference documentation](reference.md)
+**See also:** [CLI Reference documentation](cli/overview.md)
 
 ---
 
@@ -855,7 +855,7 @@ s9 doctor --fix
 - Missing referenced files
 - Mission data issues
 
-**See also:** [Database](#database), [CLI Reference](reference.md)
+**See also:** [Database](#database), [CLI Reference](cli/overview.md)
 
 ---
 
@@ -864,11 +864,11 @@ s9 doctor --fix
 For more detailed information on specific topics:
 
 - **[Quickstart Guide](quickstart.md)** - Get started in 5 minutes
-- **[Agent Roles](roles.md)** - Detailed role descriptions and best practices
+- **[Agent Roles](agents/roles.md)** - Detailed role descriptions and best practices
 - **[Directory Structure](structure.md)** - Understanding the .opencode directory
-- **[Epics](epics.md)** - Complete guide to epic workflow
+- **[Epics](epics/overview.md)** - Complete guide to epic workflow
 - **[Advanced Topics](advanced.md)** - Multi-persona workflows and patterns
-- **[CLI Reference](reference.md)** - Complete command documentation
+- **[CLI Reference](cli/overview.md)** - Complete command documentation
 
 ---
 
