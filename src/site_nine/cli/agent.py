@@ -353,6 +353,139 @@ def _find_opencode_storage() -> tuple[Path, Path]:
     return session_diff_storage, session_storage
 
 
+def _detect_session_via_diff_content(
+    project_root: Path,
+    session_diff_storage: Path,
+    session_storage: Path,
+) -> str | None:
+    """Detect current OpenCode session by correlating recent git changes with diff content
+
+    This is more reliable than timestamp-based detection when multiple sessions are active.
+    We check which session's diff file contains the files we've most recently edited.
+
+    Args:
+        project_root: Project root directory
+        session_diff_storage: Path to OpenCode session_diff directory
+        session_storage: Path to OpenCode session storage directory
+
+    Returns:
+        Session ID (e.g., "ses_xxx") or None if no matching session found
+    """
+    import json
+    import subprocess
+    import time
+
+    # Get list of recently modified files from git (last 60 seconds of activity)
+    try:
+        # Get files modified in the last minute according to git
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "HEAD"],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        recent_files = set(result.stdout.strip().split("\n")) if result.stdout.strip() else set()
+
+        # Also get staged files
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "--cached"],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if result.stdout.strip():
+            recent_files.update(result.stdout.strip().split("\n"))
+
+        # If no git changes, we can't use content correlation
+        if not recent_files:
+            logger.debug("no_git_changes_for_content_correlation")
+            return None
+
+    except (subprocess.TimeoutExpired, subprocess.SubprocessError, FileNotFoundError):
+        logger.debug("git_command_failed_in_content_correlation")
+        return None
+
+    # Find sessions for this project that have been recently modified
+    current_time = time.time()
+    recent_threshold = 60  # Check sessions modified in last minute
+
+    diff_files = sorted(session_diff_storage.glob("ses_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    candidate_sessions = []
+
+    for diff_file in diff_files:
+        mtime = diff_file.stat().st_mtime
+        age_seconds = current_time - mtime
+
+        # Only check recently modified sessions
+        if age_seconds > recent_threshold:
+            break
+
+        mission_id = diff_file.stem
+
+        # Verify this session is for the current project
+        session_file = None
+        for project_dir in session_storage.iterdir():
+            if not project_dir.is_dir():
+                continue
+            candidate = project_dir / f"{mission_id}.json"
+            if candidate.exists():
+                session_file = candidate
+                break
+
+        if not session_file:
+            continue
+
+        try:
+            with open(session_file) as f:
+                session_data = json.load(f)
+            session_dir = session_data.get("directory", "")
+            if not (session_dir and Path(session_dir).resolve() == project_root.resolve()):
+                continue
+        except (json.JSONDecodeError, FileNotFoundError, PermissionError):
+            continue
+
+        # Now check if this session's diff contains our recent files
+        try:
+            with open(diff_file) as f:
+                diff_data = json.load(f)
+
+            # Get the last few entries from the diff (most recent edits)
+            if not (type(diff_data).__name__ == "list" and len(diff_data) > 0):
+                continue
+
+            # Check last 10 entries for overlap with our recent files
+            recent_diff_files = {entry.get("file", "") for entry in diff_data[-10:]}
+            overlap = recent_files & recent_diff_files
+
+            if overlap:
+                # Calculate a match score based on how many files overlap
+                score = len(overlap)
+                candidate_sessions.append((mission_id, score, age_seconds))
+                logger.debug(
+                    "session_content_match_found",
+                    mission_id=mission_id,
+                    matched_files=[*overlap][:3],  # Log first 3 matches
+                    score=score,
+                )
+
+        except (json.JSONDecodeError, FileNotFoundError, PermissionError):
+            continue
+
+    # Return the session with the best match (highest score, then most recent)
+    if candidate_sessions:
+        # Sort by score (descending), then by age (ascending)
+        best_match = sorted(candidate_sessions, key=lambda x: (-x[1], x[2]))[0]
+        mission_id, score, age_seconds = best_match
+        logger.debug(
+            "session_detected_via_content_correlation", mission_id=mission_id, score=score, age_seconds=int(age_seconds)
+        )
+        return mission_id
+
+    return None
+
+
 def _detect_session_via_diff_recency(
     project_root: Path,
     session_diff_storage: Path,
@@ -360,13 +493,8 @@ def _detect_session_via_diff_recency(
 ) -> str | None:
     """Detect current OpenCode session by finding most recently modified diff file
 
-    This is the most reliable method because the active session continuously
-    writes to its diff file as you work. We verify the session is for the
-    current project before returning it.
-
-    When multiple sessions are active on the same project, we only consider
-    diff files modified within the last 10 seconds, since the user just ran
-    this command from the active session.
+    This is a fallback method when content correlation doesn't work. When multiple
+    sessions are active, uses a 10-second recency window to reduce race conditions.
 
     Args:
         project_root: Project root directory
@@ -776,27 +904,33 @@ def rename_tui(
         current_mission_id = mission_id
         logger.debug("mission_id_provided", mission_id=mission_id)
     else:
-        # Check for multiple active sessions first (to warn the user)
-        import time
+        # Try content correlation first (most reliable)
+        current_mission_id = _detect_session_via_diff_content(project_root, session_diff_storage, session_storage)
 
-        current_time = time.time()
-        recent_threshold = 10
-        diff_files = sorted(session_diff_storage.glob("ses_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
-        recent_project_count = 0
-        for diff_file in diff_files:
-            if current_time - diff_file.stat().st_mtime > recent_threshold:
-                break
-            # Quick check if this might be for our project (full check is in _detect_session_via_diff_recency)
-            recent_project_count += 1
+        # Fall back to timestamp-based detection if content correlation doesn't work
+        if not current_mission_id:
+            logger.debug("content_correlation_failed_fallback_to_timestamp")
 
-        if recent_project_count > 1:
-            multiple_sessions_detected = True
+            # Check for multiple active sessions (to warn the user)
+            import time
 
-        # Use diff file recency - the most reliable detection method
-        # The active session continuously writes to its diff file
-        current_mission_id = _detect_session_via_diff_recency(project_root, session_diff_storage, session_storage)
+            current_time = time.time()
+            recent_threshold = 10
+            diff_files = sorted(session_diff_storage.glob("ses_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+            recent_project_count = 0
+            for diff_file in diff_files:
+                if current_time - diff_file.stat().st_mtime > recent_threshold:
+                    break
+                # Quick check if this might be for our project (full check is in _detect_session_via_diff_recency)
+                recent_project_count += 1
 
-        # If that somehow fails, fall back to session file recency
+            if recent_project_count > 1:
+                multiple_sessions_detected = True
+
+            # Use diff file recency as fallback
+            current_mission_id = _detect_session_via_diff_recency(project_root, session_diff_storage, session_storage)
+
+        # Final fallback to session file recency
         if not current_mission_id:
             logger.debug("diff_recency_failed_fallback_to_session_recency")
             project_missions = _find_project_sessions(project_root, session_storage)
