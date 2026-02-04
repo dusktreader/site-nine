@@ -9,11 +9,15 @@ from site_nine.missions import MissionManager
 from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
 from site_nine.tasks import TaskManager
+from site_nine.epics import EpicManager
 
 console = Console()
 
 
-def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help="Filter tasks by role")) -> None:
+def dashboard_command(
+    role: str | None = typer.Option(None, "--role", "-r", help="Filter tasks by role"),
+    epic: str | None = typer.Option(None, "--epic", "-e", help="Filter tasks by epic ID"),
+) -> None:
     """Show project dashboard with overview of missions and tasks"""
     try:
         # Get database
@@ -31,6 +35,65 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
         db = Database(db_path)
         mission_manager = MissionManager(db)
         task_manager = TaskManager(db)
+        epic_manager = EpicManager(db)
+
+        # Handle epic filter
+        if epic:
+            # Show epic-specific dashboard
+            epic_obj = epic_manager.get_epic(epic)
+            if not epic_obj:
+                console.print(f"[red]Error: Epic {epic} not found[/red]")
+                raise typer.Exit(1)
+
+            # Get subtasks
+            subtasks = epic_manager.get_subtasks(epic)
+
+            # Display epic header
+            console.print()
+            status_color = {
+                "TODO": "yellow",
+                "UNDERWAY": "cyan",
+                "COMPLETE": "green",
+                "ABORTED": "red",
+            }.get(epic_obj.status, "white")
+
+            console.print(f"[bold]Epic {epic}:[/bold] {epic_obj.title}")
+            console.print(f"[bold]Status:[/bold] [{status_color}]{epic_obj.status}[/{status_color}]")
+            console.print(f"[bold]Priority:[/bold] {epic_obj.priority}")
+
+            if epic_obj.subtask_count and epic_obj.subtask_count > 0:
+                progress_bar = _generate_progress_bar(epic_obj.progress_percent)
+                console.print(
+                    f"[bold]Progress:[/bold] {epic_obj.completed_count}/{epic_obj.subtask_count} tasks ({epic_obj.progress_percent}%)"
+                )
+                console.print(progress_bar)
+
+            # Display subtasks table
+            console.print()
+            if subtasks:
+                tasks_table = Table(title="Epic Subtasks", show_header=True, title_style="bold magenta")
+                tasks_table.add_column("ID", style="cyan")
+                tasks_table.add_column("Title", style="white", max_width=50)
+                tasks_table.add_column("Status", style="yellow")
+                tasks_table.add_column("Role", style="green")
+                tasks_table.add_column("Priority", style="red")
+                tasks_table.add_column("Mission", style="blue")
+
+                for task in subtasks:
+                    tasks_table.add_row(
+                        task.id,
+                        task.title,
+                        task.status,
+                        task.role,
+                        task.priority,
+                        str(task.current_mission_id) if task.current_mission_id else "",
+                    )
+
+                console.print(tasks_table)
+            else:
+                console.print("[yellow]No tasks linked to this epic[/yellow]")
+
+            return
 
         # Get data
         all_tasks = task_manager.list_tasks(role=role)
@@ -167,6 +230,50 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
 
             console.print(stats_table)
 
+            # 4. Active Epics table
+            console.print("\n")
+            active_epics = epic_manager.list_epics(status="TODO") + epic_manager.list_epics(status="UNDERWAY")
+
+            if active_epics:
+                epics_table = Table(
+                    title="Active Epics", show_header=True, title_style="bold yellow", title_justify="left"
+                )
+                epics_table.add_column("ID", style="cyan", width=12)
+                epics_table.add_column("Title", style="white", max_width=40)
+                epics_table.add_column("Status", style="yellow", width=10)
+                epics_table.add_column("Priority", style="red", width=10)
+                epics_table.add_column("Progress", style="green")
+
+                # Sort by priority (CRITICAL > HIGH > MEDIUM > LOW)
+                priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+                active_epics.sort(key=lambda e: (priority_order.get(e.priority, 99), e.id))
+
+                for epic_obj in active_epics[:5]:  # Show top 5 active epics
+                    if epic_obj.subtask_count and epic_obj.subtask_count > 0:
+                        progress = f"{epic_obj.completed_count}/{epic_obj.subtask_count} ({epic_obj.progress_percent}%)"
+                    else:
+                        progress = "No tasks"
+
+                    epics_table.add_row(
+                        epic_obj.id,
+                        epic_obj.title,
+                        epic_obj.status,
+                        epic_obj.priority,
+                        progress,
+                    )
+
+                console.print(epics_table)
+                console.print("[dim]💡 View epic details: [bold]s9 epic show <EPIC_ID>[/bold][/dim]")
+                console.print("[dim]💡 View epic tasks: [bold]s9 dashboard --epic <EPIC_ID>[/bold][/dim]")
+
     except Exception as e:
         console.print(f"[red]Error showing dashboard: {e}[/red]")
         raise typer.Exit(1)
+
+
+def _generate_progress_bar(percent: int, width: int = 40) -> str:
+    """Generate a text-based progress bar"""
+    filled = int(width * percent / 100)
+    empty = width - filled
+    bar_color = "green" if percent == 100 else "cyan" if percent > 50 else "yellow" if percent > 0 else "dim"
+    return f"[{bar_color}]{'█' * filled}{'░' * empty}[/{bar_color}] {percent}%"
