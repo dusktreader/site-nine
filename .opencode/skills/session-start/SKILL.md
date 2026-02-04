@@ -69,7 +69,7 @@ The dashboard command will display the current project status including open mis
 If the user invoked `/summon <role>` (e.g., `/summon operator`), the role will be provided in the skill parameters. In this case:
 - Skip the role selection prompts below
 - Use the provided role directly
-- Proceed immediately to Step 3 (Persona Selection)
+- Proceed immediately to Step 2.5 (Validate Flags)
 
 **If NO role was provided**, display the standardized role selection prompt using the s9 CLI:
 
@@ -81,11 +81,83 @@ The command will display a consistently formatted list of all available agent ro
 
 Wait for the Director to respond with their role choice.
 
+## Step 2.5: Validate Flags
+
+**IMPORTANT:** Check for flag conflicts before proceeding.
+
+**If both `--auto-assign` and `--task` flags are provided:**
+```
+❌ Error: Cannot use both --auto-assign and --task flags together.
+
+- Use --auto-assign to claim the top priority task for the role
+- Use --task TASK-ID to claim a specific task
+
+Please use one or the other.
+```
+Stop execution and wait for the Director to restart with correct flags.
+
+**If `--task` flag is provided without a role:**
+```
+❌ Error: --task flag requires a role to be specified.
+
+Usage: /summon <role> --task TASK-ID
+
+Example: /summon operator --task OPR-H-0065
+```
+Stop execution and wait for the Director to restart with correct arguments.
+
+**If validation passes:** Continue to Step 3 (Persona Selection)
+
 ## Step 3: Persona Selection
 
-**IMPORTANT:** Check if the `--auto-name` flag was provided to `/summon`.
+**IMPORTANT:** Check if the `--persona` flag was provided to `/summon`.
 
-If the user invoked `/summon <role> --auto-name`, automatically select the first unused persona name:
+### If `--persona <name>` flag was provided:
+
+1. Check if persona exists in database:
+   ```bash
+   s9 name show <persona-name>
+   ```
+
+2. **If persona exists:**
+   - Display confirmation:
+     ```
+     ✅ Using persona: [name] ([mythology])
+     
+     [Brief 1-sentence description]
+     ```
+   - Proceed directly to Step 4 (Register Mission)
+
+3. **If persona does NOT exist** (command shows "Persona not found"):
+   - Inform the Director:
+     ```
+     📝 Creating new persona: [name]
+     
+     I'll need some information to add this persona to the database.
+     ```
+   - Collaborate with Director to gather:
+     - **Mythology type** (e.g., Greek, Norse, Egyptian, Celtic, etc.)
+     - **Brief description** (1-2 sentences about who this persona is)
+   
+4. **Create the new persona in database:**
+   ```bash
+   s9 name add <persona-name> --role <Role> --mythology <mythology-type> --description "<description>"
+   ```
+
+5. **Generate and save bio:**
+   - Research the persona based on provided information
+   - Generate a whimsical first-person bio (follow bio guidelines in Step 5c)
+   - Display the bio to the Director
+   - Save it:
+     ```bash
+     s9 name set-bio <persona-name> "<generated-bio-text>"
+     ```
+
+6. Proceed to Step 4 (Register Mission)
+
+### If `--persona` flag was NOT provided (default behavior):
+
+Automatically select the first unused persona name:
 
 1. Get suggestions:
    ```bash
@@ -102,24 +174,6 @@ If the user invoked `/summon <role> --auto-name`, automatically select the first
    ```
 
 4. Proceed directly to Step 4 (Register Mission)
-
-**If --auto-name flag was NOT provided:**
-
-Choose a persona name from mythology. **Prefer unused names!**
-
-**Get suggestions:**
-```bash
-s9 name suggest <Role> --count 3
-```
-
-**Suggest to user:**
-```
-I recommend [name] for this [role] mission.
-
-[Brief explanation of why it fits]
-
-Would you like to use this persona?
-```
 
 **Note:** Personas can be reused across missions. Each mission gets a unique codename.
 
@@ -323,11 +377,60 @@ What would you like me to help you with?
 
 ## Step 11: Auto-Assign Task (If Requested)
 
-**IMPORTANT:** Check if the `--auto-assign` flag was provided to `/summon`.
+**IMPORTANT:** Check if the `--auto-assign` OR `--task` flag was provided to `/summon`.
 
 **Skip if:**
-- No `--auto-assign` flag was provided
-- No role was specified (auto-assign requires a role)
+- Neither `--auto-assign` nor `--task` flag was provided
+- No role was specified (both flags require a role)
+
+### Handling --task Flag
+
+**If the user invoked `/summon <role> --task TASK-ID`:**
+
+1. Validate and claim the specified task:
+   ```bash
+   s9 task show [TASK-ID]
+   ```
+   
+2. **If task doesn't exist or validation fails:**
+   ```
+   ❌ Error: Task [TASK-ID] not found or invalid.
+   
+   Please verify the task ID and try again.
+   ```
+   Stop here.
+
+3. **If task exists but is not in TODO status:**
+   ```
+   ⚠️ Warning: Task [TASK-ID] is currently in [STATUS] status.
+   
+   Do you want me to claim it anyway?
+   ```
+   Wait for Director confirmation before proceeding.
+
+4. **If task is valid and TODO:**
+   - Claim the task:
+     ```bash
+     s9 task claim [TASK-ID]
+     ```
+
+5. **Inform the Director:**
+   ```
+   ✅ Assigned task: [TASK-ID]
+   
+   **Title:** [Task title]
+   **Priority:** [Priority]
+   
+   I'm starting work on this task now.
+   ```
+
+6. **Begin work immediately:**
+   - Load any relevant documentation or context needed for the task
+   - Start implementing the task without waiting for further instruction
+   - Update todos to track progress
+   - Provide status updates as you work
+
+### Handling --auto-assign Flag
 
 **If the user invoked `/summon <role> --auto-assign`:**
 
