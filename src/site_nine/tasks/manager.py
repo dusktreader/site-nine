@@ -20,7 +20,7 @@ class TaskManager:
         self,
         status: str | None = None,
         role: str | None = None,
-        agent_name: str | None = None,
+        mission_id: int | None = None,
     ) -> list[Task]:
         """
         List tasks with optional filtering.
@@ -41,9 +41,9 @@ class TaskManager:
             query += " AND role = :role"
             params["role"] = role
 
-        if agent_name:
-            query += " AND agent_name = :agent_name"
-            params["agent_name"] = agent_name
+        if mission_id:
+            query += " AND current_mission_id = :mission_id"
+            params["mission_id"] = mission_id
 
         # Fetch tasks - we'll sort them in Python using task ID sorting
         query += " ORDER BY id"
@@ -72,19 +72,18 @@ class TaskManager:
         rows = self.db.execute_query("SELECT * FROM tasks WHERE id = :id", {"id": task_id})
         return Task(**rows[0]) if rows else None
 
-    def claim_task(self, task_id: str, agent_name: str, agent_id: int | None = None) -> None:
-        """Claim a task for an agent"""
+    def claim_task(self, task_id: str, mission_id: int | None = None) -> None:
+        """Claim a task for current mission"""
         self.db.execute_update(
             """
             UPDATE tasks
-            SET agent_name = :agent_name,
-                agent_id = :agent_id,
+            SET current_mission_id = :mission_id,
                 claimed_at = datetime('now'),
                 status = 'UNDERWAY',
                 updated_at = datetime('now')
             WHERE id = :task_id
             """,
-            {"task_id": task_id, "agent_name": agent_name, "agent_id": agent_id},
+            {"task_id": task_id, "mission_id": mission_id},
         )
 
     def update_status(self, task_id: str, status: str, notes: str | None = None) -> None:

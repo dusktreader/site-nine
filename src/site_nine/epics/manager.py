@@ -212,8 +212,7 @@ class EpicManager:
             SET status = 'ABORTED',
                 closed_at = datetime('now'),
                 updated_at = datetime('now'),
-                agent_name = NULL,
-                agent_id = NULL
+                current_mission_id = NULL
             WHERE epic_id = :epic_id
             """,
             {"epic_id": epic_id},

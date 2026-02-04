@@ -106,7 +106,7 @@ def _get_manager() -> TaskManager:
 def list(
     role: str | None = typer.Option(None, "--role", "-r", help="Filter by role"),
     status: str | None = typer.Option(None, "--status", "-s", help="Filter by status"),
-    agent: str | None = typer.Option(None, "--agent", "-a", help="Filter by agent name"),
+    mission: int | None = typer.Option(None, "--mission", "-m", help="Filter by mission ID"),
 ) -> None:
     """List tasks"""
     manager = _get_manager()
@@ -117,7 +117,7 @@ def list(
     if status:
         status = status.upper()
 
-    tasks = manager.list_tasks(status=status, role=role, agent_name=agent)
+    tasks = manager.list_tasks(status=status, role=role, mission_id=mission)
 
     if not tasks:
         console.print("[yellow]No tasks found.[/yellow]")
@@ -129,7 +129,7 @@ def list(
     table.add_column("Status", style="yellow")
     table.add_column("Priority", style="red")
     table.add_column("Role", style="green")
-    table.add_column("Agent", style="blue")
+    table.add_column("Mission", style="blue")
 
     for task in tasks:
         table.add_row(
@@ -138,7 +138,7 @@ def list(
             task.status,
             task.priority,
             task.role,
-            task.agent_name or "",
+            str(task.current_mission_id) if task.current_mission_id else "",
         )
 
     console.print(table)
@@ -165,8 +165,8 @@ def show(
     console.print(f"  Role: {task.role}")
     if task.category:
         console.print(f"  Category: {task.category}")
-    if task.agent_name:
-        console.print(f"  Agent: {task.agent_name}")
+    if task.current_mission_id:
+        console.print(f"  Mission: {task.current_mission_id}")
     if task.claimed_at:
         console.print(f"  Claimed: {task.claimed_at}")
     if task.closed_at:
@@ -183,7 +183,7 @@ def show(
 @handle_errors("Failed to claim task")
 def claim(
     task_id: str = typer.Argument(..., help="Task ID"),
-    agent_name: str = typer.Option(..., "--agent", "-a", help="Agent name"),
+    mission: int | None = typer.Option(None, "--mission", "-m", help="Mission ID (current mission if not specified)"),
 ) -> None:
     """Claim a task"""
     manager = _get_manager()
@@ -214,9 +214,10 @@ def claim(
             console.print(f"Use [cyan]s9 review approve {blocking_review.id}[/cyan] to unblock this task")
             raise typer.Exit(1)
 
-    manager.claim_task(task_id, agent_name)
-    console.print(f"[green]✓[/green] Task {task_id} claimed by {agent_name}")
-    logger.info(f"Task {task_id} claimed by {agent_name}")
+    manager.claim_task(task_id, mission)
+    mission_text = f" for mission {mission}" if mission else ""
+    console.print(f"[green]✓[/green] Task {task_id} claimed{mission_text}")
+    logger.info(f"Task {task_id} claimed{mission_text}")
 
 
 @app.command()
@@ -338,19 +339,19 @@ def create(
 
 
 @app.command()
-@handle_errors("Failed to list agent tasks")
+@handle_errors("Failed to list mission tasks")
 def mine(
-    agent_name: str = typer.Option(..., "--agent", "-a", help="Agent name"),
+    mission: int = typer.Option(..., "--mission", "-m", help="Mission ID"),
 ) -> None:
-    """Show tasks claimed by an agent"""
+    """Show tasks claimed by a mission"""
     manager = _get_manager()
-    tasks = manager.list_tasks(agent_name=agent_name)
+    tasks = manager.list_tasks(mission_id=mission)
 
     if not tasks:
-        console.print(f"[yellow]No tasks found for agent '{agent_name}'[/yellow]")
+        console.print(f"[yellow]No tasks found for mission {mission}[/yellow]")
         return
 
-    table = Table(title=f"Tasks for {agent_name}")
+    table = Table(title=f"Tasks for Mission {mission}")
     table.add_column("ID", style="cyan", justify="left")
     table.add_column("Title", style="magenta")
     table.add_column("Status", style="yellow")
@@ -373,7 +374,7 @@ def mine(
 
     console.print(table)
     console.print(f"\nTotal: {len(tasks)} task(s)")
-    logger.debug(f"Listed {len(tasks)} tasks for agent {agent_name}")
+    logger.debug(f"Listed {len(tasks)} tasks for mission {mission}")
 
 
 @app.command()
@@ -429,7 +430,7 @@ def report(
     where_clause = " AND ".join(conditions) if conditions else "1=1"
 
     query = f"""
-        SELECT id, title, status, priority, role, category, agent_name,
+        SELECT id, title, status, priority, role, category, current_mission_id,
                claimed_at, closed_at, actual_hours, objective, created_at
         FROM tasks
         WHERE {where_clause}
@@ -456,7 +457,7 @@ def report(
     table.add_column("Status", style="yellow")
     table.add_column("Priority", style="magenta")
     table.add_column("Role", style="green")
-    table.add_column("Agent", style="blue")
+    table.add_column("Mission", style="blue")
 
     for task in tasks:
         # Truncate long titles
@@ -464,7 +465,7 @@ def report(
         if len(title) > 40:
             title = title[:37] + "..."
 
-        agent = task["agent_name"] if task["agent_name"] else "-"
+        mission = str(task["current_mission_id"]) if task["current_mission_id"] else "-"
 
         table.add_row(
             task["id"],
@@ -472,7 +473,7 @@ def report(
             task["status"],
             task["priority"],
             task["role"],
-            agent,
+            mission,
         )
 
     console.print(table)
@@ -533,7 +534,7 @@ def search(
     where_clause = " AND ".join(conditions)
 
     query = f"""
-        SELECT id, title, status, priority, role, agent_name, objective, created_at
+        SELECT id, title, status, priority, role, current_mission_id, objective, created_at
         FROM tasks
         WHERE {where_clause}
         ORDER BY
@@ -829,7 +830,7 @@ def _sync_task_file(task, opencode_dir: Path) -> None:
 
     # Build header
     category = task.category or ""
-    agent_name = task.agent_name or ""
+    mission_id = str(task.current_mission_id) if task.current_mission_id else ""
     claimed_at = task.claimed_at or ""
     actual_hours = f"~{task.actual_hours} hours" if task.actual_hours else ""
     closed_at = task.closed_at or ""
@@ -841,7 +842,7 @@ def _sync_task_file(task, opencode_dir: Path) -> None:
 **Priority:** {task.priority}
 **Role:** {task.role}
 **Category:** {category}
-**Agent:** {agent_name}
+**Mission:** {mission_id}
 **Claimed:** {claimed_at}
 **Actual Time:** {actual_hours}
 **Closed:** {closed_at}

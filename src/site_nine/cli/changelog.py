@@ -51,7 +51,7 @@ def changelog_command(
             priority, 
             role, 
             category,
-            agent_name,
+            current_mission_id,
             claimed_at,
             closed_at,
             actual_hours,
@@ -136,8 +136,8 @@ def _generate_changelog_markdown(tasks: list[dict], opencode_dir: Path) -> str:
             output.append(f"**Role:** {task['role']}  ")
             if task.get("category"):
                 output.append(f"**Category:** {task['category']}  ")
-            if task.get("agent_name"):
-                output.append(f"**Agent:** {task['agent_name']}  ")
+            if task.get("current_mission_id"):
+                output.append(f"**Mission:** {task['current_mission_id']}  ")
             if task.get("actual_hours"):
                 output.append(f"**Time:** {task['actual_hours']} hours  ")
 
@@ -197,7 +197,7 @@ def _generate_changelog_json(tasks: list[dict], opencode_dir: Path) -> str:
             "priority": task["priority"],
             "role": task["role"],
             "category": task.get("category"),
-            "agent": task.get("agent_name"),
+            "mission": task.get("current_mission_id"),
             "hours": task.get("actual_hours"),
             "changes": sections.get("implementation") or task.get("description"),
             "files_changed": sections.get("files_changed"),

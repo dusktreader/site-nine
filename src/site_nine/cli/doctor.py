@@ -74,7 +74,6 @@ def doctor_command(
     else:
         console.print("  [green]✓[/green] All mission persona_names are valid")
 
-    # Check tasks.agent_id → missions.id
     # Check tasks.current_mission_id → missions.id
     orphaned_tasks = db.execute_query("""
         SELECT t.id, t.title, t.current_mission_id
