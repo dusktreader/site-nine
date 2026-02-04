@@ -27,17 +27,28 @@ theme:
 extra_css:
   - stylesheets/extra.css
 watch:
-  - source
   - ../src/site_nine/
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
-  - Agent Roles: roles.md
+  - Working with Agents:
+    - Overview: agents/overview.md
+    - Missions: agents/missions.md
+    - Roles: agents/roles.md
+    - Personas: agents/personas.md
+  - Epics:
+    - Overview: epics/overview.md
+    - Planning: epics/planning.md
+    - Tracking Progress: epics/tracking.md
+    - Epic Files: epics/files.md
+  - CLI Reference:
+    - Overview: cli/overview.md
+    - For Humans: cli/for-humans.md
+    - For Agents: cli/for-agents.md
+    - Complete Reference: cli/complete.md
   - Directory Structure: structure.md
-  - Epics: epics.md
   - Advanced Topics: advanced.md
   - Glossary: glossary.md
-  - CLI Reference: reference.md
 plugins:
   search:
     lang: en
