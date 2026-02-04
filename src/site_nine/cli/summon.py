@@ -17,7 +17,7 @@ def summon_command(
     model: str | None = typer.Option(None, "--model", "-m", help="Model to use (provider/model format)"),
     dry_run: bool = typer.Option(False, "--dry-run", "-d", help="Show command that would be run without executing"),
 ) -> None:
-    """Launch OpenCode and automatically run /summon with specified role and flags
+    """Launch OpenCode and automatically run /summon with specified role and flags (typically used by: humans)
 
     Examples:
         s9 summon operator

@@ -21,7 +21,7 @@ console = Console()
 def check_command(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
 ) -> None:
-    """Run infrastructure health checks
+    """Run infrastructure health checks (typically used by: humans)
 
     Performs checks on the .opencode directory structure:
     - Database integrity (SQLite PRAGMA integrity_check)

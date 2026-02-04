@@ -40,7 +40,7 @@ def _open_editor(file_path: Path) -> None:
 @app.command(name="agents")
 @handle_errors("Failed to edit AGENTS.md")
 def edit_agents() -> None:
-    """Edit the AGENTS.md file with development patterns and guidelines"""
+    """Edit the AGENTS.md file with development patterns and guidelines (typically used by: humans)"""
     try:
         opencode_dir = get_opencode_dir()
     except FileNotFoundError:
@@ -62,7 +62,7 @@ def edit_agents() -> None:
 @app.command(name="commits")
 @handle_errors("Failed to edit COMMIT_GUIDELINES.md")
 def edit_commits() -> None:
-    """Edit the COMMIT_GUIDELINES.md file with git commit conventions"""
+    """Edit the COMMIT_GUIDELINES.md file with git commit conventions (typically used by: humans)"""
     try:
         opencode_dir = get_opencode_dir()
     except FileNotFoundError:
@@ -84,7 +84,7 @@ def edit_commits() -> None:
 @app.command(name="workflows")
 @handle_errors("Failed to edit WORKFLOWS.md")
 def edit_workflows() -> None:
-    """Edit the WORKFLOWS.md file with development workflows"""
+    """Edit the WORKFLOWS.md file with development workflows (typically used by: humans)"""
     try:
         opencode_dir = get_opencode_dir()
     except FileNotFoundError:
@@ -106,7 +106,7 @@ def edit_workflows() -> None:
 @app.command(name="troubleshooting")
 @handle_errors("Failed to edit TROUBLESHOOTING.md")
 def edit_troubleshooting() -> None:
-    """Edit the TROUBLESHOOTING.md file"""
+    """Edit the TROUBLESHOOTING.md file (typically used by: humans)"""
     try:
         opencode_dir = get_opencode_dir()
     except FileNotFoundError:
@@ -128,7 +128,7 @@ def edit_troubleshooting() -> None:
 @app.command(name="task-workflow")
 @handle_errors("Failed to edit TASK_WORKFLOW.md")
 def edit_task_workflow() -> None:
-    """Edit the TASK_WORKFLOW.md file"""
+    """Edit the TASK_WORKFLOW.md file (typically used by: humans)"""
     try:
         opencode_dir = get_opencode_dir()
     except FileNotFoundError:
@@ -150,7 +150,7 @@ def edit_task_workflow() -> None:
 @app.command(name="project-status")
 @handle_errors("Failed to edit PROJECT_STATUS.md")
 def edit_project_status() -> None:
-    """Edit the PROJECT_STATUS.md file with project goals and status"""
+    """Edit the PROJECT_STATUS.md file with project goals and status (typically used by: humans)"""
     try:
         opencode_dir = get_opencode_dir()
     except FileNotFoundError:
@@ -172,7 +172,7 @@ def edit_project_status() -> None:
 @app.command(name="architecture")
 @handle_errors("Failed to edit architecture.md")
 def edit_architecture() -> None:
-    """Edit the architecture.md file with system design documentation"""
+    """Edit the architecture.md file with system design documentation (typically used by: humans)"""
     try:
         opencode_dir = get_opencode_dir()
     except FileNotFoundError:
@@ -194,7 +194,7 @@ def edit_architecture() -> None:
 @app.command(name="design-philosophy")
 @handle_errors("Failed to edit design-philosophy.md")
 def edit_design_philosophy() -> None:
-    """Edit the design-philosophy.md file"""
+    """Edit the design-philosophy.md file (typically used by: humans)"""
     try:
         opencode_dir = get_opencode_dir()
     except FileNotFoundError:
@@ -216,7 +216,7 @@ def edit_design_philosophy() -> None:
 @app.command(name="opencode-config")
 @handle_errors("Failed to edit opencode.json")
 def edit_opencode_config() -> None:
-    """Edit the opencode.json configuration file"""
+    """Edit the opencode.json configuration file (typically used by: humans)"""
     try:
         opencode_dir = get_opencode_dir()
     except FileNotFoundError:

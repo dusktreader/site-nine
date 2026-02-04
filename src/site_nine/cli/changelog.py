@@ -23,7 +23,7 @@ def changelog_command(
     format: str = typer.Option("markdown", "--format", help="Output format: markdown or json"),
     output: Path | None = typer.Option(None, "--output", "-o", help="Write to file instead of stdout"),
 ) -> None:
-    """Generate changelog from completed tasks
+    """Generate changelog from completed tasks (typically used by: humans)
 
     Creates a chronological report of completed work, grouped by date,
     showing what changes were made to the system. Excludes aborted tasks

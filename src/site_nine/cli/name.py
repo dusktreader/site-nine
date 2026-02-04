@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.table import Table
 from typerdrive import handle_errors
 
+from site_nine.cli.json_utils import format_json_response, output_json
 from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
 
@@ -60,7 +61,7 @@ def add(
     mythology: str = typer.Option(..., "--mythology", "-m", help="Mythology origin (e.g., Greek, Roman, Norse)"),
     description: str = typer.Option(..., "--description", "-d", help="Brief description of the deity/figure"),
 ) -> None:
-    """Add a new persona"""
+    """Add a new persona (typically used by: humans)"""
     name = name.lower()
     role = _validate_role(role)
 
@@ -89,8 +90,9 @@ def list(
     role: str | None = typer.Option(None, "--role", "-r", help="Filter by role"),
     unused_only: bool = typer.Option(False, "--unused-only", help="Show only unused personas"),
     by_usage: bool = typer.Option(False, "--by-usage", help="Sort by mission count"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
-    """List personas"""
+    """List personas (typically used by: both)"""
     db = _get_db()
 
     # Build query
@@ -118,7 +120,29 @@ def list(
     personas = db.execute_query(query, params)
 
     if not personas:
+        if json_output:
+            output_json(format_json_response([]))
+            logger.debug("Listed 0 personas (JSON)")
+            return
         console.print("[yellow]No personas found[/yellow]")
+        return
+
+    if json_output:
+        # Build JSON data
+        data = []
+        for persona in personas:
+            persona_dict = {
+                "name": persona["name"],
+                "role": persona["role"],
+                "mythology": persona["mythology"],
+                "description": persona["description"],
+                "mission_count": persona["mission_count"],
+                "last_mission_at": persona["last_mission_at"],
+            }
+            data.append(persona_dict)
+
+        output_json(format_json_response(data))
+        logger.debug(f"Listed {len(personas)} personas (JSON)")
         return
 
     # Display table
@@ -154,8 +178,9 @@ def list(
 def suggest(
     role: str = typer.Argument(..., help="Role to suggest persona for"),
     count: int = typer.Option(3, "--count", "-c", help="Number of suggestions"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
-    """Suggest unused personas for a role"""
+    """Suggest unused personas for a role (typically used by: agents)"""
     role = _validate_role(role)
 
     db = _get_db()
@@ -173,8 +198,28 @@ def suggest(
     )
 
     if not suggestions:
+        if json_output:
+            output_json(format_json_response([]))
+            logger.debug("Suggested 0 personas (JSON)")
+            return
         console.print(f"[yellow]No personas found for role: {role}[/yellow]")
         console.print("[dim]Tip: Add personas with 's9 name add'[/dim]")
+        return
+
+    if json_output:
+        # Build JSON data
+        data = []
+        for persona in suggestions:
+            persona_dict = {
+                "name": persona["name"],
+                "mythology": persona["mythology"],
+                "description": persona["description"],
+                "mission_count": persona["mission_count"],
+            }
+            data.append(persona_dict)
+
+        output_json(format_json_response(data))
+        logger.debug(f"Suggested {len(suggestions)} personas (JSON)")
         return
 
     console.print(f"\n[bold]Suggested personas for {role.title()}:[/bold]\n")
@@ -191,7 +236,7 @@ def suggest(
 def usage(
     name: str = typer.Argument(..., help="Persona name to check"),
 ) -> None:
-    """Show usage history for a persona"""
+    """Show usage history for a persona (typically used by: both)"""
     name = name.lower()
 
     db = _get_db()
@@ -259,8 +304,9 @@ def usage(
 @handle_errors("Failed to show persona")
 def show(
     name: str = typer.Argument(..., help="Persona name to display"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
-    """Show persona details including whimsical bio"""
+    """Show persona details including whimsical bio (typically used by: both)"""
     name = name.lower()
 
     db = _get_db()
@@ -276,6 +322,22 @@ def show(
         raise typer.Exit(1)
 
     persona = persona_results[0]
+
+    if json_output:
+        # Build JSON data
+        persona_dict = {
+            "name": persona["name"],
+            "role": persona["role"],
+            "mythology": persona["mythology"],
+            "description": persona["description"],
+            "whimsical_bio": persona.get("whimsical_bio"),
+            "mission_count": persona.get("mission_count"),
+            "last_mission_at": persona.get("last_mission_at"),
+        }
+
+        output_json(format_json_response(persona_dict))
+        logger.debug(f"Displayed persona {name} (JSON)")
+        return
 
     # Display basic info
     console.print(f"\n[bold cyan]{persona['name'].title()}[/bold cyan]")
@@ -299,7 +361,7 @@ def set_bio(
     name: str = typer.Argument(..., help="Persona name"),
     bio: str = typer.Argument(..., help="Whimsical bio text (3-5 sentences, first person, playful tone)"),
 ) -> None:
-    """Set whimsical bio for a persona"""
+    """Set whimsical bio for a persona (typically used by: agents)"""
     name = name.lower()
 
     db = _get_db()

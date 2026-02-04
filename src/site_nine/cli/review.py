@@ -12,6 +12,7 @@ from rich.table import Table
 from rich.text import Text
 from typerdrive import handle_errors
 
+from site_nine.cli.json_utils import format_json_response, output_json
 from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
 from site_nine.reviews import ReviewManager, ReviewStatus, ReviewType
@@ -48,7 +49,7 @@ def create(
     artifact: str | None = typer.Option(None, "--artifact", "-a", help="Path to artifact being reviewed"),
     requested_by: str | None = typer.Option(None, "--requested-by", help="Daemon name requesting review"),
 ) -> None:
-    """Create a review request"""
+    """Create a review request (typically used by: agents)"""
     manager = _get_manager()
 
     # Validate review type
@@ -85,8 +86,9 @@ def create(
 def list(
     status: str | None = typer.Option(None, "--status", "-s", help="Filter by status (pending, approved, rejected)"),
     type: str | None = typer.Option(None, "--type", "-t", help="Filter by type"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
-    """List reviews"""
+    """List reviews (typically used by: both)"""
     manager = _get_manager()
 
     # Normalize status and type for filtering
@@ -96,6 +98,11 @@ def list(
     reviews = manager.list_reviews(status=status_value, type=type_value)
 
     if not reviews:
+        if json_output:
+            output_json(format_json_response([]))
+            logger.debug("Listed 0 reviews (JSON)")
+            return
+
         filter_msg = ""
         if status or type:
             filter_parts = []
@@ -105,6 +112,32 @@ def list(
                 filter_parts.append(f"type={type}")
             filter_msg = f" ({', '.join(filter_parts)})"
         console.print(f"[yellow]No reviews found{filter_msg}.[/yellow]")
+        return
+
+    if json_output:
+        # Build JSON data
+        from datetime import datetime
+
+        data = []
+        for review in reviews:
+            review_dict = {
+                "id": review.id,
+                "type": review.type,
+                "status": review.status,
+                "title": review.title,
+                "description": review.description,
+                "task_id": review.task_id,
+                "requested_by": review.requested_by,
+                "reviewed_by": review.reviewed_by,
+                "artifact_path": review.artifact_path,
+                "outcome_reason": review.outcome_reason,
+                "requested_at": review.requested_at,
+                "reviewed_at": review.reviewed_at,
+            }
+            data.append(review_dict)
+
+        output_json(format_json_response(data))
+        logger.debug(f"Listed {len(reviews)} reviews (JSON)")
         return
 
     table = Table(title="Reviews")
@@ -167,14 +200,38 @@ def list(
 
 @app.command()
 @handle_errors("Failed to show review")
-def show(review_id: int = typer.Argument(..., help="Review ID")) -> None:
-    """Show review details"""
+def show(
+    review_id: int = typer.Argument(..., help="Review ID"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
+) -> None:
+    """Show review details (typically used by: both)"""
     manager = _get_manager()
 
     review = manager.get_review(review_id)
     if not review:
         console.print(f"[red]Error: Review #{review_id} not found.[/red]")
         raise typer.Exit(1)
+
+    if json_output:
+        # Build JSON data
+        review_dict = {
+            "id": review.id,
+            "type": review.type,
+            "status": review.status,
+            "title": review.title,
+            "description": review.description,
+            "task_id": review.task_id,
+            "requested_by": review.requested_by,
+            "reviewed_by": review.reviewed_by,
+            "artifact_path": review.artifact_path,
+            "outcome_reason": review.outcome_reason,
+            "requested_at": review.requested_at,
+            "reviewed_at": review.reviewed_at,
+        }
+
+        output_json(format_json_response(review_dict))
+        logger.debug(f"Displayed review {review_id} (JSON)")
+        return
 
     # Create details display
     console.print()
@@ -230,7 +287,7 @@ def approve(
     reason: str | None = typer.Option(None, "--reason", "-r", help="Approval reason"),
     reviewed_by: str = typer.Option("Director", "--reviewed-by", help="Who is approving"),
 ) -> None:
-    """Approve a review"""
+    """Approve a review (typically used by: humans)"""
     manager = _get_manager()
 
     # Check review exists and is pending
@@ -260,7 +317,7 @@ def reject(
     reason: str = typer.Option(..., "--reason", "-r", help="Rejection reason (required)"),
     reviewed_by: str = typer.Option("Director", "--reviewed-by", help="Who is rejecting"),
 ) -> None:
-    """Reject a review"""
+    """Reject a review (typically used by: humans)"""
     manager = _get_manager()
 
     # Check review exists and is pending
@@ -285,7 +342,7 @@ def reject(
 @app.command()
 @handle_errors("Failed to show blocked tasks")
 def blocked() -> None:
-    """Show tasks blocked by pending reviews"""
+    """Show tasks blocked by pending reviews (typically used by: both)"""
     manager = _get_manager()
 
     blocked_tasks = manager.get_blocked_tasks()

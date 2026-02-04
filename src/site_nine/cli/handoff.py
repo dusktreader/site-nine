@@ -13,6 +13,7 @@ from rich.table import Table
 from rich.text import Text
 from typerdrive import handle_errors
 
+from site_nine.cli.json_utils import format_json_response, output_json
 from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
 from site_nine.handoffs import HandoffManager, HandoffStatus
@@ -50,14 +51,14 @@ def create(
     acceptance_criteria: str | None = typer.Option(None, "--criteria", "-c", help="What defines completion"),
     notes: str | None = typer.Option(None, "--notes", "-n", help="Additional context or instructions"),
 ) -> None:
-    """Create a work handoff to another role"""
+    """Create a work handoff to another role (typically used by: agents)"""
     manager = _get_manager()
 
     # Validate role
     valid_roles = [
         "Administrator",
         "Architect",
-        "Builder",
+        "Engineer",
         "Tester",
         "Documentarian",
         "Designer",
@@ -97,8 +98,9 @@ def list(
     role: str | None = typer.Option(None, "--role", "-r", help="Filter by target role"),
     status: str | None = typer.Option(None, "--status", "-s", help="Filter by status"),
     from_mission: int | None = typer.Option(None, "--from-mission", help="Filter by source mission"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
-    """List handoffs"""
+    """List handoffs (typically used by: both)"""
     manager = _get_manager()
 
     # Normalize status for filtering
@@ -111,6 +113,11 @@ def list(
     )
 
     if not handoffs:
+        if json_output:
+            output_json(format_json_response([]))
+            logger.debug("Listed 0 handoffs (JSON)")
+            return
+
         filter_msg = ""
         if role or status or from_mission:
             filter_parts = []
@@ -122,6 +129,33 @@ def list(
                 filter_parts.append(f"from_mission={from_mission}")
             filter_msg = f" ({', '.join(filter_parts)})"
         console.print(f"[yellow]No handoffs found{filter_msg}.[/yellow]")
+        return
+
+    if json_output:
+        # Build JSON data
+        from datetime import datetime
+
+        data = []
+        for handoff in handoffs:
+            handoff_dict = {
+                "id": handoff.id,
+                "status": handoff.status,
+                "task_id": handoff.task_id,
+                "to_role": handoff.to_role,
+                "from_mission_id": handoff.from_mission_id,
+                "to_mission_id": handoff.to_mission_id,
+                "summary": handoff.summary,
+                "acceptance_criteria": handoff.acceptance_criteria,
+                "files": json.loads(handoff.files) if handoff.files else None,
+                "notes": handoff.notes,
+                "created_at": handoff.created_at,
+                "accepted_at": handoff.accepted_at,
+                "completed_at": handoff.completed_at,
+            }
+            data.append(handoff_dict)
+
+        output_json(format_json_response(data))
+        logger.debug(f"Listed {len(handoffs)} handoffs (JSON)")
         return
 
     table = Table(title="Handoffs")
@@ -177,14 +211,39 @@ def list(
 
 @app.command()
 @handle_errors("Failed to show handoff")
-def show(handoff_id: int = typer.Argument(..., help="Handoff ID")) -> None:
-    """Show handoff details"""
+def show(
+    handoff_id: int = typer.Argument(..., help="Handoff ID"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
+) -> None:
+    """Show handoff details (typically used by: both)"""
     manager = _get_manager()
 
     handoff = manager.get_handoff(handoff_id)
     if not handoff:
         console.print(f"[red]Error: Handoff #{handoff_id} not found.[/red]")
         raise typer.Exit(1)
+
+    if json_output:
+        # Build JSON data
+        handoff_dict = {
+            "id": handoff.id,
+            "status": handoff.status,
+            "task_id": handoff.task_id,
+            "to_role": handoff.to_role,
+            "from_mission_id": handoff.from_mission_id,
+            "to_mission_id": handoff.to_mission_id,
+            "summary": handoff.summary,
+            "acceptance_criteria": handoff.acceptance_criteria,
+            "files": json.loads(handoff.files) if handoff.files else None,
+            "notes": handoff.notes,
+            "created_at": handoff.created_at,
+            "accepted_at": handoff.accepted_at,
+            "completed_at": handoff.completed_at,
+        }
+
+        output_json(format_json_response(handoff_dict))
+        logger.debug(f"Displayed handoff {handoff_id} (JSON)")
+        return
 
     # Create details display
     console.print()
@@ -250,7 +309,7 @@ def accept(
     handoff_id: int = typer.Argument(..., help="Handoff ID"),
     mission: int = typer.Option(..., "--mission", "-m", help="Mission ID accepting the handoff"),
 ) -> None:
-    """Accept a handoff"""
+    """Accept a handoff (typically used by: agents)"""
     manager = _get_manager()
 
     # Check handoff exists and is pending
@@ -278,7 +337,7 @@ def accept(
 def complete(
     handoff_id: int = typer.Argument(..., help="Handoff ID"),
 ) -> None:
-    """Mark a handoff as completed"""
+    """Mark a handoff as completed (typically used by: agents)"""
     manager = _get_manager()
 
     # Check handoff exists and is accepted
@@ -307,7 +366,7 @@ def complete(
 def cancel(
     handoff_id: int = typer.Argument(..., help="Handoff ID"),
 ) -> None:
-    """Cancel a handoff"""
+    """Cancel a handoff (typically used by: both)"""
     manager = _get_manager()
 
     # Check handoff exists

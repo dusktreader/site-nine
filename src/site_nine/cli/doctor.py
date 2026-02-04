@@ -22,7 +22,7 @@ def doctor_command(
     fix: bool = typer.Option(False, "--fix", help="Apply fixes automatically"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
 ) -> None:
-    """Run health checks and validate data integrity
+    """Run health checks and validate data integrity (typically used by: humans)
 
     Performs comprehensive checks on the database to identify:
     - Invalid foreign key references

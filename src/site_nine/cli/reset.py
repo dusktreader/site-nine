@@ -18,7 +18,7 @@ console = Console()
 def reset_command(
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip first confirmation (still requires typing confirmation)"),
 ) -> None:
-    """Reset project data - DANGEROUS!
+    """Reset project data - DANGEROUS! (typically used by: humans)
 
     This command will DELETE:
     - All missions (database records and mission files)
