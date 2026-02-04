@@ -41,8 +41,8 @@ s9 task claim TASK_ID --agent-name "YourName" --agent-id YOUR_ID
 s9 task update TASK_ID --notes "..." --actual-hours X.X
 s9 task close TASK_ID --status COMPLETE --notes "..."
 
-# See also: agent and name commands
-s9 agent start <name> --role <Role> --session-file "..." --task-summary "..."
+# See also: mission and name commands
+s9 mission start <name> --role <Role> --session-file "..." --task-summary "..."
 s9 name suggest <Role>
 ```
 

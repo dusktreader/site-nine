@@ -462,7 +462,7 @@ Use this checklist when updating your session file:
 - [ ] Close tasks in task database
 - [ ] Verify task artifacts are updated
 - [ ] Commit session file
-- [ ] Run `s9 agent end <agent-id> --status <status>` to update frontmatter
+- [ ] Run `s9 mission end <mission-id> --status <status>` to update frontmatter
 - [ ] Provide summary to Director
 ```
 

@@ -74,7 +74,7 @@ If the user invoked `/summon <role>` (e.g., `/summon operator`), the role will b
 **If NO role was provided**, display the standardized role selection prompt using the s9 CLI:
 
 ```bash
-s9 agent roles
+s9 mission roles
 ```
 
 The command will display a consistently formatted list of all available agent roles with their descriptions.
@@ -314,7 +314,7 @@ After sharing your mythological background, generate a unique UUID marker for re
 **IMPORTANT:** This step must be done BEFORE renaming the TUI session. The marker helps identify which OpenCode session is yours when multiple sessions are active.
 
 ```bash
-s9 agent generate-session-uuid
+s9 mission generate-session-uuid
 ```
 
 **This command:**
@@ -326,7 +326,7 @@ s9 agent generate-session-uuid
 **Example output:**
 ```
 Session UUID: session-marker-abc123def456
-Use this marker with: s9 agent rename-tui <name> <role> --uuid-marker session-marker-abc123def456
+Use this marker with: s9 mission rename-tui <name> <role> --uuid-marker session-marker-abc123def456
 session-marker-abc123def456
 ```
 
@@ -339,12 +339,12 @@ Now rename the OpenCode TUI session using the UUID marker from Step 6 for reliab
 **Recommended approach (most reliable with multiple sessions):**
 
 ```bash
-s9 agent rename-tui <persona> <Role> --uuid-marker <uuid-from-step-6>
+s9 mission rename-tui <persona> <Role> --uuid-marker <uuid-from-step-6>
 ```
 
 **Example:**
 ```bash
-s9 agent rename-tui nut Operator --uuid-marker session-marker-abc123def456
+s9 mission rename-tui nut Operator --uuid-marker session-marker-abc123def456
 ```
 
 **This approach:**
@@ -363,13 +363,13 @@ If the UUID-based detection fails, the command will automatically fall back to:
 If you have multiple OpenCode sessions and want to specify manually:
 
 ```bash
-s9 agent list-opencode-sessions
+s9 mission list-opencode-sessions
 ```
 
 Then use the specific session ID:
 
 ```bash
-s9 agent rename-tui <persona> <Role> --session-id <session-id>
+s9 mission rename-tui <persona> <Role> --session-id <session-id>
 ```
 
 **This command:**
@@ -386,7 +386,7 @@ s9 agent rename-tui <persona> <Role> --session-id <session-id>
 **If the command fails:**
 - The UUID marker may not have been captured in the session diff yet
 - The command will automatically fall back to other detection methods
-- If you still have issues, try: `s9 agent list-opencode-sessions` to manually select a session
+- If you still have issues, try: `s9 mission list-opencode-sessions` to manually select a session
 
 ## Step 8: Check for Pending Handoffs
 
