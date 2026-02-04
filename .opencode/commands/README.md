@@ -32,6 +32,7 @@ Together, they provide a powerful way to standardize and simplify common develop
 /summon <role> --auto-name
 /summon <role> --auto-assign
 /summon <role> --auto-name --auto-assign
+/summon <role> --task TASK-ID
 ```
 
 **Examples:**
@@ -40,6 +41,7 @@ Together, they provide a powerful way to standardize and simplify common develop
 - `/summon operator --auto-name` - Fully automated: auto-selects first unused persona name
 - `/summon operator --auto-assign` - Automated task assignment: auto-claims and starts work on top priority task
 - `/summon operator --auto-name --auto-assign` - Fully automated: auto-selects persona and auto-assigns top priority task
+- `/summon operator --task OPR-H-0065` - Direct task assignment: auto-names persona, claims specific task, and starts work immediately
 
 **What it does:**
 1. (If no role provided) Asks you to choose a role (Administrator, Architect, Engineer, Tester, etc.)
@@ -48,6 +50,13 @@ Together, they provide a powerful way to standardize and simplify common develop
 4. Creates a mission file with proper metadata
 5. Reads essential project documentation
 6. Shows available tasks for your role
+7. (If `--auto-assign` flag) Auto-claims the top priority task for your role
+8. (If `--task TASK-ID` flag) Auto-claims the specific task and starts work immediately
+
+**Flags:**
+- `--auto-name` - Automatically select the first unused persona name (skips persona selection prompt)
+- `--auto-assign` - Automatically claim and start work on the top priority task for the role (requires role to be specified)
+- `--task TASK-ID` - Claim a specific task and start work immediately (implies `--auto-name`, mutually exclusive with `--auto-assign`, requires role to be specified)
 
 **Example interaction (interactive mode):**
 ```
@@ -108,23 +117,80 @@ I'm Hemera, your Operator persona for this mission.
 **Usage:**
 ```
 /dismiss
+/dismiss [optional message]
+```
+
+**Examples:**
+```
+/dismiss
+/dismiss great work today! thank you
+/dismiss excellent job on the refactoring
 ```
 
 **What it does:**
-1. Locates your mission file
-2. Gathers information about work completed (git status, commits, tasks)
-3. Updates mission file with:
+1. Captures optional thank you message from the Director
+2. Locates your mission file
+3. Gathers information about work completed (git status, commits, tasks)
+4. Updates mission file with:
    - End time and duration
    - Files changed
    - Outcomes (✅ completed, ⚠️ partial, ❌ blocked)
+   - Dismissal message (if provided)
    - Next steps for future work
-4. Closes any open tasks in the task database
-5. Verifies task artifacts are updated
-6. Commits the mission file
-7. Provides a summary of the mission
-8. Says goodbye
+5. Closes any open tasks in the task database
+6. Verifies task artifacts are updated
+7. Commits the mission file
+8. Provides a summary of the mission
+9. Displays the Director's message (if provided)
+10. Says goodbye
 
-**Example interaction:**
+**Example interaction (with message):**
+```
+User: /dismiss great work today! thank you
+
+Agent: Closing mission...
+
+[Agent checks git status, recent commits, open tasks...]
+
+I've updated the mission file with:
+- End time: 15:30:00
+- Duration: ~2.5 hours
+- Status: completed
+
+Files changed:
+- .opencode/commands/dismiss.md - Added message parameter
+- .opencode/skills/session-end/SKILL.md - Added dismissal message handling
+
+Tasks closed:
+- OPR-M-0111: Add optional message parameter to /dismiss command (COMPLETE)
+
+✅ Mission closed successfully!
+
+**Summary:**
+- Duration: ~2.5 hours
+- Files changed: 2 files
+- Tasks completed: OPR-M-0111
+- Status: completed
+
+**What was accomplished:**
+- ✅ Added message parameter to /dismiss command
+- ✅ Updated session-end skill to handle messages
+- ✅ Documentation updated
+
+**Next steps:**
+- None - work complete
+
+Mission file updated: .opencode/work/missions/2026-02-04.15:44:19.operator.dumuzid.titanium-nexus.md
+
+💬 **From the Director:**
+> great work today! thank you
+
+Thank you for working with me! I'm Dumuzid, signing off.
+
+I descend once more to the sacred flocks, my cycle renewed as the seasons turn eternal.
+```
+
+**Example interaction (without message):**
 ```
 User: /dismiss
 
@@ -164,6 +230,8 @@ Tasks closed:
 Mission file updated: .opencode/work/missions/2026-01-29.14:30:00.builder.goibniu.rate-limiting.md
 
 Thank you for working with me! I'm Goibniu, signing off.
+
+I return to my forge in the halls of the Tuatha Dé Danann, my craft complete.
 ```
 
 **When to use:**

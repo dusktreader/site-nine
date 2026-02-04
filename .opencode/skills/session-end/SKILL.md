@@ -26,6 +26,35 @@ I help you properly end a mission on the s9 project by:
 - Running final checks
 - Saying a proper goodbye
 
+## Dismissal Message
+
+**IMPORTANT:** Check if a dismissal message was provided with the `/dismiss` command.
+
+If the Director provided a message (e.g., `/dismiss great work today! thank you`), capture it and include it in:
+1. The mission file (Step 3 - add to Work Log final entry)
+2. The final goodbye message (Step 11)
+
+**Format for mission file:**
+```markdown
+### HH:MM - Mission End
+**Dismissal message:** "[message from Director]"
+
+- Updated mission file
+- Committed changes
+- Closed task(s): TASK_ID
+```
+
+**Format for goodbye:**
+Display the Director's message prominently before the standard farewell:
+```markdown
+💬 **From the Director:**
+> [message]
+
+Thank you for working with me! I'm <Persona>, signing off.
+```
+
+If no dismissal message was provided, skip this and proceed normally.
+
 ## Step 1: Locate Your Mission File
 
 Find your mission file in `.opencode/work/missions/`:
@@ -221,7 +250,18 @@ Provide final summary:
 - [Summary or "None - work complete"]
 
 Mission file: .opencode/work/missions/<filename>.md
+```
 
+**If a dismissal message was provided**, display it prominently:
+```markdown
+💬 **From the Director:**
+> [dismissal message]
+
+Thank you for working with me! I'm <Persona>, signing off.
+```
+
+**If no dismissal message**, use standard farewell:
+```markdown
 Thank you for working with me! I'm <Persona>, signing off.
 
 [Add mythologically appropriate farewell - 1-2 sentences that evoke your character]
@@ -234,6 +274,7 @@ Thank you for working with me! I'm <Persona>, signing off.
 - **Mesopotamian:** "I return to the ziggurats, my work inscribed in clay..."
 - **Hindu/Buddhist:** "I return to the cosmic dance, my task in this cycle complete..."
 - **Celtic:** "I return to the mists of Avalon, my prophecy fulfilled..."
+- **Sumerian:** "I descend once more to the sacred flocks, my cycle renewed..."
 
 Research your persona's mythology for inspiration!
 
