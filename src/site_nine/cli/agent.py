@@ -426,6 +426,16 @@ def _detect_session_via_diff_recency(
     # If we found recent sessions for this project, return the most recent one
     if recent_project_sessions:
         mission_id, age_seconds = min(recent_project_sessions, key=lambda x: x[1])
+
+        # Warn if multiple sessions are active (potential race condition)
+        if len(recent_project_sessions) > 1:
+            logger.warning(
+                "multiple_active_sessions_detected",
+                count=len(recent_project_sessions),
+                selected=mission_id,
+                note="If wrong session renamed, use --session-id flag",
+            )
+
         logger.debug("session_detected_via_diff_recency", mission_id=mission_id, age_seconds=int(age_seconds))
         return mission_id
 
@@ -761,10 +771,27 @@ def rename_tui(
 
     # Determine session ID: use provided or auto-detect
     current_mission_id = None
+    multiple_sessions_detected = False
     if mission_id:
         current_mission_id = mission_id
         logger.debug("mission_id_provided", mission_id=mission_id)
     else:
+        # Check for multiple active sessions first (to warn the user)
+        import time
+
+        current_time = time.time()
+        recent_threshold = 10
+        diff_files = sorted(session_diff_storage.glob("ses_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+        recent_project_count = 0
+        for diff_file in diff_files:
+            if current_time - diff_file.stat().st_mtime > recent_threshold:
+                break
+            # Quick check if this might be for our project (full check is in _detect_session_via_diff_recency)
+            recent_project_count += 1
+
+        if recent_project_count > 1:
+            multiple_sessions_detected = True
+
         # Use diff file recency - the most reliable detection method
         # The active session continuously writes to its diff file
         current_mission_id = _detect_session_via_diff_recency(project_root, session_diff_storage, session_storage)
@@ -786,3 +813,10 @@ def rename_tui(
     # Update the session title
     new_title = f"{name.capitalize()} - {role}"
     _update_session_title(session_file, new_title, project_root)
+
+    # Warn if multiple sessions were active (potential race condition)
+    if multiple_sessions_detected:
+        console.print("[yellow]⚠ Warning: Multiple active sessions detected.[/yellow]")
+        console.print("[dim]If the wrong session was renamed, run:[/dim]")
+        console.print(f"[dim]  s9 agent list-opencode-sessions[/dim]")
+        console.print(f"[dim]  s9 agent rename-tui {name} {role} --session-id <correct-session-id>[/dim]")
