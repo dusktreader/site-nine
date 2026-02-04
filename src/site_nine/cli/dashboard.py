@@ -4,6 +4,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from rich.tree import Tree
 
 from site_nine.missions import MissionManager
 from site_nine.core.database import Database
@@ -152,11 +153,14 @@ def dashboard_command(
             }
             idle_missions = [m for m in active_missions if m.id not in missions_with_underway]
 
-            # 1. Available Tasks table (show TODO and UNDERWAY tasks FIRST)
+            # 1. Epic Tree View (show before tasks table)
+            _render_epic_tree(epic_manager)
+
+            # 2. Available Individual Tasks table (show TODO and UNDERWAY tasks that are not part of an epic)
             console.print("\n")
-            available_tasks = [t for t in all_tasks if t.status in ("TODO", "UNDERWAY")]
+            available_tasks = [t for t in all_tasks if t.status in ("TODO", "UNDERWAY") and t.epic_id is None]
             tasks_table = Table(
-                title="Available Tasks", show_header=True, title_style="bold magenta", title_justify="left"
+                title="Available Individual Tasks", show_header=True, title_style="bold magenta", title_justify="left"
             )
             tasks_table.add_column("ID", style="cyan", width=12)
             tasks_table.add_column("Priority", style="red", width=10)
@@ -182,7 +186,7 @@ def dashboard_command(
             else:
                 console.print("[green]No available tasks - all work complete![/green]")
 
-            # 2. Open missions table (all active missions)
+            # 3. Open missions table (all active missions)
             console.print("\n")
             open_table = Table(title="Open Missions", show_header=True, title_style="bold green", title_justify="left")
             open_table.add_column("Name", style="magenta")
@@ -212,7 +216,7 @@ def dashboard_command(
 
             console.print(open_table)
 
-            # 3. Quick Stats table
+            # 4. Quick Stats table
             console.print("\n")
             persona_count = len(set(m.persona_name for m in active_missions))
             stats_table = Table(title="Quick Stats", show_header=True, title_style="bold cyan", title_justify="left")
@@ -230,42 +234,6 @@ def dashboard_command(
 
             console.print(stats_table)
 
-            # 4. Active Epics table
-            console.print("\n")
-            active_epics = epic_manager.list_epics(status="TODO") + epic_manager.list_epics(status="UNDERWAY")
-
-            if active_epics:
-                epics_table = Table(
-                    title="Active Epics", show_header=True, title_style="bold yellow", title_justify="left"
-                )
-                epics_table.add_column("ID", style="cyan", width=12)
-                epics_table.add_column("Title", style="white", max_width=40)
-                epics_table.add_column("Status", style="yellow", width=10)
-                epics_table.add_column("Priority", style="red", width=10)
-                epics_table.add_column("Progress", style="green")
-
-                # Sort by priority (CRITICAL > HIGH > MEDIUM > LOW)
-                priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
-                active_epics.sort(key=lambda e: (priority_order.get(e.priority, 99), e.id))
-
-                for epic_obj in active_epics[:5]:  # Show top 5 active epics
-                    if epic_obj.subtask_count and epic_obj.subtask_count > 0:
-                        progress = f"{epic_obj.completed_count}/{epic_obj.subtask_count} ({epic_obj.progress_percent}%)"
-                    else:
-                        progress = "No tasks"
-
-                    epics_table.add_row(
-                        epic_obj.id,
-                        epic_obj.title,
-                        epic_obj.status,
-                        epic_obj.priority,
-                        progress,
-                    )
-
-                console.print(epics_table)
-                console.print("[dim]💡 View epic details: [bold]s9 epic show <EPIC_ID>[/bold][/dim]")
-                console.print("[dim]💡 View epic tasks: [bold]s9 dashboard --epic <EPIC_ID>[/bold][/dim]")
-
     except Exception as e:
         console.print(f"[red]Error showing dashboard: {e}[/red]")
         raise typer.Exit(1)
@@ -277,3 +245,108 @@ def _generate_progress_bar(percent: int, width: int = 40) -> str:
     empty = width - filled
     bar_color = "green" if percent == 100 else "cyan" if percent > 50 else "yellow" if percent > 0 else "dim"
     return f"[{bar_color}]{'█' * filled}{'░' * empty}[/{bar_color}] {percent}%"
+
+
+def _render_epic_tree(epic_manager: EpicManager) -> None:
+    """Render a tree view of active epics with their subtasks"""
+    # Get active epics (TODO and UNDERWAY)
+    active_epics = epic_manager.list_epics(status="TODO") + epic_manager.list_epics(status="UNDERWAY")
+
+    if not active_epics:
+        return  # No active epics to display
+
+    # Sort by priority
+    priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+    active_epics.sort(key=lambda e: (priority_order.get(e.priority, 99), e.id))
+
+    # Create main tree
+    tree = Tree("[bold yellow]📋 Active Epics with Subtasks[/bold yellow]")
+
+    for epic_obj in active_epics[:5]:  # Show top 5 active epics
+        # Format epic node
+        status_color = {
+            "TODO": "yellow",
+            "UNDERWAY": "cyan",
+            "COMPLETE": "green",
+            "ABORTED": "red",
+        }.get(epic_obj.status, "white")
+
+        priority_color = {
+            "CRITICAL": "red bold",
+            "HIGH": "red",
+            "MEDIUM": "yellow",
+            "LOW": "blue",
+        }.get(epic_obj.priority, "white")
+
+        # Epic header with progress
+        if epic_obj.subtask_count and epic_obj.subtask_count > 0:
+            progress_text = f"[{epic_obj.completed_count}/{epic_obj.subtask_count}]"
+        else:
+            progress_text = "[0/0]"
+
+        epic_label = (
+            f"[cyan]{epic_obj.id}[/cyan] "
+            f"[{priority_color}]{epic_obj.priority}[/{priority_color}] "
+            f"[{status_color}]{epic_obj.status}[/{status_color}] "
+            f"[white]{epic_obj.title}[/white] "
+            f"[dim]{progress_text}[/dim]"
+        )
+
+        epic_branch = tree.add(epic_label)
+
+        # Get and display subtasks
+        subtasks = epic_manager.get_subtasks(epic_obj.id)
+
+        if not subtasks:
+            epic_branch.add("[dim italic]No subtasks linked[/dim italic]")
+        else:
+            # Sort subtasks by status (UNDERWAY > TODO > others) and priority
+            status_priority = {
+                "UNDERWAY": 0,
+                "TODO": 1,
+                "BLOCKED": 2,
+                "PAUSED": 3,
+                "REVIEW": 4,
+                "COMPLETE": 5,
+                "ABORTED": 6,
+            }
+            subtasks.sort(key=lambda t: (status_priority.get(t.status, 99), priority_order.get(t.priority, 99), t.id))
+
+            for task in subtasks[:10]:  # Show up to 10 subtasks per epic
+                task_status_color = {
+                    "TODO": "yellow",
+                    "UNDERWAY": "cyan bold",
+                    "BLOCKED": "red",
+                    "PAUSED": "magenta",
+                    "REVIEW": "blue",
+                    "COMPLETE": "green",
+                    "ABORTED": "dim red",
+                }.get(task.status, "white")
+
+                task_priority_color = {
+                    "CRITICAL": "red bold",
+                    "HIGH": "red",
+                    "MEDIUM": "yellow",
+                    "LOW": "blue",
+                }.get(task.priority, "white")
+
+                # Show mission assignment if present
+                mission_text = f"[blue]@{task.current_mission_id}[/blue]" if task.current_mission_id else ""
+
+                task_label = (
+                    f"[cyan]{task.id}[/cyan] "
+                    f"[{task_priority_color}]{task.priority}[/{task_priority_color}] "
+                    f"[green]{task.role or ''}[/green] "
+                    f"[{task_status_color}]{task.status}[/{task_status_color}] "
+                    f"[white]{task.title[:60]}[/white] "
+                    f"{mission_text}"
+                )
+
+                epic_branch.add(task_label)
+
+            # Show truncation message if there are more tasks
+            if len(subtasks) > 10:
+                epic_branch.add(f"[dim italic]... and {len(subtasks) - 10} more tasks[/dim italic]")
+
+    console.print()
+    console.print(tree)

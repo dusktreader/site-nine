@@ -15,9 +15,10 @@
 CREATE TABLE personas (
     name TEXT PRIMARY KEY,                -- Persona name (lowercase, e.g., 'atlas', 'terminus')
     role TEXT NOT NULL                    -- Primary role this name suits
-        CHECK(role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+        CHECK(role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
     mythology TEXT NOT NULL,              -- Mythology/religion origin (e.g., 'Greek', 'Roman', 'Norse')
     description TEXT NOT NULL,            -- Brief description of the deity/daemon
+    whimsical_bio TEXT,                   -- Whimsical first-person bio (3-5 sentences, generated lazily)
     mission_count INTEGER NOT NULL DEFAULT 0, -- How many times this name has been used
     last_mission_at TEXT,                 -- ISO 8601 timestamp of last usage
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -38,7 +39,7 @@ CREATE TABLE missions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     persona_name TEXT NOT NULL,           -- Persona name (e.g., 'terminus', 'atlas')
     role TEXT NOT NULL                    -- Persona role for this mission
-        CHECK(role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+        CHECK(role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
     codename TEXT NOT NULL,               -- Mission codename (e.g., 'silent-phoenix', 'bold-shadow')
     mission_file TEXT NOT NULL,           -- Path to mission file (e.g., '.opencode/work/missions/2026-01-30.09:15:55.operator.terminus.silent-phoenix.md')
     start_time TEXT NOT NULL,             -- Mission start time (ISO 8601)
@@ -175,14 +176,14 @@ CREATE INDEX idx_handoffs_created_at ON handoffs(created_at);
 -- ============================================================================
 -- Main tasks table (ported from original task management system)
 CREATE TABLE tasks (
-    id TEXT PRIMARY KEY,                  -- e.g., 'OPR-H-0001', 'BLD-H-0003'
+    id TEXT PRIMARY KEY,                  -- e.g., 'OPR-H-0001', 'ENG-H-0003'
     title TEXT NOT NULL,                  -- Short task description
     status TEXT NOT NULL                  -- Task status
         CHECK(status IN ('TODO', 'UNDERWAY', 'BLOCKED', 'PAUSED', 'REVIEW', 'COMPLETE', 'ABORTED')),
     priority TEXT NOT NULL                -- Task priority
         CHECK(priority IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')),
     role TEXT NOT NULL                    -- Required role for this task
-        CHECK(role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+        CHECK(role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
     category TEXT                         -- Task category (e.g., 'feature', 'bug-fix', 'documentation')
         CHECK(category IN ('feature', 'bug-fix', 'refactor', 'documentation', 'testing', 'infrastructure', 'security', 'performance', 'architecture', 'maintenance') OR category IS NULL),
 
@@ -327,7 +328,7 @@ CREATE TABLE task_templates (
     priority TEXT NOT NULL                -- Default priority
         CHECK(priority IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')),
     role TEXT NOT NULL                    -- Default role
-        CHECK(role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+        CHECK(role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
     category TEXT,                        -- Default category
     objective_template TEXT NOT NULL,     -- e.g., "Implement {feature} functionality in {component}"
     description_template TEXT,            -- Long description with variables
@@ -357,3 +358,60 @@ FOR EACH ROW
 BEGIN
     UPDATE task_templates SET updated_at = datetime('now') WHERE id = NEW.id;
 END;
+
+-- ============================================================================
+-- ARCHITECTURE DOCUMENTS (ADRs) TABLE
+-- ============================================================================
+-- Tracks Architecture Decision Records (ADRs) as database-backed entities
+CREATE TABLE architecture_docs (
+    id TEXT PRIMARY KEY,                  -- ADR ID (e.g., 'ADR-001', 'ADR-002')
+    title TEXT NOT NULL,                  -- ADR title
+    status TEXT NOT NULL                  -- ADR status
+        CHECK(status IN ('PROPOSED', 'ACCEPTED', 'REJECTED', 'SUPERSEDED', 'DEPRECATED')),
+    file_path TEXT NOT NULL,              -- Path to markdown file (e.g., '.opencode/docs/adrs/ADR-001-adapter-pattern.md')
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_architecture_docs_status ON architecture_docs(status);
+CREATE INDEX idx_architecture_docs_created ON architecture_docs(created_at);
+
+-- Trigger to update updated_at timestamp
+CREATE TRIGGER update_architecture_docs_timestamp
+AFTER UPDATE ON architecture_docs
+FOR EACH ROW
+BEGIN
+    UPDATE architecture_docs SET updated_at = datetime('now') WHERE id = NEW.id;
+END;
+
+-- ============================================================================
+-- EPIC-ADR LINKING TABLE
+-- ============================================================================
+-- Links epics to architecture documents
+CREATE TABLE epic_architecture_docs (
+    epic_id TEXT NOT NULL,
+    adr_id TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (epic_id, adr_id),
+    FOREIGN KEY (epic_id) REFERENCES epics(id) ON DELETE CASCADE,
+    FOREIGN KEY (adr_id) REFERENCES architecture_docs(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_epic_architecture_docs_epic ON epic_architecture_docs(epic_id);
+CREATE INDEX idx_epic_architecture_docs_adr ON epic_architecture_docs(adr_id);
+
+-- ============================================================================
+-- TASK-ADR LINKING TABLE
+-- ============================================================================
+-- Links tasks to architecture documents
+CREATE TABLE task_architecture_docs (
+    task_id TEXT NOT NULL,
+    adr_id TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (task_id, adr_id),
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (adr_id) REFERENCES architecture_docs(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_task_architecture_docs_task ON task_architecture_docs(task_id);
+CREATE INDEX idx_task_architecture_docs_adr ON task_architecture_docs(adr_id);

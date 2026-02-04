@@ -16,7 +16,7 @@ console = Console()
 VALID_ROLES = [
     "administrator",
     "architect",
-    "builder",
+    "engineer",
     "tester",
     "documentarian",
     "designer",
@@ -253,3 +253,72 @@ def usage(
         console.print("\n[yellow]No missions found for this persona[/yellow]")
 
     logger.debug(f"Displayed usage for persona: {name}")
+
+
+@app.command()
+@handle_errors("Failed to show persona")
+def show(
+    name: str = typer.Argument(..., help="Persona name to display"),
+) -> None:
+    """Show persona details including whimsical bio"""
+    name = name.lower()
+
+    db = _get_db()
+
+    # Get persona info
+    persona_results = db.execute_query(
+        "SELECT * FROM personas WHERE name = :name",
+        {"name": name},
+    )
+
+    if not persona_results:
+        console.print(f"[red]Persona '{name}' not found[/red]")
+        raise typer.Exit(1)
+
+    persona = persona_results[0]
+
+    # Display basic info
+    console.print(f"\n[bold cyan]{persona['name'].title()}[/bold cyan]")
+    console.print(f"[bold]Role:[/bold] {persona['role']}")
+    console.print(f"[bold]Mythology:[/bold] {persona['mythology']}")
+    console.print(f"[bold]Description:[/bold] {persona['description']}")
+
+    # Display whimsical bio if available
+    if persona.get("whimsical_bio"):
+        console.print(f"\n📖 [bold]About me...[/bold]\n")
+        console.print(persona["whimsical_bio"])
+    else:
+        console.print(f"\n[dim]No whimsical bio available yet. Generate one during session-start![/dim]")
+
+    logger.debug(f"Displayed persona: {name}")
+
+
+@app.command()
+@handle_errors("Failed to set persona bio")
+def set_bio(
+    name: str = typer.Argument(..., help="Persona name"),
+    bio: str = typer.Argument(..., help="Whimsical bio text (3-5 sentences, first person, playful tone)"),
+) -> None:
+    """Set whimsical bio for a persona"""
+    name = name.lower()
+
+    db = _get_db()
+
+    # Check if persona exists
+    persona_results = db.execute_query(
+        "SELECT name FROM personas WHERE name = :name",
+        {"name": name},
+    )
+
+    if not persona_results:
+        console.print(f"[red]Persona '{name}' not found[/red]")
+        raise typer.Exit(1)
+
+    # Update bio
+    db.execute_update(
+        "UPDATE personas SET whimsical_bio = :bio WHERE name = :name",
+        {"name": name, "bio": bio},
+    )
+
+    console.print(f"[green]✓[/green] Updated bio for {name}")
+    logger.info(f"Updated bio for persona: {name}")
