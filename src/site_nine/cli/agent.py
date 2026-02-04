@@ -121,26 +121,27 @@ def show(
 ) -> None:
     """Show mission details"""
     manager = _get_manager()
-    session = manager.get_mission(mission_id)
+    mission = manager.get_mission(mission_id)
 
-    if not session:
+    if not mission:
         console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
         raise typer.Exit(1)
 
-    console.print(f"[bold]Agent Session #{session.id}[/bold]")
-    console.print(f"  Name: {session.name}")
-    console.print(f"  Base Name: {session.base_name}")
-    if mission.suffix:
-        console.print(f"  Suffix: {session.suffix}")
-    console.print(f"  Role: {session.role}")
-    console.print(f"  Status: {session.status}")
-    console.print(f"  Session Date: {session.session_date}")
-    console.print(f"  Start Time: {session.start_time}")
+    # Determine status from end_time
+    status = "Active" if mission.end_time is None else "Complete"
+
+    console.print(f"[bold]Mission #{mission.id}[/bold]")
+    console.print(f"  Persona: {mission.persona_name}")
+    console.print(f"  Codename: {mission.codename}")
+    console.print(f"  Role: {mission.role}")
+    console.print(f"  Status: {status}")
+    console.print(f"  Start Date: {mission.start_date}")
+    console.print(f"  Start Time: {mission.start_time}")
     if mission.end_time:
-        console.print(f"  End Time: {session.end_time}")
-    console.print(f"  Session File: {session.session_file}")
+        console.print(f"  End Time: {mission.end_time}")
+    console.print(f"  Mission File: {mission.mission_file}")
     if mission.objective:
-        console.print(f"  Task: {session.objective}")
+        console.print(f"  Objective: {mission.objective}")
     logger.debug(f"Displayed details for mission {mission_id}")
 
 
@@ -148,79 +149,41 @@ def show(
 @handle_errors("Failed to end mission")
 def end(
     mission_id: int = typer.Argument(..., help="Mission ID"),
-    status: str = typer.Option("completed", "--status", help="End status"),
 ) -> None:
-    """End an mission"""
+    """End a mission"""
     manager = _get_manager()
 
-    # Verify session exists
-    session = manager.get_mission(mission_id)
-    if not session:
+    # Verify mission exists
+    mission = manager.get_mission(mission_id)
+    if not mission:
         console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
         raise typer.Exit(1)
 
-    manager.end_mission(mission_id, status)
-    console.print(f"[green]✓[/green] Ended mission #{mission_id} with status: {status}")
-    logger.info(f"Ended mission {mission_id} with status: {status}")
+    manager.end_mission(mission_id)
+    console.print(f"[green]✓[/green] Ended mission #{mission_id}")
+    logger.info(f"Ended mission {mission_id}")
 
 
-@app.command()
-@handle_errors("Failed to pause mission")
-def pause(
-    mission_id: int = typer.Argument(..., help="Mission ID to pause"),
-    reason: str | None = typer.Option(None, "--reason", help="Reason for pausing"),
-) -> None:
-    """Pause an active mission"""
-    manager = _get_manager()
-
-    # Verify session exists and is active
-    session = manager.get_mission(mission_id)
-    if not session:
-        console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
-        raise typer.Exit(1)
-
-    if mission.status != "in-progress":
-        console.print(
-            f"[red]Error: Cannot pause session with status '{session.status}'. "
-            f"Only 'in-progress' missions can be paused.[/red]"
-        )
-        raise typer.Exit(1)
-
-    manager.pause_mission(mission_id)
-    console.print(f"[green]⏸️  Paused mission #{mission_id} ({session.name})[/green]")
-
-    if reason:
-        console.print(f"[dim]Reason: {reason}[/dim]")
-
-    console.print(f"[dim]Resume with: s9 agent resume {mission_id}[/dim]")
-    logger.info(f"Paused mission {mission_id}")
+# NOTE: Pause/resume commands removed per ADR-006
+# Missions no longer have status field - they are either active (end_time IS NULL) or complete
+# @app.command()
+# @handle_errors("Failed to pause mission")
+# def pause(
+#     mission_id: int = typer.Argument(..., help="Mission ID to pause"),
+#     reason: str | None = typer.Option(None, "--reason", help="Reason for pausing"),
+# ) -> None:
+#     """Pause an active mission"""
+#     ...
 
 
-@app.command()
-@handle_errors("Failed to resume mission")
-def resume(
-    mission_id: int = typer.Argument(..., help="Mission ID to resume"),
-) -> None:
-    """Resume a paused mission"""
-    manager = _get_manager()
-
-    # Verify session exists and is paused
-    session = manager.get_mission(mission_id)
-    if not session:
-        console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
-        raise typer.Exit(1)
-
-    if mission.status != "paused":
-        console.print(
-            f"[red]Error: Cannot resume session with status '{session.status}'. "
-            f"Only 'paused' missions can be resumed.[/red]"
-        )
-        raise typer.Exit(1)
-
-    manager.resume_mission(mission_id)
-    console.print(f"[green]▶️  Resumed mission #{mission_id} ({session.name})[/green]")
-    console.print("[dim]Status is now: in-progress[/dim]")
-    logger.info(f"Resumed mission {mission_id}")
+# NOTE: Pause/resume commands removed per ADR-006
+# @app.command()
+# @handle_errors("Failed to resume mission")
+# def resume(
+#     mission_id: int = typer.Argument(..., help="Mission ID to resume"),
+# ) -> None:
+#     """Resume a paused mission"""
+#     ...
 
 
 @app.command()
@@ -237,17 +200,15 @@ def update(
         console.print("[yellow]No updates specified. Use --task or --role[/yellow]")
         raise typer.Exit(0)
 
-    # Verify session exists
-    session = manager.get_mission(mission_id)
-    if not session:
+    # Verify mission exists
+    mission = manager.get_mission(mission_id)
+    if not mission:
         console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
         raise typer.Exit(1)
 
-    if mission.status not in ["in-progress", "paused"]:
-        console.print(
-            f"[red]Error: Cannot update session with status '{session.status}'. "
-            f"Only active or paused missions can be updated.[/red]"
-        )
+    # Check if mission is active (no end_time)
+    if mission.end_time is not None:
+        console.print(f"[red]Error: Cannot update completed mission. Only active missions can be updated.[/red]")
         raise typer.Exit(1)
 
     # Validate role if provided
@@ -307,7 +268,7 @@ def _find_current_opencode_session(project_root: Path) -> str | None:
     session_files = []
     for missions_dir in missions_dirs:
         if missions_dir.exists():
-            session_files.extend(sessions_dir.glob("*.md"))
+            session_files.extend(missions_dir.glob("*.md"))
 
     if not session_files:
         return None
@@ -480,11 +441,11 @@ def _find_project_sessions(
                 session_dir = session_data.get("directory", "")
                 if session_dir and Path(session_dir).resolve() == project_root.resolve():
                     mtime = session_file.stat().st_mtime
-                    project_sessions.append((session_file, mtime))
+                    project_missions.append((session_file, mtime))
             except (json.JSONDecodeError, FileNotFoundError, PermissionError):
                 continue
 
-    return project_sessions
+    return project_missions
 
 
 def _detect_session_via_recency(
@@ -515,18 +476,18 @@ def _detect_session_via_recency(
     # Find missions modified in last 3 seconds (very recent activity)
     very_recent_missions = [(f, mt) for f, mt in project_sessions if time.time() - mt < 3]
 
-    if len(very_recent_sessions) == 1:
+    if len(very_recent_missions) == 1:
         # Only one session active in the last 3 seconds - must be us!
-        mission_id = very_recent_sessions[0][0].stem
+        mission_id = very_recent_missions[0][0].stem
         logger.debug("session_auto_detected_single_active", mission_id=mission_id)
         return mission_id
 
-    elif len(very_recent_sessions) > 1:
+    elif len(very_recent_missions) > 1:
         # Multiple missions active - need user to specify
         console.print("[yellow]Multiple active OpenCode missions detected for this project.[/yellow]")
         console.print("[yellow]Please specify which session to rename:[/yellow]\n")
 
-        for session_file, mtime in sorted(very_recent_sessions, key=lambda x: x[1], reverse=True):
+        for session_file, mtime in sorted(very_recent_missions, key=lambda x: x[1], reverse=True):
             try:
                 with open(session_file) as f:
                     session_data = json.load(f)
@@ -762,7 +723,7 @@ def rename_tui(
         if not current_mission_id:
             logger.debug("diff_recency_failed_fallback_to_session_recency")
             project_missions = _find_project_sessions(project_root, session_storage)
-            current_mission_id = _detect_session_via_recency(project_root, project_sessions)
+            current_mission_id = _detect_session_via_recency(project_root, project_missions)
 
     # At this point, current_mission_id should be set (or we would have exited)
     if not current_mission_id:

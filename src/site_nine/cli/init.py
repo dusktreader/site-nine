@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from site_nine.core.config import HQueueConfig
-from site_nine.core.daemon_names import load_daemon_names
+from site_nine.core.personas import load_personas
 from site_nine.core.database import Database
 from site_nine.core.templates import TemplateRenderer
 from site_nine.core.wizard import run_wizard
@@ -52,10 +52,10 @@ def init_command(
         db.initialize_schema()
         progress.update(task, description="✓ Database initialized")
 
-        # Populate daemon names
-        task2 = progress.add_task("Populating daemon names...", total=None)
-        populate_daemon_names(db)
-        progress.update(task2, description="✓ Daemon names populated")
+        # Populate personas
+        task2 = progress.add_task("Populating personas...", total=None)
+        populate_personas(db)
+        progress.update(task2, description="✓ Personas populated")
 
         # Render templates
         task3 = progress.add_task("Rendering templates...", total=None)
@@ -71,17 +71,17 @@ def init_command(
     console.print("  3. Run: s9 dashboard")
 
 
-def populate_daemon_names(db: Database) -> None:
-    """Populate daemon names from built-in list"""
-    names = load_daemon_names()
+def populate_personas(db: Database) -> None:
+    """Populate personas from built-in list"""
+    personas = load_personas()
 
-    for name_data in names:
+    for persona_data in personas:
         db.execute_update(
             """
-            INSERT INTO daemon_names (name, role, mythology, description, usage_count, created_at)
+            INSERT INTO personas (name, role, mythology, description, mission_count, created_at)
             VALUES (:name, :role, :mythology, :description, 0, datetime('now'))
             """,
-            name_data,
+            persona_data,
         )
 
 
@@ -117,9 +117,9 @@ def render_all_templates(renderer: TemplateRenderer, output_dir: Path, context: 
         "base/work/planning/PROJECT_STATUS.md.jinja": "work/planning/PROJECT_STATUS.md",
         # Commands
         "base/commands/README.md.jinja": "commands/README.md",
-        # Sessions
-        "base/work/sessions/README.md.jinja": "work/sessions/README.md",
-        "base/work/sessions/TEMPLATE.md.jinja": "work/sessions/TEMPLATE.md",
+        # Missions
+        "base/work/missions/README.md.jinja": "work/missions/README.md",
+        "base/work/missions/TEMPLATE.md.jinja": "work/missions/TEMPLATE.md",
     }
 
     count = 0

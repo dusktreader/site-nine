@@ -21,13 +21,13 @@ def reset_command(
     """Reset project data - DANGEROUS!
 
     This command will DELETE:
-    - All agent sessions (database records and session files)
+    - All missions (database records and mission files)
     - All tasks (database records and task files)
     - All task dependencies
-    - All daemon name usage counts (reset to 0)
+    - All persona mission counts (reset to 0)
 
     This command will PRESERVE:
-    - Daemon names list (but usage counts reset to 0)
+    - Personas list (but mission counts reset to 0)
     - Task templates
     - Configuration files
     - Documentation files
@@ -51,10 +51,10 @@ def reset_command(
         Panel(
             "[bold red]⚠️  WARNING: DESTRUCTIVE OPERATION ⚠️[/bold red]\n\n"
             "This will permanently DELETE:\n"
-            "  • All agent sessions (database + files)\n"
+            "  • All missions (database + files)\n"
             "  • All tasks (database + files)\n"
             "  • All task dependencies\n"
-            "  • Daemon name usage counts\n\n"
+            "  • Persona mission counts\n\n"
             "This CANNOT be undone without a backup!",
             border_style="red",
             title="[bold red]DANGER ZONE[/bold red]",
@@ -65,17 +65,17 @@ def reset_command(
     # Get counts before deletion
     db = Database(db_path)
 
-    agent_count = db.execute_query("SELECT COUNT(*) as count FROM agents")[0]["count"]
+    mission_count = db.execute_query("SELECT COUNT(*) as count FROM missions")[0]["count"]
     task_count = db.execute_query("SELECT COUNT(*) as count FROM tasks")[0]["count"]
     dep_count = db.execute_query("SELECT COUNT(*) as count FROM task_dependencies")[0]["count"]
 
     console.print("[yellow]Data to be deleted:[/yellow]")
-    console.print(f"  • {agent_count} agent sessions")
+    console.print(f"  • {mission_count} missions")
     console.print(f"  • {task_count} tasks")
     console.print(f"  • {dep_count} task dependencies")
     console.print()
 
-    if agent_count == 0 and task_count == 0:
+    if mission_count == 0 and task_count == 0:
         console.print("[green]✓ No data to delete. Database is already clean.[/green]")
         return
 
@@ -102,26 +102,26 @@ def reset_command(
     console.print("[bold red]Proceeding with reset...[/bold red]")
     console.print()
 
-    # Delete session files
-    console.print("[bold]1. Deleting session files...[/bold]")
-    sessions_dir = opencode_dir / "work" / "sessions"
-    deleted_session_files = 0
+    # Delete mission files
+    console.print("[bold]1. Deleting mission files...[/bold]")
+    missions_dir = opencode_dir / "work" / "missions"
+    deleted_mission_files = 0
 
-    if sessions_dir.exists():
-        for session_file in sessions_dir.glob("*.md"):
+    if missions_dir.exists():
+        for mission_file in missions_dir.glob("*.md"):
             # Skip README and TEMPLATE files
-            if session_file.name in ("README.md", "TEMPLATE.md"):
+            if mission_file.name in ("README.md", "TEMPLATE.md"):
                 continue
             try:
-                session_file.unlink()
-                deleted_session_files += 1
+                mission_file.unlink()
+                deleted_mission_files += 1
             except Exception as e:
-                console.print(f"  [yellow]⚠[/yellow] Failed to delete {session_file.name}: {e}")
+                console.print(f"  [yellow]⚠[/yellow] Failed to delete {mission_file.name}: {e}")
 
-    console.print(f"  [green]✓[/green] Deleted {deleted_session_files} session files")
+    console.print(f"  [green]✓[/green] Deleted {deleted_mission_files} mission files")
 
     # Delete handoff files
-    handoffs_dir = opencode_dir / "work" / "sessions" / "handoffs"
+    handoffs_dir = opencode_dir / "work" / "missions" / "handoffs"
     deleted_handoff_files = 0
 
     if handoffs_dir.exists():
@@ -167,13 +167,13 @@ def reset_command(
     db.execute_update("DELETE FROM tasks")
     console.print(f"  [green]✓[/green] Deleted {task_count} tasks")
 
-    # Delete agents
-    db.execute_update("DELETE FROM agents")
-    console.print(f"  [green]✓[/green] Deleted {agent_count} agent sessions")
+    # Delete missions
+    db.execute_update("DELETE FROM missions")
+    console.print(f"  [green]✓[/green] Deleted {mission_count} missions")
 
-    # Reset daemon name usage counts
-    db.execute_update("UPDATE daemon_names SET usage_count = 0, last_used_at = NULL")
-    console.print("  [green]✓[/green] Reset daemon name usage counts")
+    # Reset persona mission counts
+    db.execute_update("UPDATE personas SET mission_count = 0, last_mission_at = NULL")
+    console.print("  [green]✓[/green] Reset persona mission counts")
 
     console.print()
 
@@ -193,10 +193,10 @@ def reset_command(
         Panel(
             "[bold green]✅ Project reset complete![/bold green]\n\n"
             "Deleted:\n"
-            f"  • {deleted_session_files} session files\n"
+            f"  • {deleted_mission_files} mission files\n"
             f"  • {deleted_handoff_files} handoff files\n"
             f"  • {deleted_task_files} task files\n"
-            f"  • {agent_count} agent records\n"
+            f"  • {mission_count} mission records\n"
             f"  • {task_count} task records\n"
             f"  • {dep_count} dependencies\n\n"
             "Your project is now in a fresh state.",

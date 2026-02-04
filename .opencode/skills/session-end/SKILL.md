@@ -1,11 +1,11 @@
 ---
 name: session-end
-description: Properly close a development session with cleanup and documentation
+description: Properly close a mission with cleanup and documentation
 license: MIT
 compatibility: opencode
 metadata:
   audience: all-agents
-  workflow: session-closure
+  workflow: mission-closure
 ---
 
 ## Important: CLI Tool Usage
@@ -18,29 +18,29 @@ All commands in this skill use the `s9` executable via bash. You should NOT atte
 
 ## What I Do
 
-I help you properly end a development session on the s9 project by:
-- Identifying your session file
+I help you properly end a mission on the s9 project by:
+- Identifying your mission file
 - Updating it with completion metadata
 - Documenting work accomplished
 - Closing any open tasks
 - Running final checks
 - Saying a proper goodbye
 
-## Step 1: Locate Your Session File
+## Step 1: Locate Your Mission File
 
-Find your session file in `.opencode/work/sessions/`:
+Find your mission file in `.opencode/work/missions/`:
 
 ```bash
-ls -lt .opencode/work/sessions/*.md | head -5
+ls -lt .opencode/work/missions/*.md | head -5
 ```
 
-Your session file should be the most recent one with your role and name in the filename.
+Your mission file should be the most recent one with your role and persona in the filename.
 
-**Format:** `.opencode/work/sessions/YYYY-mm-dd.HH:MM:SS.role.name.task-summary.md`
+**Format:** `.opencode/work/missions/YYYY-mm-dd.HH:MM:SS.role.persona.codename.md`
 
-If you're not sure which file is yours, check the YAML frontmatter for your name:
+If you're not sure which file is yours, check the YAML frontmatter for your persona:
 ```bash
-grep -l "name: your-name" .opencode/work/sessions/*.md | tail -1
+grep -l "persona: your-persona" .opencode/work/missions/*.md | tail -1
 ```
 
 ## Step 2: Identify Work Completed
@@ -59,7 +59,7 @@ List all files that were:
 
 ### B. Review Commits Made
 ```bash
-git log --oneline --author="[Agent: $(git config user.name)]" --since="<session-start-time>"
+git log --oneline --author="[Persona: $(git config user.name)]" --since="<mission-start-time>"
 ```
 
 Or simpler:
@@ -67,33 +67,22 @@ Or simpler:
 git log --oneline -10
 ```
 
-Look for commits with your agent name in the format: `[Agent: Role - Name]`
+Look for commits with your persona name in the format: `[Persona: Name - Role]` or `[Mission: codename]`
 
 ### C. Check Task Progress
 
 If you claimed any tasks, check their status:
 ```bash
-s9 task mine --agent-name "<your-name>"
+s9 task mine --mission-id "<your-mission-id>"
 ```
 
-## Step 3: Determine Session Status
+## Step 3: Update Mission File
 
-Choose the appropriate status:
-
-- **`completed`** - Session finished successfully, all objectives met
-- **`partial`** - Made progress but didn't complete all objectives
-- **`blocked`** - Work stopped due to external blocker
-- **`aborted`** - Session cancelled or abandoned
-
-**Most sessions are `completed` or `partial`.**
-
-## Step 4: Update Session File
-
-Read your session file and update it with the information gathered:
+Read your mission file and update it with the information gathered:
 
 ### Required Updates
 
-**IMPORTANT:** Do NOT manually edit the YAML frontmatter! The `s9 agent end` command will update it automatically in Step 6.
+**IMPORTANT:** The `s9 agent end` command will update the frontmatter automatically in Step 5.
 
 **1. Update Duration line:**
 ```markdown
@@ -111,7 +100,7 @@ List ALL files modified/created with brief description:
 - `src/crol_troll/auth.py` - Added rate limiting decorator
 - `tests/test_auth.py` - Added rate limiting tests
 - `.opencode/data/tasks/H027.md` - Updated task artifact
-- `.opencode/work/sessions/2026-01-29.21:00:35.builder.goibniu.rate-limiting.md` - This file
+- `.opencode/work/missions/2026-01-29.21:00:35.builder.goibniu.rate-limiting.md` - This file
 ```
 
 **3. Fill in "Outcomes" section:**
@@ -131,8 +120,8 @@ Use checkmarks to show what succeeded/failed:
 
 Add final entry:
 ```markdown
-### HH:MM - Session End
-- Updated session file with outcomes
+### HH:MM - Mission End
+- Updated mission file with outcomes
 - Committed all changes
 - Closed task(s): H027
 ```
@@ -155,13 +144,13 @@ If everything is complete:
 None - work is complete.
 ```
 
-## Step 5: Close Any Open Tasks
+## Step 4: Close Any Open Tasks
 
-If you claimed tasks during this session, close them:
+If you claimed tasks during this mission, close them:
 
 ### Check Tasks
 ```bash
-s9 task mine --agent-name "<your-name>" | grep UNDERWAY
+s9 task mine --mission-id "<your-mission-id>" | grep UNDERWAY
 ```
 
 ### Close Completed Tasks
@@ -180,41 +169,41 @@ If you tracked time:
 s9 task update TASK_ID --actual-hours X.X
 ```
 
-## Step 5a: Mark Handoffs as Complete (If Applicable)
+## Step 5: Mark Handoffs as Complete (If Applicable)
 
-**If you received a handoff at the start of this session**, mark it as complete:
+**If you received a handoff at the start of this mission**, mark it as complete:
 
 ### Check for Accepted Handoffs
 
 Look for handoffs you accepted:
 ```bash
-ls .opencode/work/sessions/handoffs/*to-[your-role].accepted.md 2>/dev/null | grep "$(date +%Y-%m-%d)"
+ls .opencode/work/missions/handoffs/*to-[your-role].accepted.md 2>/dev/null | grep "$(date +%Y-%m-%d)"
 ```
 
-Or check your session file for handoff references.
+Or check your mission file for handoff references.
 
 ### Rename Handoff to Complete
 
 If you finished the work from the handoff:
 ```bash
-mv .opencode/work/sessions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.accepted.md \
-   .opencode/work/sessions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.completed.md
+mv .opencode/work/missions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.accepted.md \
+   .opencode/work/missions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.completed.md
 ```
 
 **Example:**
 ```bash
-mv .opencode/work/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.accepted.md \
-   .opencode/work/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.completed.md
+mv .opencode/work/missions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.accepted.md \
+   .opencode/work/missions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.completed.md
 ```
 
-### Update Session File
+### Update Mission File
 
-Add completion note to your session file:
+Add completion note to your mission file:
 ```markdown
 ## Handoff Completion
 
 **Handoff Received From:** Administrator (Ishtar)
-**Handoff Document:** `.opencode/work/sessions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.completed.md`
+**Handoff Document:** `.opencode/work/missions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.completed.md`
 **Task:** TASK_ID - Task Title
 
 **Status:** Completed
@@ -230,13 +219,13 @@ The work from this handoff is complete and ready for next phase.
 
 If you didn't finish the handoff work:
 - **Don't rename to .completed.md** - leave as `.accepted.md`
-- Document what's done and what remains in session file
+- Document what's done and what remains in mission file
 - Consider creating a new handoff to next agent
 - Close tasks as PAUSED or BLOCKED with notes
 
 **Note:** If you didn't receive a handoff, skip this step entirely.
 
-## Step 7: Update Task Artifacts
+## Step 6: Update Task Artifacts
 
 Verify your work is documented in task artifacts (`.opencode/data/tasks/`):
 
@@ -251,12 +240,12 @@ If missing details, update the task artifact:
 - Testing performed and results
 - Any issues encountered and solutions
 
-Use the `pm` CLI to update:
+Use the `s9` CLI to update:
 ```bash
 s9 task update TASK_ID
 ```
 
-## Step 8: Final Git Check
+## Step 7: Final Git Check
 
 Before ending, ensure everything is committed:
 
@@ -266,41 +255,35 @@ git status
 ```
 
 If there are uncommitted changes to important files:
-- **Session file** - MUST be committed before ending
+- **Mission file** - MUST be committed before ending
 - **Task artifacts** - Should be committed if updated
-- **Code changes** - Should already be committed during the session
+- **Code changes** - Should already be committed during the mission
 
-### Commit session file:
+### Commit mission file:
 ```bash
-git add .opencode/work/sessions/<your-session-file>.md
-git commit -m "docs(session): complete <name> <role> session [Agent: <Role> - <Name>]"
+git add .opencode/work/missions/<your-mission-file>.md
+git commit -m "docs(mission): complete <persona> <role> mission <codename> [Persona: <Persona> - <Role>]"
 ```
 
-## Step 8a: End Agent Session
+## Step 8: End Mission
 
-**IMPORTANT:** Use the `s9 agent end` command to officially close your session. This updates both the database and your session file's YAML frontmatter atomically.
+**IMPORTANT:** Use the `s9 agent end` command to officially close your mission. This updates the database and your mission file atomically.
 
 ```bash
-s9 agent end <your-agent-id> --status completed
+s9 agent end <your-mission-id>
 ```
 
-**Status options:**
-- `completed` - Session finished successfully (default)
-- `partial` - Made progress but didn't complete all objectives
-- `blocked` - Work stopped due to external blocker
-- `aborted` - Session cancelled or abandoned
-
-**Find your agent ID:**
+**Find your mission ID:**
 ```bash
-s9 agent list --active-only | grep <your-name>
+s9 agent list --active-only | grep <your-persona>
 ```
 
 **What this command does:**
-- Updates the database with end time and status
-- Updates your session file's YAML frontmatter (end_time, status)
+- Updates the database with end time
+- Updates your mission file's YAML frontmatter (end_time)
 - Ensures DB and file are always in sync
 
-**Note:** This replaces manual YAML frontmatter editing. Do NOT manually edit the end_time or status fields - let `s9 agent end` handle it.
+**Note:** This replaces manual YAML frontmatter editing. Do NOT manually edit the end_time field - let `s9 agent end` handle it.
 
 ## Step 9: Verify Quality Checks
 
@@ -316,20 +299,19 @@ make qa
 If QA fails:
 - Fix the issues OR
 - Document in "Next Steps" that QA needs attention
-- Update session status to `partial` if issues are blocking
 
 ## Step 10: Say Goodbye
 
 Once everything is updated and committed, provide a final summary to the Director:
 
 ```markdown
-✅ Session closed successfully!
+✅ Mission complete!
 
 **Summary:**
 - Duration: ~X hours
 - Files changed: N files
 - Tasks completed: TASK_ID, TASK_ID
-- Status: [status]
+- Codename: <codename>
 
 **What was accomplished:**
 - [Bullet point summary from Outcomes]
@@ -337,14 +319,14 @@ Once everything is updated and committed, provide a final summary to the Directo
 **Next steps:**
 - [Summary from Next Steps section, or "None - work complete"]
 
-Session file updated: .opencode/work/sessions/<filename>.md
+Mission file updated: .opencode/work/missions/<filename>.md
 
-Thank you for working with me! I'm <Name>, signing off.
+Thank you for working with me! I'm <Persona>, signing off.
 ```
 
 ### Add a Mythologically Appropriate Farewell
 
-After your summary, add a colorful, thematic farewell that matches your daemon name's mythology. This should be 1-2 sentences that evoke the character's mythological nature.
+After your summary, add a colorful, thematic farewell that matches your persona's mythology. This should be 1-2 sentences that evoke the character's mythological nature.
 
 **Examples by mythology:**
 

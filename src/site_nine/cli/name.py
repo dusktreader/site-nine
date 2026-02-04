@@ -1,4 +1,4 @@
-"""Daemon name management commands"""
+"""Persona name management commands"""
 
 import typer
 from loguru import logger
@@ -9,7 +9,7 @@ from typerdrive import handle_errors
 from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
 
-app = typer.Typer(help="Manage daemon names")
+app = typer.Typer(help="Manage persona names")
 console = Console()
 
 # Valid roles matching config.py defaults
@@ -53,14 +53,14 @@ def _validate_role(role: str) -> str:
 
 
 @app.command()
-@handle_errors("Failed to add daemon name")
+@handle_errors("Failed to add persona")
 def add(
-    name: str = typer.Argument(..., help="Daemon name (lowercase)"),
-    role: str = typer.Option(..., "--role", "-r", help="Primary role for this name"),
+    name: str = typer.Argument(..., help="Persona name (lowercase)"),
+    role: str = typer.Option(..., "--role", "-r", help="Primary role for this persona"),
     mythology: str = typer.Option(..., "--mythology", "-m", help="Mythology origin (e.g., Greek, Roman, Norse)"),
-    description: str = typer.Option(..., "--description", "-d", help="Brief description of the deity/daemon"),
+    description: str = typer.Option(..., "--description", "-d", help="Brief description of the deity/figure"),
 ) -> None:
-    """Add a new daemon name"""
+    """Add a new persona"""
     name = name.lower()
     role = _validate_role(role)
 
@@ -69,28 +69,28 @@ def add(
     try:
         db.execute_update(
             """
-            INSERT INTO daemon_names (name, role, mythology, description)
+            INSERT INTO personas (name, role, mythology, description)
             VALUES (:name, :role, :mythology, :description)
             """,
             {"name": name, "role": role, "mythology": mythology, "description": description},
         )
-        console.print(f"[green]✓[/green] Added daemon name: {name} ({role}, {mythology})")
-        logger.info(f"Added daemon name: {name} ({role}, {mythology})")
+        console.print(f"[green]✓[/green] Added persona: {name} ({role}, {mythology})")
+        logger.info(f"Added persona: {name} ({role}, {mythology})")
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
-            console.print(f"[red]Name '{name}' already exists[/red]")
+            console.print(f"[red]Persona '{name}' already exists[/red]")
             raise typer.Exit(1)
         raise
 
 
 @app.command()
-@handle_errors("Failed to list daemon names")
+@handle_errors("Failed to list personas")
 def list(
     role: str | None = typer.Option(None, "--role", "-r", help="Filter by role"),
-    unused_only: bool = typer.Option(False, "--unused-only", help="Show only unused names"),
-    by_usage: bool = typer.Option(False, "--by-usage", help="Sort by usage count"),
+    unused_only: bool = typer.Option(False, "--unused-only", help="Show only unused personas"),
+    by_usage: bool = typer.Option(False, "--by-usage", help="Sort by mission count"),
 ) -> None:
-    """List daemon names"""
+    """List personas"""
     db = _get_db()
 
     # Build query
@@ -103,150 +103,153 @@ def list(
         params["role"] = role
 
     if unused_only:
-        conditions.append("usage_count = 0")
+        conditions.append("mission_count = 0")
 
     where_clause = " AND ".join(conditions) if conditions else "1=1"
-    order_by = "usage_count DESC, name ASC" if by_usage else "role ASC, name ASC"
+    order_by = "mission_count DESC, name ASC" if by_usage else "role ASC, name ASC"
 
     query = f"""
-        SELECT name, role, mythology, description, usage_count, last_used_at
-        FROM daemon_names
+        SELECT name, role, mythology, description, mission_count, last_mission_at
+        FROM personas
         WHERE {where_clause}
         ORDER BY {order_by}
     """
 
-    names = db.execute_query(query, params)
+    personas = db.execute_query(query, params)
 
-    if not names:
-        console.print("[yellow]No daemon names found[/yellow]")
+    if not personas:
+        console.print("[yellow]No personas found[/yellow]")
         return
 
     # Display table
-    table = Table(title="Daemon Names")
+    table = Table(title="Personas")
     table.add_column("Name", style="cyan")
     table.add_column("Role", style="green")
     table.add_column("Mythology", style="magenta")
     table.add_column("Description", style="white")
-    table.add_column("Usage", style="yellow")
-    table.add_column("Last Used", style="dim")
+    table.add_column("Missions", style="yellow")
+    table.add_column("Last Mission", style="dim")
 
-    for name_row in names:
-        last_used = name_row["last_used_at"][:10] if name_row["last_used_at"] else "Never"
-        desc = name_row["description"]
+    for persona in personas:
+        last_mission = persona["last_mission_at"][:10] if persona["last_mission_at"] else "Never"
+        desc = persona["description"]
         desc_display = desc[:40] + "..." if len(desc) > 40 else desc
 
         table.add_row(
-            name_row["name"],
-            name_row["role"],
-            name_row["mythology"],
+            persona["name"],
+            persona["role"],
+            persona["mythology"],
             desc_display,
-            str(name_row["usage_count"]),
-            last_used,
+            str(persona["mission_count"]),
+            last_mission,
         )
 
     console.print(table)
-    console.print(f"\nTotal: {len(names)} name(s)")
-    logger.debug(f"Listed {len(names)} daemon names")
+    console.print(f"\nTotal: {len(personas)} persona(s)")
+    logger.debug(f"Listed {len(personas)} personas")
 
 
 @app.command()
-@handle_errors("Failed to suggest daemon names")
+@handle_errors("Failed to suggest personas")
 def suggest(
-    role: str = typer.Argument(..., help="Role to suggest name for"),
+    role: str = typer.Argument(..., help="Role to suggest persona for"),
     count: int = typer.Option(3, "--count", "-c", help="Number of suggestions"),
 ) -> None:
-    """Suggest unused daemon names for a role"""
+    """Suggest unused personas for a role"""
     role = _validate_role(role)
 
     db = _get_db()
 
-    # Find unused or least-used names for this role
+    # Find unused or least-used personas for this role
     suggestions = db.execute_query(
         """
-        SELECT name, mythology, description, usage_count
-        FROM daemon_names
+        SELECT name, mythology, description, mission_count
+        FROM personas
         WHERE role = :role
-        ORDER BY usage_count ASC, name ASC
+        ORDER BY mission_count ASC, name ASC
         LIMIT :count
         """,
         {"role": role, "count": count},
     )
 
     if not suggestions:
-        console.print(f"[yellow]No names found for role: {role}[/yellow]")
-        console.print("[dim]Tip: Add names with 's9 name add'[/dim]")
+        console.print(f"[yellow]No personas found for role: {role}[/yellow]")
+        console.print("[dim]Tip: Add personas with 's9 name add'[/dim]")
         return
 
-    console.print(f"\n[bold]Suggested names for {role.title()}:[/bold]\n")
-    for idx, name_row in enumerate(suggestions, 1):
-        usage_str = "unused" if name_row["usage_count"] == 0 else f"used {name_row['usage_count']}x"
-        console.print(f"{idx}. [cyan]{name_row['name']}[/cyan] ({name_row['mythology']}) - {usage_str}")
-        console.print(f"   {name_row['description']}\n")
+    console.print(f"\n[bold]Suggested personas for {role.title()}:[/bold]\n")
+    for idx, persona in enumerate(suggestions, 1):
+        usage_str = "unused" if persona["mission_count"] == 0 else f"{persona['mission_count']} mission(s)"
+        console.print(f"{idx}. [cyan]{persona['name']}[/cyan] ({persona['mythology']}) - {usage_str}")
+        console.print(f"   {persona['description']}\n")
 
-    logger.debug(f"Suggested {len(suggestions)} names for role {role}")
+    logger.debug(f"Suggested {len(suggestions)} personas for role {role}")
 
 
 @app.command()
-@handle_errors("Failed to show name usage")
+@handle_errors("Failed to show persona usage")
 def usage(
-    name: str = typer.Argument(..., help="Daemon name to check"),
+    name: str = typer.Argument(..., help="Persona name to check"),
 ) -> None:
-    """Show usage history for a daemon name"""
+    """Show usage history for a persona"""
     name = name.lower()
 
     db = _get_db()
 
-    # Get name info
-    name_results = db.execute_query(
-        "SELECT * FROM daemon_names WHERE name = :name",
+    # Get persona info
+    persona_results = db.execute_query(
+        "SELECT * FROM personas WHERE name = :name",
         {"name": name},
     )
 
-    if not name_results:
-        console.print(f"[red]Name '{name}' not found[/red]")
+    if not persona_results:
+        console.print(f"[red]Persona '{name}' not found[/red]")
         raise typer.Exit(1)
 
-    name_row = name_results[0]
+    persona = persona_results[0]
 
-    # Get agent sessions using this name (base_name column stores the daemon name)
-    sessions = db.execute_query(
+    # Get missions for this persona
+    missions = db.execute_query(
         """
-        SELECT id, name, role, status, session_date, start_time, end_time
-        FROM agents
-        WHERE base_name = :name
-        ORDER BY session_date DESC, start_time DESC
+        SELECT id, persona_name, role, codename, start_date, start_time, end_time
+        FROM missions
+        WHERE persona_name = :name
+        ORDER BY start_date DESC, start_time DESC
         """,
         {"name": name},
     )
 
-    # Display name info
-    console.print(f"\n[bold]Name: {name_row['name']}[/bold]")
-    console.print(f"Role:        {name_row['role']}")
-    console.print(f"Mythology:   {name_row['mythology']}")
-    console.print(f"Description: {name_row['description']}")
-    console.print(f"Usage Count: {name_row['usage_count']}")
-    if name_row["last_used_at"]:
-        console.print(f"Last Used:   {name_row['last_used_at'][:10]}")
+    # Display persona info
+    console.print(f"\n[bold]Persona: {persona['name']}[/bold]")
+    console.print(f"Role:          {persona['role']}")
+    console.print(f"Mythology:     {persona['mythology']}")
+    console.print(f"Description:   {persona['description']}")
+    console.print(f"Mission Count: {persona['mission_count']}")
+    if persona["last_mission_at"]:
+        console.print(f"Last Mission:  {persona['last_mission_at'][:10]}")
 
-    # Display sessions
-    if sessions:
-        console.print(f"\n[bold]Agent Sessions ({len(sessions)}):[/bold]\n")
+    # Display missions
+    if missions:
+        console.print(f"\n[bold]Missions ({len(missions)}):[/bold]\n")
         table = Table()
-        table.add_column("Name", style="cyan")
+        table.add_column("ID", style="cyan")
+        table.add_column("Codename", style="yellow")
         table.add_column("Role", style="green")
         table.add_column("Date", style="white")
-        table.add_column("Status", style="yellow")
+        table.add_column("Status", style="magenta")
 
-        for session in sessions:
+        for mission in missions:
+            status = "Active" if mission["end_time"] is None else "Complete"
             table.add_row(
-                session["name"],
-                session["role"] or "?",
-                session["session_date"] or "?",
-                session["status"],
+                str(mission["id"]),
+                mission["codename"],
+                mission["role"] or "?",
+                mission["start_date"] or "?",
+                status,
             )
 
         console.print(table)
     else:
-        console.print("\n[yellow]No sessions found for this name[/yellow]")
+        console.print("\n[yellow]No missions found for this persona[/yellow]")
 
-    logger.debug(f"Displayed usage for daemon name: {name}")
+    logger.debug(f"Displayed usage for persona: {name}")

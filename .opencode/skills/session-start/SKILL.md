@@ -1,11 +1,11 @@
 ---
 name: session-start
-description: Initialize a new agent session with role selection and daemon naming
+description: Initialize a new mission with role selection and persona naming
 license: MIT
 compatibility: opencode
 metadata:
   audience: all-agents
-  workflow: session-initialization
+  workflow: mission-initialization
 ---
 
 ## Important: CLI Tool Usage
@@ -129,13 +129,13 @@ This will display a consistently formatted list of all available agent roles wit
 
 Wait for the Director to respond with their role choice.
 
-## Step 3: Daemon Name Selection
+## Step 3: Persona Selection
 
-After confirming the role, help choose a daemon name from mythology.
+After confirming the role, help choose a persona name from mythology.
 
 **IMPORTANT: Prefer unused names over reused names!**
 
-All daemon names are now stored in the project management database. Use the `pm` script for name selection.
+All persona names are now stored in the project management database. Use the `s9` CLI for name selection.
 
 ### Step 1: Get Name Suggestions
 
@@ -170,104 +170,111 @@ s9 name usage <chosen-name>
 ```
 
 This shows:
-- Usage count
-- Last used date
-- All agent sessions that used this name
+- Mission count (how many times used)
+- Last mission date
+- All missions that used this persona
 
-**If usage count is 0**: The name is unused - perfect! Use it as-is.
-**If usage count > 0**: Determine the next suffix from the session list.
+**If mission count is 0**: The name is unused - perfect! Use it as-is.
+**If mission count > 0**: The name has been used before - you can still use it (personas can run multiple missions).
 
-### Step 3: Determine Full Name with Suffix
+### Step 3: Suggest Persona to User
 
-Based on usage count, construct the full name:
-
-- **0 uses**: Use name as-is (e.g., `terminus`)
-- **1 use**: Append `-ii` (e.g., `terminus-ii`)
-- **2 uses**: Append `-iii` (e.g., `terminus-iii`)
-- **3 uses**: Append `-iv` (e.g., `terminus-iv`)
-- etc.
-
-### Step 4: Suggest to User
-
-**For unused names (preferred):**
+**For unused personas (preferred):**
 ```
-I suggest the name "[name]" for this [role] session.
+I suggest the persona "[name]" for this [role] mission.
 
-This name hasn't been used before and fits the [role] role well as [brief explanation].
+This persona hasn't been used before and fits the [role] role well as [brief explanation].
 
-Would you like to use this name, or choose a different one?
+Would you like to use this persona, or choose a different one?
 ```
 
-**For reused names (only if necessary):**
+**For reused personas:**
 ```
-I see that "[base-name]" has been used [N] times before.
+I suggest the persona "[name]" for this [role] mission.
 
-I suggest "[base-name]-[roman-numeral]" for this [role] session.
+This persona has been used [N] time(s) before and fits the [role] role well as [brief explanation].
 
-However, there are many unused names available. Run `s9 name suggest [Role]` to see other options.
-Would you prefer an unused name instead?
+Would you like to use this persona, or choose a different one?
 ```
 
 ### Important Notes
 
-- **CRITICAL**: If a name has been used before, the roman numeral suffix is REQUIRED
-  - ✅ Correct: `thoth-iii` (if thoth and thoth-ii exist)
-  - ❌ Wrong: `thoth` (when thoth already exists)
+- **Personas can be reused** across multiple missions (no suffixes needed per ADR-006)
+  - ✅ Correct: `kuk` can run multiple missions with different codenames
+  - Each mission gets a unique auto-generated codename (e.g., "azure-shadow", "crimson-phoenix")
   
-- **Use the FULL name with suffix** in:
-  - Session filename: `2026-01-29.21:24:38.documentarian.thoth-iii.task.md`
-  - Session introduction: "I'm Thoth-iii, your Documentarian agent"
-  - All commits: `[Agent: Documentarian - Thoth-iii]`
-  - Task artifact updates: `Documentarian Agent (Thoth-iii)`
+- **Use the persona name** in:
+  - Mission filename: `2026-02-03.16:53:43.operator.kuk.azure-shadow.md`
+  - Mission introduction: "I'm Kuk, your Operator agent on mission 'azure-shadow'"
+  - All commits: `[Persona: Kuk - Operator]` or `[Mission: azure-shadow]`
 
 - **Use CLI commands for name information:**
-  - `s9 name list --role [Role]` - See all names for a role
-  - `s9 name list --unused-only` - See only unused names
-  - `s9 name usage [name]` - Check usage history for a name
+  - `s9 name list --role [Role]` - See all personas for a role
+  - `s9 name list --unused-only` - See only unused personas
+  - `s9 name usage [name]` - Check usage history for a persona
 
-## Step 4: Session File Creation
+## Step 4: Register Mission
 
-Once role and name are confirmed, create the session file:
+Once role and persona are confirmed, register the mission in the project database:
 
-**File naming format:**
-```
-.opencode/work/sessions/YYYY-mm-dd.HH:MM:SS.role.name.task-summary.md
-```
-
-**Get current timestamp:**
 ```bash
-date +"%Y-%m-%d.%H:%M:%S"
+s9 agent start <persona-name> \
+  --role <Role> \
+  --task "<brief-objective>"
 ```
 
-**Create the file** with this template:
+**Example:**
+```bash
+s9 agent start kuk \
+  --role Operator \
+  --task "Entity model refactor - personas and missions"
+```
+
+**This command:**
+- Creates a mission record in the database (returns a mission ID)
+- Auto-generates a unique codename for the mission (e.g., "azure-shadow")
+- Updates the persona's mission count
+- Records the start time
+- Creates the mission file at `.opencode/work/missions/YYYY-MM-DD.HH:MM:SS.role.persona.codename.md`
+
+**Important:** The command will display:
+- Mission ID (you'll need this for claiming tasks)
+- Persona name
+- Role
+- Mission codename (auto-generated)
+- Mission objective
+
+**The mission file is created automatically** with this structure:
 
 ```markdown
 ---
 date: YYYY-MM-DD
 start_time: HH:MM:SS
-end_time: in-progress
+end_time: null
 role: <role>
-name: <name>
-task_summary: <brief description>
-status: in-progress
+persona: <persona>
+codename: <auto-generated-codename>
+mission_id: <id>
+objective: <brief description>
 ---
 
-# Session: <Task Summary>
+# Mission: <Codename>
 
-**Agent:** <Name> (<Role>)
+**Persona:** <Persona> (<Role>)
+**Codename:** <codename>
 **Date:** <YYYY-MM-DD>
-**Duration:** <start> - in-progress
-**Status:** in-progress
+**Duration:** <start> - active
 
 ## Objective
 
-[To be filled in as work proceeds]
+<objective from command>
 
 ## Work Log
 
-### HH:MM - Session Started
+### HH:MM - Mission Started
+- Persona: <persona>
 - Role: <role>
-- Name: <name>
+- Codename: <codename>
 - Awaiting direction from user
 
 ## Files Changed
@@ -276,47 +283,16 @@ status: in-progress
 
 ## Outcomes
 
-[To be filled in at session end]
+[To be filled in at mission end]
 
 ## Next Steps
 
 [To be determined based on work done]
-
-## Notes
-
-Session started with /summon command.
 ```
 
-## Step 5: Register Agent Session
+## Step 5: Share Mythological Background
 
-After creating the session file, register the agent in the project database:
-
-```bash
-s9 agent start <full-name-with-suffix> \
-  --role <Role> \
-  --session-file "<path-to-session-file>" \
-  --task-summary "<brief-summary>"
-```
-
-**Example:**
-```bash
-s9 agent start terminus \
-  --role Operator \
-  --session-file ".opencode/work/sessions/2026-01-30.09:15:55.operator.terminus.expand-task-db.md" \
-  --task-summary "expand-task-db"
-```
-
-**This command:**
-- Creates an agent session record (returns an agent ID)
-- Updates the daemon name usage count
-- Records the start time
-- Links to the session file
-
-**Important:** Save the agent ID returned - you'll need it when claiming tasks!
-
-## Step 5a: Share Mythological Background
-
-After registering the agent session, share a whimsical, fun paragraph about your mythological character with the Director.
+After registering the mission, share a whimsical, fun paragraph about your mythological character with the Director.
 
 **Format:**
 ```
@@ -377,16 +353,16 @@ I am Kali, the fierce goddess of time, destruction, and transformation - basical
 I am Marduk, the great god of Babylon who defeated the chaos dragon Tiamat by creating a strategic battle plan so brilliant the other gods made me their king! I split Tiamat's body in half and used it to create heaven and earth - the ultimate resource optimization. My fifty names represent my fifty different management responsibilities, from "Lord of Lords" to "He Who Fixes Things When Other Gods Mess Up." I organized the entire cosmic order, assigned the gods their duties, established the calendar, and basically invented project management while wielding the Winds of Destiny as my project timeline. When chaos threatens, I don't panic - I draft an action plan and delegate with divine authority!
 ```
 
-**Research your specific name** and create something fun and appropriate!
+**Research your specific persona** and create something fun and appropriate!
 
-## Step 5b: Rename OpenCode TUI Session
+## Step 6: Rename OpenCode TUI Session
 
-After sharing your mythological background, rename the OpenCode TUI session to include your persona, role, and mission codename.
+After sharing your mythological background, rename the OpenCode TUI session to include your persona and role.
 
 **If you have multiple OpenCode sessions open**, first list them to find the correct one:
 
 ```bash
-s9 mission list-opencode-sessions
+s9 agent list-opencode-sessions
 ```
 
 This shows all OpenCode sessions for this project with their session IDs and last modification times.
@@ -394,38 +370,38 @@ This shows all OpenCode sessions for this project with their session IDs and las
 **Then rename the session:**
 
 ```bash
-s9 mission rename-tui <persona> <Role> <codename> --session-id <session-id>
+s9 agent rename-tui <persona> <Role> --session-id <session-id>
 ```
 
 **If you only have ONE OpenCode session open**, you can omit the session ID and let it auto-detect:
 
 ```bash
-s9 mission rename-tui <persona> <Role> <codename>
+s9 agent rename-tui <persona> <Role>
 ```
 
 **Example:**
 ```bash
-s9 mission rename-tui brigid Administrator void-matrix
+s9 agent rename-tui kuk Operator
 ```
 
 **This command:**
-- Updates the OpenCode TUI session title to "<Persona> - <Role> - <codename>"
+- Updates the OpenCode TUI session title to "<Persona> - <Role>"
 - Makes it easy to identify which mission you're working with in `opencode session list`
 - Updates take effect immediately - no TUI restart needed
-- **Note:** Persona name is capitalized in the title (e.g., "Brigid" not "brigid")
+- **Note:** Persona name is capitalized in the title (e.g., "Kuk" not "kuk")
 
 **After running the command, tell the Director:**
 ```
-✅ I've renamed your OpenCode session to "<Persona> - <Role> - <codename>" so you can easily find this conversation later!
+✅ I've renamed your OpenCode session to "<Persona> - <Role>" so you can easily find this conversation later!
 ```
 
 **If the command fails or there are multiple sessions:**
-- Run `s9 mission list-opencode-sessions` to see available sessions
+- Run `s9 agent list-opencode-sessions` to see available sessions
 - Ask the Director which session ID to rename, or
 - Continue without renaming (it's not critical to the mission)
 - The Director can rename manually later if needed
 
-## Step 6: Check for Pending Handoffs
+## Step 7: Check for Pending Handoffs
 
 **IMPORTANT:** Before reading documentation, check if there are pending handoffs for your role.
 
@@ -436,7 +412,7 @@ ls .opencode/work/sessions/handoffs/*to-[your-role].pending.md 2>/dev/null
 
 **Example for Builder role:**
 ```bash
-ls .opencode/work/sessions/handoffs/*builder.pending.md 2>/dev/null
+ls .opencode/work/missions/handoffs/*builder.pending.md 2>/dev/null
 ```
 
 **If pending handoffs exist:**
@@ -447,11 +423,11 @@ ls .opencode/work/sessions/handoffs/*builder.pending.md 2>/dev/null
    
    1. From Administrator (Ishtar) - Created 2026-01-29 16:30:00
       Task: H040 - Implement database query caching
-      Document: .opencode/work/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.pending.md
+      Document: .opencode/work/missions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.pending.md
    
    2. From Inspector (Argus) - Created 2026-01-29 14:20:00
       Task: H038 - Fix security issues
-      Document: .opencode/work/sessions/handoffs/2026-01-29.14:20:00.inspector-argus.builder.pending.md
+      Document: .opencode/work/missions/handoffs/2026-01-29.14:20:00.inspector-argus.builder.pending.md
    
    Would you like me to read one of these handoffs?
    ```
@@ -467,17 +443,17 @@ ls .opencode/work/sessions/handoffs/*builder.pending.md 2>/dev/null
 
 4. **Rename file from `.pending.md` to `.accepted.md`:**
    ```bash
-   mv .opencode/work/sessions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.pending.md \
-      .opencode/work/sessions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.accepted.md
+   mv .opencode/work/missions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.pending.md \
+      .opencode/work/missions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.accepted.md
    ```
 
-5. **Update your session file with handoff info:**
+5. **Update your mission file with handoff info:**
    Add to Work Log section:
    ```markdown
    ### HH:MM - Received Handoff
    
-   **From:** [Role] ([Name])
-   **Handoff Document:** `.opencode/work/sessions/handoffs/[filename].accepted.md`
+   **From:** [Role] ([Persona])
+   **Handoff Document:** `.opencode/work/missions/handoffs/[filename].accepted.md`
    **Task:** [TASK_ID] - [Task Title]
    
    **Summary:**
@@ -514,12 +490,12 @@ ls .opencode/work/sessions/handoffs/*builder.pending.md 2>/dev/null
    ```
 
 **If no pending handoffs:**
-- Skip this section and proceed to Step 6a
+- Skip this section and proceed to Step 8
 - No message needed - just continue normally
 
-## Step 6a: Check for Pending Reviews (Administrator Only)
+## Step 8: Check for Pending Reviews (Administrator Only)
 
-**IMPORTANT:** This step is ONLY for Administrator role. Other roles should skip to Step 7.
+**IMPORTANT:** This step is ONLY for Administrator role. Other roles should skip to Step 9.
 
 **If role is Administrator**, check for pending reviews:
 
@@ -549,24 +525,24 @@ Would you like to handle any of these reviews now, or shall we proceed with othe
 
 **Wait for Director's response:**
 - If they want to review now, help them review each one
-- If they want to proceed with other work, continue to Step 7
+- If they want to proceed with other work, continue to Step 9
 
 **If no pending reviews:**
-- Skip this section and proceed to Step 7
+- Skip this section and proceed to Step 9
 - No message needed - just continue normally
 
 **If role is NOT Administrator:**
 - Skip this entire section silently
-- Proceed directly to Step 7
+- Proceed directly to Step 9
 
-## Step 7: Essential Documentation
+## Step 9: Essential Documentation
 
-After creating the session file (and accepting any handoffs), inform the Director you're ready:
+After registering the mission (and accepting any handoffs), inform the Director you're ready:
 
 ```
-✅ Session initialized!
+✅ Mission initialized!
 
-I'm [Name], your [Role] agent for this session. I'm ready to help!
+I'm [Persona], your [Role] agent on mission "[codename]". I'm ready to help!
 
 What would you like me to work on?
 ```
@@ -590,7 +566,7 @@ What would you like me to work on?
 - Most tasks don't require all documentation
 - User gets to start working immediately
 
-## Step 8: Show Role-Specific Dashboard
+## Step 10: Show Role-Specific Dashboard
 
 After initialization is complete, automatically show the Director what tasks are available for their selected role.
 
@@ -640,28 +616,26 @@ No tasks currently assigned to [Role] role (see "No tasks for [Role] role" in Re
 
 ## Important Notes
 
-- **DO NOT** read files until AFTER the session file is created
+- **DO NOT** read files until AFTER the mission is registered
 - **DO NOT** start work until the Director gives direction
-- **ALWAYS** use the chosen name in commits: `[Agent: Role - Name]`
-- **UPDATE** the session file throughout the session with progress
-- **PAUSE** sessions if interrupted: `s9 agent pause <agent-id> --reason "Taking a break"`
-- **RESUME** paused sessions: `s9 agent resume <agent-id>`
-- **UPDATE** session metadata if scope changes: `s9 agent update <agent-id> --task-summary "..." --role NewRole`
-- **CLOSE** the session file at end with end_time, status, and outcomes
+- **ALWAYS** use the persona name in commits: `[Persona: Name - Role]` or `[Mission: codename]`
+- **UPDATE** the mission file throughout the session with progress
+- **UPDATE** mission metadata if scope changes: `s9 agent update <mission-id> --task "..." --role NewRole`
+- **CLOSE** the mission file at end with end_time and outcomes
 
-## Session End
+## Mission End
 
-**IMPORTANT:** When the Director indicates the session is ending (says "goodbye", "we're done", "call it a day", etc.), you MUST load and follow the `session-end` skill:
+**IMPORTANT:** When the Director indicates the mission is ending (says "goodbye", "we're done", "call it a day", etc.), you MUST load and follow the `session-end` skill:
 
 ```
-Load the session-end skill and follow its instructions to properly close this session.
+Load the session-end skill and follow its instructions to properly close this mission.
 ```
 
 **The session-end skill provides detailed steps for:**
-- Updating session file with completion metadata
+- Updating mission file with completion metadata
 - Documenting work accomplished
 - Closing tasks properly
 - Committing final changes
 - Providing mythologically appropriate farewell
 
-**DO NOT** try to close the session manually. Always use the session-end skill to ensure all required steps are completed.
+**DO NOT** try to close the mission manually. Always use the session-end skill to ensure all required steps are completed.
