@@ -353,6 +353,97 @@ def _find_opencode_storage() -> tuple[Path, Path]:
     return session_diff_storage, session_storage
 
 
+def _detect_session_via_uuid_marker(
+    uuid_marker: str,
+    project_root: Path,
+    session_diff_storage: Path,
+    session_storage: Path,
+) -> str | None:
+    """Detect current OpenCode session by searching for UUID marker in session diffs
+
+    This is the most reliable detection method. The UUID marker should be generated
+    at session start and written to a temporary marker file, where it gets captured
+    in the session diff file.
+
+    Args:
+        uuid_marker: UUID marker to search for (e.g., "session-marker-abc123")
+        project_root: Project root directory
+        session_diff_storage: Path to OpenCode session_diff directory
+        session_storage: Path to OpenCode session storage directory
+
+    Returns:
+        Session ID (e.g., "ses_xxx") or None if no matching session found
+    """
+    import json
+    import time
+
+    # Search all recent session diffs for the UUID marker
+    current_time = time.time()
+    recent_threshold = 600  # Check sessions modified in last 10 minutes (was 5)
+
+    diff_files = sorted(session_diff_storage.glob("ses_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+
+    for diff_file in diff_files:
+        mtime = diff_file.stat().st_mtime
+        age_seconds = current_time - mtime
+
+        # Only check recently modified sessions
+        if age_seconds > recent_threshold:
+            break
+
+        mission_id = diff_file.stem
+
+        # Verify this session is for the current project
+        session_file = None
+        for project_dir in session_storage.iterdir():
+            if not project_dir.is_dir():
+                continue
+            candidate = project_dir / f"{mission_id}.json"
+            if candidate.exists():
+                session_file = candidate
+                break
+
+        if not session_file:
+            continue
+
+        try:
+            with open(session_file) as f:
+                session_data = json.load(f)
+            session_dir = session_data.get("directory", "")
+            if not (session_dir and Path(session_dir).resolve() == project_root.resolve()):
+                continue
+        except (json.JSONDecodeError, FileNotFoundError, PermissionError):
+            continue
+
+        # Search the diff content for the UUID marker
+        try:
+            with open(diff_file) as f:
+                diff_data = json.load(f)
+
+            if not (type(diff_data).__name__ == "list" and len(diff_data) > 0):
+                continue
+
+            # Search through all diff entries for the marker
+            # The marker can be in 'before' or 'after' fields (file content snapshots)
+            for entry in diff_data:
+                before_content = entry.get("before", "")
+                after_content = entry.get("after", "")
+                if uuid_marker in before_content or uuid_marker in after_content:
+                    logger.debug(
+                        "session_detected_via_uuid_marker",
+                        mission_id=mission_id,
+                        uuid_marker=uuid_marker,
+                        age_seconds=int(age_seconds),
+                    )
+                    return mission_id
+
+        except (json.JSONDecodeError, FileNotFoundError, PermissionError):
+            continue
+
+    logger.debug("uuid_marker_not_found", uuid_marker=uuid_marker)
+    return None
+
+
 def _detect_session_via_diff_content(
     project_root: Path,
     session_diff_storage: Path,
@@ -807,6 +898,46 @@ def _update_session_title(
         raise typer.Exit(1)
 
 
+@app.command("generate-session-uuid")
+def generate_session_uuid() -> None:
+    """Generate a unique session UUID marker for reliable session detection
+
+    This command creates a temporary marker file with a UUID that OpenCode captures
+    in the session diff. This allows rename-tui to reliably identify the current
+    OpenCode session even when multiple sessions are active.
+
+    Usage in session-start workflow:
+    1. Agent calls: s9 agent generate-session-uuid
+    2. Agent captures the UUID from output
+    3. Agent calls: s9 agent rename-tui <name> <role> --uuid-marker <uuid>
+    4. The marker file is automatically cleaned up
+    """
+    import uuid
+
+    try:
+        opencode_dir = get_opencode_dir()
+    except FileNotFoundError:
+        console.print("[red]Error: .opencode directory not found. Run 's9 init' first.[/red]")
+        raise typer.Exit(1)
+
+    # Generate a unique session marker
+    session_uuid = f"session-marker-{uuid.uuid4().hex[:16]}"
+
+    # Write the marker to a temporary file that OpenCode will capture in the diff
+    marker_file = opencode_dir / ".session_uuid_marker"
+    marker_file.write_text(f"{session_uuid}\n")
+
+    # Output the marker
+    console.print(f"[bold green]Session UUID:[/bold green] {session_uuid}")
+    console.print(f"[dim]Use this marker with: s9 agent rename-tui <name> <role> --uuid-marker {session_uuid}[/dim]")
+    console.print(f"[dim]Marker file: {marker_file}[/dim]")
+
+    # Also output just the UUID for easy parsing
+    console.print(session_uuid)
+
+    logger.debug("session_uuid_generated", uuid=session_uuid, marker_file=str(marker_file))
+
+
 @app.command("list-opencode-sessions")
 def list_opencode_sessions() -> None:
     """List OpenCode TUI missions for the current project
@@ -879,12 +1010,15 @@ def rename_tui(
     name: str = typer.Argument(..., help="Persona name"),
     role: str = typer.Argument(..., help="Agent role"),
     mission_id: str | None = typer.Option(None, "--session-id", "-s", help="OpenCode session ID (e.g., ses_xxx)"),
+    uuid_marker: str | None = typer.Option(
+        None, "--uuid-marker", "-u", help="Session UUID marker from generate-session-uuid"
+    ),
 ) -> None:
     """Rename the current OpenCode TUI session to match agent identity
 
-    If --session-id is provided, renames that specific mission. Otherwise, attempts
-    to auto-detect the current session by finding the most recently active session
-    diff file for this project.
+    If --session-id is provided, renames that specific mission.
+    If --uuid-marker is provided, searches session diffs for that marker (most reliable).
+    Otherwise, attempts to auto-detect using content correlation and timestamps.
     """
     # Find the project root (contains .opencode directory)
     try:
@@ -904,8 +1038,18 @@ def rename_tui(
         current_mission_id = mission_id
         logger.debug("mission_id_provided", mission_id=mission_id)
     else:
-        # Try content correlation first (most reliable)
-        current_mission_id = _detect_session_via_diff_content(project_root, session_diff_storage, session_storage)
+        # Try UUID marker first (most reliable)
+        if uuid_marker:
+            current_mission_id = _detect_session_via_uuid_marker(
+                uuid_marker, project_root, session_diff_storage, session_storage
+            )
+            if not current_mission_id:
+                console.print(f"[yellow]Warning: UUID marker '{uuid_marker}' not found in any session diffs[/yellow]")
+                console.print("[dim]Falling back to other detection methods...[/dim]")
+
+        # Try content correlation as fallback
+        if not current_mission_id:
+            current_mission_id = _detect_session_via_diff_content(project_root, session_diff_storage, session_storage)
 
         # Fall back to timestamp-based detection if content correlation doesn't work
         if not current_mission_id:
@@ -947,6 +1091,16 @@ def rename_tui(
     # Update the session title
     new_title = f"{name.capitalize()} - {role}"
     _update_session_title(session_file, new_title, project_root)
+
+    # Clean up the marker file if it exists
+    if uuid_marker:
+        marker_file = opencode_dir / ".session_uuid_marker"
+        if marker_file.exists():
+            try:
+                marker_file.unlink()
+                logger.debug("session_uuid_marker_cleaned_up", marker_file=str(marker_file))
+            except (FileNotFoundError, PermissionError) as e:
+                logger.warning("failed_to_clean_uuid_marker", error=str(e))
 
     # Warn if multiple sessions were active (potential race condition)
     if multiple_sessions_detected:

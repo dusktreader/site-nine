@@ -83,26 +83,20 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
             # Count tasks blocked by reviews
             blocked_by_review_count = sum(1 for task in all_tasks if task.blocks_on_review_id is not None)
 
-            # Print header
-            project_name = opencode_dir.parent.name
-            console.print(Panel(f"[bold cyan]site-nine Dashboard[/bold cyan] - {project_name}", style="white on blue"))
+            # Find idle missions (active missions with no UNDERWAY tasks)
+            missions_with_underway = {
+                task.current_mission_id for task in all_tasks if task.status == "UNDERWAY" and task.current_mission_id
+            }
+            idle_missions = [m for m in active_missions if m.id not in missions_with_underway]
 
-            # Print quick stats
-            console.print("\n[cyan]Quick Stats:[/cyan]")
-            console.print(f"  Active missions: [bold]{len(active_missions)}[/bold]")
-            console.print(f"  Total tasks: [bold]{sum(task_counts.values())}[/bold]")
-            console.print(f"  In progress: [bold yellow]{task_counts['UNDERWAY']}[/bold yellow]")
-            console.print(f"  Completed: [bold green]{task_counts['COMPLETE']}[/bold green]")
-            if blocked_by_review_count > 0:
-                console.print(f"  [red]Blocked by reviews: {blocked_by_review_count}[/red]")
-
-            # Active missions table
+            # 1. Open missions table (all active missions)
             console.print("\n")
-            mission_table = Table(title="Active Missions", show_header=True, title_style="bold green")
-            mission_table.add_column("Name", style="magenta")
-            mission_table.add_column("Role", style="green")
-            mission_table.add_column("Start Time", style="blue")
-            mission_table.add_column("Task", style="white")
+            open_table = Table(title="Open Missions", show_header=True, title_style="bold green", title_justify="left")
+            open_table.add_column("Name", style="magenta")
+            open_table.add_column("Role", style="green")
+            open_table.add_column("Status", style="yellow")
+            open_table.add_column("Start Time", style="blue")
+            open_table.add_column("Objective", style="white")
 
             if active_missions:
                 for mission in active_missions:
@@ -111,55 +105,37 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
                         if mission.objective and len(mission.objective) > 50
                         else (mission.objective or "")
                     )
-                    mission_table.add_row(
+                    # Determine if mission is idle or active based on UNDERWAY tasks
+                    status = "IDLE" if mission.id in [m.id for m in idle_missions] else "WORKING"
+                    open_table.add_row(
                         mission.persona_name,
                         mission.role,
+                        status,
                         mission.start_time,
                         objective_display,
                     )
             else:
-                mission_table.add_row("[dim]No active missions[/dim]", "", "", "")
+                open_table.add_row("[dim]No open missions[/dim]", "", "", "", "")
 
-            console.print(mission_table)
+            console.print(open_table)
 
-            # Task summary table
+            # 2. Quick Stats table
             console.print("\n")
-            task_table = Table(title="Task Summary", show_header=True, title_style="bold yellow")
-            task_table.add_column("Status", style="yellow")
-            task_table.add_column("Count", justify="right", style="cyan")
+            persona_count = len(set(m.persona_name for m in active_missions))
+            stats_table = Table(title="Quick Stats", show_header=True, title_style="bold cyan", title_justify="left")
+            stats_table.add_column("Metric", style="cyan")
+            stats_table.add_column("Count", justify="right", style="bold")
 
-            for status in ["TODO", "UNDERWAY", "BLOCKED", "REVIEW", "COMPLETE", "PAUSED", "ABORTED"]:
-                count = task_counts[status]
-                if count > 0:
-                    task_table.add_row(status, str(count))
+            stats_table.add_row("Active missions", str(len(active_missions)))
+            stats_table.add_row("Idle missions", f"[yellow]{len(idle_missions)}[/yellow]")
+            stats_table.add_row("Active personas", f"[magenta]{persona_count}[/magenta]")
+            stats_table.add_row("Total tasks", str(sum(task_counts.values())))
+            stats_table.add_row("In progress", f"[yellow]{task_counts['UNDERWAY']}[/yellow]")
+            stats_table.add_row("Completed", f"[green]{task_counts['COMPLETE']}[/green]")
+            if blocked_by_review_count > 0:
+                stats_table.add_row("Blocked by reviews", f"[red]{blocked_by_review_count}[/red]")
 
-            if sum(task_counts.values()) == 0:
-                task_table.add_row("[dim]No tasks[/dim]", "0")
-
-            console.print(task_table)
-
-            # Recent tasks table
-            console.print("\n")
-            recent_tasks = Table(title="Recent Tasks", show_header=True, title_style="bold blue")
-            recent_tasks.add_column("ID", style="cyan")
-            recent_tasks.add_column("Title", style="magenta", max_width=40)
-            recent_tasks.add_column("Status", style="yellow")
-            recent_tasks.add_column("Priority", style="red")
-            recent_tasks.add_column("Mission", style="blue")
-
-            for task in all_tasks[:10]:  # Show top 10 most recent
-                recent_tasks.add_row(
-                    task.id,
-                    task.title,
-                    task.status,
-                    task.priority,
-                    str(task.current_mission_id) if task.current_mission_id else "",
-                )
-
-            if not all_tasks:
-                recent_tasks.add_row("[dim]No tasks[/dim]", "", "", "", "")
-
-            console.print(recent_tasks)
+            console.print(stats_table)
 
     except Exception as e:
         console.print(f"[red]Error showing dashboard: {e}[/red]")

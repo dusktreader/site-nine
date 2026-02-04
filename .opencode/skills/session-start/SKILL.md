@@ -355,53 +355,91 @@ I am Marduk, the great god of Babylon who defeated the chaos dragon Tiamat by cr
 
 **Research your specific persona** and create something fun and appropriate!
 
-## Step 6: Rename OpenCode TUI Session
+## Step 6: Generate Session UUID Marker
 
-After sharing your mythological background, rename the OpenCode TUI session to include your persona and role.
+After sharing your mythological background, generate a unique UUID marker for reliable session detection.
 
-**If you have multiple OpenCode sessions open**, first list them to find the correct one:
+**IMPORTANT:** This step must be done BEFORE renaming the TUI session. The marker helps identify which OpenCode session is yours when multiple sessions are active.
 
 ```bash
-s9 mission list-opencode-sessions
+s9 agent generate-session-uuid
 ```
 
-This shows all OpenCode sessions for this project with their session IDs and last modification times.
+**This command:**
+- Creates a temporary marker file (`.opencode/.session_uuid_marker`) with a unique UUID
+- OpenCode will capture this file in the session diff
+- The UUID can then be used to reliably identify this specific session
 
-**Then rename the session:**
-
-```bash
-s9 mission rename-tui <persona> <Role> --session-id <session-id>
+**Example output:**
+```
+Session UUID: session-marker-abc123def456
+Use this marker with: s9 agent rename-tui <name> <role> --uuid-marker session-marker-abc123def456
+Marker file: /path/to/project/.opencode/.session_uuid_marker
+session-marker-abc123def456
 ```
 
-**If you only have ONE OpenCode session open**, you can omit the session ID and let it auto-detect:
+**Capture the UUID from the output** (it appears on the last line). You'll use it in the next step.
+
+**Important:** Don't worry about cleaning up the marker file - it will be automatically removed after the rename step.
+
+## Step 7: Rename OpenCode TUI Session
+
+Now rename the OpenCode TUI session using the UUID marker from Step 6 for reliable detection.
+
+**Recommended approach (most reliable with multiple sessions):**
 
 ```bash
-s9 mission rename-tui <persona> <Role>
+s9 agent rename-tui <persona> <Role> --uuid-marker <uuid-from-step-6>
 ```
 
 **Example:**
 ```bash
-s9 mission rename-tui kuk Operator
+s9 agent rename-tui nut Operator --uuid-marker session-marker-abc123def456
+```
+
+**This approach:**
+- Uses the UUID marker to reliably identify YOUR specific OpenCode session
+- Works correctly even when multiple OpenCode sessions are active
+- Eliminates the "wrong session renamed" problem
+
+**Fallback approach (if UUID marker fails):**
+
+If the UUID-based detection fails, the command will automatically fall back to:
+1. Git diff correlation (matches recently edited files)
+2. Timestamp-based detection (most recent session for this project)
+
+**Alternative: Manual session ID specification:**
+
+If you have multiple OpenCode sessions and want to specify manually:
+
+```bash
+s9 agent list-opencode-sessions
+```
+
+Then use the specific session ID:
+
+```bash
+s9 agent rename-tui <persona> <Role> --session-id <session-id>
 ```
 
 **This command:**
 - Updates the OpenCode TUI session title to "<Persona> - <Role>"
 - Makes it easy to identify which mission you're working with in `opencode session list`
 - Updates take effect immediately - no TUI restart needed
-- **Note:** Persona name is capitalized in the title (e.g., "Kuk" not "kuk")
+- Automatically cleans up the UUID marker file
+- **Note:** Persona name is capitalized in the title (e.g., "Nut" not "nut")
 
 **After running the command, tell the Director:**
 ```
 ✅ I've renamed your OpenCode session to "<Persona> - <Role>" so you can easily find this conversation later!
 ```
 
-**If the command fails or there are multiple sessions:**
-- Run `s9 mission list-opencode-sessions` to see available sessions
-- Ask the Director which session ID to rename, or
-- Continue without renaming (it's not critical to the mission)
-- The Director can rename manually later if needed
+**If the command fails:**
+- The UUID marker may not have been captured in the session diff yet
+- The command will automatically fall back to other detection methods
+- If you still have issues, try: `s9 agent list-opencode-sessions` to manually select a session
 
-## Step 7: Check for Pending Handoffs
+## Step 8: Check for Pending Handoffs
 
 **IMPORTANT:** Before reading documentation, check if there are pending handoffs for your role.
 
@@ -493,7 +531,7 @@ ls .opencode/work/missions/handoffs/*builder.pending.md 2>/dev/null
 - Skip this section and proceed to Step 8
 - No message needed - just continue normally
 
-## Step 8: Check for Pending Reviews (Administrator Only)
+## Step 9: Check for Pending Reviews (Administrator Only)
 
 **IMPORTANT:** This step is ONLY for Administrator role. Other roles should skip to Step 9.
 
@@ -535,7 +573,7 @@ Would you like to handle any of these reviews now, or shall we proceed with othe
 - Skip this entire section silently
 - Proceed directly to Step 9
 
-## Step 9: Essential Documentation
+## Step 10: Essential Documentation
 
 After registering the mission (and accepting any handoffs), inform the Director you're ready:
 
@@ -566,7 +604,7 @@ What would you like me to work on?
 - Most tasks don't require all documentation
 - User gets to start working immediately
 
-## Step 10: Show Role-Specific Dashboard
+## Step 11: Show Role-Specific Dashboard
 
 After initialization is complete, automatically show the Director what tasks are available for their selected role.
 

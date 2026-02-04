@@ -283,8 +283,96 @@ def doctor_command(
 
     console.print()
 
-    # Check 5: Task Files Exist
-    console.print("[bold]5. Checking task files...[/bold]")
+    # Check 5: Abandoned Work Detection
+    console.print("[bold]5. Checking for abandoned work...[/bold]")
+
+    # Check for tasks UNDERWAY but mission has ended
+    abandoned_tasks = db.execute_query("""
+        SELECT t.id, t.title, t.current_mission_id, m.codename, m.persona_name, m.end_time
+        FROM tasks t
+        JOIN missions m ON t.current_mission_id = m.id
+        WHERE t.status = 'UNDERWAY'
+        AND m.end_time IS NOT NULL
+    """)
+
+    if abandoned_tasks:
+        for task in abandoned_tasks:
+            issue = (
+                f"Task {task['id']} ({task['title']}): status is UNDERWAY but mission "
+                f"#{task['current_mission_id']} ({task['codename']}) has ended"
+            )
+            task_id = task["id"]
+
+            def fix_fn():
+                db.execute_update(
+                    "UPDATE tasks SET current_mission_id = NULL WHERE id = :id",
+                    {"id": task_id},
+                )
+
+            issues_found.append(("abandoned_work", "fixable", issue, fix_fn))
+            if verbose:
+                console.print(f"  [yellow]⚠[/yellow] {issue}")
+        console.print(f"  [yellow]⚠[/yellow]  Found {len(abandoned_tasks)} tasks abandoned by ended missions")
+        console.print("  [cyan]💡 These tasks should be manually reviewed and marked COMPLETE or TODO[/cyan]")
+    else:
+        console.print("  [green]✓[/green] No tasks abandoned by ended missions")
+
+    # Check for orphaned UNDERWAY tasks (UNDERWAY but no mission)
+    orphaned_underway = db.execute_query("""
+        SELECT id, title, claimed_at
+        FROM tasks
+        WHERE status = 'UNDERWAY'
+        AND current_mission_id IS NULL
+    """)
+
+    if orphaned_underway:
+        for task in orphaned_underway:
+            issue = f"Task {task['id']} ({task['title']}): status is UNDERWAY but not claimed by any mission"
+            issues_found.append(("abandoned_work", "warning", issue, None))
+            if verbose:
+                console.print(f"  [yellow]⚠[/yellow] {issue}")
+        console.print(f"  [yellow]⚠[/yellow]  Found {len(orphaned_underway)} orphaned UNDERWAY tasks")
+        console.print("  [cyan]💡 These tasks should be manually reviewed and released or completed[/cyan]")
+    else:
+        console.print("  [green]✓[/green] No orphaned UNDERWAY tasks")
+
+    # Check for stale active missions (no end_time, but mission file is old)
+    from datetime import timedelta
+
+    stale_threshold = datetime.now(timezone.utc) - timedelta(hours=48)
+    active_missions = db.execute_query("""
+        SELECT id, codename, persona_name, start_time, mission_file
+        FROM missions
+        WHERE end_time IS NULL
+    """)
+
+    stale_missions = []
+    for mission in active_missions:
+        if mission.get("mission_file"):
+            mission_path = opencode_dir / mission["mission_file"]
+            if mission_path.exists():
+                # Check file modification time
+                mtime = datetime.fromtimestamp(mission_path.stat().st_mtime, tz=timezone.utc)
+                if mtime < stale_threshold:
+                    stale_missions.append((mission, mtime))
+                    issue = (
+                        f"Mission #{mission['id']} ({mission['codename']}): active but no activity "
+                        f"for {(datetime.now(timezone.utc) - mtime).days} days"
+                    )
+                    issues_found.append(("abandoned_work", "warning", issue, None))
+                    if verbose:
+                        console.print(f"  [yellow]⚠[/yellow] {issue}")
+
+    if stale_missions:
+        console.print(f"  [yellow]⚠[/yellow]  Found {len(stale_missions)} stale active missions (>48 hours inactive)")
+        console.print("  [cyan]💡 Consider using 's9 agent end <id>' to close abandoned missions[/cyan]")
+    else:
+        console.print("  [green]✓[/green] No stale active missions")
+
+    console.print()
+
+    # Check 6: Task Files Exist
+    console.print("[bold]6. Checking task files...[/bold]")
 
     tasks_with_files = db.execute_query("SELECT id, title, file_path FROM tasks WHERE file_path IS NOT NULL")
     missing_task_files = []
