@@ -96,7 +96,7 @@ def render_all_templates(renderer: TemplateRenderer, output_dir: Path, context: 
         # Agents
         "base/docs/agents/administrator.md.jinja": "docs/agents/administrator.md",
         "base/docs/agents/architect.md.jinja": "docs/agents/architect.md",
-        "base/docs/agents/builder.md.jinja": "docs/agents/builder.md",
+        "base/docs/agents/engineer.md.jinja": "docs/agents/engineer.md",
         "base/docs/agents/tester.md.jinja": "docs/agents/tester.md",
         "base/docs/agents/documentarian.md.jinja": "docs/agents/documentarian.md",
         "base/docs/agents/designer.md.jinja": "docs/agents/designer.md",

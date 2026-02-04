@@ -70,14 +70,36 @@ s9 init --force
 Show project overview with active personas and task summary.
 
 ```bash
-s9 dashboard
+s9 dashboard [OPTIONS]
 ```
+
+**Options:**
+- `--epic EPIC_ID, -e EPIC_ID` - Show epic-specific dashboard
+- `--role ROLE, -r ROLE` - Filter by role
 
 **Output includes:**
 - Quick stats (active personas, total tasks, in progress, completed)
+- Active epics (top 5 TODO/UNDERWAY)
 - Active missions table
 - Task summary by status
 - Recent tasks (last 10)
+
+**Examples:**
+
+Full dashboard:
+```bash
+s9 dashboard
+```
+
+Epic-specific view:
+```bash
+s9 dashboard --epic EPC-H-0001
+```
+
+Role-filtered view:
+```bash
+s9 dashboard --role Engineer
+```
 
 **Example output:**
 ```
@@ -139,7 +161,7 @@ s9 changelog --format json --output changelog.json
 
 ## 2026-01-30
 
-### Builder
+### Engineer
 - BLD-H-0003: Implement JWT authentication
 - BLD-M-0008: Add input validation to API endpoints
 
@@ -227,7 +249,7 @@ s9 mission start <name> --role <ROLE> [OPTIONS]
 **Valid Roles:**
 - `Administrator` - Project coordination
 - `Architect` - System design
-- `Builder` - Implementation
+- `Engineer` - Implementation
 - `Tester` - Quality assurance
 - `Documentarian` - Documentation
 - `Designer` - UI/UX design
@@ -236,9 +258,9 @@ s9 mission start <name> --role <ROLE> [OPTIONS]
 
 **Examples:**
 
-Start a Builder mission:
+Start a Engineer mission:
 ```bash
-s9 mission start azazel --role Builder --task "Implement authentication"
+s9 mission start azazel --role Engineer --task "Implement authentication"
 ```
 
 Start without task description:
@@ -248,14 +270,14 @@ s9 mission start belial --role Administrator
 
 Start with suffix (for second instance):
 ```bash
-s9 mission start azazel-ii --role Builder
+s9 mission start azazel-ii --role Engineer
 ```
 
 **Output:**
 ```
 ✓ Started mission #1
   Name: azazel
-  Role: Builder
+  Role: Engineer
   Task: Implement authentication
 ```
 
@@ -287,7 +309,7 @@ s9 mission list --active-only
 
 Filter by role:
 ```bash
-s9 mission list --role Builder
+s9 mission list --role Engineer
 ```
 
 **Output:**
@@ -296,7 +318,7 @@ s9 mission list --role Builder
 ┏━━━━┳━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┓
 ┃ ID ┃ Name   ┃ Role    ┃ Status      ┃ Start Time ┃
 ┡━━━━╇━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━┩
-│ 1  │ azazel │ Builder │ in-progress │ 14:30:15   │
+│ 1  │ azazel │ Engineer │ in-progress │ 14:30:15   │
 │ 2  │ belial │ Administrator │ completed   │ 13:20:00   │
 └────┴────────┴─────────┴─────────────┴────────────┘
 ```
@@ -324,7 +346,7 @@ s9 mission show 1
 Mission #1
   Name: azazel
   Base Name: azazel
-  Role: Builder
+  Role: Engineer
   Status: in-progress
   Mission Date: 2026-01-30
   Start Time: 14:30:15
@@ -491,7 +513,7 @@ Which role should I assume for this mission?
 
   • Administrator: coordinate and delegate to other personas
   • Architect: design systems and make technical decisions
-  • Builder: implement features and write code
+  • Engineer: implement features and write code
   • Tester: write tests and validate functionality
   • Documentarian: create documentation and guides
   • Designer: design user interfaces and experiences
@@ -548,7 +570,7 @@ s9 mission rename-tui <name> <role> [OPTIONS]
 
 **Arguments:**
 - `name` - Persona name (e.g., `calliope`, `atlas-ii`)
-- `role` - Persona role (e.g., `Documentarian`, `Builder`)
+- `role` - Persona role (e.g., `Documentarian`, `Engineer`)
 
 **Options:**
 - `--session-id ID, -s ID` - OpenCode session ID (if multiple sessions open)
@@ -562,7 +584,7 @@ s9 mission rename-tui calliope Documentarian
 
 Rename specific session:
 ```bash
-s9 mission rename-tui atlas Builder --session-id ses_3e058ebd6ffebwwd2lKOcGt1iw
+s9 mission rename-tui atlas Engineer --session-id ses_3e058ebd6ffebwwd2lKOcGt1iw
 ```
 
 **Output:**
@@ -612,7 +634,7 @@ s9 task list --status TODO
 
 Filter by role:
 ```bash
-s9 task list --role Builder
+s9 task list --role Engineer
 ```
 
 Filter by persona:
@@ -655,7 +677,7 @@ Task T001
   Title: Implement authentication
   Status: TODO
   Priority: HIGH
-  Role: Builder
+  Role: Engineer
   Objective: Build user login system
   Description: Implement JWT-based authentication...
   File: .opencode/planning/T001.md
@@ -836,9 +858,9 @@ Only active tasks:
 s9 task report --active-only
 ```
 
-Builder tasks only:
+Engineer tasks only:
 ```bash
-s9 task report --role Builder
+s9 task report --role Engineer
 ```
 
 **Output:**
@@ -860,7 +882,7 @@ By Priority:
   LOW      : 5 tasks
 
 By Role:
-  Builder      : 9 tasks
+  Engineer      : 9 tasks
   Tester       : 6 tasks
   Operator     : 4 tasks
   Documentarian: 4 tasks
@@ -890,9 +912,9 @@ Search for "auth" in all tasks:
 s9 task search auth
 ```
 
-Search active Builder tasks:
+Search active Engineer tasks:
 ```bash
-s9 task search validation --role Builder --active-only
+s9 task search validation --role Engineer --active-only
 ```
 
 **Output:**
@@ -930,9 +952,9 @@ Get 3 task suggestions:
 s9 task next
 ```
 
-Suggest Builder tasks:
+Suggest Engineer tasks:
 ```bash
-s9 task next --role Builder --count 5
+s9 task next --role Engineer --count 5
 ```
 
 **Output:**
@@ -1042,9 +1064,10 @@ s9 task create --title <TITLE> --role <ROLE> [OPTIONS]
 - `--priority PRIORITY, -p PRIORITY` - Task priority (default: `MEDIUM`)
 - `--category TEXT, -c TEXT` - Task category (optional)
 - `--description TEXT, -d TEXT` - Detailed description (optional)
+- `--epic EPIC_ID, -e EPIC_ID` - Link task to an epic (optional)
 
 **Valid Roles:**
-- `Administrator`, `Architect`, `Builder`, `Tester`, `Documentarian`, `Designer`, `Inspector`, `Operator`
+- `Administrator`, `Architect`, `Engineer`, `Tester`, `Documentarian`, `Designer`, `Inspector`, `Operator`
 
 **Valid Priorities:**
 - `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`
@@ -1053,17 +1076,26 @@ s9 task create --title <TITLE> --role <ROLE> [OPTIONS]
 
 Create a high-priority task:
 ```bash
-s9 task create --title "Implement JWT authentication" --role Builder --priority HIGH
+s9 task create --title "Implement JWT authentication" --role Engineer --priority HIGH
 ```
 
 With category and description:
 ```bash
 s9 task create \
   --title "Add user login API" \
-  --role Builder \
+  --role Engineer \
   --priority HIGH \
   --category "Authentication" \
   --description "Build REST endpoint for user authentication with JWT tokens"
+```
+
+Create task linked to an epic:
+```bash
+s9 task create \
+  --title "Design auth architecture" \
+  --role Architect \
+  --priority HIGH \
+  --epic EPC-H-0001
 ```
 
 **Task ID Format:**
@@ -1081,6 +1113,348 @@ Task IDs are auto-generated with format: `{ROLE}-{PRIORITY}-{NUMBER}`
 ✓ Created task BLD-H-0003: Implement JWT authentication
   File: .opencode/planning/BLD-H-0003.md
 ```
+
+---
+
+### `s9 epic create`
+
+Create a new epic to group related tasks.
+
+```bash
+s9 epic create --title <TITLE> --priority <PRIORITY> [OPTIONS]
+```
+
+**Options:**
+- `--title TEXT, -t TEXT` - Epic title (required)
+- `--priority PRIORITY, -p PRIORITY` - Epic priority (required)
+- `--description TEXT, -d TEXT` - Detailed description (optional)
+
+**Valid Priorities:**
+- `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`
+
+**Examples:**
+
+Create a high-priority epic:
+```bash
+s9 epic create --title "User Authentication System" --priority HIGH
+```
+
+With description:
+```bash
+s9 epic create \
+  --title "User Authentication System" \
+  --priority HIGH \
+  --description "Implement complete user authentication including login, registration, and password reset"
+```
+
+**Epic ID Format:**
+
+Epic IDs are auto-generated with format: `EPC-{P}-{NNNN}`
+
+- `EPC` - Epic prefix (constant)
+- `{P}` - Priority code: `C` (Critical), `H` (High), `M` (Medium), `L` (Low)
+- `{NNNN}` - Sequential 4-digit number (padded with zeros)
+
+**Examples:** `EPC-H-0001`, `EPC-C-0015`, `EPC-M-0042`
+
+**Output:**
+```
+✓ Created epic EPC-H-0001
+  Title: User Authentication System
+  Priority: HIGH
+  Status: TODO
+  File: .opencode/work/epics/EPC-H-0001.md
+```
+
+---
+
+### `s9 epic list`
+
+List epics with optional filters.
+
+```bash
+s9 epic list [OPTIONS]
+```
+
+**Options:**
+- `--status STATUS, -s STATUS` - Filter by status
+- `--priority PRIORITY, -p PRIORITY` - Filter by priority
+
+**Valid Statuses:**
+- `TODO`, `UNDERWAY`, `COMPLETE`, `ABORTED`
+
+**Examples:**
+
+List all epics:
+```bash
+s9 epic list
+```
+
+Filter by status:
+```bash
+s9 epic list --status UNDERWAY
+```
+
+Filter by priority:
+```bash
+s9 epic list --priority HIGH
+```
+
+Combine filters:
+```bash
+s9 epic list --status UNDERWAY --priority HIGH
+```
+
+**Output:**
+```
+                                    Epics
+┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┓
+┃ ID         ┃ Title                      ┃ Status     ┃ Priority ┃ Progress ┃ Created            ┃
+┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━┩
+│ EPC-H-0001 │ User Authentication System │ 🚧 UNDERWAY│ HIGH     │ 3/5 (60%)│ 2026-02-04 10:30:00│
+│ EPC-H-0002 │ API Documentation          │ 📋 TODO    │ HIGH     │ 0/3 (0%) │ 2026-02-04 11:15:00│
+│ EPC-M-0003 │ UI Refactoring             │ 🚧 UNDERWAY│ MEDIUM   │ 2/8 (25%)│ 2026-02-04 12:00:00│
+└────────────┴────────────────────────────┴────────────┴──────────┴──────────┴────────────────────┘
+```
+
+---
+
+### `s9 epic show`
+
+Show detailed information about an epic.
+
+```bash
+s9 epic show <EPIC_ID>
+```
+
+**Arguments:**
+- `EPIC_ID` - Epic ID (e.g., `EPC-H-0001`)
+
+**Example:**
+```bash
+s9 epic show EPC-H-0001
+```
+
+**Output:**
+```
+Epic EPC-H-0001: User Authentication System
+
+Status: 🚧 UNDERWAY
+Priority: HIGH
+Created: 2026-02-04 10:30:00
+Updated: 2026-02-04 15:45:00
+
+Progress: 3/5 tasks complete (60%)
+[████████████████████░░░░░░░░░░] 60%
+
+Subtasks:
+┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┓
+┃ Task ID    ┃ Title                          ┃ Status     ┃ Role         ┃ Priority ┃
+┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━┩
+│ ARC-H-0015 │ Design auth architecture       │ ✅ COMPLETE│ Architect    │ HIGH     │
+│ BLD-H-0016 │ Implement login endpoint       │ ✅ COMPLETE│ Engineer      │ HIGH     │
+│ BLD-H-0017 │ Implement registration         │ 🔵 UNDERWAY│ Engineer      │ HIGH     │
+│ TST-M-0018 │ Write auth tests               │ ⬜ TODO    │ Tester       │ MEDIUM   │
+│ DOC-M-0019 │ Document auth API              │ ⬜ TODO    │ Documentarian│ MEDIUM   │
+└────────────┴────────────────────────────────┴────────────┴──────────────┴──────────┘
+
+Description:
+Implement complete user authentication including login, registration, and password reset
+```
+
+---
+
+### `s9 epic update`
+
+Update epic metadata.
+
+```bash
+s9 epic update <EPIC_ID> [OPTIONS]
+```
+
+**Arguments:**
+- `EPIC_ID` - Epic ID (e.g., `EPC-H-0001`)
+
+**Options:**
+- `--title TEXT, -t TEXT` - New title
+- `--description TEXT, -d TEXT` - New description
+- `--priority PRIORITY, -p PRIORITY` - New priority
+
+**Examples:**
+
+Update title:
+```bash
+s9 epic update EPC-H-0001 --title "User Authentication and Authorization"
+```
+
+Change priority:
+```bash
+s9 epic update EPC-H-0001 --priority CRITICAL
+```
+
+Update description:
+```bash
+s9 epic update EPC-H-0001 --description "Extended scope to include role-based access control"
+```
+
+**Output:**
+```
+✓ Updated epic EPC-H-0001
+  Title: User Authentication and Authorization
+```
+
+---
+
+### `s9 epic abort`
+
+Abort an epic and all its subtasks.
+
+```bash
+s9 epic abort <EPIC_ID> --reason <REASON> [OPTIONS]
+```
+
+**Arguments:**
+- `EPIC_ID` - Epic ID (e.g., `EPC-H-0001`)
+
+**Options:**
+- `--reason TEXT, -r TEXT` - Reason for aborting (required)
+- `--yes, -y` - Skip confirmation prompt
+
+**Examples:**
+
+Abort with confirmation:
+```bash
+s9 epic abort EPC-H-0001 --reason "Requirements changed; switching to OAuth instead"
+```
+
+Skip confirmation:
+```bash
+s9 epic abort EPC-H-0001 --reason "Project cancelled" --yes
+```
+
+**What it does:**
+- Sets epic status to ABORTED
+- Cascades ABORTED status to ALL subtasks
+- Records abort reason and timestamp
+- Protects epic from future auto-updates
+
+**Confirmation prompt:**
+```
+⚠️  WARNING: Aborting epic will also abort ALL 5 subtasks
+
+Epic: EPC-H-0001 - User Authentication System
+Subtasks that will be aborted:
+  • ARC-H-0015 - Design auth architecture
+  • BLD-H-0016 - Implement login endpoint
+  • BLD-H-0017 - Implement registration
+  • TST-M-0018 - Write auth tests
+  • DOC-M-0019 - Document auth API
+
+Abort reason: Requirements changed; switching to OAuth instead
+
+Continue? [y/N]:
+```
+
+**Output:**
+```
+✓ Epic EPC-H-0001 aborted
+  Reason: Requirements changed; switching to OAuth instead
+  Affected tasks: 5
+```
+
+---
+
+### `s9 epic sync`
+
+Synchronize epic markdown files with database.
+
+```bash
+s9 epic sync [OPTIONS]
+```
+
+**Options:**
+- `--epic EPIC_ID, -e EPIC_ID` - Sync specific epic (syncs all if omitted)
+
+**Examples:**
+
+Sync all epics:
+```bash
+s9 epic sync
+```
+
+Sync specific epic:
+```bash
+s9 epic sync --epic EPC-H-0001
+```
+
+**What it does:**
+- Regenerates epic markdown files from database
+- Updates header with current metadata
+- Regenerates progress and subtasks sections
+- Preserves user-edited sections (Description, Goals, Success Criteria, Notes)
+
+**Output:**
+```
+Syncing epics...
+
+✓ EPC-H-0001.md - Regenerated
+✓ EPC-H-0002.md - Regenerated
+✓ EPC-M-0003.md - Regenerated
+
+Summary: 3 epics synced
+```
+
+---
+
+### `s9 task link`
+
+Link an existing task to an epic.
+
+```bash
+s9 task link <TASK_ID> <EPIC_ID>
+```
+
+**Arguments:**
+- `TASK_ID` - Task ID (e.g., `BLD-H-0059`)
+- `EPIC_ID` - Epic ID (e.g., `EPC-H-0001`)
+
+**Example:**
+```bash
+s9 task link BLD-H-0059 EPC-H-0001
+```
+
+**Output:**
+```
+✓ Linked task BLD-H-0059 to epic EPC-H-0001
+```
+
+**Note:** A task can only belong to one epic at a time. Linking a task to a new epic will unlink it from its previous
+epic.
+
+---
+
+### `s9 task unlink`
+
+Remove a task from its epic.
+
+```bash
+s9 task unlink <TASK_ID>
+```
+
+**Arguments:**
+- `TASK_ID` - Task ID (e.g., `BLD-H-0059`)
+
+**Example:**
+```bash
+s9 task unlink BLD-H-0059
+```
+
+**Output:**
+```
+✓ Unlinked task BLD-H-0059 from epic EPC-H-0001
+```
+
+**Note:** The task becomes standalone after unlinking (not deleted).
 
 ---
 
@@ -1152,9 +1526,9 @@ List all names:
 s9 name list
 ```
 
-List unused Builder names:
+List unused Engineer names:
 ```bash
-s9 name list --role Builder --unused-only
+s9 name list --role Engineer --unused-only
 ```
 
 Sort by most-used:
@@ -1170,7 +1544,7 @@ s9 name list --by-usage
 ┡━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━┩
 │ azazel        │ Inspec…  │ Judaism    │ 2           │
 │ calliope      │ Document │ Greek      │ 1           │
-│ atlas         │ Builder  │ Greek      │ 0           │
+│ atlas         │ Engineer  │ Greek      │ 0           │
 └───────────────┴──────────┴────────────┴─────────────┘
 ```
 
@@ -1192,9 +1566,9 @@ s9 name suggest <role> [OPTIONS]
 
 **Examples:**
 
-Get 3 suggestions for Builder:
+Get 3 suggestions for Engineer:
 ```bash
-s9 name suggest Builder
+s9 name suggest Engineer
 ```
 
 Get 5 suggestions:
@@ -1204,7 +1578,7 @@ s9 name suggest Documentarian --count 5
 
 **Output:**
 ```
-Suggested names for Builder:
+Suggested names for Engineer:
 
 1. hephaestus (Greek) - unused
    Greek god of blacksmiths and craftsmen
@@ -1238,7 +1612,7 @@ s9 name usage atlas
 ```
 Persona name: atlas
   Mythology: Greek
-  Primary role: Builder
+  Primary role: Engineer
   Description: Titan who holds up the sky
 
 Usage history:
@@ -1246,8 +1620,8 @@ Usage history:
   Last used: 2026-01-30 14:30:15
 
 Missions:
-  #15 - atlas    - Builder (2026-01-30 14:30:15)
-  #8  - atlas-ii - Builder (2026-01-29 09:15:00)
+  #15 - atlas    - Engineer (2026-01-30 14:30:15)
+  #8  - atlas-ii - Engineer (2026-01-29 09:15:00)
 ```
 
 ---
@@ -1305,7 +1679,7 @@ s9 settings show
 **Output:**
 ```
 Current settings:
-  default_role: Builder
+  default_role: Engineer
   log_level: INFO
   database_path: .opencode/data/project.db
 ```

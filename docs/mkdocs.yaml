@@ -34,6 +34,7 @@ nav:
   - Quickstart: quickstart.md
   - Agent Roles: roles.md
   - Directory Structure: structure.md
+  - Epics: epics.md
   - Advanced Topics: advanced.md
   - CLI Reference: reference.md
 plugins:

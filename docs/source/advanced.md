@@ -35,7 +35,7 @@ opencode
 > ✓ Created task BLD-H-0002
 >   Title: Implement authentication API endpoints
 >   Priority: HIGH
->   Role: Builder
+>   Role: Engineer
 >   Dependencies: ARC-H-0001
 >   Description: Build login, logout, refresh, and password reset endpoints
 > 
@@ -53,7 +53,7 @@ opencode
 >   Dependencies: BLD-H-0002
 >   Description: API documentation with examples for all auth endpoints
 > 
-> The tasks are ready. I recommend starting with the Architect designing the approach, then handing off to the Builder.
+> The tasks are ready. I recommend starting with the Architect designing the approach, then handing off to the Engineer.
 
 ---
 
@@ -94,7 +94,7 @@ opencode
 > The architecture is documented and ready for implementation. Task ARC-H-0001 is complete.
 
 **You (in Terminal 2):**
-> Hand this off to a Builder persona to implement
+> Hand this off to a Engineer persona to implement
 
 **Kothar (Architect):**
 > I'll update the handoff for task BLD-H-0002.
@@ -115,24 +115,24 @@ opencode
 > All design decisions documented in docs/adr/0003-authentication-strategy.md
 > ```
 > 
-> Task BLD-H-0002 is ready for a Builder to claim.
+> Task BLD-H-0002 is ready for a Engineer to claim.
 
 ---
 
-**Terminal 3 - Builder Persona:**
+**Terminal 3 - Engineer Persona:**
 ```bash
 opencode
 ```
 ```
 /summon
-# Select: Builder
+# Select: Engineer
 # Choose persona: Azazel
 ```
 
 **You (in Terminal 3):**
 > Claim task BLD-H-0002 and implement it based on Kothar's architecture
 
-**Azazel (Builder):**
+**Azazel (Engineer):**
 > I'll claim BLD-H-0002 and implement the authentication system.
 > 
 > ✓ Claimed task BLD-H-0002
@@ -217,17 +217,17 @@ opencode
 
 ### Coordination Patterns
 
-**Pattern 1: Builder → Tester Pipeline**
+**Pattern 1: Engineer → Tester Pipeline**
 
-Have a Builder implement features in one terminal while a Tester writes tests in another terminal, creating a continuous feedback loop.
+Have a Engineer implement features in one terminal while a Tester writes tests in another terminal, creating a continuous feedback loop.
 
-**Pattern 2: Architect → Builder Handoff**
+**Pattern 2: Architect → Engineer Handoff**
 
-Use an Architect to design the system in one terminal, then hand off the specifications to a Builder in another terminal for implementation.
+Use an Architect to design the system in one terminal, then hand off the specifications to a Engineer in another terminal for implementation.
 
-**Pattern 3: Builder → Inspector Review**
+**Pattern 3: Engineer → Inspector Review**
 
-After a Builder completes work, bring in an Inspector in a separate terminal to review the code and suggest improvements.
+After a Engineer completes work, bring in an Inspector in a separate terminal to review the code and suggest improvements.
 
 **Pattern 4: Administrator Orchestration**
 
@@ -269,7 +269,7 @@ Instead of querying databases or running commands, ask your personas for insight
 > | Kothar       | 6        | 6         |
 > | Nabu         | 4        | 3         |
 > 
-> Azazel (Builder) has been the most active, with a strong completion rate.
+> Azazel (Engineer) has been the most active, with a strong completion rate.
 
 ### Task Dependencies
 
@@ -287,7 +287,7 @@ Instead of querying databases or running commands, ask your personas for insight
 > 
 > - **DOC-H-0018** (API documentation update)
 >   - Blocked by: BLD-H-0015, BLD-H-0016, BLD-H-0017
->   - Status: Waiting on 3 Builder tasks
+>   - Status: Waiting on 3 Engineer tasks
 > 
 > The main bottleneck is architectural work. Once ARC-H-0014 completes, several tasks can proceed.
 
@@ -304,7 +304,7 @@ cp .opencode/personas/builder.md .opencode/personas/builder-custom.md
 
 2. Edit the template to add project-specific guidelines:
 ```markdown
-# Builder Persona
+# Engineer Persona
 
 ## Project-Specific Guidelines
 
@@ -333,7 +333,7 @@ Create custom workflow documents in `.opencode/procedures/`:
    - Document security requirements
    - Plan token management strategy
 
-2. **Implementation Phase (Builder)**
+2. **Implementation Phase (Engineer)**
    - Implement auth endpoints in `src/api/auth.py`
    - Add middleware to `src/middleware/auth.py`
    - Update user model with password hashing
@@ -372,10 +372,10 @@ Instead of using CLI commands, ask personas to create tasks conversationally:
 > ✓ Created task BLD-H-0015
 >   Title: Implement rate limiting on API
 >   Priority: HIGH
->   Role: Builder
+>   Role: Engineer
 >   Status: TODO
 > 
-> The task is ready for a Builder to claim.
+> The task is ready for a Engineer to claim.
 
 ### Ask Personas About Dependencies
 
@@ -415,14 +415,14 @@ Instead of using CLI commands, ask personas to create tasks conversationally:
 > ✓ Created task BLD-H-0021
 >   Title: Implement notification backend
 >   Priority: HIGH
->   Role: Builder
+>   Role: Engineer
 >   Dependencies: ARC-H-0020
 >   Description: Build notification service, API endpoints, and data storage
 > 
 > ✓ Created task BLD-H-0022
 >   Title: Add notification frontend components
 >   Priority: HIGH
->   Role: Builder
+>   Role: Engineer
 >   Dependencies: BLD-H-0021
 >   Description: Create notification UI, toast/banner components, and real-time updates
 > 
@@ -441,6 +441,67 @@ Instead of using CLI commands, ask personas to create tasks conversationally:
 >   Description: API docs, user guide for managing notifications
 > 
 > I've created 5 tasks with proper dependencies. Start with the Architect designing the system.
+
+
+### Group Related Tasks with Epics
+
+For large features spanning multiple tasks, use epics to track overall progress:
+
+**You:**
+> Create an epic for the notification system work
+
+**Persona (Administrator):**
+> I'll create an epic to group these notification tasks.
+> 
+> ✓ Created epic EPC-H-0005
+>   Title: Notification System Implementation
+>   Priority: HIGH
+>   Status: TODO
+> 
+> Now I'll link the related tasks to this epic...
+> 
+> ✓ Linked task ARC-H-0020 to epic EPC-H-0005
+> ✓ Linked task BLD-H-0021 to epic EPC-H-0005
+> ✓ Linked task BLD-H-0022 to epic EPC-H-0005
+> ✓ Linked task TST-M-0023 to epic EPC-H-0005
+> ✓ Linked task DOC-M-0024 to epic EPC-H-0005
+> 
+> The epic is ready! You can track overall progress with `s9 dashboard --epic EPC-H-0005`
+
+**Later, checking progress:**
+
+**You:**
+> What's the status of the notification system epic?
+
+**Persona (Administrator):**
+> Let me check epic EPC-H-0005...
+> 
+> **Epic: Notification System Implementation**
+> Status: 🚧 UNDERWAY
+> Progress: 2/5 tasks complete (40%)
+> 
+> ✅ **Complete:**
+> - ARC-H-0020 - Design architecture (Kothar)
+> - BLD-H-0021 - Backend implementation (Azazel)
+> 
+> 🔄 **In Progress:**
+> - BLD-H-0022 - Frontend components (Azazel)
+> 
+> 📋 **TODO:**
+> - TST-M-0023 - Test notification delivery
+> - DOC-M-0024 - Document system
+> 
+> We're making good progress! The architecture and backend are done, and the frontend is underway.
+
+**Benefits of using epics:**
+
+1. **Visibility** - See overall feature progress at a glance
+2. **Organization** - Group related tasks logically
+3. **Auto-status** - Epic status updates automatically as tasks progress
+4. **Coordination** - Easier to coordinate work across multiple personas
+5. **Tracking** - Track feature completion from start to finish
+
+See the [Epics guide](epics.md) for detailed information on working with epics.
 
 ### Check Task Status
 
@@ -481,7 +542,7 @@ Instead of using CLI commands, ask personas to create tasks conversationally:
 > ✓ Status changed to TODO
 > ✓ Unassigned from Azazel
 > 
-> The task is now available for another Builder to claim, or Azazel can reclaim it with a fresh approach.
+> The task is now available for another Engineer to claim, or Azazel can reclaim it with a fresh approach.
 
 ### Find Related Tasks
 
