@@ -45,7 +45,7 @@ def version() -> None:
 # Imports are at the end to avoid circular imports
 def _register_subcommands() -> None:
     """Register CLI subcommands"""
-    from site_nine.cli import config, edit, mission, name, review, task, template
+    from site_nine.cli import config, edit, handoff, mission, name, review, task, template
     from site_nine.cli.changelog import changelog_command
     from site_nine.cli.check import check_command
     from site_nine.cli.dashboard import dashboard_command
@@ -66,6 +66,7 @@ def _register_subcommands() -> None:
     app.add_typer(name.app, name="name")
     app.add_typer(edit.app, name="edit")
     app.add_typer(review.app, name="review")
+    app.add_typer(handoff.app, name="handoff")
 
 
 # Register subcommands when module is imported

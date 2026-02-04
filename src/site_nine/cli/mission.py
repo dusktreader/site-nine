@@ -146,6 +146,160 @@ def show(
 
 
 @app.command()
+@handle_errors("Failed to generate mission summary")
+def summary(
+    mission_id: int = typer.Argument(..., help="Mission ID"),
+) -> None:
+    """Generate mission summary from git history and database
+
+    Auto-generates a summary showing:
+    - Files changed since mission start
+    - Commits made (filtered by persona)
+    - Tasks claimed and their status
+    """
+    manager = _get_manager()
+    mission = manager.get_mission(mission_id)
+
+    if not mission:
+        console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
+        raise typer.Exit(1)
+
+    console.print(
+        f"\n[bold cyan]Mission Summary for #{mission.id} ({mission.persona_name} - {mission.role})[/bold cyan]\n"
+    )
+
+    # Mission details
+    console.print(f"[bold]Mission Details:[/bold]")
+    console.print(f"  Codename: {mission.codename}")
+    console.print(f"  Start: {mission.start_time}")
+    if mission.end_time:
+        console.print(f"  End: {mission.end_time}")
+    if mission.objective:
+        console.print(f"  Objective: {mission.objective}")
+
+    # Get files changed via git
+    console.print(f"\n[bold]Files Changed:[/bold]")
+    try:
+        import subprocess
+
+        # Get files changed since mission start using git diff
+        result = subprocess.run(
+            ["git", "diff", "--name-status", f"@{{'{mission.start_time}'}}", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        if result.returncode == 0 and result.stdout.strip():
+            for line in result.stdout.strip().split("\n"):
+                parts = line.split("\t", 1)
+                if len(parts) == 2:
+                    status, filepath = parts
+                    status_map = {"M": "modified", "A": "added", "D": "deleted", "R": "renamed"}
+                    status_display = status_map.get(status[0], status)
+                    console.print(f"  • [{status_display}] {filepath}")
+        else:
+            # Fallback: use git log --name-status
+            result = subprocess.run(
+                ["git", "log", "--name-status", "--pretty=format:", f"--since={mission.start_time}"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                files_seen = set()
+                for line in result.stdout.strip().split("\n"):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    parts = line.split("\t", 1)
+                    if len(parts) == 2:
+                        status, filepath = parts
+                        if filepath not in files_seen:
+                            files_seen.add(filepath)
+                            status_map = {"M": "modified", "A": "added", "D": "deleted", "R": "renamed"}
+                            status_display = status_map.get(status[0], status)
+                            console.print(f"  • [{status_display}] {filepath}")
+            else:
+                console.print("  [dim]No files changed (or git unavailable)[/dim]")
+
+    except Exception as e:
+        console.print(f"  [yellow]Could not retrieve git history: {e}[/yellow]")
+
+    # Get commits made
+    console.print(f"\n[bold]Commits:[/bold]")
+    try:
+        # Try to find commits with persona name in commit message
+        result = subprocess.run(
+            [
+                "git",
+                "log",
+                "--oneline",
+                f"--since={mission.start_time}",
+                f"--grep={mission.persona_name}",
+                "--grep=Mission:",
+                "--perl-regexp",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        if result.returncode == 0 and result.stdout.strip():
+            for line in result.stdout.strip().split("\n"):
+                console.print(f"  • {line}")
+        else:
+            # Show all commits since mission start
+            result = subprocess.run(
+                ["git", "log", "--oneline", f"--since={mission.start_time}", "-10"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                console.print("  [dim](Showing recent commits, may include other work):[/dim]")
+                for line in result.stdout.strip().split("\n"):
+                    console.print(f"  • {line}")
+            else:
+                console.print("  [dim]No commits found[/dim]")
+
+    except Exception as e:
+        console.print(f"  [yellow]Could not retrieve commits: {e}[/yellow]")
+
+    # Get tasks claimed
+    console.print(f"\n[bold]Tasks Claimed:[/bold]")
+    try:
+        from site_nine.tasks import TaskManager
+
+        task_manager = TaskManager(manager.db)
+
+        # Get all tasks for this mission
+        tasks = task_manager.list_tasks(mission_id=mission_id)
+
+        if tasks:
+            for task in tasks:
+                status_icon = {
+                    "COMPLETE": "✓",
+                    "UNDERWAY": "→",
+                    "PAUSED": "⏸",
+                    "BLOCKED": "🚫",
+                    "REVIEW": "👀",
+                    "TODO": "○",
+                    "ABORTED": "✗",
+                }.get(task.status, "?")
+                console.print(f"  {status_icon} [{task.status}] {task.id} - {task.title}")
+        else:
+            console.print("  [dim]No tasks claimed[/dim]")
+
+    except Exception as e:
+        console.print(f"  [yellow]Could not retrieve tasks: {e}[/yellow]")
+
+    console.print()
+    logger.info(f"Generated summary for mission {mission_id}")
+
+
+@app.command()
 @handle_errors("Failed to end mission")
 def end(
     mission_id: int = typer.Argument(..., help="Mission ID"),
