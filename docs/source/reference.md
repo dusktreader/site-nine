@@ -8,91 +8,133 @@ The s9 CLI is designed to be used by both **AI agents** and **human developers**
 
 ### Commands for Agent Workflows
 
-These commands are primarily used by AI agents during automated workflows, particularly during mission initialization and task execution:
+These commands are primarily used by AI agents during automated workflows, particularly during mission initialization and task execution.
 
 **Mission Management:**
-- `s9 mission start` - Register a new mission with persona and role
-- `s9 mission generate-session-uuid` - Generate UUID for session detection
-- `s9 mission rename-tui` - Rename OpenCode TUI session
-- `s9 mission update` - Update mission metadata
-- `s9 mission roles` - Display available agent roles
+
+```bash
+s9 mission start              # Register a new mission with persona and role
+s9 mission generate-session-uuid  # Generate UUID for session detection
+s9 mission rename-tui         # Rename OpenCode TUI session
+s9 mission update             # Update mission metadata
+s9 mission roles              # Display available agent roles
+```
 
 **Task Execution:**
-- `s9 task claim` - Claim a task for the active mission
-- `s9 task update` - Update task status during execution
-- `s9 task close` - Close a completed task
+
+```bash
+s9 task claim                 # Claim a task for the active mission
+s9 task update                # Update task status during execution
+s9 task close                 # Close a completed task
+```
 
 **Collaboration:**
-- `s9 handoff create` - Create a handoff to another role
-- `s9 handoff accept` - Accept a pending handoff
-- `s9 handoff complete` - Complete a handoff
+
+```bash
+s9 handoff create             # Create a handoff to another role
+s9 handoff accept             # Accept a pending handoff
+s9 handoff complete           # Complete a handoff
+```
 
 **Reviews:**
-- `s9 review create` - Create a review request
+
+```bash
+s9 review create              # Create a review request
+```
 
 **Personas:**
-- `s9 name suggest` - Get persona name suggestions
-- `s9 name set-bio` - Set persona biography
+
+```bash
+s9 name suggest               # Get persona name suggestions
+s9 name set-bio               # Set persona biography
+```
 
 ### Commands for Human Management
 
-These commands are primarily used by human developers for project oversight, planning, and coordination:
+These commands are primarily used by human developers for project oversight, planning, and coordination.
 
 **Project Overview:**
-- `s9 init` - Initialize project structure
-- `s9 dashboard` - View project overview with tasks and missions
-- `s9 doctor` - Run health checks and validate data integrity
-- `s9 reset` - Reset project data (dangerous!)
+
+```bash
+s9 init                       # Initialize project structure
+s9 dashboard                  # View project overview with tasks and missions
+s9 doctor                     # Run health checks and validate data integrity
+s9 reset                      # Reset project data (dangerous!)
+```
 
 **Task Planning:**
-- `s9 task create` - Create new tasks
-- `s9 task report` - Generate task summary reports
-- `s9 task next` - Get task suggestions
+
+```bash
+s9 task create                # Create new tasks
+s9 task report                # Generate task summary reports
+s9 task next                  # Get task suggestions
+```
 
 **Mission Management:**
-- `s9 mission list` - List all missions
-- `s9 mission summary` - Generate mission summaries
-- `s9 mission list-opencode-sessions` - List OpenCode TUI sessions
+
+```bash
+s9 mission list               # List all missions
+s9 mission summary            # Generate mission summaries
+s9 mission list-opencode-sessions  # List OpenCode TUI sessions
+```
 
 **Reviews & Approvals:**
-- `s9 review list` - List review requests
-- `s9 review approve` - Approve a review
-- `s9 review reject` - Reject a review
-- `s9 review blocked` - Show tasks blocked by reviews
+
+```bash
+s9 review list                # List review requests
+s9 review approve             # Approve a review
+s9 review reject              # Reject a review
+s9 review blocked             # Show tasks blocked by reviews
+```
 
 **Epic Management:**
-- `s9 epic create` - Create new epics
-- `s9 epic list` - List all epics
-- `s9 epic abort` - Abort an epic and its tasks
+
+```bash
+s9 epic create                # Create new epics
+s9 epic list                  # List all epics
+s9 epic abort                 # Abort an epic and its tasks
+```
 
 **Architecture Decisions:**
-- `s9 adr create` - Create Architecture Decision Records
-- `s9 adr list` - List ADRs
+
+```bash
+s9 adr create                 # Create Architecture Decision Records
+s9 adr list                   # List ADRs
+```
 
 **Release Management:**
-- `s9 changelog` - Generate changelogs from completed tasks
+
+```bash
+s9 changelog                  # Generate changelogs from completed tasks
+```
 
 **Utilities:**
-- `s9 summon` - Launch OpenCode with agent initialization
+
+```bash
+s9 summon                     # Launch OpenCode with agent initialization
+```
 
 ### Shared Commands (Used by Both)
 
-These commands are useful for both agents and humans:
+These commands are useful for both agents and humans.
 
 **Information & Inspection:**
-- `s9 mission show` - Show mission details
-- `s9 mission end` - End a mission
-- `s9 task show` - Show task details
-- `s9 task list` - List tasks with filters
-- `s9 task search` - Search tasks by keyword
-- `s9 task mine` - Show tasks claimed by a mission
-- `s9 handoff list` - List handoffs
-- `s9 handoff show` - Show handoff details
-- `s9 review show` - Show review details
-- `s9 name list` - List persona names
-- `s9 name show` - Show persona details
-- `s9 epic show` - Show epic details
-- `s9 adr show` - Show ADR details
+
+```bash
+s9 mission show               # Show mission details
+s9 mission end                # End a mission
+s9 task show                  # Show task details
+s9 task list                  # List tasks with filters
+s9 task search                # Search tasks by keyword
+s9 task mine                  # Show tasks claimed by a mission
+s9 handoff list               # List handoffs
+s9 handoff show               # Show handoff details
+s9 review show                # Show review details
+s9 name list                  # List persona names
+s9 name show                  # Show persona details
+s9 epic show                  # Show epic details
+s9 adr show                   # Show ADR details
+```
 
 ## Global Options
 
