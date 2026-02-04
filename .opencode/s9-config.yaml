@@ -1,0 +1,40 @@
+project:
+  name: site-nine
+  type: python
+  description: Generic orchestration framework for AI agent workflows in software
+    development
+features:
+  pm_system: true
+  session_tracking: true
+  commit_guidelines: true
+  daemon_naming: true
+agent_roles:
+- name: manager
+  enabled: true
+  description: Oversees project planning and task distribution
+- name: architect
+  enabled: true
+  description: Designs system architecture and technical decisions
+- name: builder
+  enabled: true
+  description: Implements features and writes code
+- name: tester
+  enabled: true
+  description: Creates and runs tests, ensures quality
+- name: documentarian
+  enabled: true
+  description: Writes and maintains documentation
+- name: designer
+  enabled: true
+  description: Handles UI/UX and visual design
+- name: inspector
+  enabled: true
+  description: Reviews code quality and best practices
+- name: operator
+  enabled: true
+  description: Manages deployment and operations
+customization:
+  personas_theme: mythology
+  variables:
+    framework: typer + typerdrive
+    testing: pytest

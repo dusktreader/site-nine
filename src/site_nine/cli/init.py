@@ -39,6 +39,43 @@ def init_command(
     # Create .opencode directory
     opencode_dir.mkdir(exist_ok=True)
 
+    # Save configuration to .opencode/s9-config.yaml
+    import yaml
+
+    config_path = opencode_dir / "s9-config.yaml"
+    with open(config_path, "w") as f:
+        yaml.safe_dump(
+            {
+                "project": {
+                    "name": hq_config.project.name,
+                    "type": hq_config.project.type,
+                    "description": hq_config.project.description,
+                },
+                "features": {
+                    "pm_system": hq_config.features.pm_system,
+                    "session_tracking": hq_config.features.session_tracking,
+                    "commit_guidelines": hq_config.features.commit_guidelines,
+                    "daemon_naming": hq_config.features.daemon_naming,
+                },
+                "agent_roles": [
+                    {
+                        "name": role.name,
+                        "enabled": role.enabled,
+                        "description": role.description,
+                    }
+                    for role in hq_config.agent_roles
+                ],
+                "customization": {
+                    "personas_theme": hq_config.customization.personas_theme,
+                    "variables": hq_config.customization.variables,
+                },
+            },
+            f,
+            default_flow_style=False,
+            sort_keys=False,
+        )
+    console.print(f"[green]✓[/green] Saved configuration to {config_path}")
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -67,8 +104,9 @@ def init_command(
     console.print(f"\n[bold green]✓[/bold green] Successfully initialized .opencode at {opencode_dir}")
     console.print("\n[cyan]Next steps:[/cyan]")
     console.print("  1. Review .opencode/README.md")
-    console.print("  2. Customize agent roles in .opencode/docs/agents/")
-    console.print("  3. Run: s9 dashboard")
+    console.print("  2. Review configuration in .opencode/s9-config.yaml")
+    console.print("  3. Customize agent roles in .opencode/docs/agents/")
+    console.print("  4. Run: s9 dashboard")
 
 
 def populate_personas(db: Database) -> None:

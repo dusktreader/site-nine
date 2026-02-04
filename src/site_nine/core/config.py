@@ -72,7 +72,7 @@ class HQueueConfig:
         default_roles = [
             AgentRoleConfig("manager"),
             AgentRoleConfig("architect"),
-            AgentRoleConfig("builder"),
+            AgentRoleConfig("engineer"),
             AgentRoleConfig("tester"),
             AgentRoleConfig("documentarian"),
             AgentRoleConfig("designer"),

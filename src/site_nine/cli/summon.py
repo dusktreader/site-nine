@@ -4,6 +4,8 @@ import subprocess
 import typer
 from rich.console import Console
 
+from site_nine.core.settings import get_default_model
+
 console = Console()
 
 
@@ -12,6 +14,7 @@ def summon_command(
     persona: str | None = typer.Option(None, "--persona", "-p", help="Specific persona name to use"),
     auto_assign: bool = typer.Option(False, "--auto-assign", "-a", help="Auto-assign top priority task for role"),
     task: str | None = typer.Option(None, "--task", "-t", help="Specific task ID to claim and start"),
+    model: str | None = typer.Option(None, "--model", "-m", help="Model to use (provider/model format)"),
     dry_run: bool = typer.Option(False, "--dry-run", "-d", help="Show command that would be run without executing"),
 ) -> None:
     """Launch OpenCode and automatically run /summon with specified role and flags
@@ -21,6 +24,7 @@ def summon_command(
         s9 summon operator --persona atlas
         s9 summon operator --auto-assign
         s9 summon operator --task OPR-H-0065
+        s9 summon operator --model github-copilot/gpt-5
     """
     # Validate flag conflicts
     if auto_assign and task:
@@ -29,6 +33,10 @@ def summon_command(
         console.print("- Use --task TASK-ID to claim a specific task")
         console.print("\nPlease use one or the other.")
         raise typer.Exit(1)
+
+    # Get model from config if not specified
+    if model is None:
+        model = get_default_model()
 
     # Build the /summon command
     summon_cmd = f"/summon {role}"
@@ -46,12 +54,12 @@ def summon_command(
     console.print(f"[cyan]🚀 Launching OpenCode with:[/cyan] {summon_cmd}")
 
     if dry_run:
-        console.print(f'[yellow]Dry run - would execute:[/yellow] opencode run "{summon_cmd}"')
+        console.print(f'[yellow]Dry run - would execute:[/yellow] opencode run --model {model} "{summon_cmd}"')
         return
 
     # Launch OpenCode with the /summon command
     try:
-        subprocess.run(["opencode", "run", summon_cmd], check=True)
+        subprocess.run(["opencode", "run", "--model", model, summon_cmd], check=True)
     except subprocess.CalledProcessError as e:
         console.print(f"[red]Error launching OpenCode: {e}[/red]")
         raise typer.Exit(1)

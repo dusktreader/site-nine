@@ -20,6 +20,9 @@ class SiteNineSettings(BaseModel):
     # Customization
     persona_theme: str = Field(default="mythology", description="Persona theme (mythology, tech, etc)")
     template_dir: str = Field(default="", description="Custom template directory (empty = use default)")
+    default_model: str = Field(
+        default="github-copilot/claude-sonnet-4.5", description="Default model for s9 summon command"
+    )
 
     class Config:
         """Pydantic configuration"""
@@ -32,3 +35,25 @@ class SiteNineSettings(BaseModel):
                 "persona_theme": "mythology",
             }
         }
+
+
+def get_default_model() -> str:
+    """Get the default model from user settings"""
+    from pathlib import Path
+    import json
+    from typerdrive import get_typerdrive_config
+
+    # Get the settings file path
+    config = get_typerdrive_config()
+    settings_path = Path(config.settings_path)
+
+    # Load from file if it exists
+    if settings_path.exists():
+        try:
+            data = json.loads(settings_path.read_text())
+            return data.get("default_model", "github-copilot/claude-sonnet-4.5")
+        except Exception:
+            pass
+
+    # Fallback if settings can't be loaded
+    return "github-copilot/claude-sonnet-4.5"
