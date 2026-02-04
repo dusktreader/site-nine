@@ -15,6 +15,7 @@ from typerdrive import handle_errors
 from site_nine.missions import MissionManager
 from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
+from site_nine.cli.json_utils import format_json_response, format_json_error, output_json
 
 app = typer.Typer(help="Manage missions")
 console = Console()
@@ -78,6 +79,7 @@ def start(
 def list(
     active_only: bool = typer.Option(False, "--active-only", help="Show only active missions"),
     role: str = typer.Option(None, "--role", "-r", help="Filter by role"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
     """List missions"""
     manager = _get_manager()
@@ -89,66 +91,118 @@ def list(
     missions = manager.list_missions(active_only=active_only, role=role)
 
     if not missions:
-        console.print("[yellow]No missions found.[/yellow]")
+        if json_output:
+            output_json(format_json_response([], count=0))
+        else:
+            console.print("[yellow]No missions found.[/yellow]")
         return
 
-    table = Table(title="Agent Sessions")
-    table.add_column("ID", style="cyan", justify="right")
-    table.add_column("Persona", style="magenta")
-    table.add_column("Role", style="green")
-    table.add_column("Codename", style="yellow")
-    table.add_column("Start Time", style="blue")
-    table.add_column("End Time", style="blue")
+    if json_output:
+        # Output JSON format
+        missions_data = [
+            {
+                "id": mission.id,
+                "persona_name": mission.persona_name,
+                "role": mission.role,
+                "codename": mission.codename,
+                "start_time": mission.start_time,
+                "end_time": mission.end_time,
+                "start_date": mission.start_date,
+                "objective": mission.objective,
+                "mission_file": mission.mission_file,
+            }
+            for mission in missions
+        ]
+        output_json(format_json_response(missions_data))
+        logger.debug(f"Listed {len(missions)} missions (JSON)")
+    else:
+        # Output table format
+        table = Table(title="Agent Sessions")
+        table.add_column("ID", style="cyan", justify="right")
+        table.add_column("Persona", style="magenta")
+        table.add_column("Role", style="green")
+        table.add_column("Codename", style="yellow")
+        table.add_column("Start Time", style="blue")
+        table.add_column("End Time", style="blue")
 
-    for mission in missions:
-        table.add_row(
-            str(mission.id),
-            mission.persona_name,
-            mission.role,
-            mission.codename,
-            mission.start_time or "",
-            mission.end_time or "",
-        )
+        for mission in missions:
+            table.add_row(
+                str(mission.id),
+                mission.persona_name,
+                mission.role,
+                mission.codename,
+                mission.start_time or "",
+                mission.end_time or "",
+            )
 
-    console.print(table)
-    logger.debug(f"Listed {len(missions)} missions")
+        console.print(table)
+        logger.debug(f"Listed {len(missions)} missions")
 
 
 @app.command()
 @handle_errors("Failed to show mission")
 def show(
     mission_id: int = typer.Argument(..., help="Mission ID"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
     """Show mission details"""
     manager = _get_manager()
     mission = manager.get_mission(mission_id)
 
     if not mission:
-        console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
+        if json_output:
+            output_json(
+                format_json_error(
+                    error_message=f"Mission #{mission_id} not found",
+                    error_code="MISSION_NOT_FOUND",
+                    details={"mission_id": mission_id},
+                )
+            )
+        else:
+            console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
         raise typer.Exit(1)
 
     # Determine status from end_time
     status = "Active" if mission.end_time is None else "Complete"
 
-    console.print(f"[bold]Mission #{mission.id}[/bold]")
-    console.print(f"  Persona: {mission.persona_name}")
-    console.print(f"  Codename: {mission.codename}")
-    console.print(f"  Role: {mission.role}")
-    console.print(f"  Status: {status}")
-    console.print(f"  Start Date: {mission.start_date}")
-    console.print(f"  Start Time: {mission.start_time}")
-    if mission.end_time:
-        console.print(f"  End Time: {mission.end_time}")
-    console.print(f"  Mission File: {mission.mission_file}")
-    if mission.objective:
-        console.print(f"  Objective: {mission.objective}")
-    logger.debug(f"Displayed details for mission {mission_id}")
+    if json_output:
+        # Output JSON format
+        mission_data = {
+            "id": mission.id,
+            "persona_name": mission.persona_name,
+            "codename": mission.codename,
+            "role": mission.role,
+            "status": status,
+            "start_date": mission.start_date,
+            "start_time": mission.start_time,
+            "end_time": mission.end_time,
+            "mission_file": mission.mission_file,
+            "objective": mission.objective,
+        }
+        output_json(format_json_response(mission_data))
+        logger.debug(f"Displayed details for mission {mission_id} (JSON)")
+    else:
+        # Output human-readable format
+        console.print(f"[bold]Mission #{mission.id}[/bold]")
+        console.print(f"  Persona: {mission.persona_name}")
+        console.print(f"  Codename: {mission.codename}")
+        console.print(f"  Role: {mission.role}")
+        console.print(f"  Status: {status}")
+        console.print(f"  Start Date: {mission.start_date}")
+        console.print(f"  Start Time: {mission.start_time}")
+        if mission.end_time:
+            console.print(f"  End Time: {mission.end_time}")
+        console.print(f"  Mission File: {mission.mission_file}")
+        if mission.objective:
+            console.print(f"  Objective: {mission.objective}")
+        logger.debug(f"Displayed details for mission {mission_id}")
 
 
 @app.command()
 @handle_errors("Failed to generate mission summary")
 def summary(
     mission_id: int = typer.Argument(..., help="Mission ID"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
     """Generate mission summary from git history and database
 
@@ -157,31 +211,31 @@ def summary(
     - Commits made (filtered by persona)
     - Tasks claimed and their status
     """
+    import subprocess
+
     manager = _get_manager()
     mission = manager.get_mission(mission_id)
 
     if not mission:
-        console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
+        if json_output:
+            output_json(
+                format_json_error(
+                    error_message=f"Mission #{mission_id} not found",
+                    error_code="MISSION_NOT_FOUND",
+                    details={"mission_id": mission_id},
+                )
+            )
+        else:
+            console.print(f"[red]Error: Mission #{mission_id} not found.[/red]")
         raise typer.Exit(1)
 
-    console.print(
-        f"\n[bold cyan]Mission Summary for #{mission.id} ({mission.persona_name} - {mission.role})[/bold cyan]\n"
-    )
-
-    # Mission details
-    console.print(f"[bold]Mission Details:[/bold]")
-    console.print(f"  Codename: {mission.codename}")
-    console.print(f"  Start: {mission.start_time}")
-    if mission.end_time:
-        console.print(f"  End: {mission.end_time}")
-    if mission.objective:
-        console.print(f"  Objective: {mission.objective}")
+    # Collect data for JSON or console output
+    files_changed = []
+    commits = []
+    tasks = []
 
     # Get files changed via git
-    console.print(f"\n[bold]Files Changed:[/bold]")
     try:
-        import subprocess
-
         # Get files changed since mission start using git diff
         result = subprocess.run(
             ["git", "diff", "--name-status", f"@{{'{mission.start_time}'}}", "HEAD"],
@@ -197,7 +251,7 @@ def summary(
                     status, filepath = parts
                     status_map = {"M": "modified", "A": "added", "D": "deleted", "R": "renamed"}
                     status_display = status_map.get(status[0], status)
-                    console.print(f"  • [{status_display}] {filepath}")
+                    files_changed.append({"status": status_display, "file": filepath})
         else:
             # Fallback: use git log --name-status
             result = subprocess.run(
@@ -220,15 +274,13 @@ def summary(
                             files_seen.add(filepath)
                             status_map = {"M": "modified", "A": "added", "D": "deleted", "R": "renamed"}
                             status_display = status_map.get(status[0], status)
-                            console.print(f"  • [{status_display}] {filepath}")
-            else:
-                console.print("  [dim]No files changed (or git unavailable)[/dim]")
+                            files_changed.append({"status": status_display, "file": filepath})
 
     except Exception as e:
-        console.print(f"  [yellow]Could not retrieve git history: {e}[/yellow]")
+        if not json_output:
+            console.print(f"  [yellow]Could not retrieve git history: {e}[/yellow]")
 
     # Get commits made
-    console.print(f"\n[bold]Commits:[/bold]")
     try:
         # Try to find commits with persona name in commit message
         result = subprocess.run(
@@ -248,7 +300,7 @@ def summary(
 
         if result.returncode == 0 and result.stdout.strip():
             for line in result.stdout.strip().split("\n"):
-                console.print(f"  • {line}")
+                commits.append(line)
         else:
             # Show all commits since mission start
             result = subprocess.run(
@@ -258,25 +310,85 @@ def summary(
                 check=False,
             )
             if result.returncode == 0 and result.stdout.strip():
-                console.print("  [dim](Showing recent commits, may include other work):[/dim]")
                 for line in result.stdout.strip().split("\n"):
-                    console.print(f"  • {line}")
-            else:
-                console.print("  [dim]No commits found[/dim]")
+                    commits.append(line)
 
     except Exception as e:
-        console.print(f"  [yellow]Could not retrieve commits: {e}[/yellow]")
+        if not json_output:
+            console.print(f"  [yellow]Could not retrieve commits: {e}[/yellow]")
 
     # Get tasks claimed
-    console.print(f"\n[bold]Tasks Claimed:[/bold]")
     try:
         from site_nine.tasks import TaskManager
 
         task_manager = TaskManager(manager.db)
 
         # Get all tasks for this mission
-        tasks = task_manager.list_tasks(mission_id=mission_id)
+        task_list = task_manager.list_tasks(mission_id=mission_id)
 
+        if task_list:
+            for task in task_list:
+                tasks.append(
+                    {
+                        "id": task.id,
+                        "title": task.title,
+                        "status": task.status,
+                    }
+                )
+
+    except Exception as e:
+        if not json_output:
+            console.print(f"  [yellow]Could not retrieve tasks: {e}[/yellow]")
+
+    # Output in JSON or console format
+    if json_output:
+        summary_data = {
+            "mission_id": mission.id,
+            "persona_name": mission.persona_name,
+            "role": mission.role,
+            "codename": mission.codename,
+            "start_time": mission.start_time,
+            "end_time": mission.end_time,
+            "objective": mission.objective,
+            "files_changed": files_changed,
+            "commits": commits,
+            "tasks": tasks,
+        }
+        output_json(format_json_response(summary_data))
+        logger.debug(f"Generated summary for mission {mission_id} (JSON)")
+    else:
+        # Output human-readable format
+        console.print(
+            f"\n[bold cyan]Mission Summary for #{mission.id} ({mission.persona_name} - {mission.role})[/bold cyan]\n"
+        )
+
+        # Mission details
+        console.print(f"[bold]Mission Details:[/bold]")
+        console.print(f"  Codename: {mission.codename}")
+        console.print(f"  Start: {mission.start_time}")
+        if mission.end_time:
+            console.print(f"  End: {mission.end_time}")
+        if mission.objective:
+            console.print(f"  Objective: {mission.objective}")
+
+        # Files changed
+        console.print(f"\n[bold]Files Changed:[/bold]")
+        if files_changed:
+            for file in files_changed:
+                console.print(f"  • [{file['status']}] {file['file']}")
+        else:
+            console.print("  [dim]No files changed (or git unavailable)[/dim]")
+
+        # Commits
+        console.print(f"\n[bold]Commits:[/bold]")
+        if commits:
+            for commit in commits:
+                console.print(f"  • {commit}")
+        else:
+            console.print("  [dim]No commits found[/dim]")
+
+        # Tasks
+        console.print(f"\n[bold]Tasks Claimed:[/bold]")
         if tasks:
             for task in tasks:
                 status_icon = {
@@ -287,16 +399,13 @@ def summary(
                     "REVIEW": "👀",
                     "TODO": "○",
                     "ABORTED": "✗",
-                }.get(task.status, "?")
-                console.print(f"  {status_icon} [{task.status}] {task.id} - {task.title}")
+                }.get(task["status"], "?")
+                console.print(f"  {status_icon} [{task['status']}] {task['id']} - {task['title']}")
         else:
             console.print("  [dim]No tasks claimed[/dim]")
 
-    except Exception as e:
-        console.print(f"  [yellow]Could not retrieve tasks: {e}[/yellow]")
-
-    console.print()
-    logger.info(f"Generated summary for mission {mission_id}")
+        console.print()
+        logger.info(f"Generated summary for mission {mission_id}")
 
 
 @app.command()
@@ -461,30 +570,34 @@ def _find_current_opencode_session(project_root: Path) -> str | None:
 
 
 @app.command("roles")
-def roles() -> None:
+def roles(
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
+) -> None:
     """Display available agent roles with descriptions
 
     Shows a formatted list of all available agent roles and their responsibilities.
     This is used during session initialization to present consistent role options.
     """
-    console.print("\n[bold cyan]Which role should I assume for this session?[/bold cyan]\n")
-
     roles_list = [
-        ("Administrator", "coordinate and delegate to other agents"),
-        ("Architect", "design systems and make technical decisions"),
-        ("Engineer", "implement features and write code"),
-        ("Tester", "write tests and validate functionality"),
-        ("Documentarian", "create documentation and guides"),
-        ("Designer", "design user interfaces and experiences"),
-        ("Historian", "document project history and decisions"),
-        ("Inspector", "review code and audit security"),
-        ("Operator", "deploy systems and manage infrastructure"),
+        {"name": "Administrator", "description": "coordinate and delegate to other agents"},
+        {"name": "Architect", "description": "design systems and make technical decisions"},
+        {"name": "Engineer", "description": "implement features and write code"},
+        {"name": "Tester", "description": "write tests and validate functionality"},
+        {"name": "Documentarian", "description": "create documentation and guides"},
+        {"name": "Designer", "description": "design user interfaces and experiences"},
+        {"name": "Historian", "description": "document project history and decisions"},
+        {"name": "Inspector", "description": "review code and audit security"},
+        {"name": "Operator", "description": "deploy systems and manage infrastructure"},
     ]
 
-    for role, description in roles_list:
-        console.print(f"  • [bold green]{role}[/bold green]: {description}")
-
-    console.print()
+    if json_output:
+        output_json(format_json_response(roles_list))
+        logger.debug("Listed agent roles (JSON)")
+    else:
+        console.print("\n[bold cyan]Which role should I assume for this session?[/bold cyan]\n")
+        for role in roles_list:
+            console.print(f"  • [bold green]{role['name']}[/bold green]: {role['description']}")
+        console.print()
 
 
 def _find_opencode_storage() -> tuple[Path, Path, Path]:
