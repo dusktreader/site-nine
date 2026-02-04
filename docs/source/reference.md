@@ -6,49 +6,6 @@ Complete reference for all s9 commands.
 
 The s9 CLI is designed to be used by both **AI agents** and **human developers**. Commands are categorized to help you understand their primary use case:
 
-### Commands for Agent Workflows
-
-These commands are primarily used by AI agents during automated workflows, particularly during mission initialization and task execution.
-
-**Mission Management:**
-
-```bash
-s9 mission start              # Register a new mission with persona and role
-s9 mission generate-session-uuid  # Generate UUID for session detection
-s9 mission rename-tui         # Rename OpenCode TUI session
-s9 mission update             # Update mission metadata
-s9 mission roles              # Display available agent roles
-```
-
-**Task Execution:**
-
-```bash
-s9 task claim                 # Claim a task for the active mission
-s9 task update                # Update task status during execution
-s9 task close                 # Close a completed task
-```
-
-**Collaboration:**
-
-```bash
-s9 handoff create             # Create a handoff to another role
-s9 handoff accept             # Accept a pending handoff
-s9 handoff complete           # Complete a handoff
-```
-
-**Reviews:**
-
-```bash
-s9 review create              # Create a review request
-```
-
-**Personas:**
-
-```bash
-s9 name suggest               # Get persona name suggestions
-s9 name set-bio               # Set persona biography
-```
-
 ### Commands for Human Management
 
 These commands are primarily used by human developers for project oversight, planning, and coordination.
@@ -112,6 +69,49 @@ s9 changelog                  # Generate changelogs from completed tasks
 
 ```bash
 s9 summon                     # Launch OpenCode with agent initialization
+```
+
+### Commands for Agent Workflows
+
+These commands are primarily used by AI agents during automated workflows, particularly during mission initialization and task execution.
+
+**Mission Management:**
+
+```bash
+s9 mission start              # Register a new mission with persona and role
+s9 mission generate-session-uuid  # Generate UUID for session detection
+s9 mission rename-tui         # Rename OpenCode TUI session
+s9 mission update             # Update mission metadata
+s9 mission roles              # Display available agent roles
+```
+
+**Task Execution:**
+
+```bash
+s9 task claim                 # Claim a task for the active mission
+s9 task update                # Update task status during execution
+s9 task close                 # Close a completed task
+```
+
+**Collaboration:**
+
+```bash
+s9 handoff create             # Create a handoff to another role
+s9 handoff accept             # Accept a pending handoff
+s9 handoff complete           # Complete a handoff
+```
+
+**Reviews:**
+
+```bash
+s9 review create              # Create a review request
+```
+
+**Personas:**
+
+```bash
+s9 name suggest               # Get persona name suggestions
+s9 name set-bio               # Set persona biography
 ```
 
 ### Shared Commands (Used by Both)
