@@ -112,7 +112,7 @@ If the user invoked `/summon <role>` (e.g., `/summon operator`), the role will b
 **If NO role was provided**, display the standardized role selection prompt using the s9 CLI:
 
 ```bash
-s9 agent roles
+s9 mission roles
 ```
 
 This will display a consistently formatted list of all available agent roles with their descriptions.
@@ -205,7 +205,7 @@ Would you like to use this persona, or choose a different one?
   
 - **Use the persona name** in:
   - Mission filename: `2026-02-03.16:53:43.operator.kuk.azure-shadow.md`
-  - Mission introduction: "I'm Kuk, your Operator agent on mission 'azure-shadow'"
+  - Mission introduction: "I'm Kuk, your Operator persona on mission 'azure-shadow'"
   - All commits: `[Persona: Kuk - Operator]` or `[Mission: azure-shadow]`
 
 - **Use CLI commands for name information:**
@@ -218,14 +218,14 @@ Would you like to use this persona, or choose a different one?
 Once role and persona are confirmed, register the mission in the project database:
 
 ```bash
-s9 agent start <persona-name> \
+s9 mission start <persona-name> \
   --role <Role> \
   --task "<brief-objective>"
 ```
 
 **Example:**
 ```bash
-s9 agent start kuk \
+s9 mission start kuk \
   --role Operator \
   --task "Entity model refactor - personas and missions"
 ```
@@ -362,7 +362,7 @@ After sharing your mythological background, rename the OpenCode TUI session to i
 **If you have multiple OpenCode sessions open**, first list them to find the correct one:
 
 ```bash
-s9 agent list-opencode-sessions
+s9 mission list-opencode-sessions
 ```
 
 This shows all OpenCode sessions for this project with their session IDs and last modification times.
@@ -370,18 +370,18 @@ This shows all OpenCode sessions for this project with their session IDs and las
 **Then rename the session:**
 
 ```bash
-s9 agent rename-tui <persona> <Role> --session-id <session-id>
+s9 mission rename-tui <persona> <Role> --session-id <session-id>
 ```
 
 **If you only have ONE OpenCode session open**, you can omit the session ID and let it auto-detect:
 
 ```bash
-s9 agent rename-tui <persona> <Role>
+s9 mission rename-tui <persona> <Role>
 ```
 
 **Example:**
 ```bash
-s9 agent rename-tui kuk Operator
+s9 mission rename-tui kuk Operator
 ```
 
 **This command:**
@@ -396,7 +396,7 @@ s9 agent rename-tui kuk Operator
 ```
 
 **If the command fails or there are multiple sessions:**
-- Run `s9 agent list-opencode-sessions` to see available sessions
+- Run `s9 mission list-opencode-sessions` to see available sessions
 - Ask the Director which session ID to rename, or
 - Continue without renaming (it's not critical to the mission)
 - The Director can rename manually later if needed
@@ -542,7 +542,7 @@ After registering the mission (and accepting any handoffs), inform the Director 
 ```
 ✅ Mission initialized!
 
-I'm [Persona], your [Role] agent on mission "[codename]". I'm ready to help!
+I'm [Persona], your [Role] persona on mission "[codename]". I'm ready to help!
 
 What would you like me to work on?
 ```
@@ -620,7 +620,7 @@ No tasks currently assigned to [Role] role (see "No tasks for [Role] role" in Re
 - **DO NOT** start work until the Director gives direction
 - **ALWAYS** use the persona name in commits: `[Persona: Name - Role]` or `[Mission: codename]`
 - **UPDATE** the mission file throughout the session with progress
-- **UPDATE** mission metadata if scope changes: `s9 agent update <mission-id> --task "..." --role NewRole`
+- **UPDATE** mission metadata if scope changes: `s9 mission update <mission-id> --task "..." --role NewRole`
 - **CLOSE** the mission file at end with end_time and outcomes
 
 ## Mission End

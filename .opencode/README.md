@@ -67,7 +67,7 @@ make qa/test-all
    - Administrator, Architect, Builder, Tester, Documentarian, Designer, or Inspector
    - **Pro tip:** Use `/summon operator` to start an Operator session immediately
 
-3. Agent suggests or asks for a **daemon name** (from any religion's mythology)
+3. Agent suggests or asks for a **persona name** (from any religion's mythology)
    - **Prefer unused names first** - use `s9 name suggest <Role>` to get unused name suggestions
    - 142+ names available from various mythologies (Greek, Egyptian, Norse, Hindu, Celtic, Japanese, and more)
    - **Reusing names is OK** when good unused names are exhausted, but try fresh names first
@@ -128,7 +128,7 @@ Just talk naturally to your agent:
 
 The agent will use their assigned role and name consistently throughout the session.
 
-### Choosing Agent Names (For Agents)
+### Choosing Persona Names (For Agents)
 
 **IMPORTANT: Prefer unused names over reusing existing names.**
 
@@ -139,9 +139,9 @@ Before suggesting a name:
 4. Only reuse a name (with roman numeral suffix) when most good names are taken
 
 **Why this matters:**
-- Makes it easier to track which agent did what work
+- Makes it easier to track which persona did what work
 - Reduces confusion when reading git history
-- Gives each agent session a unique identity
+- Gives each mission a unique identity
 - There are 142+ names available across 8+ mythologies - use them!
 
 **Available mythologies**:
@@ -305,15 +305,15 @@ s9 name suggest <Role> --count 3  # Get 3 unused suggestions
 
 ## Commit Guidelines (Quick Reference)
 
-**All agents use Conventional Commits format with agent attribution.**
+**All agents use Conventional Commits format with persona attribution.**
 
 **Format:**
 ```bash
-git commit -m "feat(database): add connection pooling [Agent: Builder - Azazel]"
-git commit -m "docs(readme): update setup guide [Agent: Documentarian - Seraphina-iii]"
+git commit -m "feat(database): add connection pooling [Persona: Azazel - Builder]"
+git commit -m "docs(readme): update setup guide [Persona: Seraphina - Documentarian]"
 ```
 
-**Note**: If the agent name has a roman numeral suffix (e.g., `-iii`), include it in the commit message.
+**Note**: Include the persona name in the commit message attribution.
 
 **Common types**: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`, `perf:`, `style:`, `ci:`
 
@@ -483,7 +483,7 @@ When working on s9:
 
 ## Project Management System
 
-**Unified management system** for tasks, agent sessions, and daemon names via the `s9` CLI:
+**Unified management system** for tasks, missions, and personas via the `s9` CLI:
 
 ```bash
 # Quick project overview
@@ -493,16 +493,16 @@ s9 dashboard                # Show current status, active work, and available ta
 s9 doctor                   # Run diagnostics (read-only)
 s9 doctor --fix             # Fix issues automatically
 
-# View available daemon names
+# View available persona names
 s9 name suggest <Role>
 
-# Start agent session (auto-registers and tracks usage)
-s9 agent start <name> --role <Role> --session-file "..." --task-summary "..."
+# Start mission (auto-registers and tracks usage)
+s9 mission start <name> --role <Role> --task "..."
 
-# Manage agent sessions
-s9 agent pause <agent-id> [--reason "reason"]     # Pause active session
-s9 agent resume <agent-id>                        # Resume paused session
-s9 agent update <agent-id> [--task-summary "..."] [--role NewRole]  # Update session
+# Manage missions
+s9 mission pause <mission-id> [--reason "reason"]     # Pause active mission
+s9 mission resume <mission-id>                        # Resume paused mission
+s9 mission update <mission-id> [--task "..."] [--role NewRole]  # Update mission
 
 # Manage tasks
 s9 task next --role <Role>                    # Get smart task suggestions
@@ -519,22 +519,22 @@ s9 task close <TASK_ID> --status COMPLETE
 s9 template list                              # See available templates
 s9 template show <template-id>                # View template details
 
-# End session
-s9 agent end <ID> --status completed
+# End mission
+s9 mission end <mission-id>
 ```
 
 **Documentation:**
 - **`.opencode/data/README.md`** - Complete reference (schema, commands, workflows)
-- **`.opencode/data/project.db`** - SQLite database (daemon names, tasks, agent sessions)
+- **`.opencode/data/project.db`** - SQLite database (personas, tasks, missions)
 
 
 ## Important Files
 
 ### For Development
 - **`.opencode/docs/guides/AGENTS.md`** - Development patterns (READ THIS FIRST!)
-- **`s9`** - **Unified project management CLI (tasks, agents, names)**
+- **`s9`** - **Unified project management CLI (tasks, missions, personas)**
 - **`.opencode/data/README.md`** - **Complete s9 system reference**
-- **`.opencode/work/sessions/README.md`** - Session tracking format and guidelines
+- **`.opencode/work/missions/README.md`** - Mission tracking format and guidelines
 - **`.opencode/work/planning/build.md`** - Implementation phases
 - **`.opencode/work/planning/PROJECT_STATUS.md`** - **Current project status and progress** (use this!)
 - **`.opencode/docs/procedures/COMMIT_GUIDELINES.md`** - Commit format reference
@@ -583,14 +583,14 @@ See `.opencode/work/planning/PROJECT_STATUS.md` for current project status and p
 
 ## Tips for Success
 
-### 1. Every Session Starts with Role Selection
+### 1. Every Mission Starts with Role Selection
 
-Each development session begins with the agent asking which role to assume and what name to use. This creates consistency and accountability:
+Each development mission begins with the agent asking which role to assume and what persona to use. This creates consistency and accountability:
 
-- Agent uses the same name (including suffix) throughout the session
-- Commits include the agent name: `[Agent: Builder - Azazel]` or `[Agent: Designer - Seraphina-iii]`
+- Agent uses the same persona throughout the mission
+- Commits include the persona: `[Persona: Azazel - Builder]` or `[Persona: Seraphina - Designer]`
 - Task artifacts document all work done
-- Session history tracks all work done
+- Mission history tracks all work done
 
 ### 2. Start with the Administrator (or Pick Your Role)
 

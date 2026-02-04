@@ -82,7 +82,7 @@ Read your mission file and update it with the information gathered:
 
 ### Required Updates
 
-**IMPORTANT:** The `s9 agent end` command will update the frontmatter automatically in Step 5.
+**IMPORTANT:** The `s9 mission end` command will update the frontmatter automatically in Step 5.
 
 **1. Update Duration line:**
 ```markdown
@@ -267,15 +267,15 @@ git commit -m "docs(mission): complete <persona> <role> mission <codename> [Pers
 
 ## Step 8: End Mission
 
-**IMPORTANT:** Use the `s9 agent end` command to officially close your mission. This updates the database and your mission file atomically.
+**IMPORTANT:** Use the `s9 mission end` command to officially close your mission. This updates the database and your mission file atomically.
 
 ```bash
-s9 agent end <your-mission-id>
+s9 mission end <your-mission-id>
 ```
 
 **Find your mission ID:**
 ```bash
-s9 agent list --active-only | grep <your-persona>
+s9 mission list --active-only | grep <your-persona>
 ```
 
 **What this command does:**
@@ -283,7 +283,7 @@ s9 agent list --active-only | grep <your-persona>
 - Updates your mission file's YAML frontmatter (end_time)
 - Ensures DB and file are always in sync
 
-**Note:** This replaces manual YAML frontmatter editing. Do NOT manually edit the end_time field - let `s9 agent end` handle it.
+**Note:** This replaces manual YAML frontmatter editing. Do NOT manually edit the end_time field - let `s9 mission end` handle it.
 
 ## Step 9: Verify Quality Checks
 

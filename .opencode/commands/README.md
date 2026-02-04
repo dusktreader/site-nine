@@ -21,9 +21,9 @@ Together, they provide a powerful way to standardize and simplify common develop
 
 ### Session Management
 
-#### `/summon` - Start New Agent Session
+#### `/summon` - Start New Mission
 
-**Purpose:** Initialize a new development session with proper role selection and daemon naming.
+**Purpose:** Initialize a new development mission with proper role selection and persona naming.
 
 **Usage:**
 ```
@@ -38,9 +38,9 @@ Together, they provide a powerful way to standardize and simplify common develop
 
 **What it does:**
 1. (If no role provided) Asks you to choose a role (Administrator, Architect, Builder, Tester, etc.)
-2. Suggests a daemon name from mythology appropriate to your role
-3. Checks for name conflicts with existing sessions
-4. Creates a session file with proper metadata
+2. Suggests a persona name from mythology appropriate to your role
+3. Checks for name conflicts with existing missions
+4. Creates a mission file with proper metadata
 5. Reads essential project documentation
 6. Shows available tasks for your role
 
@@ -48,7 +48,7 @@ Together, they provide a powerful way to standardize and simplify common develop
 ```
 User: /summon
 
-Agent: Which role should I assume for this session?
+Agent: Which role should I assume for this mission?
 - Administrator (coordination & delegation)
 - Architect (design & planning)
 - Builder (implementation)
@@ -60,16 +60,16 @@ Agent: Which role should I assume for this session?
 
 User: Builder
 
-Agent: I suggest the name "goibniu" for this Builder session.
+Agent: I suggest the persona "goibniu" for this Builder mission.
 (Goibniu is the Celtic god of metalworking and craft)
 
-Would you like to use this name, or choose a different one?
+Would you like to use this persona, or choose a different one?
 
 User: That's perfect!
 
-Agent: ✅ Session initialized!
+Agent: ✅ Mission initialized!
 
-I'm Goibniu, your Builder agent for this session.
+I'm Goibniu, your Builder persona for this mission.
 
 [Session continues...]
 ```
@@ -78,16 +78,16 @@ I'm Goibniu, your Builder agent for this session.
 ```
 User: /summon operator
 
-Agent: I suggest the name "hemera" for this Operator session.
+Agent: I suggest the persona "hemera" for this Operator mission.
 (Hemera is the Greek goddess of day)
 
-Would you like to use this name, or choose a different one?
+Would you like to use this persona, or choose a different one?
 
 User: yes
 
-Agent: ✅ Session initialized!
+Agent: ✅ Mission initialized!
 
-I'm Hemera, your Operator agent for this session.
+I'm Hemera, your Operator persona for this mission.
 
 [Session continues...]
 ```
@@ -96,9 +96,9 @@ I'm Hemera, your Operator agent for this session.
 
 ---
 
-#### `/dismiss` - End Current Session
+#### `/dismiss` - End Current Mission
 
-**Purpose:** Properly close a development session with cleanup and documentation.
+**Purpose:** Properly close a development mission with cleanup and documentation.
 
 **Usage:**
 ```
@@ -106,28 +106,28 @@ I'm Hemera, your Operator agent for this session.
 ```
 
 **What it does:**
-1. Locates your session file
+1. Locates your mission file
 2. Gathers information about work completed (git status, commits, tasks)
-3. Updates session file with:
+3. Updates mission file with:
    - End time and duration
    - Files changed
    - Outcomes (✅ completed, ⚠️ partial, ❌ blocked)
    - Next steps for future work
 4. Closes any open tasks in the task database
 5. Verifies task artifacts are updated
-6. Commits the session file
-7. Provides a summary of the session
+6. Commits the mission file
+7. Provides a summary of the mission
 8. Says goodbye
 
 **Example interaction:**
 ```
 User: /dismiss
 
-Agent: Closing session...
+Agent: Closing mission...
 
 [Agent checks git status, recent commits, open tasks...]
 
-I've updated the session file with:
+I've updated the mission file with:
 - End time: 15:30:00
 - Duration: ~2.5 hours
 - Status: completed
@@ -140,7 +140,7 @@ Files changed:
 Tasks closed:
 - H027: Implement Authentication Rate Limiting (COMPLETE)
 
-✅ Session closed successfully!
+✅ Mission closed successfully!
 
 **Summary:**
 - Duration: ~2.5 hours
@@ -156,14 +156,14 @@ Tasks closed:
 **Next steps:**
 - None - work complete
 
-Session file updated: .opencode/sessions/2026-01-29.14:30:00.builder.goibniu.rate-limiting.md
+Mission file updated: .opencode/work/missions/2026-01-29.14:30:00.builder.goibniu.rate-limiting.md
 
 Thank you for working with me! I'm Goibniu, signing off.
 ```
 
 **When to use:**
-- ✅ You're done with your work session
-- ✅ Handing off to another agent
+- ✅ You're done with your work mission
+- ✅ Handing off to another persona
 - ✅ User says "we're done for now"
 - ✅ User says "goodbye" or "thanks"
 
@@ -577,9 +577,9 @@ Your changes are now in the remote repository!
 
 ---
 
-#### `/handoff` - Hand Off to Another Agent
+#### `/handoff` - Hand Off to Another Persona
 
-**Purpose:** Transfer work to another agent with full context and documentation.
+**Purpose:** Transfer work to another persona with full context and documentation.
 
 **Usage:**
 ```
@@ -587,8 +587,8 @@ Your changes are now in the remote repository!
 ```
 
 **What it does:**
-1. Identifies your current role and name
-2. Determines target agent role (or asks if not specified)
+1. Identifies your current role and persona
+2. Determines target role (or asks if not specified)
 3. Gathers current state (git status, active tasks, recent commits)
 4. Creates structured handoff document with:
    - What was done
@@ -597,15 +597,15 @@ Your changes are now in the remote repository!
    - Files to review
    - Approach and constraints
    - Acceptance criteria
-5. Saves handoff as `.pending.md` file in `.opencode/sessions/handoffs/`
-6. Updates your session file with handoff info
+5. Saves handoff as `.pending.md` file in `.opencode/work/missions/handoffs/`
+6. Updates your mission file with handoff info
 7. Provides instructions for recipient
 
 **Example interaction:**
 ```
 User: /handoff Builder
 
-Agent (Administrator - Ishtar): Creating handoff to Builder agent...
+Agent (Administrator - Ishtar): Creating handoff to Builder...
 
 Gathering current state...
 - Branch: feature/query-caching
@@ -626,7 +626,7 @@ Agent: Creating handoff document...
 **Created:** 2026-01-29 16:30:00
 
 **Handoff Document:**
-.opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.pending.md
+.opencode/work/missions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.pending.md
 
 **Summary:**
 - Task: H040 - Implement database query caching
@@ -636,13 +636,13 @@ Agent: Creating handoff document...
 - Files to review: 4 files
 - Acceptance criteria: 7 items
 
-**For Next Agent:**
+**For Next Persona:**
 When Builder starts with `/summon`, they'll be notified of this handoff
 and can read the full context.
 
 **Your Options:**
 - Continue working on other tasks
-- Use `/dismiss` to end your session
+- Use `/dismiss` to end your mission
 - Create another handoff if needed
 
 Handoff document includes:
@@ -660,7 +660,7 @@ Handoff document includes:
 - ✅ Builder hands off to Tester for validation
 - ✅ Tester finds bugs and hands back to Builder
 - ✅ Builder completes feature and hands to Inspector for review
-- ✅ Any time work needs to transition between agent roles
+- ✅ Any time work needs to transition between roles
 
 **What gets handed off:**
 - **Context:** What was done and why
@@ -672,7 +672,7 @@ Handoff document includes:
 - **Resources:** Files to review, docs to read, related work
 
 **Handoff lifecycle:**
-1. **Created (`.pending.md`)** - Waiting for recipient agent
+1. **Created (`.pending.md`)** - Waiting for recipient persona
 2. **Accepted (`.accepted.md`)** - Recipient started work (via `/summon`)
 3. **Completed (`.completed.md`)** - Work finished (via `/dismiss`)
 
@@ -692,14 +692,14 @@ Handoff document includes:
 3. **Command tells agent:** "Load the session-start skill"
 4. **Agent calls skill tool:** `skill({ name: "session-start" })`
 5. **OpenCode loads skill:** `.opencode/skills/session-start/SKILL.md`
-6. **Agent follows skill instructions:** Role selection → naming → session creation → doc reading
+6. **Agent follows skill instructions:** Role selection → naming → mission creation → doc reading
 
 ### Why This Design?
 
 **Commands** provide:
 - ✅ Easy discoverability (users can type `/` to see all commands)
 - ✅ Simple invocation (just `/summon` instead of explaining the process)
-- ✅ Consistent entry points across all agents
+- ✅ Consistent entry points across all personas
 
 **Skills** provide:
 - ✅ Detailed, step-by-step instructions
@@ -716,7 +716,7 @@ Want to add more standardized workflows? Here's how:
 ### 1. Identify a Repetitive Workflow
 
 Look for tasks that:
-- Agents do repeatedly
+- Personas do repeatedly
 - Have multiple steps
 - Need consistency
 - Can be standardized
@@ -832,7 +832,7 @@ Add your command to this README with:
 
 ### For Both
 
-- ✅ Test with actual agents before committing
+- ✅ Test with actual personas before committing
 - ✅ Keep instructions up to date
 - ✅ Version control both files together
 - ✅ Document in this README
@@ -841,7 +841,7 @@ Add your command to this README with:
 
 ## Skill Permissions
 
-You can control which skills agents can access in `opencode.json`:
+You can control which skills personas can access in `opencode.json`:
 
 ```json
 {
@@ -910,9 +910,9 @@ Want to add one? Follow the guide above and submit a PR!
 .opencode/
 ├── commands/              # Slash commands
 │   ├── README.md         # This file
-│   ├── summon.md         # /summon - Start session
-│   ├── dismiss.md        # /dismiss - End session
-│   ├── handoff.md        # /handoff - Hand off to another agent
+│   ├── summon.md         # /summon - Start mission
+│   ├── dismiss.md        # /dismiss - End mission
+│   ├── handoff.md        # /handoff - Hand off to another persona
 │   ├── commit.md         # /commit - Commit & push changes
 │   ├── tasks.md          # /tasks - Show task queue report
 │   ├── create-task.md    # /create-task - Create new task
@@ -924,7 +924,7 @@ Want to add one? Follow the guide above and submit a PR!
 │   │   └── SKILL.md
 │   ├── session-end/      # Session closure skill
 │   │   └── SKILL.md
-│   ├── handoff-workflow/ # Agent handoff skill
+│   ├── handoff-workflow/ # Persona handoff skill
 │   │   └── SKILL.md
 │   ├── commit-workflow/  # Commit and push workflow
 │   │   └── SKILL.md
@@ -934,11 +934,12 @@ Want to add one? Follow the guide above and submit a PR!
 │       └── SKILL.md
 ├── templates/            # Document templates
 │   └── handoff-template.md  # Handoff document template
-└── sessions/
-    └── handoffs/         # Agent handoff documents
-        ├── *.pending.md   # Waiting for recipient
-        ├── *.accepted.md  # Work in progress
-        └── *.completed.md # Work finished
+└── work/
+    └── missions/
+        └── handoffs/     # Persona handoff documents
+            ├── *.pending.md   # Waiting for recipient
+            ├── *.accepted.md  # Work in progress
+            └── *.completed.md # Work finished
 ```
 
 ---
@@ -947,5 +948,5 @@ Want to add one? Follow the guide above and submit a PR!
 
 - [OpenCode Commands Documentation](https://opencode.ai/docs/commands)
 - [OpenCode Skills Documentation](https://opencode.ai/docs/skills)
-- `.opencode/sessions/README.md` - Session file format
+- `.opencode/work/missions/README.md` - Mission file format
 - `.opencode/tasks/README.md` - Task management system

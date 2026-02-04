@@ -110,28 +110,29 @@ site-nine/
 
 **Schema:**
 ```sql
--- Agent sessions
-CREATE TABLE agents (
+-- Missions (formerly agent sessions)
+CREATE TABLE missions (
     id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,              -- Daemon name (e.g., "azazel", "thoth-ii")
-    role TEXT NOT NULL,              -- Agent role (Builder, Tester, etc.)
-    status TEXT NOT NULL,            -- active, paused, completed
-    session_file TEXT,               -- Path to session markdown file
-    task_summary TEXT,
+    codename TEXT NOT NULL,             -- Auto-generated mission codename (e.g., "azure-shadow")
+    persona_name TEXT NOT NULL,         -- Persona name (e.g., "kuk", "thoth")
+    role TEXT NOT NULL,                 -- Role (Builder, Tester, etc.)
+    status TEXT NOT NULL,               -- active, paused, completed
+    mission_file TEXT,                  -- Path to mission markdown file
+    objective TEXT,
     started_at TIMESTAMP,
     ended_at TIMESTAMP
 );
 
 -- Tasks
 CREATE TABLE tasks (
-    id TEXT PRIMARY KEY,             -- Format: ROLE-PRIORITY-NUMBER (e.g., BLD-H-0003)
+    id TEXT PRIMARY KEY,                -- Format: ROLE-PRIORITY-NUMBER (e.g., BLD-H-0003)
     title TEXT NOT NULL,
     objective TEXT,
-    status TEXT NOT NULL,            -- TODO, IN_PROGRESS, COMPLETE
-    priority TEXT NOT NULL,          -- LOW, MEDIUM, HIGH, CRITICAL
+    status TEXT NOT NULL,               -- TODO, IN_PROGRESS, COMPLETE
+    priority TEXT NOT NULL,             -- LOW, MEDIUM, HIGH, CRITICAL
     role TEXT NOT NULL,
-    assigned_agent_id INTEGER,       -- FK to agents.id
-    file_path TEXT,                  -- Path to task markdown file
+    assigned_mission_id INTEGER,        -- FK to missions.id
+    file_path TEXT,                     -- Path to task markdown file
     estimated_hours REAL,
     actual_hours REAL,
     created_at TIMESTAMP,
@@ -141,19 +142,19 @@ CREATE TABLE tasks (
 
 -- Task dependencies
 CREATE TABLE task_dependencies (
-    task_id TEXT,                    -- FK to tasks.id
-    depends_on_task_id TEXT,         -- FK to tasks.id
+    task_id TEXT,                       -- FK to tasks.id
+    depends_on_task_id TEXT,            -- FK to tasks.id
     PRIMARY KEY (task_id, depends_on_task_id)
 );
 
--- Daemon names (145+ mythology names)
-CREATE TABLE daemon_names (
+-- Personas (145+ mythology names)
+CREATE TABLE personas (
     id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,       -- e.g., "azazel", "thoth"
-    role TEXT NOT NULL,              -- Associated role
-    mythology TEXT,                  -- Greek, Norse, Egyptian, etc.
+    name TEXT NOT NULL UNIQUE,          -- e.g., "azazel", "thoth"
+    role TEXT NOT NULL,                 -- Associated role
+    mythology TEXT,                     -- Greek, Norse, Egyptian, etc.
     description TEXT,
-    usage_count INTEGER DEFAULT 0
+    mission_count INTEGER DEFAULT 0     -- How many missions this persona has run
 );
 ```
 
@@ -264,20 +265,20 @@ Create opencode.json for IDE integration
 Success! Project ready for agent orchestration
 ```
 
-### 2. Agent Session Start (`s9 agent start`)
+### 2. Mission Start (`s9 mission start`)
 
 ```
-User runs: s9 agent start <name> --role Builder --task "Build auth"
+User runs: s9 mission start <name> --role Builder --task "Build auth"
     ↓
-Check daemon name availability
+Check persona name availability
     ↓
-Create agent record in database
+Create mission record in database
     ↓
-Generate session file (.opencode/work/sessions/YYYY-MM-DD.HH:MM:SS.role.name.task.md)
+Generate mission file (.opencode/work/missions/YYYY-MM-DD.HH:MM:SS.role.name.codename.md)
     ↓
-Mark agent as active
+Mark mission as active
     ↓
-Return agent ID for tracking
+Return mission ID for tracking
 ```
 
 ### 3. Task Creation (`s9 task create`)
@@ -298,10 +299,10 @@ Return task ID
 
 ```
 1. Create task (TODO status)
-2. Agent claims task → status = IN_PROGRESS
-3. Agent works on task
-4. Agent updates task with progress notes
-5. Agent completes work → status = COMPLETE
+2. Persona claims task → status = IN_PROGRESS
+3. Persona works on task
+4. Persona updates task with progress notes
+5. Persona completes work → status = COMPLETE
 6. Task file includes commit SHAs, learnings, artifacts
 ```
 
@@ -326,7 +327,7 @@ Return task ID
 **Alternative:** JSON/YAML files for data
 
 **Rationale:**
-- Relational data (tasks → agents, task dependencies)
+- Relational data (tasks → missions, task dependencies)
 - ACID transactions prevent corruption
 - Built-in query capabilities
 - Foreign key constraints enforce integrity
@@ -380,12 +381,12 @@ VALUES ('SecurityAuditor', 'Reviews code for security issues');
 EOF
 ```
 
-### Custom Daemon Names
+### Custom Persona Names
 
 Add names from your favorite mythology:
 
 ```bash
-s9 name add --name "MyDaemon" --role Builder --mythology "Custom"
+s9 name add --name "MyPersona" --role Builder --mythology "Custom"
 ```
 
 ---
@@ -420,13 +421,13 @@ s9 name add --name "MyDaemon" --role Builder --mythology "Custom"
 
 2. **Cloud Sync (Optional)**
    - Sync tasks across team members
-   - Centralized daemon name registry
+   - Centralized persona registry
    - Opt-in, not required
 
 3. **Web Dashboard**
    - Local web UI (`s9 dashboard --web`)
    - Visualize task dependencies
-   - Agent activity timeline
+   - Mission activity timeline
 
 4. **API Mode**
    - Run as HTTP server
@@ -453,7 +454,7 @@ s9 name add --name "MyDaemon" --role Builder --mythology "Custom"
 | Setup | ✅ Zero config | ❌ Account needed |
 | Privacy | ✅ Local only | ❌ Cloud data |
 | Git integration | ✅ Native | ⚠️ Via API |
-| Agent-friendly | ✅ Designed for AI | ❌ Human UI |
+| Persona-friendly | ✅ Designed for AI | ❌ Human UI |
 
 ---
 

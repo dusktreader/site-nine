@@ -208,12 +208,12 @@ COMPLETE - Merged and deployed
 ### Starting a Session
 
 ```bash
-# Start agent session
-s9 agent start azazel \
+# Start mission
+s9 mission start azazel \
   --role Builder \
   --task "Implement task dependencies"
 
-# Returns agent ID: 42
+# Returns mission ID: 42
 ```
 
 ### During Session
@@ -225,16 +225,16 @@ s9 agent start azazel \
 ### Ending Session
 
 ```bash
-# End session
-s9 agent end 42 --status completed
+# End mission
+s9 mission end 42
 
 # Or if interrupted
-s9 agent end 42 --status aborted --reason "Need to switch tasks"
+s9 mission end 42 --reason "Need to switch tasks"
 ```
 
 ### Session Files
 
-Sessions auto-create files in `.opencode/work/sessions/`:
+Sessions auto-create files in `.opencode/work/missions/`:
 ```
 2026-02-02.14:30:00.builder.azazel.implement-dependencies.md
 ```
@@ -272,7 +272,7 @@ Before submitting PR or merging:
 
 **Git:**
 - [ ] Commits follow Conventional Commits
-- [ ] Agent attribution in commits
+- [ ] Persona attribution in commits
 - [ ] Commit messages are clear
 - [ ] No merge commits (rebase preferred)
 
@@ -386,7 +386,7 @@ uv sync
 | Lint code | `make qa/lint` |
 | Run CLI | `uv run s9 <command>` |
 | Create task | `s9 task create --title "..." --role X --priority Y` |
-| Start session | `s9 agent start <name> --role X --task "..."` |
+| Start mission | `s9 mission start <name> --role X --task "..."` |
 | View dashboard | `s9 dashboard` |
 | Generate changelog | `s9 changelog --since YYYY-MM-DD` |
 
