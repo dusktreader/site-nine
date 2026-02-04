@@ -51,15 +51,15 @@ def summon_command(
         summon_cmd += f" --task {task}"
 
     # Show what would be executed
-    console.print(f"[cyan]🚀 Launching OpenCode with:[/cyan] {summon_cmd}")
+    console.print(f"[cyan]🚀 Launching OpenCode TUI with:[/cyan] {summon_cmd}")
 
     if dry_run:
-        console.print(f'[yellow]Dry run - would execute:[/yellow] opencode run --model {model} "{summon_cmd}"')
+        console.print(f'[yellow]Dry run - would execute:[/yellow] opencode --model {model} "{summon_cmd}"')
         return
 
-    # Launch OpenCode with the /summon command
+    # Launch OpenCode TUI with the /summon command
     try:
-        subprocess.run(["opencode", "run", "--model", model, summon_cmd], check=True)
+        subprocess.run(["opencode", "--model", model, summon_cmd], check=True)
     except subprocess.CalledProcessError as e:
         console.print(f"[red]Error launching OpenCode: {e}[/red]")
         raise typer.Exit(1)
