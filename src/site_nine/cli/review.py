@@ -109,11 +109,12 @@ def list(
 
     table = Table(title="Reviews")
     table.add_column("ID", style="cyan", justify="right", width=4)
-    table.add_column("Type", style="blue", width=20)
-    table.add_column("Status", style="yellow", width=10)
-    table.add_column("Task", style="magenta", width=12)
-    table.add_column("Title", style="white")
-    table.add_column("Requested", style="dim", width=12)
+    table.add_column("Type", style="blue", width=18)
+    table.add_column("Status", style="yellow", width=9)
+    table.add_column("Task", style="magenta", width=11)
+    table.add_column("Title", style="white", width=25)
+    table.add_column("Artifact", style="green", width=20)
+    table.add_column("Requested", style="dim", width=10)
 
     for review in reviews:
         # Color-code status
@@ -143,12 +144,20 @@ def list(
         except:
             requested_str = review.requested_at[:16]  # Fallback to date string
 
+        # Format artifact path to show just the filename for brevity
+        artifact_display = "-"
+        if review.artifact_path:
+            from pathlib import Path
+
+            artifact_display = Path(review.artifact_path).name
+
         table.add_row(
             str(review.id),
             REVIEW_TYPE_DISPLAY.get(ReviewType(review.type), review.type),
             status_text,
             review.task_id or "-",
             review.title[:50] + "..." if len(review.title) > 50 else review.title,
+            artifact_display,
             requested_str,
         )
 
