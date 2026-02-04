@@ -8,15 +8,6 @@ import yaml
 
 
 @dataclass
-class AgentRoleConfig:
-    """Configuration for an agent role"""
-
-    name: str
-    enabled: bool = True
-    description: str | None = None
-
-
-@dataclass
 class ProjectConfig:
     """Project configuration"""
 
@@ -45,16 +36,15 @@ class CustomizationConfig:
 
 
 @dataclass
-class HQueueConfig:
+class SiteNineConfig:
     """Main site-nine configuration"""
 
     project: ProjectConfig
     features: FeaturesConfig = field(default_factory=FeaturesConfig)
-    agent_roles: list[AgentRoleConfig] = field(default_factory=list)
     customization: CustomizationConfig = field(default_factory=CustomizationConfig)
 
     @classmethod
-    def from_yaml(cls, path: Path) -> "HQueueConfig":
+    def from_yaml(cls, path: Path) -> "SiteNineConfig":
         """Load configuration from YAML file"""
         with open(path) as f:
             data = yaml.safe_load(f)
@@ -62,27 +52,14 @@ class HQueueConfig:
         return cls(
             project=ProjectConfig(**data["project"]),
             features=FeaturesConfig(**data.get("features", {})),
-            agent_roles=[AgentRoleConfig(**role) for role in data.get("agent_roles", [])],
             customization=CustomizationConfig(**data.get("customization", {})),
         )
 
     @classmethod
-    def default(cls, project_name: str) -> "HQueueConfig":
+    def default(cls, project_name: str) -> "SiteNineConfig":
         """Create default configuration"""
-        default_roles = [
-            AgentRoleConfig("manager"),
-            AgentRoleConfig("architect"),
-            AgentRoleConfig("engineer"),
-            AgentRoleConfig("tester"),
-            AgentRoleConfig("documentarian"),
-            AgentRoleConfig("designer"),
-            AgentRoleConfig("inspector"),
-            AgentRoleConfig("operator"),
-        ]
-
         return cls(
             project=ProjectConfig(name=project_name),
-            agent_roles=default_roles,
         )
 
     def to_template_context(self) -> dict[str, Any]:
@@ -98,7 +75,6 @@ class HQueueConfig:
             "has_pm_system": self.features.pm_system,
             "has_session_tracking": self.features.session_tracking,
             "has_commit_guidelines": self.features.commit_guidelines,
-            "agent_roles": [{"name": role.name, "enabled": role.enabled} for role in self.agent_roles],
             "custom": self.customization.variables,
             "date": datetime.now().strftime("%Y-%m-%d"),
             "generated_at": datetime.now().isoformat(),

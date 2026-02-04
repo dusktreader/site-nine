@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from site_nine.cli.main import app
-from site_nine.core.config import HQueueConfig
+from site_nine.core.config import SiteNineConfig
 from site_nine.core.templates import TemplateRenderer
 from typer.testing import CliRunner
 
@@ -88,7 +88,7 @@ def test_init_command_renders_all_templates(project_dir: Path):
     expected_agents = [
         "administrator",
         "architect",
-        "builder",
+        "engineer",
         "tester",
         "documentarian",
         "designer",
@@ -249,16 +249,6 @@ def test_template_renderer_renders_all_jinja_templates(temp_dir: Path):
         "has_pm_system": True,
         "has_session_tracking": True,
         "has_commit_guidelines": True,
-        "agent_roles": [
-            {"name": "manager", "enabled": True},
-            {"name": "architect", "enabled": True},
-            {"name": "builder", "enabled": True},
-            {"name": "tester", "enabled": True},
-            {"name": "documentarian", "enabled": True},
-            {"name": "designer", "enabled": True},
-            {"name": "inspector", "enabled": True},
-            {"name": "operator", "enabled": True},
-        ],
     }
 
     # Test each template can be rendered
@@ -267,7 +257,7 @@ def test_template_renderer_renders_all_jinja_templates(temp_dir: Path):
         "base/opencode.json.jinja",
         "base/docs/agents/administrator.md.jinja",
         "base/docs/agents/architect.md.jinja",
-        "base/docs/agents/builder.md.jinja",
+        "base/docs/agents/engineer.md.jinja",
         "base/docs/agents/tester.md.jinja",
         "base/docs/agents/documentarian.md.jinja",
         "base/docs/agents/designer.md.jinja",
@@ -302,10 +292,10 @@ def test_template_renderer_renders_all_jinja_templates(temp_dir: Path):
         assert output_path.stat().st_size > 0, f"Template {template_name} created empty file"
 
 
-def test_hqueue_config_to_template_context():
-    """Test that HQueueConfig generates correct template context"""
+def test_site_nine_config_to_template_context():
+    """Test that SiteNineConfig generates correct template context"""
 
-    config = HQueueConfig.default("my-test-project")
+    config = SiteNineConfig.default("my-test-project")
     config.project.type = "python"
     config.project.description = "A test description"
 
@@ -319,7 +309,6 @@ def test_hqueue_config_to_template_context():
     assert context["has_pm_system"] is True
     assert context["has_session_tracking"] is True
     assert context["has_commit_guidelines"] is True
-    assert len(context["agent_roles"]) == 8
 
 
 def test_init_without_pm_system(project_dir: Path):

@@ -6,7 +6,7 @@ import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from site_nine.core.config import HQueueConfig
+from site_nine.core.config import SiteNineConfig
 from site_nine.core.personas import load_personas
 from site_nine.core.database import Database
 from site_nine.core.templates import TemplateRenderer
@@ -31,10 +31,10 @@ def init_command(
 
     # Get configuration
     if config:
-        hq_config = HQueueConfig.from_yaml(config)
+        site_nine_config = SiteNineConfig.from_yaml(config)
         console.print(f"[green]Loaded configuration from {config}[/green]")
     else:
-        hq_config = run_wizard()
+        site_nine_config = run_wizard()
 
     # Create .opencode directory
     opencode_dir.mkdir(exist_ok=True)
@@ -47,27 +47,19 @@ def init_command(
         yaml.safe_dump(
             {
                 "project": {
-                    "name": hq_config.project.name,
-                    "type": hq_config.project.type,
-                    "description": hq_config.project.description,
+                    "name": site_nine_config.project.name,
+                    "type": site_nine_config.project.type,
+                    "description": site_nine_config.project.description,
                 },
                 "features": {
-                    "pm_system": hq_config.features.pm_system,
-                    "session_tracking": hq_config.features.session_tracking,
-                    "commit_guidelines": hq_config.features.commit_guidelines,
-                    "daemon_naming": hq_config.features.daemon_naming,
+                    "pm_system": site_nine_config.features.pm_system,
+                    "session_tracking": site_nine_config.features.session_tracking,
+                    "commit_guidelines": site_nine_config.features.commit_guidelines,
+                    "daemon_naming": site_nine_config.features.daemon_naming,
                 },
-                "agent_roles": [
-                    {
-                        "name": role.name,
-                        "enabled": role.enabled,
-                        "description": role.description,
-                    }
-                    for role in hq_config.agent_roles
-                ],
                 "customization": {
-                    "personas_theme": hq_config.customization.personas_theme,
-                    "variables": hq_config.customization.variables,
+                    "personas_theme": site_nine_config.customization.personas_theme,
+                    "variables": site_nine_config.customization.variables,
                 },
             },
             f,
@@ -97,7 +89,7 @@ def init_command(
         # Render templates
         task3 = progress.add_task("Rendering templates...", total=None)
         renderer = TemplateRenderer()
-        context = hq_config.to_template_context()
+        context = site_nine_config.to_template_context()
         file_count = render_all_templates(renderer, opencode_dir, context)
         progress.update(task3, description=f"✓ Rendered {file_count} templates")
 
