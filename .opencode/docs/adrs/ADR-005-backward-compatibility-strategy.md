@@ -1,14 +1,60 @@
 # ADR-005: Backward Compatibility Strategy
 
-**Status:** Proposed  
+**Status:** Rejected  
 **Date:** 2026-02-03  
-**Deciders:** Ptah (Architect)  
+**Deciders:** Ptah (Architect), Al-Lat (Administrator)  
+**Rejection Date:** 2026-02-03  
+**Rejection Reason:** Unnecessary for project in early stages with no significant adoption  
 **Related Tasks:** ARC-H-0030, ADM-H-0029  
-**Related ADRs:** ADR-001 (Adapter), ADR-002 (Cursor), ADR-003 (Config), ADR-004 (Skills)
+**Related ADRs:** ADR-001 (Adapter Pattern), ADR-002 (Target Tool Prioritization), ADR-003 (Configuration System - 
+Rejected), ADR-004 (Skills Refactoring - Rejected)
 
-## Context
+## Rejection Summary
 
-Site-nine has existing users with `.opencode/` projects that work today. As we introduce multi-tool support through the adapter pattern (ADR-001), unified configuration (ADR-003), and skills refactoring (ADR-004), we must ensure **zero breaking changes** for these users.
+This ADR proposed a comprehensive backward compatibility strategy for the multi-tool refactoring. Upon review, it 
+became clear that:
+
+1. **No significant adoption**: Site-nine is in early/natal stages with minimal user base
+2. **Feasibility unknown**: We don't know if backward compatibility is even feasible during adapter implementation
+3. **Premature constraint**: Backward compatibility requirements may unnecessarily constrain the refactoring
+4. **Focused migration approach**: Per ADR-001, we're doing a coordinated migration with Operators where breaking 
+   changes are acceptable
+
+## Decision
+
+**REJECTED** - Do not enforce backward compatibility during adapter pattern implementation.
+
+**Rationale**: 
+- Site-nine has no significant user adoption yet - no one to break
+- Focused migration approach (ADR-001) means we can make breaking changes
+- Unknown feasibility - may be impossible or extremely costly to maintain compatibility
+- Better to build the right architecture than be constrained by premature compatibility promises
+- **Zero regression** (ADR-001) applies to features, not to migration path
+
+## Migration Strategy
+
+Instead of backward compatibility, use **focused migration**:
+
+1. Coordinate with Operators during refactoring period
+2. Breaking changes are acceptable - update all affected code/docs in one effort
+3. No other agents work during migration (no gradual migration needed)
+4. Document all breaking changes comprehensively
+5. Update ALL references per ADR-001 requirement #5
+
+**Key Distinction**: 
+- **Zero regression** = All site-nine features work after migration (feature parity)
+- **Backward compatibility** = Old `.opencode/` projects work without changes during migration (REJECTED)
+
+## Original Context (For Historical Reference)
+
+This ADR originally proposed a backward compatibility strategy, but was rejected as unnecessary for a project in 
+early stages. The content below is preserved for historical context only.
+
+---
+
+Site-nine has existing users with `.opencode/` projects that work today. As we introduce multi-tool support through the 
+adapter pattern (ADR-001), unified configuration (ADR-003), and skills refactoring (ADR-004), we must ensure **zero 
+breaking changes** for these users.
 
 ### Compatibility Requirements
 
@@ -78,7 +124,8 @@ class ToolRegistry:
             current = parent
 ```
 
-**Rationale**: Existing users have `.opencode/` directories. Detection finds them and uses OpenCodeAdapter. New code paths identical to old behavior.
+**Rationale**: Existing users have `.opencode/` directories. Detection finds them and uses OpenCodeAdapter. New code 
+paths identical to old behavior.
 
 ### Principle 2: OpenCodeAdapter Wraps Existing Behavior
 
@@ -124,7 +171,8 @@ class OpenCodeAdapter(ToolAdapter):
         ...
 ```
 
-**Rationale**: OpenCodeAdapter is a **thin wrapper**, not a rewrite. Existing code still executes, just accessed through adapter interface.
+**Rationale**: OpenCodeAdapter is a **thin wrapper**, not a rewrite. Existing code still executes, just accessed 
+through adapter interface.
 
 ### Principle 3: Gradual Deprecation (Not Removal)
 
@@ -151,7 +199,8 @@ def _convert_legacy_skill(self, md_path: Path) -> SkillDefinition:
     ...
 ```
 
-**Rationale**: No forced migration. Users migrate on their schedule. Advanced users can opt-in to strict mode for future-proofing.
+**Rationale**: No forced migration. Users migrate on their schedule. Advanced users can opt-in to strict mode for 
+future-proofing.
 
 ### Principle 4: Semantic Versioning
 
@@ -162,7 +211,8 @@ def _convert_legacy_skill(self, md_path: Path) -> SkillDefinition:
 - **v2.x.x**: Bug fixes, new tools, feature additions (no breaking changes)
 - **v3.0.0**: Only if we must remove legacy support (years from now)
 
-**Rationale**: Users know what to expect from version numbers. v2.0.0 signals "major new features" but not "breaking changes" thanks to backward compatibility.
+**Rationale**: Users know what to expect from version numbers. v2.0.0 signals "major new features" but not "breaking 
+changes" thanks to backward compatibility.
 
 ### Principle 5: Testing Matrix
 
@@ -401,9 +451,11 @@ This ADR ensures:
 
 ## Notes
 
-This ADR establishes **backward compatibility as a first-class requirement**, not an afterthought. Every design decision in ADR-001 through ADR-004 was made with backward compatibility in mind.
+This ADR establishes **backward compatibility as a first-class requirement**, not an afterthought. Every design 
+decision in ADR-001 through ADR-004 was made with backward compatibility in mind.
 
-**Key Principle**: **Abstractions should be invisible to existing users.** OpenCodeAdapter, ToolConfig, and SkillExecutor are implemented as wrappers around existing code, not replacements.
+**Key Principle**: **Abstractions should be invisible to existing users.** OpenCodeAdapter, ToolConfig, and 
+SkillExecutor are implemented as wrappers around existing code, not replacements.
 
 **Testing Philosophy**: "If it worked in v1.x.x, it must work identically in v2.0.0."
 

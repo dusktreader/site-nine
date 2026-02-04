@@ -1,13 +1,15 @@
 # ADR-001: Adapter Pattern for Tool Abstraction
 
-**Status:** Proposed  
-**Date:** 2026-02-03  
-**Deciders:** Ptah (Architect)  
+**Status:** Proposed
+**Date:** 2026-02-03
+**Deciders:** Ptah (Architect)
 **Related Tasks:** ARC-H-0030, ADM-H-0029
 
 ## Context
 
-Site-nine is currently tightly coupled to OpenCode as its primary AI coding tool. To make site-nine a universal AI coding workflow system that works with multiple tools (Cursor, Aider, GitHub Copilot CLI, etc.), we need to introduce an abstraction layer.
+Site-nine is currently tightly coupled to OpenCode as its primary AI coding tool. To make site-nine a universal AI
+coding workflow system that works with multiple tools (GitHub Copilot CLI, Claude Code, Crush, etc.), we need to
+introduce an abstraction layer.
 
 ### Current State
 
@@ -22,11 +24,13 @@ Based on codebase analysis:
 
 ### Requirements
 
-1. **Multi-tool support**: Enable site-nine to work with OpenCode, Cursor MCP, Aider, and future tools
-2. **Zero regression**: Existing OpenCode users must continue working without changes
+1. **Multi-tool support**: Enable site-nine to work with OpenCode, GitHub Copilot CLI, Claude Code, Crush, and future
+   tools
+2. **Zero regression**: All current site-nine features and functionality must be retained
 3. **Minimal coupling**: New abstractions should be clean and maintainable
 4. **Extensibility**: Community should be able to add new tool adapters
-5. **Gradual migration**: Refactoring should happen in phases without breaking existing functionality
+5. **Complete documentation update**: ALL documentation, bootstrapping files, .opencode/ agent directions, open tasks,
+   open missions, and any other references must be updated to reflect changes. No outdated references left behind.
 
 ## Decision
 
@@ -36,8 +40,8 @@ We will use the **Adapter Pattern** with **dependency injection** to abstract to
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│                  site-nine Core                       │
-│  (CLI, Tasks, Database, Agents - 80% of codebase)   │
+│                  site-nine Core                      │
+│  (CLI, Tasks, Database, Agents - 80% of codebase)    │
 └──────────────────┬───────────────────────────────────┘
                    │
                    │ depends on
@@ -48,18 +52,18 @@ We will use the **Adapter Pattern** with **dependency injection** to abstract to
         └──────────────────────┘
                    △
                    │ implements
-         ┌─────────┴──────────┐
-         │                    │
-┌────────▼────────┐  ┌───────▼────────┐
-│ OpenCodeAdapter │  │ CursorAdapter  │
-│  (Default)      │  │   (MCP)        │
-└─────────────────┘  └────────────────┘
-         │                    │
-         ▼                    ▼
-  ┌────────────┐      ┌──────────────┐
-  │  OpenCode  │      │ Cursor MCP   │
-  │    API     │      │     API      │
-  └────────────┘      └──────────────┘
+         ┌─────────┴──────────┬─────────────┐
+         │                    │             │
+┌────────▼────────┐  ┌───────▼────────┐  ┌▼──────────┐
+│ OpenCodeAdapter │  │ CopilotAdapter │  │ ClaudeCode│
+│  (Default)      │  │   (CLI)        │  │  Adapter  │
+└─────────────────┘  └────────────────┘  └───────────┘
+         │                    │                  │
+         ▼                    ▼                  ▼
+  ┌────────────┐      ┌─────────────┐    ┌────────────┐
+  │  OpenCode  │      │ Copilot CLI │    │Claude Code │
+  │    API     │      │     API     │    │    API     │
+  └────────────┘      └─────────────┘    └────────────┘
 ```
 
 ### Key Components
@@ -69,17 +73,17 @@ We will use the **Adapter Pattern** with **dependency injection** to abstract to
    - Methods: `load_skill()`, `execute_command()`, `get_config_path()`, `rename_session()`, etc.
 
 2. **ToolRegistry** (`src/site_nine/adapters/registry.py`)
-   - Auto-detects which tool is active (by checking for `.opencode/`, `.cursor/`, `.aider/` etc.)
+   - Auto-detects which tool is active (by checking for `.opencode/`, tool-specific markers, etc.)
    - Loads appropriate adapter
    - Provides fallback to OpenCode for backward compatibility
 
-3. **Concrete Adapters** (`src/site_nine/adapters/opencode.py`, `cursor.py`, etc.)
+3. **Concrete Adapters** (`src/site_nine/adapters/opencode.py`, `copilot.py`, `claude_code.py`, `crush.py`, etc.)
    - Implement ToolAdapter protocol for specific tools
    - Handle tool-specific API calls and configuration
 
 4. **Config Abstraction** (`src/site_nine/core/tool_config.py`)
    - Unified configuration model that maps to tool-specific configs
-   - Handles path resolution (`.opencode/` vs `.cursor/` vs `.aider/`)
+   - Handles path resolution (`.opencode/` vs tool-specific directories)
 
 ## Alternatives Considered
 
@@ -102,7 +106,7 @@ We will use the **Adapter Pattern** with **dependency injection** to abstract to
 
 ### Alternative 2: Tool-Specific Forks
 
-**Approach**: Fork site-nine for each tool (s9-opencode, s9-cursor, s9-aider).
+**Approach**: Fork site-nine for each tool (s9-opencode, s9-copilot, s9-claude-code, s9-crush).
 
 **Pros**:
 - Simple implementation
@@ -135,7 +139,8 @@ We will use the **Adapter Pattern** with **dependency injection** to abstract to
 
 ### Alternative 4: Monolithic Conditional Logic
 
-**Approach**: Add `if tool == "opencode"` / `elif tool == "cursor"` throughout codebase.
+**Approach**: Add `if tool == "opencode"` / `elif tool == "copilot"` / `elif tool == "claude_code"` throughout
+codebase.
 
 **Pros**:
 - Simple to understand
@@ -157,66 +162,90 @@ We will use the **Adapter Pattern** with **dependency injection** to abstract to
 1. **Right-sized abstraction**: Only abstracts the 20% that needs it
 2. **Open/Closed Principle**: New tools added without modifying existing code
 3. **Testability**: Each adapter can be tested independently
-4. **Backward compatibility**: OpenCodeAdapter is default, zero breaking changes
+4. **Zero regression**: All site-nine features retained across tools
 5. **Community-friendly**: Clear interface for community adapters
 6. **Industry standard**: Well-understood pattern with proven track record
 
 ### Implementation Strategy
 
-**Phase 1: Foundation (Weeks 1-2)**
+**Focused Migration Approach:**
+
+This will be implemented as a coordinated effort with Operators in a focused migration period. During this time, no
+other agents will be actively working on the system, eliminating backwards compatibility concerns.
+
+**Critical Requirement:** Every reference to changed concepts must be updated - documentation, bootstrapping, agent
+directions, open tasks, open missions, skills, templates, and any other artifacts. A comprehensive audit checklist
+must be completed before the migration is considered done.
+
+**Phase 1: Foundation**
 - Create ToolAdapter protocol
 - Implement OpenCodeAdapter (wraps existing behavior)
 - Add ToolRegistry with auto-detection
 - Update core to use adapter (with OpenCode as default)
-- **No user-facing changes** - pure refactoring
 
-**Phase 2: Cursor MCP Adapter (Weeks 3-4)**
-- Implement CursorAdapter
-- Add Cursor MCP server integration
-- Test with Cursor users
-- Document Cursor setup
+**Phase 2: Initial Alternative Tool Adapters**
+- Implement CopilotAdapter (GitHub Copilot CLI)
+- Implement ClaudeCodeAdapter
+- Implement CrushAdapter
+- Test with each tool
+- Document setup for each tool
 
-**Phase 3: Configuration System (Week 5)**
+**Phase 3: Configuration System**
 - Unified ToolConfig abstraction
 - Path mapping system
 - Multi-tool project support
 
-**Phase 4: Skills Refactoring (Week 6)**
+**Phase 4: Skills Refactoring**
 - Separate skill logic from presentation
 - Generic skill execution engine
 - Tool-specific skill renderers
+
+**Phase 5: Comprehensive Documentation & Reference Update**
+- Audit ALL files for outdated references (grep/search for old terms)
+- Update documentation (README, ADRs, guides, API docs)
+- Update bootstrapping/init templates
+- Update .opencode/ agent directions and skills
+- Update all open tasks and missions
+- Update CLI help text and error messages
+- Update code comments
+- Verify no broken references remain
 
 ## Consequences
 
 ### Positive
 
-- ✅ **Extensibility**: Easy to add new tools (Aider, Claude Code, etc.)
+- ✅ **Extensibility**: Easy to add new tools (Copilot CLI, Claude Code, Crush, etc.)
 - ✅ **Maintainability**: Single source of truth for core logic
 - ✅ **Testability**: Adapters can be mocked/tested independently
 - ✅ **Community growth**: Clear path for community contributions
-- ✅ **Zero regression**: OpenCode users unaffected
+- ✅ **Zero regression**: All current functionality retained across tool adapters
 
 ### Negative
 
 - ⚠️ **Initial complexity**: Adding abstraction layer requires upfront work
 - ⚠️ **Adapter maintenance**: Each tool needs its adapter kept up-to-date
 - ⚠️ **Learning curve**: Contributors need to understand adapter pattern
+- ⚠️ **Testing limitations**: Cannot run integration tests (can't run coding agent from within another agent)
+- ⚠️ **Versioning complexity**: Tracking compatibility between site-nine, adapters, and external tools could become 
+  complex; need to keep versioning strategy simple or risk maintenance burden
 
 ### Risks & Mitigation
 
-| Risk | Mitigation |
-|------|------------|
-| Adapter API becomes bloated | Start minimal, extend only when needed (YAGNI) |
-| Tool APIs change breaking adapters | Version adapters, adapter compatibility matrix |
-| Performance overhead from abstraction | Benchmark, optimize hot paths, lazy loading |
-| Community doesn't adopt | Excellent docs, example adapter, support |
+| Risk                                                                           | Mitigation                                                                                                                                                                  |
+|--------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Adapter API becomes bloated                                                    | Start minimal, extend only when needed (YAGNI)                                                                                                                              |
+| Tool APIs change breaking adapters                                             | Version adapters, maintain adapter compatibility matrix with supported tool versions                                                                                        |
+| Adapters can't be integration tested (can't run coding agent from within another) | Manual testing protocol per adapter with comprehensive smoke test checklist; real-world validation with each tool before release; document expected behavior per adapter |
+| Performance overhead from abstraction                                          | Benchmark critical paths, optimize hot paths, lazy loading                                                                                                                  |
+| Community doesn't adopt                                                        | Excellent docs, example adapter, support                                                                                                                                    |
 
 ## Compliance
 
 This decision supports:
 - **Project Goal**: Making site-nine a universal AI coding workflow system
 - **Research Findings**: 80% of codebase already tool-agnostic (ADM-H-0029)
-- **User Requirement**: Backward compatibility for existing OpenCode users
+- **Zero Regression**: All current site-nine features retained across tools
+- **Migration Strategy**: Focused effort with Operators during coordinated transition period
 
 ## References
 
@@ -231,7 +260,7 @@ This decision supports:
 This ADR focuses on **why** we chose the adapter pattern. Detailed **how** specifications (interface methods, class diagrams, sequence diagrams) are in the Technical Design Document.
 
 Next ADRs will cover:
-- ADR-002: Cursor MCP vs Aider as first target
+- ADR-002: Target tools prioritization (Copilot CLI, Claude Code, Crush)
 - ADR-003: Configuration system design
 - ADR-004: Skills refactoring approach
 - ADR-005: Backward compatibility strategy

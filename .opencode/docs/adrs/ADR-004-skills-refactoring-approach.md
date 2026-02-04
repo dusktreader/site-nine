@@ -1,14 +1,51 @@
 # ADR-004: Skills System Refactoring for Tool-Agnostic Execution
 
-**Status:** Proposed  
+**Status:** Rejected  
 **Date:** 2026-02-03  
-**Deciders:** Ptah (Architect)  
+**Deciders:** Ptah (Architect), Al-Lat (Administrator)  
+**Rejection Date:** 2026-02-03  
+**Rejection Reason:** Premature design - need to understand target tools' skill/extension systems first  
 **Related Tasks:** ARC-H-0030, ADM-H-0029  
-**Related ADRs:** ADR-001 (Adapter Pattern), ADR-002 (Cursor MCP), ADR-003 (Configuration System)
+**Related ADRs:** ADR-001 (Adapter Pattern), ADR-002 (Target Tool Prioritization), ADR-003 (Configuration System - 
+Rejected)
 
-## Context
+## Rejection Summary
 
-Site-nine's skills system is currently tightly coupled to OpenCode's skill invocation mechanism. Skills are invoked via `skill(name="session-start")` which only works in OpenCode. To support multiple tools, we need to refactor the skills system to separate:
+This ADR attempted to design a refactored skills system before understanding how the target tools (Copilot CLI, Crush, 
+Claude Code) handle skills, extensions, or similar concepts. Upon review, it became clear that:
+
+1. **Unknown skill systems**: We don't know if/how Copilot CLI, Crush, or Claude Code support skills/extensions
+2. **Premature abstraction**: Designing skill abstractions before understanding concrete tool capabilities is risky
+3. **May not be needed**: Some tools may not have skill systems at all - site-nine skills might be OpenCode-specific
+
+## Decision
+
+**REJECTED** - Defer skills refactoring until after implementing adapters and understanding each tool's capabilities.
+
+**Rationale**: 
+- OpenCode has a `skill(name="...")` invocation system
+- We don't know what (if anything) Copilot CLI, Crush, or Claude Code have
+- Can't design abstractions without understanding what we're abstracting
+- Skills may be OpenCode-only feature - adapters for other tools may work differently
+
+## Next Steps
+
+1. Implement Copilot CLI adapter (ADR-002) and learn how it handles workflows/automation
+2. For each tool adapter, discover what (if any) skill-like systems exist
+3. Keep OpenCode skills working as-is (no refactoring yet)
+4. Only refactor if/when we find common patterns across multiple tools that benefit from abstraction
+5. Skills refactoring is not a prerequisite for adapter pattern implementation
+
+## Original Context (For Historical Reference)
+
+This ADR originally proposed refactoring the skills system for tool-agnostic execution, but was rejected as premature. 
+The content below is preserved for historical context only.
+
+---
+
+Site-nine's skills system is currently tightly coupled to OpenCode's skill invocation mechanism. Skills are invoked via 
+`skill(name="session-start")` which only works in OpenCode. To support multiple tools, we need to refactor the skills 
+system to separate:
 
 1. **Skill logic** (what steps to perform) - tool-agnostic
 2. **Skill presentation** (how to format/display) - tool-specific
@@ -515,14 +552,16 @@ This decision supports:
 
 ## Notes
 
-This ADR establishes the **skills refactoring strategy**. The three-layer architecture (Definition → Executor → Renderer) separates concerns cleanly:
+This ADR establishes the **skills refactoring strategy**. The three-layer architecture (Definition → Executor → 
+Renderer) separates concerns cleanly:
 - **Definitions**: What to do (tool-agnostic)
 - **Executor**: How to execute (tool-agnostic)
 - **Renderers**: How to present (tool-specific)
 
 **Key Principle**: Workflow logic is tool-agnostic. Only presentation varies by tool.
 
-**Migration Path**: Phase 1 builds infrastructure with backward compatibility. Phase 2 converts skills gradually. Phase 3 adds new tool support.
+**Migration Path**: Phase 1 builds infrastructure with backward compatibility. Phase 2 converts skills gradually. Phase 
+3 adds new tool support.
 
 Next ADR:
 - ADR-005: Backward compatibility strategy (comprehensive)

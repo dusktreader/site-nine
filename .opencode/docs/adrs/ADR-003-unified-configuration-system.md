@@ -1,20 +1,51 @@
 # ADR-003: Unified Configuration System Design
 
-**Status:** Proposed  
+**Status:** Rejected  
 **Date:** 2026-02-03  
-**Deciders:** Ptah (Architect)  
+**Deciders:** Ptah (Architect), Al-Lat (Administrator)  
+**Rejection Date:** 2026-02-03  
+**Rejection Reason:** Premature design - insufficient knowledge of target tools  
 **Related Tasks:** ARC-H-0030, ADM-H-0029  
-**Related ADRs:** ADR-001 (Adapter Pattern), ADR-002 (Cursor MCP Target)
+**Related ADRs:** ADR-001 (Adapter Pattern), ADR-002 (Target Tool Prioritization)
 
-## Context
+## Rejection Summary
 
-Site-nine currently uses `.opencode/` as a hardcoded directory structure and `opencode.json` as its configuration file. To support multiple tools, we need a configuration system that:
+This ADR attempted to design a unified configuration system before implementing any adapters for the target tools 
+(Copilot CLI, Crush, Claude Code). Upon review, it became clear that:
 
-1. Works with different tool directory structures (`.opencode/`, `.cursor/`, `.aider/`, etc.)
+1. **Insufficient knowledge**: We don't know how each tool handles configuration
+2. **Premature abstraction**: Designing abstractions before understanding concrete implementations is risky
+3. **YAGNI violation**: We may not need unified configuration at all - each adapter might handle its own config
+
+## Decision
+
+**REJECTED** - Defer configuration system design until after implementing first adapter (Copilot CLI per ADR-002).
+
+**Rationale**: Learn what's actually needed from real implementation experience rather than speculating. The adapter 
+pattern (ADR-001) doesn't require unified configuration - each adapter can manage configuration however makes sense 
+for that tool.
+
+## Next Steps
+
+1. Implement Copilot CLI adapter (ADR-002) without unified config system
+2. Each adapter handles its own configuration as appropriate for that tool
+3. If common patterns emerge across 2-3 adapters, revisit configuration abstraction
+4. Don't build abstractions until they're demonstrably needed
+
+## Original Context (For Historical Reference)
+
+This ADR originally proposed a unified configuration system, but was rejected as premature. The content below is 
+preserved for historical context only.
+
+---
+
+Site-nine currently uses `.opencode/` as a hardcoded directory structure and `opencode.json` as its configuration file.
+To support multiple tools, we need a configuration system that:
+
+1. Works with different tool directory structures (tool-specific directories for Copilot CLI, Crush, Claude Code, etc.)
 2. Supports tool-specific configuration formats while maintaining a unified internal model
 3. Enables auto-detection of which tool is active in a project
-4. Allows projects to use multiple tools simultaneously (multi-tool projects)
-5. Maintains backward compatibility with existing `.opencode/` projects
+4. Maintains backward compatibility with existing `.opencode/` projects
 
 ### Current State
 
@@ -36,11 +67,13 @@ Site-nine currently uses `.opencode/` as a hardcoded directory structure and `op
 ### Requirements
 
 1. **Tool-agnostic internals**: Core site-nine code should work with any tool's structure
-2. **Tool detection**: Auto-detect active tool (OpenCode, Cursor, Aider, etc.)
-3. **Path mapping**: Map generic paths to tool-specific paths (e.g., `{tool}/work/sessions/`)
-4. **Multi-tool support**: Projects can have `.opencode/` AND `.cursor/` simultaneously
-5. **Backward compatibility**: Existing `.opencode/` projects work without changes
-6. **Configuration normalization**: Different tool config formats map to unified internal model
+2. **Tool detection**: Auto-detect active tool (OpenCode, Copilot CLI, Crush, Claude Code, etc.)
+3. **Path abstraction**: Site-nine manages its own data/work directories, adapts to tool-specific locations as feasible
+4. **Backward compatibility**: Existing `.opencode/` projects work without changes
+5. **Configuration normalization**: Different tool config formats map to unified internal model
+
+**Note**: Full path mapping across all tools may not be feasible. We'll learn what's possible as we implement each
+adapter.
 
 ## Decision
 
@@ -50,7 +83,7 @@ We will implement a **Unified Configuration System** with **tool detection** and
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│            site-nine Core Code                       │
+│            site-nine Core Code                      │
 │   Uses generic ToolConfig & PathResolver            │
 └──────────────────┬──────────────────────────────────┘
                    │
@@ -61,21 +94,21 @@ We will implement a **Unified Configuration System** with **tool detection** and
         │  (Auto-Detection)     │
         └──────────┬────────────┘
                    │ selects
-         ┌─────────┴──────────┐
-         │                    │
-┌────────▼────────┐  ┌───────▼────────┐
-│  OpenCodeConfig │  │  CursorConfig  │
-│   Loader        │  │   Loader       │
-└────────┬────────┘  └───────┬────────┘
-         │ loads              │ loads
-         ▼                    ▼
-  ┌────────────┐      ┌──────────────┐
-  │ opencode.  │      │ cursor.json  │
-  │ json       │      │              │
-  └────────────┘      └──────────────┘
-         │                    │
-         │ normalizes         │ normalizes
-         ▼                    ▼
+         ┌─────────┴──────────┬──────────────┐
+         │                    │              │
+┌────────▼────────┐  ┌───────▼────────┐  ┌─▼──────────┐
+│  OpenCodeConfig │  │  CopilotConfig │  │ClaudeConfig│
+│   Loader        │  │   Loader       │  │  Loader    │
+└────────┬────────┘  └───────┬────────┘  └─┬──────────┘
+         │ loads              │ loads       │ loads
+         ▼                    ▼             ▼
+  ┌────────────┐      ┌──────────────┐   ┌────────────┐
+  │ opencode.  │      │ copilot.json │   │claude.json │
+  │ json       │      │              │   │            │
+  └────────────┘      └──────────────┘   └────────────┘
+         │                    │             │
+         │ normalizes         │ normalizes  │ normalizes
+         ▼                    ▼             ▼
         ┌──────────────────────┐
         │    ToolConfig         │
         │  (Unified Model)      │
@@ -99,32 +132,32 @@ We will implement a **Unified Configuration System** with **tool detection** and
 @dataclass
 class ToolConfig:
     """Unified configuration model for all tools"""
-    
+
     # Tool identification
-    tool_name: str  # "opencode", "cursor", "aider"
-    tool_dir: Path  # .opencode/, .cursor/, .aider/
-    
+    tool_name: str  # "opencode", "copilot", "crush", "claude_code"
+    tool_dir: Path  # Tool-specific directory
+
     # Project metadata
     project_name: str
     project_type: str = "python"
-    
+
     # Directory structure
     data_dir: Path        # {tool}/data/
     docs_dir: Path        # {tool}/docs/
     work_dir: Path        # {tool}/work/
     skills_dir: Path      # {tool}/skills/
     commands_dir: Path    # {tool}/commands/
-    
+
     # Skills configuration
     skills_paths: list[Path]
-    
-    # Commands configuration  
+
+    # Commands configuration
     commands: dict[str, CommandConfig]
-    
+
     # Features
     features: FeaturesConfig
     agent_roles: list[AgentRoleConfig]
-    
+
     @classmethod
     def from_tool_config(cls, tool_name: str, config_file: Path) -> "ToolConfig":
         """Load tool-specific config and normalize to ToolConfig"""
@@ -139,46 +172,46 @@ class ToolConfig:
 ```python
 class ToolRegistry:
     """Detects active tool and provides appropriate adapter"""
-    
+
     TOOL_MARKERS = {
         "opencode": (".opencode", "opencode.json"),
-        "cursor": (".cursor", "cursor.json"),
-        "aider": (".aider", ".aider.conf.yml"),
+        "copilot": (".copilot", "copilot.json"),  # Example - actual path TBD
+        "crush": (".crush", "crush.json"),  # Example - actual path TBD
+        "claude_code": (".claude", "claude.json"),  # Example - actual path TBD
     }
-    
+
     @classmethod
     def detect_tool(cls, start_path: Path | None = None) -> str | None:
         """
         Auto-detect which tool is active in project.
-        
+
         Search order:
         1. SITE_NINE_TOOL env var (explicit override)
-        2. .cursor/ directory (Cursor MCP)
-        3. .aider/ directory (Aider)
-        4. .opencode/ directory (OpenCode - default)
-        
+        2. Tool-specific directories (precedence TBD based on implementation)
+        3. .opencode/ directory (OpenCode - default fallback)
+
         Returns:
-            Tool name ("opencode", "cursor", "aider") or None if not found
+            Tool name ("opencode", "copilot", "crush", "claude_code") or None if not found
         """
         # Check environment override
         if tool := os.getenv("SITE_NINE_TOOL"):
             return tool.lower()
-        
+
         # Walk up directory tree looking for tool markers
         current = (start_path or Path.cwd()).resolve()
         while True:
-            # Check each tool in priority order
-            for tool_name in ["cursor", "aider", "opencode"]:
+            # Check each tool in priority order (actual order TBD)
+            for tool_name in ["copilot", "crush", "claude_code", "opencode"]:
                 tool_dir, config_file = cls.TOOL_MARKERS[tool_name]
                 if (current / tool_dir).exists():
                     return tool_name
-            
+
             # Move up directory tree
             parent = current.parent
             if parent == current:
                 return None
             current = parent
-    
+
     @classmethod
     def get_tool_config(cls) -> ToolConfig:
         """Get active tool configuration"""
@@ -188,10 +221,10 @@ class ToolRegistry:
                 "No site-nine tool configuration found. "
                 "Run 's9 init' or configure your tool directory."
             )
-        
+
         tool_dir = find_tool_dir(tool_name)
         config_file = tool_dir / get_config_filename(tool_name)
-        
+
         return ToolConfig.from_tool_config(tool_name, config_file)
 ```
 
@@ -202,34 +235,34 @@ class ToolRegistry:
 ```python
 class PathResolver:
     """Resolves generic paths to tool-specific paths"""
-    
+
     def __init__(self, config: ToolConfig):
         self.config = config
         self.tool_dir = config.tool_dir
-    
+
     def get_data_path(self) -> Path:
         """Get data directory path"""
         return self.tool_dir / "data"
-    
+
     def get_database_path(self) -> Path:
         """Get database file path"""
         return self.get_data_path() / "project.db"
-    
+
     def get_sessions_path(self) -> Path:
         """Get sessions directory path"""
         return self.tool_dir / "work" / "sessions"
-    
+
     def get_tasks_path(self) -> Path:
         """Get tasks directory path"""
         return self.tool_dir / "work" / "tasks"
-    
+
     def resolve(self, generic_path: str) -> Path:
         """
         Resolve generic path template to tool-specific path.
-        
+
         Examples:
             "{tool}/data/project.db" -> ".opencode/data/project.db"
-            "{tool}/work/sessions/" -> ".cursor/work/sessions/"
+            "{tool}/work/sessions/" -> ".copilot/work/sessions/"
         """
         return Path(generic_path.replace("{tool}", str(self.tool_dir)))
 ```
@@ -241,18 +274,18 @@ class PathResolver:
 ```python
 class ConfigLoader(Protocol):
     """Protocol for tool-specific config loaders"""
-    
+
     def load(self, config_file: Path) -> ToolConfig:
         """Load tool-specific config and normalize to ToolConfig"""
         ...
 
 class OpenCodeConfigLoader:
     """Loads opencode.json and converts to ToolConfig"""
-    
+
     def load(self, config_file: Path) -> ToolConfig:
         with open(config_file) as f:
             raw = json.load(f)
-        
+
         tool_dir = config_file.parent
         return ToolConfig(
             tool_name="opencode",
@@ -268,20 +301,22 @@ class OpenCodeConfigLoader:
             # ... normalize other fields
         )
 
-class CursorConfigLoader:
-    """Loads cursor.json and converts to ToolConfig"""
-    
+class CopilotConfigLoader:
+    """Loads copilot.json (or appropriate config format) and converts to ToolConfig"""
+
     def load(self, config_file: Path) -> ToolConfig:
         with open(config_file) as f:
-            raw = json.load(f)
-        
-        # Map Cursor MCP config format to ToolConfig
+            raw = json.load(f)  # Format TBD based on actual Copilot CLI config
+
+        # Map Copilot CLI config format to ToolConfig
         tool_dir = config_file.parent
         return ToolConfig(
-            tool_name="cursor",
+            tool_name="copilot",
             tool_dir=tool_dir,
-            # ... map Cursor-specific format
+            # ... map Copilot-specific format (TBD during implementation)
         )
+
+# Similar loaders for Crush and Claude Code will be implemented as we learn their config formats
 ```
 
 ### Configuration File Strategy
@@ -290,18 +325,19 @@ class CursorConfigLoader:
 
 **Approach**: Each tool has its own config file format.
 - OpenCode: `opencode.json`
-- Cursor: `cursor.json`
-- Aider: `.aider.conf.yml`
+- Copilot CLI: Config format TBD (research during implementation)
+- Crush: Config format TBD (research during implementation)
+- Claude Code: Config format TBD (research during implementation)
 
 **Pros**:
 - ✅ Respects each tool's conventions
 - ✅ Works with existing tool ecosystems
-- ✅ No conflicts in multi-tool projects
 - ✅ Tool-specific features supported
+- ✅ Incidentally handles multi-tool scenarios if they arise
 
 **Cons**:
 - ⚠️ Need config loaders for each tool
-- ⚠️ Duplication in multi-tool projects
+- ⚠️ Potential duplication if projects use multiple tools (not a priority concern)
 
 #### Option B: Unified `.s9.json` File (REJECTED)
 
@@ -332,7 +368,6 @@ class CursorConfigLoader:
 - User-hostile (must set env vars every time)
 - No per-project configuration
 - Hard to share projects
-- Doesn't support multi-tool projects
 
 **Rejected because**: Poor user experience.
 
@@ -365,7 +400,7 @@ class CursorConfigLoader:
 - Feature divergence
 - No code reuse
 
-**Rejected because**: Defeats purpose of multi-tool support.
+**Rejected because**: Defeats purpose of universal tool support; violates DRY principle.
 
 ## Implementation Plan
 
@@ -390,25 +425,29 @@ class CursorConfigLoader:
    - Replace hardcoded paths with `path_resolver.get_*_path()`
    - Update all CLI commands
 
-### Phase 2: Cursor Configuration (Week 3)
+### Phase 2: Tool-Specific Configuration Loaders (Per Tool Implementation)
 
-1. **Create CursorConfigLoader**
-   - Parse `cursor.json`
+**Note**: This phase happens alongside each tool adapter implementation (see ADR-002)
+
+1. **Create Tool-Specific ConfigLoaders**
+   - Research tool's config format
+   - Parse tool-specific config file
    - Map to ToolConfig
 
-2. **Cursor Directory Structure**
-   - Generate `.cursor/` structure in `s9 init --tool cursor`
-   - Create `cursor.json` template
+2. **Tool Directory Structure**
+   - Generate tool-specific directory structure in `s9 init --tool <toolname>`
+   - Create tool-specific config template
 
 3. **Testing**
-   - Test Cursor config loading
-   - Validate path resolution
+   - Test tool config loading
+   - Validate path resolution for that tool
 
-### Phase 3: Multi-Tool Support (Week 5)
+### Phase 3: Multi-Tool Support (After Multiple Adapters Complete)
 
 1. **Tool Priority System**
-   - Handle projects with both `.opencode/` and `.cursor/`
+   - Handle projects with multiple tool directories
    - User can override via `SITE_NINE_TOOL` env var
+   - Document precedence order
 
 2. **Config Synchronization**
    - Optional: sync configs across tools
@@ -432,32 +471,34 @@ class CursorConfigLoader:
 
 ### Risks & Mitigation
 
-| Risk | Mitigation |
-|------|------------|
-| Tool detection ambiguous in multi-tool projects | Clear precedence order, env var override |
-| Config format changes in tools | Version loaders, compatibility matrix |
-| Path resolution bugs | Comprehensive path resolution tests |
-| Performance overhead from abstraction | Lazy loading, caching |
+| Risk                                        | Mitigation                                  |
+|---------------------------------------------|---------------------------------------------|
+| Tool detection ambiguous if multiple tool directories exist | Clear precedence order, env var override for edge cases |
+| Config format changes in tools              | Version loaders, compatibility matrix       |
+| Path resolution bugs                        | Comprehensive path resolution tests         |
+| Performance overhead from abstraction       | Lazy loading, caching                       |
 
 ## Compliance
 
 This decision supports:
 - **ADR-001**: Enables adapter pattern with clean configuration abstraction
-- **ADR-002**: Provides foundation for Cursor MCP support
+- **ADR-002**: Provides foundation for multi-tool support (Copilot CLI, Crush, Claude Code)
 - **Project Goal**: Multi-tool support with unified internal model
 
 ## References
 
 - ADR-001: Adapter Pattern
-- ADR-002: Cursor MCP First Target
+- ADR-002: Target Tool Prioritization
 - Current implementation: `src/site_nine/core/paths.py`, `src/site_nine/core/config.py`
 - OpenCode config: `.opencode/opencode.json`
 
 ## Notes
 
-This ADR establishes the **configuration abstraction** layer. It's designed to work with ADR-001's adapter pattern - adapters use ToolConfig to access tool-specific paths and settings in a normalized way.
+This ADR establishes the **configuration abstraction** layer. It's designed to work with ADR-001's adapter pattern -
+adapters use ToolConfig to access tool-specific paths and settings in a normalized way.
 
-**Key Principle**: Configuration system knows about different tools (detection, loading). Core business logic only sees ToolConfig (tool-agnostic).
+**Key Principle**: Configuration system knows about different tools (detection, loading). Core business logic only sees
+ToolConfig (tool-agnostic).
 
 Next ADRs:
 - ADR-004: Skills refactoring approach
