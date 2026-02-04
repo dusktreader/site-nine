@@ -1183,12 +1183,16 @@ def rename_tui(
     uuid_marker: str | None = typer.Option(
         None, "--uuid-marker", "-u", help="Session UUID marker from generate-session-uuid"
     ),
+    suffix: str | None = typer.Option(
+        None, "--suffix", help="Optional suffix to append to title (e.g., '[DISMISSED]')"
+    ),
 ) -> None:
     """Rename the current OpenCode TUI session to match agent identity
 
     If --session-id is provided, renames that specific mission.
     If --uuid-marker is provided, searches session diffs for that marker (most reliable).
     Otherwise, attempts to auto-detect using content correlation and timestamps.
+    If --suffix is provided, appends it to the session title (useful for indicating mission status).
     """
     # Find the project root (contains .opencode directory)
     try:
@@ -1283,6 +1287,10 @@ def rename_tui(
     else:
         # Fallback if no active mission found
         new_title = f"{name.capitalize()} - {role}"
+
+    # Append suffix if provided
+    if suffix:
+        new_title = f"{new_title} {suffix}"
 
     _update_session_title(session_file, new_title, project_root)
 

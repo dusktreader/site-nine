@@ -165,7 +165,34 @@ s9 mission end <your-mission-id>
 
 This updates the database and mission file frontmatter (end_time).
 
-## Step 9: Verify Quality Checks
+## Step 9: Rename TUI Session to Indicate Dismissal
+
+Update the OpenCode session title to show the mission has ended (2-step process):
+
+### Step 9a: Generate UUID Marker
+
+```bash
+s9 mission generate-session-uuid
+```
+
+Capture the UUID from the output.
+
+### Step 9b: Rename with Dismissal Suffix
+
+```bash
+s9 mission rename-tui <persona> <Role> --uuid-marker <uuid-from-step-9a> --suffix "[DISMISSED]"
+```
+
+**After successful rename:**
+```
+✅ Session renamed to indicate dismissal - you can easily identify completed missions in your session list!
+```
+
+**Example result:** "Operation epic-specter: Yggdrasil - Operator [DISMISSED]"
+
+This provides clear visual feedback that the mission has ended and the session-end protocol was followed.
+
+## Step 10: Verify Quality Checks
 
 Run sanity check if appropriate:
 
@@ -175,7 +202,7 @@ make qa
 
 If QA fails, fix issues or document in "Next Steps".
 
-## Step 10: Say Goodbye
+## Step 11: Say Goodbye
 
 Provide final summary:
 
