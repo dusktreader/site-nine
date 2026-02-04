@@ -1,0 +1,178 @@
+# Epics
+
+This directory contains epic files documenting large-scale feature initiatives for {{ project_name }}.
+
+Each epic is a separate markdown file that groups related tasks and provides high-level tracking.
+
+
+---
+
+
+## Epic File Naming
+
+**Format:** `EPC-<PRIORITY>-<NUMBER>.md`
+
+**Examples:**
+- `EPC-H-0001.md` (High priority, epic #1)
+- `EPC-M-0002.md` (Medium priority, epic #2)
+- `EPC-L-0003.md` (Low priority, epic #3)
+
+**Components:**
+- `EPC` - Epic prefix (constant)
+- `<PRIORITY>` - Priority code:
+  - `H` - High priority
+  - `M` - Medium priority
+  - `L` - Low priority
+- `<NUMBER>` - Zero-padded sequential number (4 digits)
+
+**Priority Guidelines:**
+- **High (H):** Critical features, blockers, or technical debt that impacts development
+- **Medium (M):** Important features that improve functionality or user experience
+- **Low (L):** Nice-to-have features, minor improvements, or future enhancements
+
+
+---
+
+
+## Epic File Structure
+
+Each epic file follows this structure:
+
+```markdown
+# Epic EPC-<PRIORITY>-<NUMBER>: <Title>
+
+**Status:** 📋 TODO | 🔄 UNDERWAY | ✅ COMPLETE | ❌ CANCELLED
+**Priority:** HIGH | MEDIUM | LOW
+**Created:** YYYY-MM-DD HH:MM:SS
+**Updated:** YYYY-MM-DD HH:MM:SS
+
+
+## Description
+
+Brief overview of what this epic encompasses and why it's needed.
+
+## Goals
+
+- Specific outcome 1
+- Specific outcome 2
+- Specific outcome 3
+
+## Success Criteria
+
+- Measurable criterion 1
+- Measurable criterion 2
+- Measurable criterion 3
+
+## Related Architecture
+
+- **ADR-XXX**: Link to relevant Architecture Decision Records
+- Reference to design documents or technical specifications
+
+## Notes
+
+Additional context, background information, or important considerations.
+```
+
+
+---
+
+
+## Managing Epics
+
+**List all epics:**
+```bash
+s9 dashboard
+```
+
+**Show epic details:**
+```bash
+s9 epic show EPC-H-0001
+```
+
+**Create new epic:**
+```bash
+s9 epic create --title "Feature Name" --priority HIGH
+```
+
+**Update epic:**
+```bash
+s9 epic update EPC-H-0001 --status UNDERWAY
+```
+
+
+---
+
+
+## Epic Lifecycle
+
+### Creating an Epic
+
+1. Administrator identifies a large-scale initiative
+2. Create epic file with appropriate priority
+3. Define clear goals and success criteria
+4. Link to relevant architecture decisions (ADRs)
+5. Break down into specific tasks for various roles
+
+### During Development
+
+- Track progress through subtasks in the dashboard
+- Update status as work progresses (TODO → UNDERWAY)
+- Document decisions and adjustments in Notes section
+- Keep Related Architecture section up to date
+
+### Completing an Epic
+
+1. Verify all success criteria are met
+2. Ensure all subtasks are completed or closed
+3. Update status to COMPLETE
+4. Document outcomes and lessons learned
+5. Reference epic in related commit messages and PRs
+
+
+---
+
+
+## Epic Status Values
+
+| Status | Meaning |
+|--------|---------|
+| `📋 TODO` | Epic defined but work not yet started |
+| `🔄 UNDERWAY` | Active development in progress |
+| `✅ COMPLETE` | All goals met and success criteria satisfied |
+| `❌ CANCELLED` | Epic abandoned or deprioritized |
+
+
+---
+
+
+## Relationship with Tasks
+
+Epics serve as parent containers for related tasks:
+
+- Each task references its parent epic (if applicable)
+- Use `s9 task create --epic EPC-H-0001` to link tasks to epics
+- Dashboard shows epic progress based on subtask completion
+- Tasks can span multiple roles (Architect, Engineer, Tester, etc.)
+
+
+---
+
+
+## Benefits
+
+1. **Strategic Planning** - Organize work around meaningful features
+2. **Progress Tracking** - See high-level completion status at a glance
+3. **Context Preservation** - Goals and success criteria documented upfront
+4. **Cross-Role Coordination** - Multiple agents contribute to single epic
+5. **Architecture Alignment** - Links to ADRs ensure technical coherence
+6. **Historical Record** - Understand why features were built and how
+
+
+---
+
+
+## Related Documents
+
+- **docs/procedures/TASK_WORKFLOW.md** - How to create and manage tasks
+- **docs/adrs/** - Architecture Decision Records referenced by epics
+- **work/planning/PROJECT_STATUS.md** - Overall project roadmap and priorities

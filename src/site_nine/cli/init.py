@@ -120,6 +120,8 @@ def render_all_templates(renderer: TemplateRenderer, output_dir: Path, context: 
         # Missions
         "base/work/missions/README.md.jinja": "work/missions/README.md",
         "base/work/missions/TEMPLATE.md.jinja": "work/missions/TEMPLATE.md",
+        # Epics
+        "base/work/epics/README.md.jinja": "work/epics/README.md",
     }
 
     count = 0
@@ -192,8 +194,9 @@ def render_all_templates(renderer: TemplateRenderer, output_dir: Path, context: 
     else:
         console.print(f"[yellow]Warning: Skills source directory not found at {skills_src}[/yellow]")
 
-    # Create empty directories for work/tasks, scripts, etc.
+    # Create empty directories for work/tasks, work/epics, scripts, etc.
     (output_dir / "work" / "tasks").mkdir(exist_ok=True, parents=True)
+    (output_dir / "work" / "epics").mkdir(exist_ok=True, parents=True)
     (output_dir / "scripts").mkdir(exist_ok=True)
 
     return count
