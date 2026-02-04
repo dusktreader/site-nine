@@ -51,7 +51,7 @@ def start(
     valid_roles = [
         "administrator",
         "architect",
-        "builder",
+        "engineer",
         "tester",
         "documentarian",
         "designer",
@@ -370,7 +370,7 @@ def update(
         valid_roles = [
             "administrator",
             "architect",
-            "builder",
+            "engineer",
             "tester",
             "documentarian",
             "designer",
@@ -472,7 +472,7 @@ def roles() -> None:
     roles_list = [
         ("Administrator", "coordinate and delegate to other agents"),
         ("Architect", "design systems and make technical decisions"),
-        ("Builder", "implement features and write code"),
+        ("Engineer", "implement features and write code"),
         ("Tester", "write tests and validate functionality"),
         ("Documentarian", "create documentation and guides"),
         ("Designer", "design user interfaces and experiences"),
@@ -1258,8 +1258,32 @@ def rename_tui(
     # Locate the session file
     session_file = _locate_session_file(current_mission_id, session_storage)
 
-    # Update the session title
-    new_title = f"{name.capitalize()} - {role}"
+    # Get mission codename from database
+    # Query the most recent active mission for this persona
+    manager = _get_manager()
+    db_path = opencode_dir / "data" / "project.db"
+    db = Database(db_path)
+
+    # Get the most recent active mission for this persona
+    missions = db.execute_query(
+        """
+        SELECT codename FROM missions 
+        WHERE persona_name = :persona_name 
+        AND end_time IS NULL 
+        ORDER BY created_at DESC 
+        LIMIT 1
+        """,
+        {"persona_name": name.lower()},
+    )
+
+    # Format title with codename if available
+    if missions and missions[0]["codename"]:
+        codename = missions[0]["codename"]
+        new_title = f"Operation {codename}: {name.capitalize()} - {role}"
+    else:
+        # Fallback if no active mission found
+        new_title = f"{name.capitalize()} - {role}"
+
     _update_session_title(session_file, new_title, project_root)
 
     # Warn if multiple sessions were active (potential race condition)
