@@ -159,6 +159,19 @@ def render_all_templates(renderer: TemplateRenderer, output_dir: Path, context: 
             except Exception as e:
                 console.print(f"[yellow]Warning: Failed to copy {cmd_file}: {e}[/yellow]")
 
+    # Copy style guide from site-nine's .opencode/docs directory
+    docs_src = PathLib(__file__).parent.parent.parent.parent / ".opencode" / "docs"
+    docs_dest = output_dir / "docs"
+    docs_dest.mkdir(exist_ok=True, parents=True)
+
+    style_guide_src = docs_src / "MARKDOWN_STYLE_GUIDE.md"
+    if style_guide_src.exists():
+        try:
+            (docs_dest / "MARKDOWN_STYLE_GUIDE.md").write_text(style_guide_src.read_text())
+            count += 1
+        except Exception as e:
+            console.print(f"[yellow]Warning: Failed to copy MARKDOWN_STYLE_GUIDE.md: {e}[/yellow]")
+
     # Copy skill files directly from site-nine's .opencode directory
     # Skills should be exact copies, not templates
     skills_src = PathLib(__file__).parent.parent.parent.parent / ".opencode" / "skills"
