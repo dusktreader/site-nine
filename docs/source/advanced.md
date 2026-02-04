@@ -32,7 +32,7 @@ opencode
 >   Role: Architect
 >   Description: Create ADR for auth strategy, choose JWT vs sessions, define security requirements
 > 
-> ✓ Created task BLD-H-0002
+> ✓ Created task ENG-H-0002
 >   Title: Implement authentication API endpoints
 >   Priority: HIGH
 >   Role: Engineer
@@ -43,14 +43,14 @@ opencode
 >   Title: Write authentication test suite
 >   Priority: HIGH
 >   Role: Tester
->   Dependencies: BLD-H-0002
+>   Dependencies: ENG-H-0002
 >   Description: Unit and integration tests for all auth flows including edge cases
 > 
 > ✓ Created task DOC-M-0004
 >   Title: Document authentication API
 >   Priority: MEDIUM
 >   Role: Documentarian
->   Dependencies: BLD-H-0002
+>   Dependencies: ENG-H-0002
 >   Description: API documentation with examples for all auth endpoints
 > 
 > The tasks are ready. I recommend starting with the Architect designing the approach, then handing off to the Engineer.
@@ -97,9 +97,9 @@ opencode
 > Hand this off to a Engineer persona to implement
 
 **Kothar (Architect):**
-> I'll update the handoff for task BLD-H-0002.
+> I'll update the handoff for task ENG-H-0002.
 > 
-> ✓ Updated task BLD-H-0002 status to READY
+> ✓ Updated task ENG-H-0002 status to READY
 > ✓ Added handoff notes:
 > 
 > ```
@@ -115,7 +115,7 @@ opencode
 > All design decisions documented in docs/adr/0003-authentication-strategy.md
 > ```
 > 
-> Task BLD-H-0002 is ready for a Engineer to claim.
+> Task ENG-H-0002 is ready for a Engineer to claim.
 
 ---
 
@@ -130,12 +130,12 @@ opencode
 ```
 
 **You (in Terminal 3):**
-> Claim task BLD-H-0002 and implement it based on Kothar's architecture
+> Claim task ENG-H-0002 and implement it based on Kothar's architecture
 
 **Azazel (Engineer):**
-> I'll claim BLD-H-0002 and implement the authentication system.
+> I'll claim ENG-H-0002 and implement the authentication system.
 > 
-> ✓ Claimed task BLD-H-0002
+> ✓ Claimed task ENG-H-0002
 > 
 > Let me review Kothar's ADR first...
 > 
@@ -155,7 +155,7 @@ opencode
 > 
 > ✓ Auth endpoints responding correctly
 > 
-> Task BLD-H-0002 is ready for review. I'll update the status to REVIEW so a Tester can claim TST-H-0003.
+> Task ENG-H-0002 is ready for review. I'll update the status to REVIEW so a Tester can claim TST-H-0003.
 
 ---
 
@@ -204,7 +204,7 @@ opencode
 > ✅ All tests passing! The authentication implementation is working correctly.
 > 
 > ✓ Marked task TST-H-0003 as COMPLETE
-> ✓ Marked task BLD-H-0002 as COMPLETE
+> ✓ Marked task ENG-H-0002 as COMPLETE
 > 
 > The authentication feature is tested and validated.
 
@@ -281,12 +281,12 @@ Instead of querying databases or running commands, ask your personas for insight
 > 
 > **Blocked Tasks:**
 > 
-> - **BLD-H-0015** (Rate limiting implementation)
+> - **ENG-H-0015** (Rate limiting implementation)
 >   - Blocked by: ARC-H-0014 (Rate limiting design)
 >   - Status: ARC-H-0014 is UNDERWAY, should be ready soon
 > 
 > - **DOC-H-0018** (API documentation update)
->   - Blocked by: BLD-H-0015, BLD-H-0016, BLD-H-0017
+>   - Blocked by: ENG-H-0015, ENG-H-0016, ENG-H-0017
 >   - Status: Waiting on 3 Engineer tasks
 > 
 > The main bottleneck is architectural work. Once ARC-H-0014 completes, several tasks can proceed.
@@ -299,7 +299,7 @@ Override default persona behavior by customizing templates.
 
 1. Copy a persona template:
 ```bash
-cp .opencode/personas/builder.md .opencode/personas/builder-custom.md
+cp .opencode/personas/engineer.md .opencode/personas/engineer-custom.md
 ```
 
 2. Edit the template to add project-specific guidelines:
@@ -319,7 +319,7 @@ cp .opencode/personas/builder.md .opencode/personas/builder-custom.md
 ```
 
 3. Ask personas to reference the custom template:
-> Use the guidelines in builder-custom.md for this implementation
+> Use the guidelines in engineer-custom.md for this implementation
 
 ### Project-Specific Workflows
 
@@ -369,7 +369,7 @@ Instead of using CLI commands, ask personas to create tasks conversationally:
 **Persona (Administrator):**
 > I'll create that task for you.
 > 
-> ✓ Created task BLD-H-0015
+> ✓ Created task ENG-H-0015
 >   Title: Implement rate limiting on API
 >   Priority: HIGH
 >   Role: Engineer
@@ -412,32 +412,32 @@ Instead of using CLI commands, ask personas to create tasks conversationally:
 >   Role: Architect
 >   Description: Choose notification delivery method (websockets, SSE, polling), design data model
 > 
-> ✓ Created task BLD-H-0021
+> ✓ Created task ENG-H-0021
 >   Title: Implement notification backend
 >   Priority: HIGH
 >   Role: Engineer
 >   Dependencies: ARC-H-0020
 >   Description: Build notification service, API endpoints, and data storage
 > 
-> ✓ Created task BLD-H-0022
+> ✓ Created task ENG-H-0022
 >   Title: Add notification frontend components
 >   Priority: HIGH
 >   Role: Engineer
->   Dependencies: BLD-H-0021
+>   Dependencies: ENG-H-0021
 >   Description: Create notification UI, toast/banner components, and real-time updates
 > 
 > ✓ Created task TST-M-0023
 >   Title: Test notification delivery
 >   Priority: MEDIUM
 >   Role: Tester
->   Dependencies: BLD-H-0021, BLD-H-0022
+>   Dependencies: ENG-H-0021, ENG-H-0022
 >   Description: Test notification triggers, delivery, UI display, and edge cases
 > 
 > ✓ Created task DOC-M-0024
 >   Title: Document notification system
 >   Priority: MEDIUM
 >   Role: Documentarian
->   Dependencies: BLD-H-0021
+>   Dependencies: ENG-H-0021
 >   Description: API docs, user guide for managing notifications
 > 
 > I've created 5 tasks with proper dependencies. Start with the Architect designing the system.
@@ -461,8 +461,8 @@ For large features spanning multiple tasks, use epics to track overall progress:
 > Now I'll link the related tasks to this epic...
 > 
 > ✓ Linked task ARC-H-0020 to epic EPC-H-0005
-> ✓ Linked task BLD-H-0021 to epic EPC-H-0005
-> ✓ Linked task BLD-H-0022 to epic EPC-H-0005
+> ✓ Linked task ENG-H-0021 to epic EPC-H-0005
+> ✓ Linked task ENG-H-0022 to epic EPC-H-0005
 > ✓ Linked task TST-M-0023 to epic EPC-H-0005
 > ✓ Linked task DOC-M-0024 to epic EPC-H-0005
 > 
@@ -482,10 +482,10 @@ For large features spanning multiple tasks, use epics to track overall progress:
 > 
 > ✅ **Complete:**
 > - ARC-H-0020 - Design architecture (Kothar)
-> - BLD-H-0021 - Backend implementation (Azazel)
+> - ENG-H-0021 - Backend implementation (Azazel)
 > 
 > 🔄 **In Progress:**
-> - BLD-H-0022 - Frontend components (Azazel)
+> - ENG-H-0022 - Frontend components (Azazel)
 > 
 > 📋 **TODO:**
 > - TST-M-0023 - Test notification delivery
@@ -515,7 +515,7 @@ See the [Epics guide](epics.md) for detailed information on working with epics.
 > 
 > ✅ **Complete:**
 > - ARC-H-0001 - Design auth architecture (Kothar)
-> - BLD-H-0002 - Implement auth API (Azazel)
+> - ENG-H-0002 - Implement auth API (Azazel)
 > - TST-H-0003 - Test auth endpoints (Eris)
 > 
 > 🔄 **In Progress:**
@@ -526,12 +526,12 @@ See the [Epics guide](epics.md) for detailed information on working with epics.
 ### Request Task Reassignment
 
 **You:**
-> Azazel has been working on BLD-H-0015 for 3 days and seems stuck. Can we reassign it?
+> Azazel has been working on ENG-H-0015 for 3 days and seems stuck. Can we reassign it?
 
 **Persona (Administrator):**
 > Let me check the task status and reassign if needed...
 > 
-> Looking at BLD-H-0015 (Rate limiting implementation):
+> Looking at ENG-H-0015 (Rate limiting implementation):
 > - Claimed by Azazel 3 days ago
 > - Status: UNDERWAY
 > - Last update: "Researching best approach for distributed rate limiting"
@@ -555,21 +555,101 @@ See the [Epics guide](epics.md) for detailed information on working with epics.
 > **Payment Processing Tasks:**
 > 
 > 🔄 **Active:**
-> - BLD-H-0030 - Integrate Stripe payment gateway (Azazel, UNDERWAY)
-> - TST-H-0031 - Test payment flows (Eris, TODO, blocked by BLD-H-0030)
+> - ENG-H-0030 - Integrate Stripe payment gateway (Azazel, UNDERWAY)
+> - TST-H-0031 - Test payment flows (Eris, TODO, blocked by ENG-H-0030)
 > 
 > ✅ **Complete:**
 > - ARC-H-0028 - Design payment architecture (Kothar)
-> - BLD-H-0029 - Create payment data models (Azazel)
+> - ENG-H-0029 - Create payment data models (Azazel)
 > 
 > 📋 **Planned:**
 > - DOC-M-0032 - Document payment API (TODO)
 > - INS-H-0033 - Security audit of payment handling (TODO)
 > 
-> **Recommendation:** Once BLD-H-0030 is complete, prioritize the security audit before going live.
+> **Recommendation:** Once ENG-H-0030 is complete, prioritize the security audit before going live.
 
 ## Next Steps
 
-- See [Agent Roles](roles.md) for detailed role descriptions
+- See [Agent Roles](agents/roles.md) for detailed role descriptions
 - Check [CLI Reference](reference.md) for available commands
 - Review [Directory Structure](structure.md) to understand the .opencode layout
+
+## Future: Agent API vs Human CLI
+
+### The Vision
+
+Currently, both AI agents and humans use the same CLI interface (`s9`). While this works well, there's a potential future enhancement to provide separate, optimized interfaces for each audience:
+
+**Python API for Agents:**
+```python
+from site_nine.api import Mission, Task
+
+# Type-safe, programmatic interface
+mission = Mission.start(
+    persona="cronos",
+    role="Operator",
+    objective="System improvements"
+)
+
+task = Task.claim("OPR-H-0065", mission_id=mission.id)
+task.update_status("UNDERWAY")
+task.close("COMPLETE")
+```
+
+**Rich CLI for Humans:**
+```bash
+# Interactive, human-friendly commands
+s9 dashboard
+s9 task next
+s9 review approve RVW-001
+```
+
+### Benefits of Separation
+
+**For Agents:**
+- **Type safety**: Catch errors at development time, not runtime
+- **Better error handling**: Structured exceptions instead of parsing output
+- **Performance**: Direct database access without subprocess overhead
+- **Easier testing**: Mock API calls instead of CLI output
+- **IDE support**: Autocomplete, inline documentation, type hints
+
+**For Humans:**
+- **Richer output**: Colors, tables, progress bars without worrying about agent parsing
+- **Interactive prompts**: Confirmation dialogs, wizards, selection menus
+- **Flexible formatting**: Output optimized for readability, not machine parsing
+- **Better UX**: Focus on human ergonomics without agent compatibility constraints
+
+### Implementation Strategy
+
+If this separation is pursued in the future:
+
+1. **Phase 1**: Extract core logic into `site_nine.api` module
+   - Move business logic from CLI commands to API functions
+   - CLI becomes a thin wrapper around the API
+
+2. **Phase 2**: Create Python API for agents
+   - Design clean, typed API surface
+   - Add comprehensive docstrings
+   - Write agent-focused examples
+
+3. **Phase 3**: Enhance CLI for humans
+   - Add interactive features
+   - Improve output formatting
+   - Add confirmation prompts for dangerous operations
+
+4. **Phase 4**: Update agent workflows
+   - Migrate agents from CLI to Python API
+   - Update session-start and other skills
+   - Deprecate agent use of CLI (keep for backwards compatibility)
+
+### Current Status
+
+This is a **future concept only**. The current unified CLI approach works well and should not be changed without careful consideration. The categorization of commands (agent-primary vs human-primary) in the CLI Reference is sufficient for now and helps both audiences understand the tool's design.
+
+The separation would only be pursued if:
+- Agent workflows become significantly more complex
+- Performance becomes a bottleneck
+- Type safety becomes critical for reliability
+- The CLI becomes too constrained by agent compatibility
+
+For now, focus on improving the unified CLI experience and clearly documenting which commands are intended for which audience.

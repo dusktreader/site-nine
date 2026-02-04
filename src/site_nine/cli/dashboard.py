@@ -11,6 +11,7 @@ from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
 from site_nine.tasks import TaskManager
 from site_nine.epics import EpicManager
+from site_nine.cli.json_utils import format_json_response, output_json
 
 console = Console()
 
@@ -18,8 +19,9 @@ console = Console()
 def dashboard_command(
     role: str | None = typer.Option(None, "--role", "-r", help="Filter tasks by role"),
     epic: str | None = typer.Option(None, "--epic", "-e", help="Filter tasks by epic ID"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
-    """Show project dashboard with overview of missions and tasks"""
+    """Show project dashboard with overview of missions and tasks (typically used by: humans)"""
     try:
         # Get database
         try:
@@ -38,6 +40,135 @@ def dashboard_command(
         task_manager = TaskManager(db)
         epic_manager = EpicManager(db)
 
+        # Get data
+        all_tasks = task_manager.list_tasks(role=role)
+
+        if json_output:
+            # Build JSON response
+            dashboard_data = {}
+
+            # Handle epic filter
+            if epic:
+                epic_obj = epic_manager.get_epic(epic)
+                if not epic_obj:
+                    console.print(f"[red]Error: Epic {epic} not found[/red]")
+                    raise typer.Exit(1)
+
+                subtasks = epic_manager.get_subtasks(epic)
+                dashboard_data = {
+                    "epic": {
+                        "id": epic_obj.id,
+                        "title": epic_obj.title,
+                        "status": epic_obj.status,
+                        "priority": epic_obj.priority,
+                        "progress_percent": epic_obj.progress_percent,
+                        "completed_count": epic_obj.completed_count,
+                        "subtask_count": epic_obj.subtask_count,
+                    },
+                    "subtasks": [
+                        {
+                            "id": task.id,
+                            "title": task.title,
+                            "status": task.status,
+                            "priority": task.priority,
+                            "role": task.role,
+                            "current_mission_id": task.current_mission_id,
+                        }
+                        for task in subtasks
+                    ],
+                }
+            elif role:
+                # Role-filtered view
+                available_tasks = [t for t in all_tasks if t.status in ("TODO", "UNDERWAY")]
+                dashboard_data = {
+                    "role": role,
+                    "available_tasks": [
+                        {
+                            "id": task.id,
+                            "title": task.title,
+                            "status": task.status,
+                            "priority": task.priority,
+                            "current_mission_id": task.current_mission_id,
+                        }
+                        for task in available_tasks
+                    ],
+                }
+            else:
+                # Full dashboard
+                active_missions = mission_manager.list_missions(active_only=True)
+                active_epics = epic_manager.list_epics(status="TODO") + epic_manager.list_epics(status="UNDERWAY")
+
+                task_counts = {
+                    "TODO": 0,
+                    "UNDERWAY": 0,
+                    "BLOCKED": 0,
+                    "PAUSED": 0,
+                    "REVIEW": 0,
+                    "COMPLETE": 0,
+                    "ABORTED": 0,
+                }
+                for task in all_tasks:
+                    task_counts[task.status] = task_counts.get(task.status, 0) + 1
+
+                blocked_by_review_count = sum(1 for task in all_tasks if task.blocks_on_review_id is not None)
+                missions_with_underway = {
+                    task.current_mission_id
+                    for task in all_tasks
+                    if task.status == "UNDERWAY" and task.current_mission_id
+                }
+                idle_missions = [m for m in active_missions if m.id not in missions_with_underway]
+
+                available_tasks = [t for t in all_tasks if t.status in ("TODO", "UNDERWAY") and t.epic_id is None]
+
+                dashboard_data = {
+                    "active_epics": [
+                        {
+                            "id": e.id,
+                            "title": e.title,
+                            "status": e.status,
+                            "priority": e.priority,
+                            "progress_percent": e.progress_percent,
+                            "completed_count": e.completed_count,
+                            "subtask_count": e.subtask_count,
+                        }
+                        for e in active_epics
+                    ],
+                    "available_tasks": [
+                        {
+                            "id": task.id,
+                            "title": task.title,
+                            "status": task.status,
+                            "priority": task.priority,
+                            "role": task.role,
+                        }
+                        for task in available_tasks
+                    ],
+                    "active_missions": [
+                        {
+                            "id": m.id,
+                            "persona_name": m.persona_name,
+                            "role": m.role,
+                            "status": "IDLE" if m.id in [mi.id for mi in idle_missions] else "WORKING",
+                            "start_time": m.start_time,
+                            "objective": m.objective,
+                        }
+                        for m in active_missions
+                    ],
+                    "stats": {
+                        "active_missions": len(active_missions),
+                        "idle_missions": len(idle_missions),
+                        "active_personas": len(set(m.persona_name for m in active_missions)),
+                        "total_tasks": sum(task_counts.values()),
+                        "in_progress": task_counts["UNDERWAY"],
+                        "completed": task_counts["COMPLETE"],
+                        "blocked_by_reviews": blocked_by_review_count,
+                    },
+                }
+
+            output_json(format_json_response(dashboard_data))
+            return
+
+        # Non-JSON output (original visual dashboard)
         # Handle epic filter
         if epic:
             # Show epic-specific dashboard

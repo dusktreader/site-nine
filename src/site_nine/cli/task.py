@@ -14,6 +14,7 @@ from typerdrive import handle_errors
 from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir, validate_path_within_project
 from site_nine.tasks import TaskManager
+from site_nine.cli.json_utils import format_json_response, output_json
 
 app = typer.Typer(help="Manage tasks")
 console = Console()
@@ -42,7 +43,7 @@ class Role(str, Enum):
 
     ADMINISTRATOR = "Administrator"
     ARCHITECT = "Architect"
-    BUILDER = "Builder"
+    ENGINEER = "Engineer"
     TESTER = "Tester"
     DOCUMENTARIAN = "Documentarian"
     DESIGNER = "Designer"
@@ -107,6 +108,7 @@ def list(
     role: str | None = typer.Option(None, "--role", "-r", help="Filter by role"),
     status: str | None = typer.Option(None, "--status", "-s", help="Filter by status"),
     mission: int | None = typer.Option(None, "--mission", "-m", help="Filter by mission ID"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
     """List tasks"""
     manager = _get_manager()
@@ -120,35 +122,61 @@ def list(
     tasks = manager.list_tasks(status=status, role=role, mission_id=mission)
 
     if not tasks:
-        console.print("[yellow]No tasks found.[/yellow]")
+        if json_output:
+            output_json(format_json_response([], count=0))
+        else:
+            console.print("[yellow]No tasks found.[/yellow]")
         return
 
-    table = Table(title="Tasks")
-    table.add_column("ID", style="cyan", justify="left")
-    table.add_column("Title", style="magenta")
-    table.add_column("Status", style="yellow")
-    table.add_column("Priority", style="red")
-    table.add_column("Role", style="green")
-    table.add_column("Mission", style="blue")
+    if json_output:
+        # Output JSON format
+        tasks_data = [
+            {
+                "id": task.id,
+                "title": task.title,
+                "status": task.status,
+                "priority": task.priority,
+                "role": task.role,
+                "category": task.category,
+                "current_mission_id": task.current_mission_id,
+                "created_at": task.created_at,
+                "claimed_at": task.claimed_at,
+                "closed_at": task.closed_at,
+                "epic_id": task.epic_id,
+            }
+            for task in tasks
+        ]
+        output_json(format_json_response(tasks_data))
+        logger.debug(f"Listed {len(tasks)} tasks (JSON)")
+    else:
+        # Output table format
+        table = Table(title="Tasks")
+        table.add_column("ID", style="cyan", justify="left")
+        table.add_column("Title", style="magenta")
+        table.add_column("Status", style="yellow")
+        table.add_column("Priority", style="red")
+        table.add_column("Role", style="green")
+        table.add_column("Mission", style="blue")
 
-    for task in tasks:
-        table.add_row(
-            task.id,
-            task.title,
-            task.status,
-            task.priority,
-            task.role,
-            str(task.current_mission_id) if task.current_mission_id else "",
-        )
+        for task in tasks:
+            table.add_row(
+                task.id,
+                task.title,
+                task.status,
+                task.priority,
+                task.role,
+                str(task.current_mission_id) if task.current_mission_id else "",
+            )
 
-    console.print(table)
-    logger.debug(f"Listed {len(tasks)} tasks")
+        console.print(table)
+        logger.debug(f"Listed {len(tasks)} tasks")
 
 
 @app.command()
 @handle_errors("Failed to show task")
 def show(
     task_id: str = typer.Argument(..., help="Task ID"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
     """Show task details"""
     manager = _get_manager()
@@ -158,25 +186,47 @@ def show(
         console.print(f"[red]Error: Task '{task_id}' not found.[/red]")
         raise typer.Exit(1)
 
-    console.print(f"[bold]Task {task.id}[/bold]")
-    console.print(f"  Title: {task.title}")
-    console.print(f"  Status: {task.status}")
-    console.print(f"  Priority: {task.priority}")
-    console.print(f"  Role: {task.role}")
-    if task.category:
-        console.print(f"  Category: {task.category}")
-    if task.current_mission_id:
-        console.print(f"  Mission: {task.current_mission_id}")
-    if task.claimed_at:
-        console.print(f"  Claimed: {task.claimed_at}")
-    if task.closed_at:
-        console.print(f"  Closed: {task.closed_at}")
-    if task.description:
-        console.print(f"  Description: {task.description}")
-    if task.notes:
-        console.print(f"  Notes: {task.notes}")
-    console.print(f"  File: {task.file_path}")
-    logger.debug(f"Displayed details for task {task_id}")
+    if json_output:
+        # Output JSON format
+        task_data = {
+            "id": task.id,
+            "title": task.title,
+            "status": task.status,
+            "priority": task.priority,
+            "role": task.role,
+            "category": task.category,
+            "description": task.description,
+            "notes": task.notes,
+            "current_mission_id": task.current_mission_id,
+            "claimed_at": task.claimed_at,
+            "closed_at": task.closed_at,
+            "created_at": task.created_at,
+            "file_path": task.file_path,
+            "epic_id": task.epic_id,
+        }
+        output_json(format_json_response(task_data))
+        logger.debug(f"Displayed details for task {task_id} (JSON)")
+    else:
+        # Output human-readable format
+        console.print(f"[bold]Task {task.id}[/bold]")
+        console.print(f"  Title: {task.title}")
+        console.print(f"  Status: {task.status}")
+        console.print(f"  Priority: {task.priority}")
+        console.print(f"  Role: {task.role}")
+        if task.category:
+            console.print(f"  Category: {task.category}")
+        if task.current_mission_id:
+            console.print(f"  Mission: {task.current_mission_id}")
+        if task.claimed_at:
+            console.print(f"  Claimed: {task.claimed_at}")
+        if task.closed_at:
+            console.print(f"  Closed: {task.closed_at}")
+        if task.description:
+            console.print(f"  Description: {task.description}")
+        if task.notes:
+            console.print(f"  Notes: {task.notes}")
+        console.print(f"  File: {task.file_path}")
+        logger.debug(f"Displayed details for task {task_id}")
 
 
 @app.command()
@@ -185,7 +235,7 @@ def claim(
     task_id: str = typer.Argument(..., help="Task ID"),
     mission: int | None = typer.Option(None, "--mission", "-m", help="Mission ID (current mission if not specified)"),
 ) -> None:
-    """Claim a task"""
+    """Claim a task (typically used by: agents)"""
     manager = _get_manager()
 
     # Verify task exists
@@ -227,7 +277,7 @@ def update(
     status: str = typer.Option(..., "--status", "-s", help="New status"),
     notes: str | None = typer.Option(None, "--notes", "-n", help="Progress notes"),
 ) -> None:
-    """Update task status"""
+    """Update task status (typically used by: agents)"""
     manager = _get_manager()
 
     # Verify task exists
@@ -251,7 +301,7 @@ def close(
     status: str = typer.Option("COMPLETE", "--status", "-s", help="Completion status"),
     notes: str | None = typer.Option(None, "--notes", "-n", help="Closing notes"),
 ) -> None:
-    """Close a task"""
+    """Close a task (typically used by: agents)"""
     manager = _get_manager()
 
     # Verify task exists
@@ -360,13 +410,39 @@ def create(
 @handle_errors("Failed to list mission tasks")
 def mine(
     mission: int = typer.Option(..., "--mission", "-m", help="Mission ID"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
     """Show tasks claimed by a mission"""
     manager = _get_manager()
     tasks = manager.list_tasks(mission_id=mission)
 
     if not tasks:
+        if json_output:
+            output_json(format_json_response([]))
+            logger.debug(f"Listed 0 tasks for mission {mission} (JSON)")
+            return
         console.print(f"[yellow]No tasks found for mission {mission}[/yellow]")
+        return
+
+    if json_output:
+        # Build JSON data
+        data = []
+        for task in tasks:
+            task_dict = {
+                "id": task.id,
+                "title": task.title,
+                "status": task.status,
+                "priority": task.priority,
+                "role": task.role,
+                "category": task.category,
+                "current_mission_id": task.current_mission_id,
+                "claimed_at": task.claimed_at,
+                "closed_at": task.closed_at,
+            }
+            data.append(task_dict)
+
+        output_json(format_json_response(data))
+        logger.debug(f"Listed {len(tasks)} tasks for mission {mission} (JSON)")
         return
 
     table = Table(title=f"Tasks for Mission {mission}")
@@ -402,6 +478,7 @@ def report(
         False, "--active-only", help="Show only active tasks (excludes COMPLETE, ABORTED)"
     ),
     role: str | None = typer.Option(None, "--role", "-r", help="Filter by role"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
     """Generate task summary report"""
     try:
@@ -431,7 +508,7 @@ def report(
         valid_roles = [
             "administrator",
             "architect",
-            "builder",
+            "engineer",
             "tester",
             "documentarian",
             "designer",
@@ -449,7 +526,7 @@ def report(
 
     query = f"""
         SELECT id, title, status, priority, role, category, current_mission_id,
-               claimed_at, closed_at, actual_hours, objective, created_at
+               claimed_at, closed_at, actual_hours, created_at
         FROM tasks
         WHERE {where_clause}
         ORDER BY
@@ -465,7 +542,34 @@ def report(
     tasks = db.execute_query(query, params)
 
     if not tasks:
+        if json_output:
+            output_json(format_json_response([]))
+            logger.debug("Generated report for 0 tasks (JSON)")
+            return
         console.print("[yellow]No tasks found matching criteria[/yellow]")
+        return
+
+    if json_output:
+        # Build JSON data
+        data = []
+        for task in tasks:
+            task_dict = {
+                "id": task["id"],
+                "title": task["title"],
+                "status": task["status"],
+                "priority": task["priority"],
+                "role": task["role"],
+                "category": task["category"],
+                "current_mission_id": task["current_mission_id"],
+                "claimed_at": task["claimed_at"],
+                "closed_at": task["closed_at"],
+                "actual_hours": task["actual_hours"],
+                "created_at": task["created_at"],
+            }
+            data.append(task_dict)
+
+        output_json(format_json_response(data))
+        logger.debug(f"Generated report for {len(tasks)} tasks (JSON)")
         return
 
     # Display table format
@@ -505,6 +609,7 @@ def search(
     keyword: str = typer.Argument(..., help="Keyword to search for"),
     active_only: bool = typer.Option(False, "--active-only", help="Show only active tasks"),
     role: str | None = typer.Option(None, "--role", "-r", help="Filter by role"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
     """Search tasks by keyword"""
     try:
@@ -535,7 +640,7 @@ def search(
         valid_roles = [
             "administrator",
             "architect",
-            "builder",
+            "engineer",
             "tester",
             "documentarian",
             "designer",
@@ -568,7 +673,30 @@ def search(
     tasks = db.execute_query(query, params)
 
     if not tasks:
+        if json_output:
+            output_json(format_json_response([]))
+            logger.debug(f"Search found 0 tasks matching '{keyword}' (JSON)")
+            return
         console.print(f"[yellow]No tasks found matching '{keyword}'[/yellow]")
+        return
+
+    if json_output:
+        # Build JSON data
+        data = []
+        for task in tasks:
+            task_dict = {
+                "id": task["id"],
+                "title": task["title"],
+                "status": task["status"],
+                "priority": task["priority"],
+                "role": task["role"],
+                "current_mission_id": task["current_mission_id"],
+                "created_at": task["created_at"],
+            }
+            data.append(task_dict)
+
+        output_json(format_json_response(data))
+        logger.debug(f"Search found {len(tasks)} tasks matching '{keyword}' (JSON)")
         return
 
     table = Table(title=f"Search Results: '{keyword}'")
@@ -602,6 +730,7 @@ def search(
 def next(
     role: str | None = typer.Option(None, "--role", "-r", help="Filter by role"),
     count: int = typer.Option(3, "--count", "-c", help="Number of suggestions"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
     """Suggest next tasks to work on"""
     try:
@@ -625,7 +754,7 @@ def next(
         valid_roles = [
             "administrator",
             "architect",
-            "builder",
+            "engineer",
             "tester",
             "documentarian",
             "designer",
@@ -650,7 +779,7 @@ def next(
 
     # Get TODO tasks (simplified - not checking dependencies for now)
     query = f"""
-        SELECT id, title, priority, role, objective, created_at
+        SELECT id, title, priority, role, created_at
         FROM tasks
         WHERE {where_clause}
         ORDER BY
@@ -675,7 +804,7 @@ def next(
         blocked_params["role"] = role_param
 
     blocked_query = f"""
-        SELECT id, title, priority, role, status, objective
+        SELECT id, title, priority, role, status
         FROM tasks
         WHERE {" AND ".join(blocked_conditions)}
         ORDER BY
@@ -691,10 +820,45 @@ def next(
     blocked_tasks = db.execute_query(blocked_query, blocked_params)
 
     if not todo_tasks and not blocked_tasks:
+        if json_output:
+            output_json(format_json_response({"todo_tasks": [], "blocked_tasks": []}))
+            logger.debug("Suggested 0 TODO tasks and 0 blocked tasks (JSON)")
+            return
         if role:
             console.print(f"[yellow]No TODO or BLOCKED/PAUSED tasks for role '{role}'[/yellow]")
         else:
             console.print("[yellow]No TODO or BLOCKED/PAUSED tasks found[/yellow]")
+        return
+
+    if json_output:
+        # Build JSON data
+        data = {
+            "todo_tasks": [],
+            "blocked_tasks": [],
+        }
+
+        for task in todo_tasks:
+            task_dict = {
+                "id": task["id"],
+                "title": task["title"],
+                "priority": task["priority"],
+                "role": task["role"],
+                "created_at": task["created_at"],
+            }
+            data["todo_tasks"].append(task_dict)
+
+        for task in blocked_tasks:
+            task_dict = {
+                "id": task["id"],
+                "title": task["title"],
+                "priority": task["priority"],
+                "role": task["role"],
+                "status": task["status"],
+            }
+            data["blocked_tasks"].append(task_dict)
+
+        output_json(format_json_response(data))
+        logger.debug(f"Suggested {len(todo_tasks)} TODO tasks and {len(blocked_tasks)} blocked tasks (JSON)")
         return
 
     # Show TODO tasks
@@ -709,12 +873,6 @@ def next(
             console.print(
                 f"   Priority: [{priority_color}]{task['priority']}[/{priority_color}] | Role: [cyan]{task['role']}[/cyan]"
             )
-
-            # Show truncated objective
-            objective = task["objective"] if task["objective"] else "No objective specified"
-            if len(objective) > 80:
-                objective = objective[:77] + "..."
-            console.print(f"   {objective}")
             console.print()
 
     # Show blocked tasks
@@ -854,6 +1012,23 @@ def _sync_task_file(task, opencode_dir: Path) -> None:
     closed_at = task.closed_at or ""
     paused_at = task.paused_at or ""
 
+    # Get linked ADRs
+    from site_nine.adrs import ADRManager
+    from site_nine.core.database import Database
+
+    db_path = opencode_dir / "data" / "project.db"
+    db = Database(db_path)
+    adr_manager = ADRManager(db)
+    linked_adrs = adr_manager.get_task_adrs(task.id)
+
+    # Build header with ADR section if linked ADRs exist
+    adr_section = ""
+    if linked_adrs:
+        adr_lines = ["\n**Related Architecture:**"]
+        for adr in linked_adrs:
+            adr_lines.append(f"- [{adr.id}]({adr.file_path}): {adr.title} ({adr.status})")
+        adr_section = "\n".join(adr_lines)
+
     header = f"""# Task {task.id}: {task.title}
 
 **Status:** {task.status}
@@ -864,7 +1039,7 @@ def _sync_task_file(task, opencode_dir: Path) -> None:
 **Claimed:** {claimed_at}
 **Actual Time:** {actual_hours}
 **Closed:** {closed_at}
-**Paused:** {paused_at}"""
+**Paused:** {paused_at}{adr_section}"""
 
     # Create default body if none exists
     if not body:
@@ -961,3 +1136,73 @@ def unlink(
     epic_manager.unlink_task(task_id)
     console.print(f"[green]✓[/green] Unlinked task {task_id} from epic {epic_id}")
     logger.info(f"Unlinked task {task_id} from epic {epic_id}")
+
+
+@app.command(name="link-adr")
+@handle_errors("Failed to link ADR to task")
+def link_adr(
+    task_id: str = typer.Argument(..., help="Task ID"),
+    adr_id: str = typer.Argument(..., help="ADR ID (e.g., ADR-001)"),
+) -> None:
+    """Link an ADR to a task"""
+    from site_nine.adrs import ADRManager
+
+    manager = _get_manager()
+
+    # Verify task exists
+    task = manager.get_task(task_id)
+    if not task:
+        console.print(f"[red]Error: Task {task_id} not found[/red]")
+        raise typer.Exit(1)
+
+    # Get ADR manager and link
+    try:
+        opencode_dir = get_opencode_dir()
+        db_path = opencode_dir / "data" / "project.db"
+        from site_nine.core.database import Database
+
+        db = Database(db_path)
+        adr_manager = ADRManager(db)
+
+        adr_manager.link_to_task(adr_id, task_id)
+
+        console.print(f"[green]✓[/green] Linked ADR {adr_id} to task {task_id}")
+        logger.info(f"Linked ADR {adr_id} to task {task_id}")
+    except ValueError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command(name="unlink-adr")
+@handle_errors("Failed to unlink ADR from task")
+def unlink_adr(
+    task_id: str = typer.Argument(..., help="Task ID"),
+    adr_id: str = typer.Argument(..., help="ADR ID (e.g., ADR-001)"),
+) -> None:
+    """Unlink an ADR from a task"""
+    from site_nine.adrs import ADRManager
+
+    manager = _get_manager()
+
+    # Verify task exists
+    task = manager.get_task(task_id)
+    if not task:
+        console.print(f"[red]Error: Task {task_id} not found[/red]")
+        raise typer.Exit(1)
+
+    # Get ADR manager and unlink
+    try:
+        opencode_dir = get_opencode_dir()
+        db_path = opencode_dir / "data" / "project.db"
+        from site_nine.core.database import Database
+
+        db = Database(db_path)
+        adr_manager = ADRManager(db)
+
+        adr_manager.unlink_from_task(adr_id, task_id)
+
+        console.print(f"[green]✓[/green] Unlinked ADR {adr_id} from task {task_id}")
+        logger.info(f"Unlinked ADR {adr_id} from task {task_id}")
+    except ValueError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)

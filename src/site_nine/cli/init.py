@@ -19,7 +19,7 @@ def init_command(
     config: Path | None = typer.Option(None, "--config", "-c", help="Config file path"),
     force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing .opencode"),
 ) -> None:
-    """Initialize .opencode structure in current directory"""
+    """Initialize .opencode structure in current directory (typically used by: humans)"""
 
     opencode_dir = Path.cwd() / ".opencode"
 

@@ -45,7 +45,7 @@ def start(
     role: str = typer.Option(..., "--role", "-r", help="Agent role"),
     task: str = typer.Option("", "--task", "-t", help="Task summary"),
 ) -> None:
-    """Start a new mission"""
+    """Start a new mission (typically used by: agents)"""
     manager = _get_manager()
 
     # Validate and convert role to title case
@@ -81,7 +81,7 @@ def list(
     role: str = typer.Option(None, "--role", "-r", help="Filter by role"),
     json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
-    """List missions"""
+    """List missions (typically used by: humans)"""
     manager = _get_manager()
 
     # Normalize role to title case for case-insensitive filtering
@@ -145,7 +145,7 @@ def show(
     mission_id: int = typer.Argument(..., help="Mission ID"),
     json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
-    """Show mission details"""
+    """Show mission details (typically used by: both)"""
     manager = _get_manager()
     mission = manager.get_mission(mission_id)
 
@@ -204,7 +204,7 @@ def summary(
     mission_id: int = typer.Argument(..., help="Mission ID"),
     json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
-    """Generate mission summary from git history and database
+    """Generate mission summary from git history and database (typically used by: humans)
 
     Auto-generates a summary showing:
     - Files changed since mission start
@@ -413,7 +413,7 @@ def summary(
 def end(
     mission_id: int = typer.Argument(..., help="Mission ID"),
 ) -> None:
-    """End a mission"""
+    """End a mission (typically used by: both)"""
     manager = _get_manager()
 
     # Verify mission exists
@@ -456,7 +456,7 @@ def update(
     objective: str | None = typer.Option(None, "--task", "-t", help="Update task summary"),
     role: str | None = typer.Option(None, "--role", "-r", help="Update role"),
 ) -> None:
-    """Update mission metadata"""
+    """Update mission metadata (typically used by: agents)"""
     manager = _get_manager()
 
     if not objective and not role:
@@ -573,7 +573,7 @@ def _find_current_opencode_session(project_root: Path) -> str | None:
 def roles(
     json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
 ) -> None:
-    """Display available agent roles with descriptions
+    """Display available agent roles with descriptions (typically used by: agents)
 
     Shows a formatted list of all available agent roles and their responsibilities.
     This is used during session initialization to present consistent role options.
@@ -1190,7 +1190,7 @@ def _update_session_title(
 
 @app.command("generate-session-uuid")
 def generate_session_uuid() -> None:
-    """Generate a unique session UUID marker for reliable session detection
+    """Generate a unique session UUID marker for reliable session detection (typically used by: agents)
 
     This command outputs a UUID that OpenCode captures in the session data.
     This allows rename-tui to reliably identify the current OpenCode session
@@ -1223,7 +1223,7 @@ def generate_session_uuid() -> None:
 
 @app.command("list-opencode-sessions")
 def list_opencode_sessions() -> None:
-    """List OpenCode TUI missions for the current project
+    """List OpenCode TUI missions for the current project (typically used by: humans)
 
     Shows session IDs and titles to help identify which session to rename.
     Use the session ID with: s9 mission rename-tui <name> <role> --session-id <id>
@@ -1300,7 +1300,7 @@ def rename_tui(
         None, "--suffix", help="Optional suffix to append to title (e.g., '[DISMISSED]')"
     ),
 ) -> None:
-    """Rename the current OpenCode TUI session to match agent identity
+    """Rename the current OpenCode TUI session to match agent identity (typically used by: agents)
 
     If --session-id is provided, renames that specific mission.
     If --uuid-marker is provided, searches session diffs for that marker (most reliable).

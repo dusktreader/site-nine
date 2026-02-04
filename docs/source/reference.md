@@ -2,6 +2,98 @@
 
 Complete reference for all s9 commands.
 
+## Command Audience Guide
+
+The s9 CLI is designed to be used by both **AI agents** and **human developers**. Commands are categorized to help you understand their primary use case:
+
+### Commands for Agent Workflows
+
+These commands are primarily used by AI agents during automated workflows, particularly during mission initialization and task execution:
+
+**Mission Management:**
+- `s9 mission start` - Register a new mission with persona and role
+- `s9 mission generate-session-uuid` - Generate UUID for session detection
+- `s9 mission rename-tui` - Rename OpenCode TUI session
+- `s9 mission update` - Update mission metadata
+- `s9 mission roles` - Display available agent roles
+
+**Task Execution:**
+- `s9 task claim` - Claim a task for the active mission
+- `s9 task update` - Update task status during execution
+- `s9 task close` - Close a completed task
+
+**Collaboration:**
+- `s9 handoff create` - Create a handoff to another role
+- `s9 handoff accept` - Accept a pending handoff
+- `s9 handoff complete` - Complete a handoff
+
+**Reviews:**
+- `s9 review create` - Create a review request
+
+**Personas:**
+- `s9 name suggest` - Get persona name suggestions
+- `s9 name set-bio` - Set persona biography
+
+### Commands for Human Management
+
+These commands are primarily used by human developers for project oversight, planning, and coordination:
+
+**Project Overview:**
+- `s9 init` - Initialize project structure
+- `s9 dashboard` - View project overview with tasks and missions
+- `s9 doctor` - Run health checks and validate data integrity
+- `s9 reset` - Reset project data (dangerous!)
+
+**Task Planning:**
+- `s9 task create` - Create new tasks
+- `s9 task report` - Generate task summary reports
+- `s9 task next` - Get task suggestions
+
+**Mission Management:**
+- `s9 mission list` - List all missions
+- `s9 mission summary` - Generate mission summaries
+- `s9 mission list-opencode-sessions` - List OpenCode TUI sessions
+
+**Reviews & Approvals:**
+- `s9 review list` - List review requests
+- `s9 review approve` - Approve a review
+- `s9 review reject` - Reject a review
+- `s9 review blocked` - Show tasks blocked by reviews
+
+**Epic Management:**
+- `s9 epic create` - Create new epics
+- `s9 epic list` - List all epics
+- `s9 epic abort` - Abort an epic and its tasks
+
+**Architecture Decisions:**
+- `s9 adr create` - Create Architecture Decision Records
+- `s9 adr list` - List ADRs
+
+**Release Management:**
+- `s9 changelog` - Generate changelogs from completed tasks
+
+**Utilities:**
+- `s9 summon` - Launch OpenCode with agent initialization
+
+### Shared Commands (Used by Both)
+
+These commands are useful for both agents and humans:
+
+**Information & Inspection:**
+- `s9 mission show` - Show mission details
+- `s9 mission end` - End a mission
+- `s9 task show` - Show task details
+- `s9 task list` - List tasks with filters
+- `s9 task search` - Search tasks by keyword
+- `s9 task mine` - Show tasks claimed by a mission
+- `s9 handoff list` - List handoffs
+- `s9 handoff show` - Show handoff details
+- `s9 review show` - Show review details
+- `s9 name list` - List persona names
+- `s9 name show` - Show persona details
+- `s9 epic show` - Show epic details
+- `s9 adr show` - Show ADR details
+
 ## Global Options
 
 ```bash
@@ -162,8 +254,8 @@ s9 changelog --format json --output changelog.json
 ## 2026-01-30
 
 ### Engineer
-- BLD-H-0003: Implement JWT authentication
-- BLD-M-0008: Add input validation to API endpoints
+- ENG-H-0003: Implement JWT authentication
+- ENG-M-0008: Add input validation to API endpoints
 
 ### Tester
 - TST-H-0002: Write integration tests for auth flow
@@ -350,7 +442,7 @@ Mission #1
   Status: in-progress
   Mission Date: 2026-01-30
   Start Time: 14:30:15
-  Mission File: .opencode/missions/2026-01-30.14:30:15.builder.azazel.md
+  Mission File: .opencode/missions/2026-01-30.14:30:15.engineer.azazel.md
   Task: Implement authentication
 ```
 
@@ -664,7 +756,7 @@ s9 task show <task-id>
 ```
 
 **Arguments:**
-- `task-id` - Task ID (string, e.g., `BLD-H-0003`, `OPR-M-0009`, or legacy format like `T001`)
+- `task-id` - Task ID (string, e.g., `ENG-H-0003`, `OPR-M-0009`, or legacy format like `T001`)
 
 **Example:**
 ```bash
@@ -825,8 +917,8 @@ Tasks claimed by mission 1:
 ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┓
 ┃ ID         ┃ Title           ┃ Status  ┃ Priority ┃
 ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━┩
-│ BLD-H-0003 │ Implement auth  │ UNDER…  │ HIGH     │
-│ BLD-M-0008 │ Add validation  │ REVIEW  │ MEDIUM   │
+│ ENG-H-0003 │ Implement auth  │ UNDER…  │ HIGH     │
+│ ENG-M-0008 │ Add validation  │ REVIEW  │ MEDIUM   │
 └────────────┴─────────────────┴─────────┴──────────┘
 
 Total: 2 tasks (1 in progress, 1 in review)
@@ -925,8 +1017,8 @@ Found 3 tasks matching "auth":
 ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┓
 ┃ ID         ┃ Title                ┃ Status  ┃ Priority ┃
 ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━┩
-│ BLD-H-0003 │ Implement JWT auth   │ UNDER…  │ HIGH     │
-│ BLD-M-0012 │ Add auth middleware  │ TODO    │ MEDIUM   │
+│ ENG-H-0003 │ Implement JWT auth   │ UNDER…  │ HIGH     │
+│ ENG-M-0012 │ Add auth middleware  │ TODO    │ MEDIUM   │
 │ TST-H-0002 │ Test auth endpoints  │ REVIEW  │ HIGH     │
 └────────────┴──────────────────────┴─────────┴──────────┘
 ```
@@ -961,11 +1053,11 @@ s9 task next --role Engineer --count 5
 ```
 Suggested next tasks:
 
-1. BLD-H-0003 (HIGH) - Implement JWT authentication
+1. ENG-H-0003 (HIGH) - Implement JWT authentication
    No dependencies • Estimated: 4-6 hours
 
 2. TST-H-0005 (HIGH) - Write integration tests
-   Depends on: BLD-H-0003 (COMPLETE)
+   Depends on: ENG-H-0003 (COMPLETE)
 
 3. OPR-M-0009 (MEDIUM) - Deploy to staging
    No dependencies • Ready to start
@@ -987,22 +1079,22 @@ s9 task add-dependency <task-id> <depends-on>
 
 **Example:**
 ```bash
-s9 task add-dependency BLD-H-0008 BLD-H-0003
+s9 task add-dependency ENG-H-0008 ENG-H-0003
 ```
 
-This means BLD-H-0008 depends on BLD-H-0003 completing first.
+This means ENG-H-0008 depends on ENG-H-0003 completing first.
 
 **Output:**
 ```
-✓ Added dependency: BLD-H-0008 depends on BLD-H-0003
+✓ Added dependency: ENG-H-0008 depends on ENG-H-0003
 ```
 
 **Use case:**
 ```bash
-# Task BLD-H-0008 (Add auth middleware) depends on BLD-H-0003 (Implement JWT)
-s9 task add-dependency BLD-H-0008 BLD-H-0003
+# Task ENG-H-0008 (Add auth middleware) depends on ENG-H-0003 (Implement JWT)
+s9 task add-dependency ENG-H-0008 ENG-H-0003
 
-# Now BLD-H-0008 should wait until BLD-H-0003 is complete
+# Now ENG-H-0008 should wait until ENG-H-0003 is complete
 ```
 
 ---
@@ -1027,7 +1119,7 @@ s9 task sync
 
 Sync specific task:
 ```bash
-s9 task sync --task BLD-H-0003
+s9 task sync --task ENG-H-0003
 ```
 
 **What it does:**
@@ -1040,8 +1132,8 @@ s9 task sync --task BLD-H-0003
 ```
 Syncing tasks...
 
-✓ BLD-H-0003.md - Up to date
-✓ BLD-M-0008.md - Updated from file
+✓ ENG-H-0003.md - Up to date
+✓ ENG-M-0008.md - Updated from file
 ⚠ OPR-M-0009.md - Missing file, created from database
 ✓ TST-H-0002.md - Up to date
 
@@ -1102,16 +1194,16 @@ s9 task create \
 
 Task IDs are auto-generated with format: `{ROLE}-{PRIORITY}-{NUMBER}`
 
-- Role codes: `MGR`, `ARC`, `BLD`, `TST`, `DOC`, `DSN`, `INS`, `OPR`
+- Role codes: `MGR`, `ARC`, `ENG`, `TST`, `DOC`, `DSN`, `INS`, `OPR`
 - Priority codes: `C` (Critical), `H` (High), `M` (Medium), `L` (Low)
 - Number: Zero-padded sequence (0001, 0002, etc.)
 
-**Examples:** `BLD-H-0003`, `OPR-M-0009`, `DOC-L-0001`
+**Examples:** `ENG-H-0003`, `OPR-M-0009`, `DOC-L-0001`
 
 **Output:**
 ```
-✓ Created task BLD-H-0003: Implement JWT authentication
-  File: .opencode/planning/BLD-H-0003.md
+✓ Created task ENG-H-0003: Implement JWT authentication
+  File: .opencode/planning/ENG-H-0003.md
 ```
 
 ---
@@ -1252,8 +1344,8 @@ Subtasks:
 ┃ Task ID    ┃ Title                          ┃ Status     ┃ Role         ┃ Priority ┃
 ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━┩
 │ ARC-H-0015 │ Design auth architecture       │ ✅ COMPLETE│ Architect    │ HIGH     │
-│ BLD-H-0016 │ Implement login endpoint       │ ✅ COMPLETE│ Engineer      │ HIGH     │
-│ BLD-H-0017 │ Implement registration         │ 🔵 UNDERWAY│ Engineer      │ HIGH     │
+│ ENG-H-0016 │ Implement login endpoint       │ ✅ COMPLETE│ Engineer      │ HIGH     │
+│ ENG-H-0017 │ Implement registration         │ 🔵 UNDERWAY│ Engineer      │ HIGH     │
 │ TST-M-0018 │ Write auth tests               │ ⬜ TODO    │ Tester       │ MEDIUM   │
 │ DOC-M-0019 │ Document auth API              │ ⬜ TODO    │ Documentarian│ MEDIUM   │
 └────────────┴────────────────────────────────┴────────────┴──────────────┴──────────┘
@@ -1345,8 +1437,8 @@ s9 epic abort EPC-H-0001 --reason "Project cancelled" --yes
 Epic: EPC-H-0001 - User Authentication System
 Subtasks that will be aborted:
   • ARC-H-0015 - Design auth architecture
-  • BLD-H-0016 - Implement login endpoint
-  • BLD-H-0017 - Implement registration
+  • ENG-H-0016 - Implement login endpoint
+  • ENG-H-0017 - Implement registration
   • TST-M-0018 - Write auth tests
   • DOC-M-0019 - Document auth API
 
@@ -1415,17 +1507,17 @@ s9 task link <TASK_ID> <EPIC_ID>
 ```
 
 **Arguments:**
-- `TASK_ID` - Task ID (e.g., `BLD-H-0059`)
+- `TASK_ID` - Task ID (e.g., `ENG-H-0059`)
 - `EPIC_ID` - Epic ID (e.g., `EPC-H-0001`)
 
 **Example:**
 ```bash
-s9 task link BLD-H-0059 EPC-H-0001
+s9 task link ENG-H-0059 EPC-H-0001
 ```
 
 **Output:**
 ```
-✓ Linked task BLD-H-0059 to epic EPC-H-0001
+✓ Linked task ENG-H-0059 to epic EPC-H-0001
 ```
 
 **Note:** A task can only belong to one epic at a time. Linking a task to a new epic will unlink it from its previous
@@ -1442,16 +1534,16 @@ s9 task unlink <TASK_ID>
 ```
 
 **Arguments:**
-- `TASK_ID` - Task ID (e.g., `BLD-H-0059`)
+- `TASK_ID` - Task ID (e.g., `ENG-H-0059`)
 
 **Example:**
 ```bash
-s9 task unlink BLD-H-0059
+s9 task unlink ENG-H-0059
 ```
 
 **Output:**
 ```
-✓ Unlinked task BLD-H-0059 from epic EPC-H-0001
+✓ Unlinked task ENG-H-0059 from epic EPC-H-0001
 ```
 
 **Note:** The task becomes standalone after unlinking (not deleted).
@@ -1800,7 +1892,7 @@ s9 logs show
 ```
 2026-02-02 11:03:39 | INFO  | Started agent session 14: calliope
 2026-02-02 11:05:12 | DEBUG | Loading daemon names from database
-2026-02-02 11:06:45 | INFO  | Created task BLD-H-0003
+2026-02-02 11:06:45 | INFO  | Created task ENG-H-0003
 2026-02-02 11:08:20 | ERROR | Database connection failed: timeout
 ```
 
@@ -1925,7 +2017,7 @@ Manages tasks.
 
 | Column | Type | Description |
 |--------|------|-------------|
-| id | TEXT | Primary key (e.g., `BLD-H-0003` or legacy `T001`) |
+| id | TEXT | Primary key (e.g., `ENG-H-0003` or legacy `T001`) |
 | title | TEXT | Short description |
 | status | TEXT | Task status |
 | priority | TEXT | Priority level |
