@@ -364,6 +364,10 @@ def _detect_session_via_diff_recency(
     writes to its diff file as you work. We verify the session is for the
     current project before returning it.
 
+    When multiple sessions are active on the same project, we only consider
+    diff files modified within the last 10 seconds, since the user just ran
+    this command from the active session.
+
     Args:
         project_root: Project root directory
         session_diff_storage: Path to OpenCode session_diff directory
@@ -380,7 +384,52 @@ def _detect_session_via_diff_recency(
     if not diff_files:
         return None
 
-    # Check the most recently modified diffs (top 5 to handle multi-project scenarios)
+    current_time = time.time()
+    recent_threshold = 10  # Only consider files modified in last 10 seconds
+
+    # First pass: Find project sessions modified within the recent threshold
+    recent_project_sessions = []
+    for diff_file in diff_files:
+        mtime = diff_file.stat().st_mtime
+        age_seconds = current_time - mtime
+
+        # Skip files older than threshold
+        if age_seconds > recent_threshold:
+            # Since files are sorted by mtime, we can stop here
+            break
+
+        mission_id = diff_file.stem
+
+        # Find the corresponding session file to verify project
+        session_file = None
+        for project_dir in session_storage.iterdir():
+            if not project_dir.is_dir():
+                continue
+            candidate = project_dir / f"{mission_id}.json"
+            if candidate.exists():
+                session_file = candidate
+                break
+
+        if not session_file:
+            continue
+
+        # Check if this session is for the current project
+        try:
+            with open(session_file) as f:
+                session_data = json.load(f)
+            session_dir = session_data.get("directory", "")
+            if session_dir and Path(session_dir).resolve() == project_root.resolve():
+                recent_project_sessions.append((mission_id, age_seconds))
+        except (json.JSONDecodeError, FileNotFoundError, PermissionError):
+            continue
+
+    # If we found recent sessions for this project, return the most recent one
+    if recent_project_sessions:
+        mission_id, age_seconds = min(recent_project_sessions, key=lambda x: x[1])
+        logger.debug("session_detected_via_diff_recency", mission_id=mission_id, age_seconds=int(age_seconds))
+        return mission_id
+
+    # Fallback: No recent sessions found, use old behavior (first match in top 5)
     for diff_file in diff_files[:5]:
         mission_id = diff_file.stem
 
@@ -403,10 +452,11 @@ def _detect_session_via_diff_recency(
                 session_data = json.load(f)
             session_dir = session_data.get("directory", "")
             if session_dir and Path(session_dir).resolve() == project_root.resolve():
-                # Found it! This is our session
                 mtime = diff_file.stat().st_mtime
-                age_seconds = time.time() - mtime
-                logger.debug("session_detected_via_diff_recency", mission_id=mission_id, age_seconds=int(age_seconds))
+                age_seconds = current_time - mtime
+                logger.debug(
+                    "session_detected_via_diff_recency_fallback", mission_id=mission_id, age_seconds=int(age_seconds)
+                )
                 return mission_id
         except (json.JSONDecodeError, FileNotFoundError, PermissionError):
             continue
