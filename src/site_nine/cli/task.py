@@ -304,6 +304,12 @@ def create(
         "-d",
         help="Detailed description of what needs to be done and why",
     ),
+    epic: str | None = typer.Option(
+        None,
+        "--epic",
+        "-e",
+        help="Epic ID to link this task to (e.g., EPC-H-0001)",
+    ),
 ) -> None:
     """Create a new task (task ID auto-generated based on role and priority)"""
     manager = _get_manager()
@@ -330,6 +336,18 @@ def create(
             description=description,
         )
         console.print(f"[green]✓[/green] Created task [cyan]{task_id}[/cyan]: {title}")
+
+        # Link to epic if provided
+        if epic:
+            from site_nine.epics import EpicManager
+
+            epic_manager = EpicManager(manager.db)
+            try:
+                epic_manager.link_task(task_id, epic)
+                console.print(f"  Linked to epic: {epic}")
+            except ValueError as e:
+                console.print(f"[yellow]Warning: {e}[/yellow]")
+
         logger.info(f"Created task {task_id}")
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
@@ -884,3 +902,62 @@ def _sync_task_file(task, opencode_dir: Path) -> None:
 
     # Write combined content
     file_path.write_text(header + "\n" + body)
+
+
+@app.command()
+@handle_errors("Failed to link task to epic")
+def link(
+    task_id: str = typer.Argument(..., help="Task ID to link"),
+    epic_id: str = typer.Argument(..., help="Epic ID to link to (e.g., EPC-H-0001)"),
+) -> None:
+    """Link a task to an epic"""
+    manager = _get_manager()
+
+    # Verify task exists
+    task = manager.get_task(task_id)
+    if not task:
+        console.print(f"[red]Error: Task {task_id} not found[/red]")
+        raise typer.Exit(1)
+
+    # Link task to epic using EpicManager
+    from site_nine.epics import EpicManager
+
+    epic_manager = EpicManager(manager.db)
+
+    try:
+        epic_manager.link_task(task_id, epic_id)
+        console.print(f"[green]✓[/green] Linked task {task_id} to epic {epic_id}")
+        logger.info(f"Linked task {task_id} to epic {epic_id}")
+    except ValueError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command()
+@handle_errors("Failed to unlink task from epic")
+def unlink(
+    task_id: str = typer.Argument(..., help="Task ID to unlink from its epic"),
+) -> None:
+    """Remove a task from its epic"""
+    manager = _get_manager()
+
+    # Verify task exists
+    task = manager.get_task(task_id)
+    if not task:
+        console.print(f"[red]Error: Task {task_id} not found[/red]")
+        raise typer.Exit(1)
+
+    # Check if task is linked to an epic
+    if not task.epic_id:
+        console.print(f"[yellow]Task {task_id} is not linked to any epic[/yellow]")
+        return
+
+    # Unlink task from epic using EpicManager
+    from site_nine.epics import EpicManager
+
+    epic_manager = EpicManager(manager.db)
+    epic_id = task.epic_id
+
+    epic_manager.unlink_task(task_id)
+    console.print(f"[green]✓[/green] Unlinked task {task_id} from epic {epic_id}")
+    logger.info(f"Unlinked task {task_id} from epic {epic_id}")
