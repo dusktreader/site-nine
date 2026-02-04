@@ -55,7 +55,7 @@ qa/format:  ## RUn code formatter
 
 # ==== Documentation ===================================================================================================
 .PHONY: docs
-docs: docs/build  ## Shortcut for docs/build
+docs: docs/serve  ## Shortcut for docs/serve (auto-reload on changes)
 
 .PHONY: docs/build
 docs/build:  ## Build the documentation
@@ -63,7 +63,7 @@ docs/build:  ## Build the documentation
 
 .PHONY: docs/serve
 docs/serve:  ## Build the docs and start a local dev server
-	uv run mkdocs serve --config-file=docs/mkdocs.yaml --dev-addr=localhost:10000
+	uv run mkdocs serve --config-file=docs/mkdocs.yaml --dev-addr=localhost:10000 --livereload
 
 
 # ==== Other Commands ==================================================================================================

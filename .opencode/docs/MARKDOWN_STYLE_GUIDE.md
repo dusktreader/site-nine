@@ -1,7 +1,15 @@
 # Markdown Style Guide
 
-This document establishes markdown formatting standards for the site-nine project. Following these conventions ensures
-consistency across documentation, ADRs, mission files, and task files.
+This document establishes markdown formatting standards for the site-nine project. **All agents must follow these conventions** when creating or editing markdown files.
+
+This applies to:
+- Documentation in `docs/source/` (human-facing documentation)
+- ADRs in `.opencode/docs/adrs/`
+- Mission files in `.opencode/work/missions/`
+- Task files in `.opencode/work/tasks/`
+- All other markdown files in the repository
+
+Following these conventions ensures consistency across all documentation.
 
 
 ## Heading styles
@@ -140,7 +148,7 @@ You may use auto-numbering (all items as `1.`) if preferred, but be consistent w
 
 ### Alignment
 
-Align table columns vertically in the source markdown for human readability.
+**ALWAYS align table columns vertically in the source markdown.** Tables must be readable in both the editor and the browser. Properly aligned tables make code review, manual editing, and understanding content structure much easier.
 
 **Good:**
 
@@ -151,7 +159,7 @@ Align table columns vertically in the source markdown for human readability.
 | Data       | More data  | Even more    |
 ```
 
-**Acceptable but not preferred:**
+**Unacceptable:**
 
 ```markdown
 | Column One | Column Two | Column Three |
@@ -159,6 +167,8 @@ Align table columns vertically in the source markdown for human readability.
 | Short | Medium | Long content |
 | Data | More data | Even more |
 ```
+
+**Why this matters:** Unaligned tables are difficult to read and edit in source files. Since markdown is read both as source and rendered output, source readability is just as important as rendered appearance.
 
 ### Syntax
 

@@ -64,7 +64,7 @@ make qa/test-all
 1. **Director invokes:** `/summon` command (or `/summon <role>` to skip role selection)
 
 2. Agent asks: **"Which role should I assume?"** (skipped if role provided)
-   - Administrator, Architect, Builder, Tester, Documentarian, Designer, or Inspector
+   - Administrator, Architect, Engineer, Tester, Documentarian, Designer, or Inspector
    - **Pro tip:** Use `/summon operator` to start an Operator session immediately
 
 3. Agent suggests or asks for a **persona name** (from any religion's mythology)
@@ -87,14 +87,14 @@ make qa/test-all
 ```
 User: /summon
 Agent: Which role should I assume for this session?
-User: Builder
-Agent: Let me suggest an unused name for Builder role...
+User: Engineer
+Agent: Let me suggest an unused name for Engineer role...
        
        I suggest "Belial" - a demon king from Hebrew tradition who taught humans metalworking.
        This name hasn't been used yet.
        Would you like to use this name or choose another?
 User: That works
-Agent: Great! I'm Belial, your Builder agent. What would you like me to work on?
+Agent: Great! I'm Belial, your Engineer agent. What would you like me to work on?
 ```
 
 **Example (Reusing Name When Necessary):**
@@ -176,7 +176,7 @@ s9 name suggest <Role> --count 3  # Get 3 unused suggestions
 **Example**:
 ```
 "Add rate limiting to external MCP calls"
-→ Administrator coordinates: Architect → Builder → Tester → Documentarian
+→ Administrator coordinates: Architect → Engineer → Tester → Documentarian
 ```
 
 
@@ -195,7 +195,7 @@ s9 name suggest <Role> --count 3  # Get 3 unused suggestions
 ```
 
 
-### Builder
+### Engineer
 
 **File**: `agents/builder.md`
 
@@ -206,7 +206,7 @@ s9 name suggest <Role> --count 3  # Get 3 unused suggestions
 **Example**:
 ```
 "Implement the rate limiting feature"
-→ Builder writes code + tests, runs QA checks
+→ Engineer writes code + tests, runs QA checks
 ```
 
 
@@ -309,7 +309,7 @@ s9 name suggest <Role> --count 3  # Get 3 unused suggestions
 
 **Format:**
 ```bash
-git commit -m "feat(database): add connection pooling [Persona: Azazel - Builder]"
+git commit -m "feat(database): add connection pooling [Persona: Azazel - Engineer]"
 git commit -m "docs(readme): update setup guide [Persona: Seraphina - Documentarian]"
 ```
 
@@ -532,6 +532,7 @@ s9 mission end <mission-id>
 
 ### For Development
 - **`.opencode/docs/guides/AGENTS.md`** - Development patterns (READ THIS FIRST!)
+- **`.opencode/docs/MARKDOWN_STYLE_GUIDE.md`** - **Markdown formatting standards (REQUIRED for all markdown files)**
 - **`s9`** - **Unified project management CLI (tasks, missions, personas)**
 - **`.opencode/data/README.md`** - **Complete s9 system reference**
 - **`.opencode/work/missions/README.md`** - Mission tracking format and guidelines
@@ -588,7 +589,7 @@ See `.opencode/work/planning/PROJECT_STATUS.md` for current project status and p
 Each development mission begins with the agent asking which role to assume and what persona to use. This creates consistency and accountability:
 
 - Agent uses the same persona throughout the mission
-- Commits include the persona: `[Persona: Azazel - Builder]` or `[Persona: Seraphina - Designer]`
+- Commits include the persona: `[Persona: Azazel - Engineer]` or `[Persona: Seraphina - Designer]`
 - Task artifacts document all work done
 - Mission history tracks all work done
 
@@ -605,16 +606,16 @@ If you're starting a new task and aren't sure which role is best, choose Adminis
 
 The agents are configured to read `.opencode/docs/guides/AGENTS.md` for patterns. Keep it updated with lessons learned.
 
-### 5. Builder Writes Tests, Tester Runs Them
+### 5. Engineer Writes Tests, Tester Runs Them
 
-- **Builder**: Implements features AND writes tests
+- **Engineer**: Implements features AND writes tests
 - **Tester**: Runs tests, manual testing, validation
 
 This distinction ensures tests are written as part of implementation.
 
 ### 6. Approve Designs Before Implementation
 
-When Architect proposes a design, review and approve it before Builder starts. This saves time.
+When Architect proposes a design, review and approve it before Engineer starts. This saves time.
 
 ### 7. Inspector for Reviews, Not Just Bugs
 
