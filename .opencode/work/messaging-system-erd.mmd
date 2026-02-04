@@ -1,0 +1,87 @@
+erDiagram
+    missions ||--o{ conversations : creates
+    missions ||--o{ messages : sends
+    missions ||--o{ message_reads : reads
+    missions ||--o{ conversation_participants : participates_in
+    
+    conversations ||--o{ messages : contains
+    conversations ||--o{ conversation_participants : has
+    conversations }o--|| epics : "scoped_to (optional)"
+    conversations }o--|| tasks : "linked_to (optional)"
+    
+    messages }o--|| messages : "replies_to (parent)"
+    messages }o--|| messages : "thread_root"
+    messages }o--|| tasks : "references (optional)"
+    messages }o--|| epics : "references (optional)"
+    messages ||--o{ message_reads : "tracked_by"
+    
+    tasks }o--|| epics : "belongs_to (optional)"
+    
+    missions {
+        INTEGER id PK "Mission 0 = Director (prime-directive)"
+        TEXT persona_name
+        TEXT role
+        TEXT codename
+        TEXT start_time
+        TEXT end_time "NULL if active"
+    }
+    
+    conversations {
+        TEXT id PK "CONV-[NNNN]"
+        TEXT subject
+        TEXT type "conversation | discussion"
+        TEXT status "open | closed"
+        TEXT scope_type "NULL | epic | role | broadcast"
+        TEXT scope_role "NULL unless scope_type=role"
+        TEXT scope_epic_id FK "NULL unless scope_type=epic"
+        TEXT task_id FK "Optional task context"
+        TEXT epic_id FK "Optional epic context"
+        TEXT created_at
+        TEXT updated_at
+        TEXT closed_at
+    }
+    
+    conversation_participants {
+        TEXT conversation_id PK,FK
+        INTEGER mission_id PK,FK
+        TEXT joined_at
+        TEXT left_at "NULL if still participating"
+    }
+    
+    messages {
+        TEXT id PK "MSG-[P]-[NNNN]"
+        TEXT conversation_id FK
+        INTEGER from_mission_id FK "0 = Director"
+        TEXT subject
+        TEXT body "Markdown content"
+        TEXT priority "CRITICAL | HIGH | MEDIUM | LOW"
+        TEXT parent_message_id FK "NULL for root messages"
+        TEXT thread_root_id FK "NULL for conversations (no threading)"
+        TEXT task_id FK "Optional reference"
+        TEXT epic_id FK "Optional reference"
+        TEXT artifact_path "Optional file reference"
+        TEXT created_at
+        TEXT expires_at "NULL = no expiration"
+    }
+    
+    message_reads {
+        TEXT message_id PK,FK
+        INTEGER mission_id PK,FK
+        TEXT read_at
+    }
+    
+    tasks {
+        TEXT id PK
+        TEXT title
+        TEXT status
+        TEXT priority
+        TEXT role
+        TEXT epic_id FK
+    }
+    
+    epics {
+        TEXT id PK
+        TEXT title
+        TEXT status
+        TEXT priority
+    }
