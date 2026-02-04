@@ -99,7 +99,7 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
             tasks_table.add_column("Priority", style="red", width=10)
             tasks_table.add_column("Role", style="green", width=14)
             tasks_table.add_column("Status", style="yellow", width=10)
-            tasks_table.add_column("Title", style="white", max_width=30)
+            tasks_table.add_column("Title", style="white")
 
             if available_tasks:
                 # Sort by priority (CRITICAL > HIGH > MEDIUM > LOW), then by role
@@ -108,13 +108,12 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
 
                 # Show up to 10 most relevant tasks
                 for task in available_tasks[:10]:
-                    title_display = task.title[:27] + "..." if len(task.title) > 30 else task.title
                     tasks_table.add_row(
                         task.id,
                         task.priority,
                         task.role or "",
                         task.status,
-                        title_display,
+                        task.title,
                     )
                 console.print(tasks_table)
             else:
