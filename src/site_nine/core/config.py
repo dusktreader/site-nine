@@ -39,7 +39,7 @@ class FeaturesConfig:
 class CustomizationConfig:
     """Customization options"""
 
-    daemon_names: str = "mythology"
+    personas_theme: str = "mythology"
     template_dir: Path | None = None
     variables: dict[str, Any] = field(default_factory=dict)
 

@@ -13,12 +13,12 @@ class SiteNineSettings(BaseModel):
 
     # Feature flags
     enable_pm_system: bool = Field(default=True, description="Enable project management system")
-    enable_session_tracking: bool = Field(default=True, description="Enable agent session tracking")
+    enable_session_tracking: bool = Field(default=True, description="Enable mission tracking")
     enable_commit_guidelines: bool = Field(default=True, description="Enable commit guidelines")
-    enable_daemon_naming: bool = Field(default=True, description="Enable daemon naming system")
+    enable_daemon_naming: bool = Field(default=True, description="Enable persona system")
 
     # Customization
-    daemon_names_theme: str = Field(default="mythology", description="Daemon name theme (mythology, tech, etc)")
+    daemon_names_theme: str = Field(default="mythology", description="Persona theme (mythology, tech, etc)")
     template_dir: str = Field(default="", description="Custom template directory (empty = use default)")
 
     class Config:

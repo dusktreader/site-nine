@@ -25,7 +25,7 @@ def check_command(
 
     Performs checks on the .opencode directory structure:
     - Database integrity (SQLite PRAGMA integrity_check)
-    - Session file existence validation
+    - Mission file existence validation
     - Gitignore pattern validation
     - Database file existence
     - Backup file detection
@@ -83,36 +83,38 @@ def check_command(
         checks_warning += 1
     console.print()
 
-    # Check 3: Session File Validation
-    console.print("[bold]3. Checking session files...[/bold]")
+    # Check 3: Mission File Validation
+    console.print("[bold]3. Checking mission files...[/bold]")
     db = Database(db_path)
-    all_sessions = db.execute_query("SELECT id, name, session_file FROM agents WHERE session_file IS NOT NULL")
+    all_missions = db.execute_query("SELECT id, codename, mission_file FROM missions WHERE mission_file IS NOT NULL")
 
     missing_files = []
-    for session in all_sessions:
-        if session.get("session_file"):
+    for mission in all_missions:
+        if mission.get("mission_file"):
             # Handle both absolute and relative paths
-            session_file = session["session_file"]
-            if session_file.startswith(".opencode/"):
+            mission_file = mission["mission_file"]
+            if mission_file.startswith(".opencode/"):
                 # Relative path from project root
-                session_path = Path(session_file)
+                mission_path = Path(mission_file)
             else:
                 # Relative path from .opencode dir
-                session_path = opencode_dir / session_file
+                mission_path = opencode_dir / mission_file
 
-            if not session_path.exists():
-                missing_files.append({"id": session["id"], "name": session["name"], "file": session_file})
+            if not mission_path.exists():
+                missing_files.append(
+                    {"id": mission["id"], "codename": mission.get("codename", "unknown"), "file": mission_file}
+                )
                 if verbose:
                     console.print(
-                        f"  [yellow]⚠[/yellow] Agent #{session['id']} ({session['name']}): session file not found: {session_file}"
+                        f"  [yellow]⚠[/yellow] Mission #{mission['id']} ({mission.get('codename', 'unknown')}): mission file not found: {mission_file}"
                     )
 
     if missing_files:
-        console.print(f"  [yellow]⚠[/yellow]  Found {len(missing_files)} missing session files (non-critical)")
-        console.print("  [dim]Note: Session files are not critical. Database maintains session records.[/dim]")
+        console.print(f"  [yellow]⚠[/yellow]  Found {len(missing_files)} missing mission files (non-critical)")
+        console.print("  [dim]Note: Mission files are not critical. Database maintains mission records.[/dim]")
         checks_warning += 1
     else:
-        console.print(f"  [green]✓[/green] All {len(all_sessions)} session files exist")
+        console.print(f"  [green]✓[/green] All {len(all_missions)} mission files exist")
         checks_passed += 1
     console.print()
 

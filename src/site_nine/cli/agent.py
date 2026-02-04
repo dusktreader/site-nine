@@ -688,7 +688,7 @@ def list_opencode_sessions() -> None:
 @app.command("rename-tui")
 @handle_errors("Failed to rename OpenCode TUI session")
 def rename_tui(
-    name: str = typer.Argument(..., help="Agent daemon name"),
+    name: str = typer.Argument(..., help="Persona name"),
     role: str = typer.Argument(..., help="Agent role"),
     mission_id: str | None = typer.Option(None, "--session-id", "-s", help="OpenCode session ID (e.g., ses_xxx)"),
 ) -> None:

@@ -27,8 +27,8 @@ def doctor_command(
     Performs comprehensive checks on the database to identify:
     - Invalid foreign key references
     - Inconsistent task states
-    - Agent session data issues
-    - Incorrect usage counters
+    - Mission data issues
+    - Incorrect mission counters
     - Missing files
 
     By default, only reports issues. Use --fix to automatically repair safe issues.
@@ -56,48 +56,49 @@ def doctor_command(
     # Check 1: Foreign Key Integrity
     console.print("[bold]1. Checking foreign key integrity...[/bold]")
 
-    # Check agents.base_name → daemon_names.name
-    invalid_agents = db.execute_query("""
-        SELECT a.id, a.name, a.base_name
-        FROM agents a
-        LEFT JOIN daemon_names dn ON a.base_name = dn.name
-        WHERE dn.name IS NULL
+    # Check missions.persona_name → personas.name
+    invalid_missions = db.execute_query("""
+        SELECT m.id, m.codename, m.persona_name
+        FROM missions m
+        LEFT JOIN personas p ON m.persona_name = p.name
+        WHERE p.name IS NULL
     """)
 
-    if invalid_agents:
-        for agent in invalid_agents:
-            issue = (
-                f"Agent #{agent['id']} ({agent['name']}): base_name '{agent['base_name']}' not found in daemon_names"
-            )
+    if invalid_missions:
+        for mission in invalid_missions:
+            issue = f"Mission #{mission['id']} ({mission['codename']}): persona_name '{mission['persona_name']}' not found in personas"
             issues_found.append(("foreign_key", "error", issue, None))
             if verbose:
                 console.print(f"  [red]✗[/red] {issue}")
-        console.print(f"  [yellow]⚠[/yellow]  Found {len(invalid_agents)} invalid agent references")
+        console.print(f"  [yellow]⚠[/yellow]  Found {len(invalid_missions)} invalid mission references")
     else:
-        console.print("  [green]✓[/green] All agent base_names are valid")
+        console.print("  [green]✓[/green] All mission persona_names are valid")
 
-    # Check tasks.agent_id → agents.id
+    # Check tasks.agent_id → missions.id
+    # Check tasks.current_mission_id → missions.id
     orphaned_tasks = db.execute_query("""
-        SELECT t.id, t.title, t.agent_id
+        SELECT t.id, t.title, t.current_mission_id
         FROM tasks t
-        WHERE t.agent_id IS NOT NULL
-        AND NOT EXISTS (SELECT 1 FROM agents WHERE id = t.agent_id)
+        WHERE t.current_mission_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM missions WHERE id = t.current_mission_id)
     """)
 
     if orphaned_tasks:
         for task in orphaned_tasks:
-            issue = f"Task {task['id']}: references non-existent agent_id {task['agent_id']}"
+            issue = (
+                f"Task {task['id']}: references non-existent mission current_mission_id {task['current_mission_id']}"
+            )
             task_id = task["id"]
 
             def fix_fn():
-                db.execute_update("UPDATE tasks SET agent_id = NULL WHERE id = :id", {"id": task_id})
+                db.execute_update("UPDATE tasks SET current_mission_id = NULL WHERE id = :id", {"id": task_id})
 
             issues_found.append(("foreign_key", "fixable", issue, fix_fn))
             if verbose:
                 console.print(f"  [yellow]⚠[/yellow] {issue}")
         console.print(f"  [yellow]⚠[/yellow]  Found {len(orphaned_tasks)} orphaned task references")
     else:
-        console.print("  [green]✓[/green] All task agent_ids are valid")
+        console.print("  [green]✓[/green] All task mission references are valid")
 
     # Check task_dependencies
     invalid_deps = db.execute_query("""
@@ -158,159 +159,128 @@ def doctor_command(
     else:
         console.print("  [green]✓[/green] All completed/aborted tasks have closed_at")
 
-    # Tasks marked UNDERWAY should have agent_name and claimed_at
+    # Tasks marked UNDERWAY should have claimed_at
     incomplete_underway = db.execute_query("""
-        SELECT id, title, agent_name, claimed_at
+        SELECT id, title, claimed_at
         FROM tasks
         WHERE status = 'UNDERWAY'
-        AND (agent_name IS NULL OR claimed_at IS NULL)
+        AND claimed_at IS NULL
     """)
 
     if incomplete_underway:
         for task in incomplete_underway:
-            if task.get("agent_name") is None:
-                issue = f"Task {task['id']}: status is UNDERWAY but missing agent_name"
-            else:
-                issue = f"Task {task['id']}: status is UNDERWAY but missing claimed_at timestamp"
+            issue = f"Task {task['id']}: status is UNDERWAY but missing claimed_at timestamp"
             issues_found.append(("task_state", "warning", issue, None))
             if verbose:
                 console.print(f"  [yellow]⚠[/yellow] {issue}")
         console.print(f"  [yellow]⚠[/yellow]  Found {len(incomplete_underway)} incomplete UNDERWAY tasks")
     else:
-        console.print("  [green]✓[/green] All UNDERWAY tasks have agent_name and claimed_at")
+        console.print("  [green]✓[/green] All UNDERWAY tasks have claimed_at")
 
     console.print()
 
-    # Check 3: Agent Session Consistency
-    console.print("[bold]3. Checking agent session consistency...[/bold]")
+    # Check 3: Mission Consistency
+    console.print("[bold]3. Checking mission consistency...[/bold]")
 
-    # Completed/failed/aborted sessions should have end_time
-    unended_sessions = db.execute_query("""
-        SELECT id, name, status
-        FROM agents
-        WHERE status IN ('completed', 'failed', 'aborted')
-        AND end_time IS NULL
+    # All missions should have end_time set or NULL (no status field anymore)
+    # This check is now simplified - we just verify data integrity
+    all_missions = db.execute_query("""
+        SELECT id, codename, persona_name, start_time, end_time
+        FROM missions
     """)
 
-    if unended_sessions:
-        for session in unended_sessions:
-            issue = f"Agent #{session['id']} ({session['name']}): status is {session['status']} but missing end_time"
-            now = datetime.now(timezone.utc).isoformat()
-            session_id = session["id"]
-            timestamp = now
-
-            def fix_fn():
-                db.execute_update(
-                    "UPDATE agents SET end_time = :timestamp WHERE id = :id", {"timestamp": timestamp, "id": session_id}
-                )
-
-            issues_found.append(("agent_session", "fixable", issue, fix_fn))
+    # Validate mission data structure
+    invalid_missions_data = []
+    for mission in all_missions:
+        if not mission.get("start_time"):
+            invalid_missions_data.append(mission)
+            issue = f"Mission #{mission['id']} ({mission.get('codename', 'unknown')}): missing start_time"
+            issues_found.append(("mission_data", "error", issue, None))
             if verbose:
-                console.print(f"  [yellow]⚠[/yellow] {issue}")
-        console.print(f"  [yellow]⚠[/yellow]  Found {len(unended_sessions)} sessions missing end_time")
+                console.print(f"  [red]✗[/red] {issue}")
+
+    if invalid_missions_data:
+        console.print(f"  [red]✗[/red] Found {len(invalid_missions_data)} missions with invalid data")
     else:
-        console.print("  [green]✓[/green] All ended sessions have end_time")
+        console.print("  [green]✓[/green] All missions have valid data structure")
 
-    # In-progress/paused sessions should NOT have end_time
-    wrongly_ended = db.execute_query("""
-        SELECT id, name, status
-        FROM agents
-        WHERE status IN ('in-progress', 'paused')
-        AND end_time IS NOT NULL
-    """)
-
-    if wrongly_ended:
-        for session in wrongly_ended:
-            issue = f"Agent #{session['id']} ({session['name']}): status is {session['status']} but has end_time"
-            session_id = session["id"]
-
-            def fix_fn():
-                db.execute_update("UPDATE agents SET end_time = NULL WHERE id = :id", {"id": session_id})
-
-            issues_found.append(("agent_session", "fixable", issue, fix_fn))
-            if verbose:
-                console.print(f"  [yellow]⚠[/yellow] {issue}")
-        console.print(f"  [yellow]⚠[/yellow]  Found {len(wrongly_ended)} active sessions with end_time set")
-    else:
-        console.print("  [green]✓[/green] Active/paused sessions have no end_time")
-
-    # Check session files exist
-    all_sessions = db.execute_query("SELECT id, name, session_file FROM agents")
+    # Check mission files exist
+    all_missions_with_files = db.execute_query("SELECT id, codename, mission_file FROM missions")
     missing_files = []
 
-    for session in all_sessions:
-        if session.get("session_file"):
-            session_path = opencode_dir / session["session_file"]
-            if not session_path.exists():
-                issue = f"Agent #{session['id']} ({session['name']}): session file not found: {session['session_file']}"
-                issues_found.append(("agent_session", "error", issue, None))
-                missing_files.append(session)
+    for mission in all_missions_with_files:
+        if mission.get("mission_file"):
+            mission_path = opencode_dir / mission["mission_file"]
+            if not mission_path.exists():
+                issue = f"Mission #{mission['id']} ({mission['codename']}): mission file not found: {mission['mission_file']}"
+                issues_found.append(("mission_data", "error", issue, None))
+                missing_files.append(mission)
                 if verbose:
                     console.print(f"  [red]✗[/red] {issue}")
 
     if missing_files:
-        console.print(f"  [red]✗[/red] Found {len(missing_files)} missing session files")
+        console.print(f"  [red]✗[/red] Found {len(missing_files)} missing mission files")
     else:
-        console.print("  [green]✓[/green] All session files exist")
+        console.print("  [green]✓[/green] All mission files exist")
 
     console.print()
 
-    # Check 4: Daemon Name Usage Counts
-    console.print("[bold]4. Checking daemon name usage counts...[/bold]")
+    # Check 4: Persona Mission Counts
+    console.print("[bold]4. Checking persona mission counts...[/bold]")
 
     wrong_counts = db.execute_query("""
-        SELECT dn.name, dn.usage_count, COUNT(a.id) as actual_count
-        FROM daemon_names dn
-        LEFT JOIN agents a ON dn.name = a.base_name
-        GROUP BY dn.name
-        HAVING dn.usage_count != COUNT(a.id)
+        SELECT p.name, p.mission_count, COUNT(m.id) as actual_count
+        FROM personas p
+        LEFT JOIN missions m ON p.name = m.persona_name
+        GROUP BY p.name
+        HAVING p.mission_count != COUNT(m.id)
     """)
 
     if wrong_counts:
         for name_info in wrong_counts:
-            issue = f"Name '{name_info['name']}': usage_count is {name_info['usage_count']} but actual count is {name_info['actual_count']}"
+            issue = f"Persona '{name_info['name']}': mission_count is {name_info['mission_count']} but actual count is {name_info['actual_count']}"
             name = name_info["name"]
             count = name_info["actual_count"]
 
             def fix_fn():
                 db.execute_update(
-                    "UPDATE daemon_names SET usage_count = :count WHERE name = :name", {"count": count, "name": name}
+                    "UPDATE personas SET mission_count = :count WHERE name = :name", {"count": count, "name": name}
                 )
 
-            issues_found.append(("usage_count", "fixable", issue, fix_fn))
+            issues_found.append(("mission_count", "fixable", issue, fix_fn))
             if verbose:
                 console.print(f"  [yellow]⚠[/yellow] {issue}")
-        console.print(f"  [yellow]⚠[/yellow]  Found {len(wrong_counts)} incorrect usage counts")
+        console.print(f"  [yellow]⚠[/yellow]  Found {len(wrong_counts)} incorrect mission counts")
     else:
-        console.print("  [green]✓[/green] All usage counts are correct")
+        console.print("  [green]✓[/green] All mission counts are correct")
 
-    # Check last_used_at matches most recent session
+    # Check last_mission_at matches most recent mission
     wrong_dates = db.execute_query("""
-        SELECT dn.name, dn.last_used_at, MAX(a.created_at) as actual_last_used
-        FROM daemon_names dn
-        LEFT JOIN agents a ON dn.name = a.base_name
-        GROUP BY dn.name
-        HAVING (dn.last_used_at IS NULL AND actual_last_used IS NOT NULL)
-            OR (dn.last_used_at IS NOT NULL AND dn.last_used_at != actual_last_used)
+        SELECT p.name, p.last_mission_at, MAX(m.start_time) as actual_last_mission
+        FROM personas p
+        LEFT JOIN missions m ON p.name = m.persona_name
+        GROUP BY p.name
+        HAVING (p.last_mission_at IS NULL AND actual_last_mission IS NOT NULL)
+            OR (p.last_mission_at IS NOT NULL AND p.last_mission_at != actual_last_mission)
     """)
 
     if wrong_dates:
         for name_info in wrong_dates:
-            issue = f"Name '{name_info['name']}': last_used_at doesn't match actual usage"
+            issue = f"Persona '{name_info['name']}': last_mission_at doesn't match actual mission history"
             name = name_info["name"]
-            date = name_info["actual_last_used"]
+            date = name_info["actual_last_mission"]
 
             def fix_fn():
                 db.execute_update(
-                    "UPDATE daemon_names SET last_used_at = :date WHERE name = :name", {"date": date, "name": name}
+                    "UPDATE personas SET last_mission_at = :date WHERE name = :name", {"date": date, "name": name}
                 )
 
-            issues_found.append(("usage_count", "fixable", issue, fix_fn))
+            issues_found.append(("mission_count", "fixable", issue, fix_fn))
             if verbose:
                 console.print(f"  [yellow]⚠[/yellow] {issue}")
-        console.print(f"  [yellow]⚠[/yellow]  Found {len(wrong_dates)} incorrect last_used_at timestamps")
+        console.print(f"  [yellow]⚠[/yellow]  Found {len(wrong_dates)} incorrect last_mission_at timestamps")
     else:
-        console.print("  [green]✓[/green] All last_used_at timestamps are correct")
+        console.print("  [green]✓[/green] All last_mission_at timestamps are correct")
 
     console.print()
 
