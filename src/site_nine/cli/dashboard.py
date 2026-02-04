@@ -137,6 +137,37 @@ def dashboard_command(role: str | None = typer.Option(None, "--role", "-r", help
 
             console.print(stats_table)
 
+            # 3. Recent Tasks table (show TODO and UNDERWAY tasks)
+            console.print("\n")
+            recent_tasks = [t for t in all_tasks if t.status in ("TODO", "UNDERWAY")]
+            tasks_table = Table(
+                title="Recent Tasks", show_header=True, title_style="bold magenta", title_justify="left"
+            )
+            tasks_table.add_column("ID", style="cyan", width=12)
+            tasks_table.add_column("Priority", style="red", width=10)
+            tasks_table.add_column("Role", style="green", width=14)
+            tasks_table.add_column("Status", style="yellow", width=10)
+            tasks_table.add_column("Title", style="white", max_width=30)
+
+            if recent_tasks:
+                # Sort by priority (CRITICAL > HIGH > MEDIUM > LOW), then by role
+                priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+                recent_tasks.sort(key=lambda t: (priority_order.get(t.priority, 99), t.role or "", t.id))
+
+                # Show up to 10 most relevant tasks
+                for task in recent_tasks[:10]:
+                    title_display = task.title[:27] + "..." if len(task.title) > 30 else task.title
+                    tasks_table.add_row(
+                        task.id,
+                        task.priority,
+                        task.role or "",
+                        task.status,
+                        title_display,
+                    )
+                console.print(tasks_table)
+            else:
+                console.print("[green]No pending tasks - all work complete![/green]")
+
     except Exception as e:
         console.print(f"[red]Error showing dashboard: {e}[/red]")
         raise typer.Exit(1)
