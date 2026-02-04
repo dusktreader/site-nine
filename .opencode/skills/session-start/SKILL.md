@@ -57,48 +57,10 @@ Run the project dashboard:
 s9 dashboard
 ```
 
-Then present a **concise summary** to help the Director choose the right role:
-
-```
-**📊 Project Status**
-
-| Metric           | Count |
-|------------------|-------|
-| Active agents    | [N]   |
-| Tasks in progress| [N]   |
-| Tasks completed  | [N]   |
-
-**📋 Available Tasks**
-
-| ID         | Priority | Role          | Status   | Title                         |
-|------------|----------|---------------|----------|-------------------------------|
-| OPR-H-0005 | HIGH     | Operator      | UNDERWAY | Consolidate .opencode...      |
-| OPR-M-0008 | MEDIUM   | Operator      | TODO     | Use s9 entrypoint...          |
-| OPR-M-0009 | MEDIUM   | Operator      | TODO     | Case insensitive enum...      |
-| DOC-M-0002 | MEDIUM   | Documentarian | TODO     | Expand daemon names...        |
-
----
-
-Which role would you like me to assume?
-```
-
-**Guidelines for the table:**
-- **Column order:** ID, Priority, Role, Status, Title
-- **Column widths:**
-  - ID: 12 chars (e.g., "OPR-H-0005  ")
-  - Priority: 10 chars (e.g., "HIGH      ")
-  - Role: 14 chars (e.g., "Documentarian ", "Operator      ")
-  - Status: 10 chars (e.g., "UNDERWAY  ")
-  - Title: 30 chars max (truncate with "..." if longer)
-- **Row length:** Keep each row ≤100 characters total
-- Show each task on its own line (don't group by priority/role)
-- Sort by priority (CRITICAL > HIGH > MEDIUM > LOW), then by role
-- Limit to 8-10 most relevant tasks (omit LOW priority if too many)
+The dashboard command will display the current project status including open missions, quick stats, and available tasks.
 
 **If dashboard command fails or returns no data:**
-- Skip the status summary
-- Proceed directly to role selection
-- Note: "Unable to load project status, proceeding with role selection..."
+- Skip to role selection with note: "Unable to load project status, proceeding with role selection..."
 
 ## Step 2: Role Selection
 
@@ -107,25 +69,15 @@ Which role would you like me to assume?
 If the user invoked `/summon <role>` (e.g., `/summon operator`), the role will be provided in the skill parameters. In this case:
 - Skip the role selection prompts below
 - Use the provided role directly
-- Proceed immediately to Step 3 (Daemon Name Selection)
+- Proceed immediately to Step 3 (Persona Selection)
 
 **If NO role was provided**, display the standardized role selection prompt using the s9 CLI:
 
 ```bash
-s9 mission roles
+s9 agent roles
 ```
 
-This will display a consistently formatted list of all available agent roles with their descriptions.
-
-**Available Roles:**
-- **Administrator** - Coordination, task prioritization, delegation
-- **Architect** - System design, ADRs, technical direction
-- **Builder** - Implementation, coding, integration
-- **Tester** - Test writing, validation, QA
-- **Documentarian** - Documentation, guides, examples
-- **Designer** - UI/UX, visual design, user experience
-- **Inspector** - Security review, code review, audits
-- **Operator** - Deployment, infrastructure, monitoring
+The command will display a consistently formatted list of all available agent roles with their descriptions.
 
 Wait for the Director to respond with their role choice.
 
@@ -366,21 +318,19 @@ s9 agent generate-session-uuid
 ```
 
 **This command:**
-- Creates a temporary marker file (`.opencode/.session_uuid_marker`) with a unique UUID
-- OpenCode will capture this file in the session diff
+- Generates a unique UUID and outputs it to the console
+- OpenCode captures this output in this session's diff data
 - The UUID can then be used to reliably identify this specific session
+- **No files are created** - avoiding race conditions with concurrent sessions
 
 **Example output:**
 ```
 Session UUID: session-marker-abc123def456
 Use this marker with: s9 agent rename-tui <name> <role> --uuid-marker session-marker-abc123def456
-Marker file: /path/to/project/.opencode/.session_uuid_marker
 session-marker-abc123def456
 ```
 
 **Capture the UUID from the output** (it appears on the last line). You'll use it in the next step.
-
-**Important:** Don't worry about cleaning up the marker file - it will be automatically removed after the rename step.
 
 ## Step 7: Rename OpenCode TUI Session
 
@@ -426,7 +376,6 @@ s9 agent rename-tui <persona> <Role> --session-id <session-id>
 - Updates the OpenCode TUI session title to "<Persona> - <Role>"
 - Makes it easy to identify which mission you're working with in `opencode session list`
 - Updates take effect immediately - no TUI restart needed
-- Automatically cleans up the UUID marker file
 - **Note:** Persona name is capitalized in the title (e.g., "Nut" not "nut")
 
 **After running the command, tell the Director:**
