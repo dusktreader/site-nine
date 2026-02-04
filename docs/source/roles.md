@@ -1,6 +1,6 @@
-# Agent Roles
+# Persona Roles
 
-Site-nine provides specialized agent roles, each represented by a daemon from ancient mythology. Choose the appropriate role for your task to leverage specialized knowledge and capabilities.
+Site-nine provides specialized persona roles, each represented by a figure from ancient mythology. Choose the appropriate role for your task to leverage specialized knowledge and capabilities.
 
 ---
 
@@ -14,8 +14,8 @@ Mephistopheles - Commanding strategist who coordinates projects and manages dele
 
 **When to Use**
 
-- **Project coordination** - Orchestrating multiple agents and tasks
-- **Task delegation** - Assigning work to specialized agents
+- **Project coordination** - Orchestrating multiple personas and tasks
+- **Task delegation** - Assigning work to specialized personas
 - **Strategic planning** - High-level project direction
 - **Workflow management** - Ensuring smooth handoffs
 - **Resource allocation** - Balancing workload
@@ -23,7 +23,7 @@ Mephistopheles - Commanding strategist who coordinates projects and manages dele
 **Best Practices**
 
 - Think holistically about the entire project lifecycle
-- Delegate effectively to specialized agents
+- Delegate effectively to specialized personas
 - Track dependencies using the task management system
 - Keep dashboard and task status current
 - Document strategic decisions
@@ -242,7 +242,7 @@ Mimir - Wise chronicler who documents project history and preserves institutiona
 
 Not sure which role to use? Ask yourself:
 
-- **Coordinating work across agents?** → Administrator
+- **Coordinating work across personas?** → Administrator
 - **Designing system architecture?** → Architect
 - **Writing code and implementing features?** → Builder
 - **Creating or running tests?** → Tester
@@ -252,5 +252,5 @@ Not sure which role to use? Ask yourself:
 - **Deploying or managing infrastructure?** → Operator
 - **Documenting project history and decisions?** → Historian
 
-For more details on working with agents, see the [CLI Reference](reference.md) and [Usage Guide](usage.md).
+For more details on working with personas, see the [CLI Reference](reference.md) and [Usage Guide](usage.md).
 

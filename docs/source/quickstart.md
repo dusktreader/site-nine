@@ -4,13 +4,13 @@
 
 Get up and running with site-nine in 5 minutes.
 
-**site-nine** is designed to work with [OpenCode](https://github.com/khulnasoft/opencode), an AI coding assistant. You'll interact with specialized agents through natural conversation in OpenCode, while site-nine manages project coordination, tasks, and sessions behind the scenes.
+**site-nine** is designed to work with [OpenCode](https://github.com/khulnasoft/opencode), an AI coding assistant. You'll interact with specialized personas through natural conversation in OpenCode, while site-nine manages project coordination, tasks, and missions behind the scenes.
 
 ## Requirements
 
 * Python 3.12 or later
 * pip or uv for package installation
-* [OpenCode](https://github.com/khulnasoft/opencode) - Install separately for the full agent experience
+* [OpenCode](https://github.com/khulnasoft/opencode) - Install separately for the full persona experience
 
 
 ## Installation
@@ -41,8 +41,8 @@ This launches an interactive wizard that asks:
 - **Project name** (defaults to directory name)
 - **Project type** (python, typescript, go, rust, other)
 - **Project description**
-- **Features to enable** (task management, session tracking, etc.)
-- **Agent roles to include**
+- **Features to enable** (task management, mission tracking, etc.)
+- **Persona roles to include**
 
 ### Using a Config File
 
@@ -57,11 +57,11 @@ project:
 
 features:
   pm_system: true
-  session_tracking: true
+  mission_tracking: true
   commit_guidelines: true
-  daemon_naming: true
+  persona_naming: true
 
-agent_roles:
+persona_roles:
   - name: Administrator
     enabled: true
   - name: Builder
@@ -83,7 +83,7 @@ Check that the `.opencode` directory was created:
 
 ```bash
 ls .opencode/
-# agents/  data/  guides/  planning/  procedures/  sessions/
+# personas/  data/  guides/  planning/  procedures/  missions/
 ```
 
 View the dashboard:
@@ -95,7 +95,7 @@ s9 dashboard
 
 ## Next Steps
 
-### Start Working with Agents in OpenCode
+### Start Working with Personas in OpenCode
 
 Now that site-nine is initialized, launch OpenCode in your project directory:
 
@@ -103,7 +103,7 @@ Now that site-nine is initialized, launch OpenCode in your project directory:
 opencode
 ```
 
-Then execute the summon command to start an agent session:
+Then execute the summon command to start a mission:
 
 ```
 /summon
@@ -117,21 +117,21 @@ Or specify a role directly to skip the role selection step:
 /summon tester
 ```
 
-This will guide you through selecting an agent role (Builder, Tester, Architect, etc.) if not provided, and choosing a daemon name from mythology. Once summoned, you can talk to your agent naturally through conversation.
+This will guide you through selecting a persona role (Builder, Tester, Architect, etc.) if not provided, and choosing a persona name from mythology. Once summoned, you can talk to your persona naturally through conversation.
 
 
-## Working with Your Agent in OpenCode
+## Working with Your Persona in OpenCode
 
-Once your agent session starts, you interact through natural conversation in the OpenCode terminal. Here are some common workflows:
+Once your mission starts, you interact through natural conversation in the OpenCode terminal. Here are some common workflows:
 
 ### Creating Tasks
 
-Simply ask your agent to create tasks:
+Simply ask your persona to create tasks:
 
 **You:**
 > Create a high-priority task for implementing user authentication
 
-**Agent (Administrator - Ishtar):**
+**Persona (Administrator - Ishtar):**
 > I'll create that task for you.
 > 
 > ✓ Created task BLD-H-0001
@@ -140,16 +140,16 @@ Simply ask your agent to create tasks:
 >   Role: Builder
 >   Status: TODO
 > 
-> The task has been added to the project database and is ready to be claimed by a Builder agent.
+> The task has been added to the project database and is ready to be claimed by a Builder persona.
 
 ### Investigating Code
 
-Ask agents to explore and explain your codebase:
+Ask personas to explore and explain your codebase:
 
 **You:**
 > What authentication libraries are we currently using?
 
-**Agent (Inspector - Argus):**
+**Persona (Inspector - Argus):**
 > Let me search the codebase for authentication-related dependencies...
 > 
 > I found the following authentication libraries in your project:
@@ -166,12 +166,12 @@ Ask agents to explore and explain your codebase:
 
 ### Building Features
 
-Direct agents to implement functionality:
+Direct personas to implement functionality:
 
 **You:**
 > Implement a password reset endpoint
 
-**Agent (Builder - Goibniu):**
+**Persona (Builder - Goibniu):**
 > I'll implement a password reset endpoint for you. Let me break this down:
 > 
 > **Plan:**
@@ -192,12 +192,12 @@ Direct agents to implement functionality:
 
 ### Running Tests
 
-Ask agents to validate their work:
+Ask personas to validate their work:
 
 **You:**
 > Run the authentication tests
 
-**Agent (Tester - Ah-Puch):**
+**Persona (Tester - Ah-Puch):**
 > Running authentication test suite...
 > 
 > ```
@@ -219,7 +219,7 @@ Ask about tasks and progress:
 **You:**
 > What tasks are pending?
 
-**Agent (Administrator - Marduk):**
+**Persona (Administrator - Marduk):**
 > Let me check the task database...
 > 
 > **Pending Tasks (3):**
@@ -237,23 +237,23 @@ Ask about tasks and progress:
 
 ### Within OpenCode
 
-Your agent can help you understand available commands and workflows:
+Your persona can help you understand available commands and workflows:
 
 **You:**
 > How do I see the dashboard?
 
-**Agent:**
+**Persona:**
 > You can view the project dashboard by running:
 > ```bash
 > s9 dashboard
 > ```
 > 
-> This shows active agents, task summary, and recent activity.
+> This shows active personas, task summary, and recent activity.
 
 For complete command reference, see the [CLI Reference](reference.md) page.
 
 ## Next Steps
 
 - **[Learn about the .opencode directory](structure.md)** - Understand what's inside and what you can safely edit
-- **[Explore agent roles](roles.md)** - See what each agent type specializes in
+- **[Explore persona roles](roles.md)** - See what each persona type specializes in
 - **[Read the usage guide](usage.md)** - Learn advanced workflows and patterns

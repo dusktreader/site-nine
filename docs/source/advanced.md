@@ -4,20 +4,20 @@
 
 Advanced techniques and workflows for power users of site-nine.
 
-## Working with Multiple Agents
+## Working with Multiple Personas
 
-The most powerful way to use site-nine is running multiple OpenCode terminals simultaneously, each with a different agent working on related tasks.
+The most powerful way to use site-nine is running multiple OpenCode terminals simultaneously, each with a different persona working on related tasks.
 
 ### Multi-Terminal Workflow
 
-**Terminal 1 - Administrator Agent:**
+**Terminal 1 - Administrator Persona:**
 ```bash
 opencode
 ```
 ```
 /summon
 # Select: Administrator
-# Choose daemon: Mephistopheles
+# Choose persona: Mephistopheles
 ```
 
 **You (in Terminal 1):**
@@ -57,14 +57,14 @@ opencode
 
 ---
 
-**Terminal 2 - Architect Agent:**
+**Terminal 2 - Architect Persona:**
 ```bash
 opencode
 ```
 ```
 /summon
 # Select: Architect
-# Choose daemon: Kothar
+# Choose persona: Kothar
 ```
 
 **You (in Terminal 2):**
@@ -94,7 +94,7 @@ opencode
 > The architecture is documented and ready for implementation. Task ARC-H-0001 is complete.
 
 **You (in Terminal 2):**
-> Hand this off to a Builder agent to implement
+> Hand this off to a Builder persona to implement
 
 **Kothar (Architect):**
 > I'll update the handoff for task BLD-H-0002.
@@ -119,14 +119,14 @@ opencode
 
 ---
 
-**Terminal 3 - Builder Agent:**
+**Terminal 3 - Builder Persona:**
 ```bash
 opencode
 ```
 ```
 /summon
 # Select: Builder
-# Choose daemon: Azazel
+# Choose persona: Azazel
 ```
 
 **You (in Terminal 3):**
@@ -159,14 +159,14 @@ opencode
 
 ---
 
-**Terminal 4 - Tester Agent:**
+**Terminal 4 - Tester Persona:**
 ```bash
 opencode
 ```
 ```
 /summon
 # Select: Tester
-# Choose daemon: Eris
+# Choose persona: Eris
 ```
 
 **You (in Terminal 4):**
@@ -210,9 +210,9 @@ opencode
 
 ### Benefits of Multi-Terminal Workflow
 
-1. **Parallel Work** - Multiple agents can work on different parts of the system simultaneously
-2. **Specialization** - Each agent focuses on their area of expertise
-3. **Real-time Coordination** - Agents can reference each other's work
+1. **Parallel Work** - Multiple personas can work on different parts of the system simultaneously
+2. **Specialization** - Each persona focuses on their area of expertise
+3. **Real-time Coordination** - Personas can reference each other's work
 4. **Natural Collaboration** - Mimics how human teams work together
 
 ### Coordination Patterns
@@ -231,18 +231,18 @@ After a Builder completes work, bring in an Inspector in a separate terminal to 
 
 **Pattern 4: Administrator Orchestration**
 
-Keep an Administrator agent running in a dedicated terminal to coordinate tasks, check status, and manage the overall workflow.
+Keep an Administrator persona running in a dedicated terminal to coordinate tasks, check status, and manage the overall workflow.
 
-## Asking Agents for Project Insights
+## Asking Personas for Project Insights
 
-Instead of querying databases or running commands, ask your agents for insights conversationally.
+Instead of querying databases or running commands, ask your personas for insights conversationally.
 
 ### Task Analytics
 
 **You:**
 > What's our task completion rate?
 
-**Agent (Administrator):**
+**Persona (Administrator):**
 > Let me check the task analytics...
 > 
 > **Task Status Breakdown:**
@@ -254,20 +254,20 @@ Instead of querying databases or running commands, ask your agents for insights 
 > 
 > We're making good progress! Nearly half of all tasks are complete, and only 2 are blocked.
 
-### Agent Activity
+### Persona Activity
 
 **You:**
-> Which agents have been most active on this project?
+> Which personas have been most active on this project?
 
-**Agent (Administrator):**
-> Here's the agent activity summary:
+**Persona (Administrator):**
+> Here's the persona activity summary:
 > 
-> | Agent Name  | Sessions | Completed |
-> |-------------|----------|-----------|
-> | Azazel      | 12       | 10        |
-> | Eris        | 8        | 7         |
-> | Kothar      | 6        | 6         |
-> | Nabu        | 4        | 3         |
+> | Persona Name | Missions | Completed |
+> |--------------|----------|-----------|
+> | Azazel       | 12       | 10        |
+> | Eris         | 8        | 7         |
+> | Kothar       | 6        | 6         |
+> | Nabu         | 4        | 3         |
 > 
 > Azazel (Builder) has been the most active, with a strong completion rate.
 
@@ -276,7 +276,7 @@ Instead of querying databases or running commands, ask your agents for insights 
 **You:**
 > Show me which tasks are blocking other work
 
-**Agent (Administrator):**
+**Persona (Administrator):**
 > Let me check the task dependencies...
 > 
 > **Blocked Tasks:**
@@ -293,18 +293,18 @@ Instead of querying databases or running commands, ask your agents for insights 
 
 ## Custom Templates
 
-Override default agent behavior by customizing templates.
+Override default persona behavior by customizing templates.
 
-### Customizing Agent Instructions
+### Customizing Persona Instructions
 
-1. Copy an agent template:
+1. Copy a persona template:
 ```bash
-cp .opencode/agents/builder.md .opencode/agents/builder-custom.md
+cp .opencode/personas/builder.md .opencode/personas/builder-custom.md
 ```
 
 2. Edit the template to add project-specific guidelines:
 ```markdown
-# Builder Agent
+# Builder Persona
 
 ## Project-Specific Guidelines
 
@@ -318,7 +318,7 @@ cp .opencode/agents/builder.md .opencode/agents/builder-custom.md
 [... rest of template ...]
 ```
 
-3. Ask agents to reference the custom template:
+3. Ask personas to reference the custom template:
 > Use the guidelines in builder-custom.md for this implementation
 
 ### Project-Specific Workflows
@@ -359,14 +359,14 @@ Then reference it in conversations:
 
 ## Task Management Patterns
 
-### Ask Agents to Create Tasks
+### Ask Personas to Create Tasks
 
-Instead of using CLI commands, ask agents to create tasks conversationally:
+Instead of using CLI commands, ask personas to create tasks conversationally:
 
 **You:**
 > Create a high-priority task for implementing rate limiting on the API
 
-**Agent (Administrator):**
+**Persona (Administrator):**
 > I'll create that task for you.
 > 
 > ✓ Created task BLD-H-0015
@@ -377,12 +377,12 @@ Instead of using CLI commands, ask agents to create tasks conversationally:
 > 
 > The task is ready for a Builder to claim.
 
-### Ask Agents About Dependencies
+### Ask Personas About Dependencies
 
 **You:**
 > What tasks need to be completed before we can deploy to production?
 
-**Agent (Administrator):**
+**Persona (Administrator):**
 > Let me check the task dependencies...
 > 
 > Before deploying to production, these tasks must be complete:
@@ -403,7 +403,7 @@ Instead of using CLI commands, ask agents to create tasks conversationally:
 **You:**
 > We need to add a notification system to the app. This seems like a big feature - can you break it down?
 
-**Agent (Administrator):**
+**Persona (Administrator):**
 > I'll break the notification system into manageable tasks.
 > 
 > ✓ Created task ARC-H-0020
@@ -447,7 +447,7 @@ Instead of using CLI commands, ask agents to create tasks conversationally:
 **You:**
 > What's the status of the authentication feature we've been working on?
 
-**Agent (Administrator):**
+**Persona (Administrator):**
 > Let me check the authentication tasks...
 > 
 > **Authentication Feature Status:**
@@ -467,7 +467,7 @@ Instead of using CLI commands, ask agents to create tasks conversationally:
 **You:**
 > Azazel has been working on BLD-H-0015 for 3 days and seems stuck. Can we reassign it?
 
-**Agent (Administrator):**
+**Persona (Administrator):**
 > Let me check the task status and reassign if needed...
 > 
 > Looking at BLD-H-0015 (Rate limiting implementation):
@@ -488,7 +488,7 @@ Instead of using CLI commands, ask agents to create tasks conversationally:
 **You:**
 > What other tasks are related to payment processing?
 
-**Agent (Administrator):**
+**Persona (Administrator):**
 > Searching for payment-related tasks...
 > 
 > **Payment Processing Tasks:**

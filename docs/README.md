@@ -11,7 +11,7 @@ This directory contains user-facing documentation for the s9 project.
 ### Main Documentation (`source/`)
 The primary user-facing documentation built with MkDocs. See `mkdocs.yaml` for the site structure.
 
-**Note:** For agent/developer documentation, see `.opencode/` directory in the project root.
+**Note:** For persona/developer documentation, see `.opencode/` directory in the project root.
 
 ## Building the Documentation
 

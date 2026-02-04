@@ -59,23 +59,23 @@ s9 init --force
 **What it does:**
 1. Creates `.opencode/` directory
 2. Initializes SQLite database at `.opencode/data/project.db`
-3. Populates 145 daemon names
-4. Renders 19+ templates (agents, guides, procedures, README, config)
-5. Creates empty directories (sessions, planning, scripts)
+3. Populates 145 persona names
+4. Renders 19+ templates (missions, guides, procedures, README, config)
+5. Creates empty directories (missions, planning, scripts)
 
 ---
 
 ### `s9 dashboard`
 
-Show project overview with active agents and task summary.
+Show project overview with active personas and task summary.
 
 ```bash
 s9 dashboard
 ```
 
 **Output includes:**
-- Quick stats (active agents, total tasks, in progress, completed)
-- Active agent sessions table
+- Quick stats (active personas, total tasks, in progress, completed)
+- Active missions table
 - Task summary by status
 - Recent tasks (last 10)
 
@@ -86,12 +86,12 @@ s9 dashboard
 ╰─────────────────────────────────────────╯
 
 Quick Stats:
-  Active agents: 2
+  Active personas: 2
   Total tasks: 15
   In progress: 3
   Completed: 10
 
-[Active Agent Sessions table]
+[Active Missions table]
 [Task Summary table]
 [Recent Tasks table]
 ```
@@ -169,7 +169,7 @@ s9 doctor [OPTIONS]
 **What it checks:**
 - Invalid foreign key references
 - Inconsistent task states
-- Agent session data issues
+- Mission data issues
 - Incorrect usage counters
 - Missing files referenced in database
 - Orphaned task dependencies
@@ -197,10 +197,10 @@ Running health checks...
 
 ✓ Foreign key integrity: OK
 ✓ Task state consistency: OK
-⚠ Found 2 issues with agent sessions:
-  - Agent #5 has NULL end_time but status is 'completed'
-  - Agent #12 session file not found: .opencode/sessions/2026-01-28...
-✓ Daemon name usage counters: OK
+⚠ Found 2 issues with missions:
+  - Mission #5 has NULL end_time but status is 'completed'
+  - Mission #12 file not found: .opencode/missions/2026-01-28...
+✓ Persona name usage counters: OK
 
 Summary: 2 issues found (0 critical, 2 warnings)
 
@@ -209,19 +209,19 @@ Run with --fix to automatically repair safe issues.
 
 ---
 
-### `s9 agent start`
+### `s9 mission start`
 
-Start a new agent session.
+Start a new mission.
 
 ```bash
-s9 agent start <name> --role <ROLE> [OPTIONS]
+s9 mission start <name> --role <ROLE> [OPTIONS]
 ```
 
 **Arguments:**
-- `name` - Daemon name for the agent (e.g., `azazel`, `belial-ii`)
+- `name` - Persona name for the mission (e.g., `azazel`, `belial-ii`)
 
 **Options:**
-- `--role ROLE, -r ROLE` - Agent role (required)
+- `--role ROLE, -r ROLE` - Mission role (required)
 - `--task DESCRIPTION, -t DESCRIPTION` - Task summary
 
 **Valid Roles:**
@@ -236,24 +236,24 @@ s9 agent start <name> --role <ROLE> [OPTIONS]
 
 **Examples:**
 
-Start a Builder session:
+Start a Builder mission:
 ```bash
-s9 agent start azazel --role Builder --task "Implement authentication"
+s9 mission start azazel --role Builder --task "Implement authentication"
 ```
 
 Start without task description:
 ```bash
-s9 agent start belial --role Administrator
+s9 mission start belial --role Administrator
 ```
 
 Start with suffix (for second instance):
 ```bash
-s9 agent start azazel-ii --role Builder
+s9 mission start azazel-ii --role Builder
 ```
 
 **Output:**
 ```
-✓ Started agent session #1
+✓ Started mission #1
   Name: azazel
   Role: Builder
   Task: Implement authentication
@@ -261,38 +261,38 @@ s9 agent start azazel-ii --role Builder
 
 ---
 
-### `s9 agent list`
+### `s9 mission list`
 
-List agent sessions with optional filters.
+List missions with optional filters.
 
 ```bash
-s9 agent list [OPTIONS]
+s9 mission list [OPTIONS]
 ```
 
 **Options:**
-- `--active-only` - Show only in-progress sessions
+- `--active-only` - Show only in-progress missions
 - `--role ROLE, -r ROLE` - Filter by role
 
 **Examples:**
 
-List all sessions:
+List all missions:
 ```bash
-s9 agent list
+s9 mission list
 ```
 
-List active sessions only:
+List active missions only:
 ```bash
-s9 agent list --active-only
+s9 mission list --active-only
 ```
 
 Filter by role:
 ```bash
-s9 agent list --role Builder
+s9 mission list --role Builder
 ```
 
 **Output:**
 ```
-                 Agent Sessions                  
+                  Missions                  
 ┏━━━━┳━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┓
 ┃ ID ┃ Name   ┃ Role    ┃ Status      ┃ Start Time ┃
 ┡━━━━╇━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━┩
@@ -303,47 +303,47 @@ s9 agent list --role Builder
 
 ---
 
-### `s9 agent show`
+### `s9 mission show`
 
-Show detailed information about an agent session.
+Show detailed information about a mission.
 
 ```bash
-s9 agent show <session-id>
+s9 mission show <mission-id>
 ```
 
 **Arguments:**
-- `session-id` - Agent session ID (integer)
+- `mission-id` - Mission ID (integer)
 
 **Example:**
 ```bash
-s9 agent show 1
+s9 mission show 1
 ```
 
 **Output:**
 ```
-Agent Session #1
+Mission #1
   Name: azazel
   Base Name: azazel
   Role: Builder
   Status: in-progress
-  Session Date: 2026-01-30
+  Mission Date: 2026-01-30
   Start Time: 14:30:15
-  Session File: .opencode/sessions/2026-01-30.14:30:15.builder.azazel.md
+  Mission File: .opencode/missions/2026-01-30.14:30:15.builder.azazel.md
   Task: Implement authentication
 ```
 
 ---
 
-### `s9 agent end`
+### `s9 mission end`
 
-End an agent session.
+End a mission.
 
 ```bash
-s9 agent end <session-id> [OPTIONS]
+s9 mission end <mission-id> [OPTIONS]
 ```
 
 **Arguments:**
-- `session-id` - Agent session ID (integer)
+- `mission-id` - Mission ID (integer)
 
 **Options:**
 - `--status STATUS` - End status (default: `completed`)
@@ -358,50 +358,50 @@ s9 agent end <session-id> [OPTIONS]
 
 End with default status:
 ```bash
-s9 agent end 1
+s9 mission end 1
 ```
 
 End with specific status:
 ```bash
-s9 agent end 1 --status failed
+s9 mission end 1 --status failed
 ```
 
 **Output:**
 ```
-✓ Ended agent session #1 with status: completed
+✓ Ended mission #1 with status: completed
 ```
 
 ---
 
-### `s9 agent pause`
+### `s9 mission pause`
 
-Pause an active agent session.
+Pause an active mission.
 
 ```bash
-s9 agent pause <agent-id> [OPTIONS]
+s9 mission pause <mission-id> [OPTIONS]
 ```
 
 **Arguments:**
-- `agent-id` - Agent session ID (integer)
+- `mission-id` - Mission ID (integer)
 
 **Options:**
 - `--reason TEXT` - Reason for pausing (optional)
 
 **Examples:**
 
-Pause a session:
+Pause a mission:
 ```bash
-s9 agent pause 1
+s9 mission pause 1
 ```
 
 With reason:
 ```bash
-s9 agent pause 1 --reason "Taking a break for lunch"
+s9 mission pause 1 --reason "Taking a break for lunch"
 ```
 
 **Output:**
 ```
-✓ Paused agent session #1
+✓ Paused mission #1
   Reason: Taking a break for lunch
 ```
 
@@ -413,40 +413,40 @@ s9 agent pause 1 --reason "Taking a break for lunch"
 
 ---
 
-### `s9 agent resume`
+### `s9 mission resume`
 
-Resume a paused agent session.
+Resume a paused mission.
 
 ```bash
-s9 agent resume <agent-id>
+s9 mission resume <mission-id>
 ```
 
 **Arguments:**
-- `agent-id` - Agent session ID (integer)
+- `mission-id` - Mission ID (integer)
 
 **Example:**
 ```bash
-s9 agent resume 1
+s9 mission resume 1
 ```
 
 **Output:**
 ```
-✓ Resumed agent session #1
+✓ Resumed mission #1
   Duration paused: 1h 23m
 ```
 
 ---
 
-### `s9 agent update`
+### `s9 mission update`
 
-Update agent session metadata.
+Update mission metadata.
 
 ```bash
-s9 agent update <agent-id> [OPTIONS]
+s9 mission update <mission-id> [OPTIONS]
 ```
 
 **Arguments:**
-- `agent-id` - Agent session ID (integer)
+- `mission-id` - Mission ID (integer)
 
 **Options:**
 - `--task TEXT, -t TEXT` - Update task summary
@@ -456,40 +456,40 @@ s9 agent update <agent-id> [OPTIONS]
 
 Update task summary:
 ```bash
-s9 agent update 1 --task "Implement OAuth instead of JWT"
+s9 mission update 1 --task "Implement OAuth instead of JWT"
 ```
 
 Change role (if scope changed):
 ```bash
-s9 agent update 1 --role Architect --task "Design authentication system"
+s9 mission update 1 --role Architect --task "Design authentication system"
 ```
 
 **Output:**
 ```
-✓ Updated agent session #1
+✓ Updated mission #1
   Task: Implement OAuth instead of JWT
 ```
 
 **Use cases:**
-- Task requirements changed mid-session
+- Task requirements changed mid-mission
 - Realized different role is more appropriate
 - Refining task description for clarity
 
 ---
 
-### `s9 agent roles`
+### `s9 mission roles`
 
-Display available agent roles with descriptions.
+Display available mission roles with descriptions.
 
 ```bash
-s9 agent roles
+s9 mission roles
 ```
 
 **Output:**
 ```
-Which role should I assume for this session?
+Which role should I assume for this mission?
 
-  • Administrator: coordinate and delegate to other agents
+  • Administrator: coordinate and delegate to other personas
   • Architect: design systems and make technical decisions
   • Builder: implement features and write code
   • Tester: write tests and validate functionality
@@ -500,18 +500,18 @@ Which role should I assume for this session?
 ```
 
 **Use case:**
-- Quick reference for available roles during session start
-- Part of the session initialization workflow
-- Standardized role descriptions across all sessions
+- Quick reference for available roles during mission start
+- Part of the mission initialization workflow
+- Standardized role descriptions across all missions
 
 ---
 
-### `s9 agent list-opencode-sessions`
+### `s9 mission list-opencode-sessions`
 
 List OpenCode TUI sessions for the current project.
 
 ```bash
-s9 agent list-opencode-sessions
+s9 mission list-opencode-sessions
 ```
 
 **Output:**
@@ -528,27 +528,27 @@ OpenCode sessions for site-nine:
     Session-start skill creation
 
 To rename a session, use:
-  s9 agent rename-tui <name> <role> --session-id <session-id>
+  s9 mission rename-tui <name> <role> --session-id <session-id>
 ```
 
 **Use case:**
 - Find the correct session ID when you have multiple OpenCode sessions open
 - Verify which session corresponds to your current work
-- Used before renaming a session to match agent identity
+- Used before renaming a session to match persona identity
 
 ---
 
-### `s9 agent rename-tui`
+### `s9 mission rename-tui`
 
-Rename the OpenCode TUI session to match agent identity.
+Rename the OpenCode TUI session to match persona identity.
 
 ```bash
-s9 agent rename-tui <name> <role> [OPTIONS]
+s9 mission rename-tui <name> <role> [OPTIONS]
 ```
 
 **Arguments:**
-- `name` - Agent daemon name (e.g., `calliope`, `atlas-ii`)
-- `role` - Agent role (e.g., `Documentarian`, `Builder`)
+- `name` - Persona name (e.g., `calliope`, `atlas-ii`)
+- `role` - Persona role (e.g., `Documentarian`, `Builder`)
 
 **Options:**
 - `--session-id ID, -s ID` - OpenCode session ID (if multiple sessions open)
@@ -557,12 +557,12 @@ s9 agent rename-tui <name> <role> [OPTIONS]
 
 Auto-detect and rename current session:
 ```bash
-s9 agent rename-tui calliope Documentarian
+s9 mission rename-tui calliope Documentarian
 ```
 
 Rename specific session:
 ```bash
-s9 agent rename-tui atlas Builder --session-id ses_3e058ebd6ffebwwd2lKOcGt1iw
+s9 mission rename-tui atlas Builder --session-id ses_3e058ebd6ffebwwd2lKOcGt1iw
 ```
 
 **Output:**
@@ -572,13 +572,13 @@ s9 agent rename-tui atlas Builder --session-id ses_3e058ebd6ffebwwd2lKOcGt1iw
 
 **What it does:**
 - Updates the OpenCode TUI session title to `<Name> - <Role>`
-- Makes it easy to identify which agent you're working with
+- Makes it easy to identify which persona you're working with
 - Changes take effect immediately (no TUI restart needed)
 
 **Use case:**
-- Part of the session initialization workflow
-- Helps track which agent is working in which OpenCode session
-- Useful when managing multiple agent sessions simultaneously
+- Part of the mission initialization workflow
+- Helps track which persona is working in which OpenCode session
+- Useful when managing multiple missions simultaneously
 
 ---
 
@@ -593,7 +593,7 @@ s9 task list [OPTIONS]
 **Options:**
 - `--status STATUS, -s STATUS` - Filter by status
 - `--role ROLE, -r ROLE` - Filter by role
-- `--agent NAME, -a NAME` - Filter by agent name
+- `--persona NAME, -p NAME` - Filter by persona name
 
 **Valid Statuses:**
 - `TODO`, `UNDERWAY`, `BLOCKED`, `PAUSED`, `REVIEW`, `COMPLETE`, `ABORTED`
@@ -615,16 +615,16 @@ Filter by role:
 s9 task list --role Builder
 ```
 
-Filter by agent:
+Filter by persona:
 ```bash
-s9 task list --agent azazel
+s9 task list --persona azazel
 ```
 
 **Output:**
 ```
-                      Tasks                       
+                       Tasks                       
 ┏━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━┓
-┃ ID   ┃ Title       ┃ Status ┃ Priority ┃ Agent   ┃
+┃ ID   ┃ Title       ┃ Status ┃ Priority ┃ Persona ┃
 ┡━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━┩
 │ T001 │ Auth system │ TODO   │ HIGH     │         │
 │ T002 │ Write tests │ UNDER… │ MEDIUM   │ azazel  │
@@ -665,31 +665,31 @@ Task T001
 
 ### `s9 task claim`
 
-Claim a task for an agent.
+Claim a task for a mission.
 
 ```bash
-s9 task claim <task-id> --agent <name>
+s9 task claim <task-id> --mission <id>
 ```
 
 **Arguments:**
 - `task-id` - Task ID (string)
 
 **Options:**
-- `--agent NAME, -a NAME` - Agent name (required)
+- `--mission ID, -m ID` - Mission ID (required)
 
 **Example:**
 ```bash
-s9 task claim T001 --agent azazel
+s9 task claim T001 --mission 1
 ```
 
 **What it does:**
 - Sets task status to `UNDERWAY`
-- Records agent name
+- Records mission ID
 - Sets `claimed_at` timestamp
 
 **Output:**
 ```
-✓ Task T001 claimed by azazel
+✓ Task T001 claimed for mission 1
 ```
 
 ---
@@ -781,23 +781,23 @@ s9 task close T001 --status ABORTED --notes "Requirements changed"
 
 ### `s9 task mine`
 
-Show tasks claimed by a specific agent.
+Show tasks claimed by a specific mission.
 
 ```bash
-s9 task mine --agent <name>
+s9 task mine --mission <id>
 ```
 
 **Options:**
-- `--agent NAME, -a NAME` - Agent name (required)
+- `--mission ID, -m ID` - Mission ID (required)
 
 **Example:**
 ```bash
-s9 task mine --agent azazel
+s9 task mine --mission 1
 ```
 
 **Output:**
 ```
-Tasks claimed by azazel:
+Tasks claimed by mission 1:
 
                      Tasks                      
 ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┓
@@ -1134,7 +1134,7 @@ s9 config validate <file>
 
 ### `s9 name list`
 
-List daemon names with optional filters.
+List persona names with optional filters.
 
 ```bash
 s9 name list [OPTIONS]
@@ -1164,7 +1164,7 @@ s9 name list --by-usage
 
 **Output:**
 ```
-                    Daemon Names                     
+                     Persona Names                     
 ┏━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━┓
 ┃ Name          ┃ Role     ┃ Mythology  ┃ Usage Count ┃
 ┡━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━┩
@@ -1178,7 +1178,7 @@ s9 name list --by-usage
 
 ### `s9 name suggest`
 
-Suggest unused daemon names for a specific role.
+Suggest unused persona names for a specific role.
 
 ```bash
 s9 name suggest <role> [OPTIONS]
@@ -1220,14 +1220,14 @@ Suggested names for Builder:
 
 ### `s9 name usage`
 
-Show usage history for a daemon name.
+Show usage history for a persona name.
 
 ```bash
 s9 name usage <name>
 ```
 
 **Arguments:**
-- `name` - Daemon name to check (required)
+- `name` - Persona name to check (required)
 
 **Example:**
 ```bash
@@ -1236,7 +1236,7 @@ s9 name usage atlas
 
 **Output:**
 ```
-Daemon name: atlas
+Persona name: atlas
   Mythology: Greek
   Primary role: Builder
   Description: Titan who holds up the sky
@@ -1245,7 +1245,7 @@ Usage history:
   Times used: 2
   Last used: 2026-01-30 14:30:15
 
-Sessions:
+Missions:
   #15 - atlas    - Builder (2026-01-30 14:30:15)
   #8  - atlas-ii - Builder (2026-01-29 09:15:00)
 ```
@@ -1254,14 +1254,14 @@ Sessions:
 
 ### `s9 name add`
 
-Add a new daemon name to the database.
+Add a new persona name to the database.
 
 ```bash
 s9 name add <name> --role <ROLE> --mythology <MYTHOLOGY> --description <DESCRIPTION>
 ```
 
 **Arguments:**
-- `name` - Daemon name (lowercase, required)
+- `name` - Persona name (lowercase, required)
 
 **Options:**
 - `--role ROLE, -r ROLE` - Primary role for this name (required)
@@ -1278,7 +1278,7 @@ s9 name add sekhmet \
 
 **Output:**
 ```
-✓ Added daemon name 'sekhmet'
+✓ Added persona name 'sekhmet'
   Role: Tester
   Mythology: Egyptian
 ```
@@ -1377,9 +1377,9 @@ Cache statistics:
   Last cleared: 2026-01-30 14:30:15
 
 Recent entries:
-  - daemon_names: 145 entries
+  - persona_names: 145 entries
   - task_templates: 8 entries
-  - agent_sessions: 12 entries
+  - missions: 12 entries
 ```
 
 #### `s9 cache clear`
@@ -1487,9 +1487,9 @@ project:
 
 features:
   pm_system: boolean        # Enable task management (default: true)
-  session_tracking: boolean # Enable session tracking (default: true)
+  mission_tracking: boolean # Enable mission tracking (default: true)
   commit_guidelines: boolean # Include commit guidelines (default: true)
-  daemon_naming: boolean    # Use daemon names (default: true)
+  persona_naming: boolean    # Use persona names (default: true)
 
 agent_roles:
   - name: string           # Role name (required)
@@ -1497,7 +1497,7 @@ agent_roles:
     description: string    # Custom description (optional)
 
 customization:
-  daemon_names: string     # Naming theme (default: "mythology")
+  persona_names: string     # Naming theme (default: "mythology")
   template_dir: string     # Custom template directory (optional)
   variables:               # Custom template variables (optional)
     key: value
@@ -1511,36 +1511,37 @@ Currently, s9 does not use environment variables for configuration.
 
 The SQLite database at `.opencode/data/project.db` has the following schema:
 
-### `daemon_names` Table
+### `personas` Table
 
-Stores 145+ mythology-based agent names.
+Stores 145+ mythology-based persona names.
 
 | Column | Type | Description |
 |--------|------|-------------|
-| name | TEXT | Unique daemon name |
+| name | TEXT | Unique persona name |
 | role | TEXT | Default role (CHECK constraint) |
 | mythology | TEXT | Source mythology |
 | description | TEXT | Name description |
 | usage_count | INTEGER | Times used |
 | last_used_at | TEXT | Last usage timestamp |
 
-### `agents` Table
+### `missions` Table
 
-Tracks agent sessions.
+Tracks missions.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | INTEGER | Primary key |
-| name | TEXT | Full name with suffix |
-| base_name | TEXT | Base name (FK to daemon_names) |
+| persona_name | TEXT | Full name with suffix |
+| base_name | TEXT | Base name (FK to personas) |
 | suffix | TEXT | Roman numeral suffix |
-| role | TEXT | Session role |
-| session_file | TEXT | Log file path |
-| session_date | TEXT | Date (YYYY-MM-DD) |
+| role | TEXT | Mission role |
+| codename | TEXT | Mission codename |
+| mission_file | TEXT | Log file path |
+| mission_date | TEXT | Date (YYYY-MM-DD) |
 | start_time | TEXT | Start time (HH:MM:SS) |
 | end_time | TEXT | End time or NULL |
-| status | TEXT | Session status |
-| task_summary | TEXT | Task description |
+| status | TEXT | Mission status |
+| objective | TEXT | Mission objective |
 | created_at | TEXT | Creation timestamp |
 | updated_at | TEXT | Update timestamp |
 
@@ -1556,8 +1557,8 @@ Manages tasks.
 | priority | TEXT | Priority level |
 | role | TEXT | Required role |
 | category | TEXT | Task category |
-| agent_name | TEXT | Assigned agent |
-| agent_id | INTEGER | FK to agents table |
+| persona_name | TEXT | Assigned persona |
+| mission_id | INTEGER | FK to missions table |
 | claimed_at | TEXT | Claim timestamp |
 | closed_at | TEXT | Close timestamp |
 | paused_at | TEXT | Pause timestamp |

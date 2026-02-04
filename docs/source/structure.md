@@ -1,6 +1,6 @@
 # .opencode Directory Structure
 
-After running `s9 init`, site-nine creates a `.opencode` directory in your project. This directory contains all the configuration, data, and documentation needed for AI agent orchestration.
+After running `s9 init`, site-nine creates a `.opencode` directory in your project. This directory contains all the configuration, data, and documentation needed for AI persona orchestration.
 
 ## Directory Overview
 
@@ -10,14 +10,14 @@ After running `s9 init`, site-nine creates a `.opencode` directory in your proje
 ├── data/                  # Database and persistent storage
 │   └── project.db         # SQLite database
 ├── guides/                # Reference documentation
-│   └── AGENTS.md          # How to work with agents
+│   └── PERSONAS.md        # How to work with personas
 ├── procedures/            # Workflow documentation
 │   ├── COMMIT_GUIDELINES.md
 │   └── TASK_WORKFLOW.md
-├── sessions/              # Agent session history
+├── missions/              # Mission history
 ├── tasks/                 # Task markdown files
 └── work/                  # Active work artifacts
-    └── sessions/          # Session documentation
+    └── missions/          # Mission documentation
 ```
 
 ## Directory Details
@@ -40,10 +40,10 @@ Contains the SQLite database that tracks all project management data.
 
 ### `guides/`
 
-Reference documentation for working with agents and understanding the system.
+Reference documentation for working with personas and understanding the system.
 
 **Key files:**
-- `AGENTS.md` - Comprehensive guide to agent roles and workflows
+- `PERSONAS.md` - Comprehensive guide to persona roles and workflows
 
 **Safe to edit:** Customize these markdown files for your team.
 
@@ -57,26 +57,26 @@ Step-by-step workflow documentation for common operations.
 
 **Safe to edit:** Customize these to match your team's processes.
 
-### `sessions/`
+### `missions/`
 
-Historical record of agent sessions. Each session creates a log file here.
+Historical record of missions. Each mission creates a log file here.
 
 !!! warning "Do Not Edit"
-    Session files are automatically managed. View session history with `s9 agent list`.
+    Mission files are automatically managed. View mission history with `s9 mission list`.
 
 ### `tasks/`
 
 Individual markdown files for each task, named by task ID (e.g., `BLD-H-0001.md`).
 
 !!! warning "Do Not Edit"
-    Task files sync with the database. Create/update tasks using `s9 task` commands or ask your agent.
+    Task files sync with the database. Create/update tasks using `s9 task` commands or ask your persona.
 
 ### `work/`
 
 Active work-in-progress artifacts, organized by type.
 
 !!! warning "Do Not Edit"
-    Agents manage these files automatically during sessions.
+    Personas manage these files automatically during missions.
 
 ## What Can I Safely Edit?
 
@@ -86,48 +86,48 @@ Active work-in-progress artifacts, organized by type.
 - `procedures/*.md` - Customize workflows and guidelines
 
 **Read-only (view but don't edit):**
-- `sessions/*` - Historical session logs
+- `missions/*` - Historical mission logs
 - `tasks/*.md` - Task documentation (synced with database)
-- `work/sessions/*.md` - Active session documentation
+- `work/missions/*.md` - Active mission documentation
 
 **Do not touch:**
 - `data/project.db` - Database file (use CLI commands instead)
 - Any `.db-journal` or `.db-wal` files (SQLite internals)
 
-## Asking Agents About Project Data
+## Asking Personas About Project Data
 
-Instead of querying the database directly, ask your agents for information conversationally.
+Instead of querying the database directly, ask your personas for information conversationally.
 
 **You:**
 > Show me all active tasks
 
-**Agent:**
+**Persona:**
 > Here are the active tasks:
 > 
-> | ID         | Priority | Role   | Title                          | Agent    |
+> | ID         | Priority | Role   | Title                          | Persona  |
 > |------------|----------|--------|--------------------------------|----------|
 > | BLD-H-0003 | HIGH     | Builder| Implement rate limiting        | Azazel   |
 > | TST-M-0007 | MEDIUM   | Tester | Add integration tests          | Eris     |
 > | DOC-L-0012 | LOW      | Docs   | Update README                  | Nabu     |
 
 **You:**
-> Which agents are currently working?
+> Which personas are currently working?
 
-**Agent:**
-> **Active Agent Sessions:**
+**Persona:**
+> **Active Missions:**
 > - Azazel (Builder) - Started 2 hours ago - Working on rate limiting
 > - Eris (Tester) - Started 45 minutes ago - Writing integration tests
 
 **You:**
-> What are the most frequently used daemon names?
+> What are the most frequently used persona names?
 
-**Agent:**
-> **Most Active Daemon Names:**
-> 1. Azazel - 12 sessions (Builder)
-> 2. Eris - 8 sessions (Tester)
-> 3. Kothar - 6 sessions (Architect)
-> 4. Nabu - 5 sessions (Documentarian)
-> 5. Mephistopheles - 4 sessions (Administrator)
+**Persona:**
+> **Most Active Persona Names:**
+> 1. Azazel - 12 missions (Builder)
+> 2. Eris - 8 missions (Tester)
+> 3. Kothar - 6 missions (Architect)
+> 4. Nabu - 5 missions (Documentarian)
+> 5. Mephistopheles - 4 missions (Administrator)
 
 ## Backing Up Your Work
 
@@ -145,18 +145,18 @@ cp .opencode/data/project.db .opencode/data/project.db.backup
 
 ## Troubleshooting
 
-**Q: I accidentally deleted a session file. How do I recover it?**
+**Q: I accidentally deleted a mission file. How do I recover it?**
 
-Session files are not critical to system operation. The database maintains the session record. However, you'll lose the detailed work log. Restore from backup if available.
+Mission files are not critical to system operation. The database maintains the mission record. However, you'll lose the detailed work log. Restore from backup if available.
 
 **Q: The database seems corrupted. What should I do?**
 
-Ask an Administrator agent to check the database health:
+Ask an Administrator persona to check the database health:
 
 **You:**
 > Check the database for any issues
 
-**Agent (Administrator):**
+**Persona (Administrator):**
 > Running database health check...
 > 
 > ✓ Database integrity check passed
@@ -165,7 +165,7 @@ Ask an Administrator agent to check the database health:
 > 
 > The database is healthy!
 
-If the agent reports corruption, restore from backup. If no backup exists, you may need to reinitialize:
+If the persona reports corruption, restore from backup. If no backup exists, you may need to reinitialize:
 ```bash
 # Backup current state first!
 mv .opencode/data/project.db .opencode/data/project.db.broken
@@ -188,4 +188,4 @@ Yes! Recommended `.gitignore` patterns:
 !.opencode/README.md
 ```
 
-Session and task files can be committed if you want to track agent work history.
+Session and task files can be committed if you want to track persona work history.
