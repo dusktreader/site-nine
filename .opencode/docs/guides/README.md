@@ -80,6 +80,6 @@ Why we made the choices we made:
 ## Related Documentation
 
 - **Procedures:** `.opencode/docs/procedures/` - Step-by-step how-tos
-- **Agent Roles:** `.opencode/docs/agents/` - Role definitions
+- **Agent Roles:** `.opencode/docs/roles/` - Role definitions
 - **Project Overview:** `.opencode/README.md` - Entry point
 - **User Docs:** `docs/source/` - User-facing documentation

@@ -1,92 +1,46 @@
 # Agent Roles for site-nine Development
 
-This directory contains agent role definitions for developing site-nine itself.
+This directory contains documentation for the 8 specialized agent roles used in site-nine development.
 
-## Available Roles
+## Role Overview
 
-### Administrator
-**Primary interface and coordinator**
-- Understands project holistically
-- Delegates to specialized agents
-- Coordinates multi-step tasks
-- Default agent for general development
+### [Administrator](./administrator.md)
+Primary interface and coordinator. Delegates to specialized agents.
 
 **Use for:** Starting new features, complex tasks, planning, coordination
 
----
-
-### Architect
-**Design and planning specialist**
-- Creates technical designs
-- Makes architecture decisions
-- Plans feature implementations
-- Documents design rationale
+### [Architect](./architect.md)
+Design and planning specialist. Creates technical designs.
 
 **Use for:** Designing new features, refactoring plans, architecture decisions
 
----
-
-### Engineer
-**Implementation specialist**
-- Writes code according to designs
-- Implements features
-- Fixes bugs
-- Creates tests (unit and integration)
+### [Engineer](./engineer.md)
+Implementation specialist. Writes code and tests.
 
 **Use for:** Implementing features, fixing bugs, writing tests, refactoring
 
----
-
-### Tester
-**Quality assurance specialist**
-- Runs tests and validates features
-- Manual testing workflows
-- Reports issues found
-- Does NOT write tests (Engineer does that)
+### [Tester](./tester.md)
+Quality assurance specialist. Runs tests, validates features.
 
 **Use for:** Running test suites, manual validation, regression testing
 
----
-
-### Documentarian
-**Documentation specialist**
-- Writes and updates documentation
-- Maintains consistency across docs
-- Creates examples and guides
-- Updates docstrings
+### [Documentarian](./documentarian.md)
+Documentation specialist. Writes and maintains docs.
 
 **Use for:** Writing/updating docs, README updates, API documentation
 
----
-
-### Designer
-**User experience specialist**
-- Designs CLI output formats
-- Plans user workflows
-- Creates mockups and specifications
-- Focuses on usability and clarity
+### [Designer](./designer.md)
+User experience specialist. Designs CLI output and workflows.
 
 **Use for:** CLI output design, UX improvements, user flow planning
 
----
-
-### Inspector
-**Code review specialist**
-- Reviews code for issues
-- Checks consistency
-- Finds bugs and code smells
-- Suggests improvements
+### [Inspector](./inspector.md)
+Code review specialist. Reviews code, finds issues.
 
 **Use for:** Code review, finding issues, quality checks, refactoring suggestions
 
----
-
-### Operator
-**Meta-development specialist**
-- Maintains `.opencode/` infrastructure
-- Updates agent definitions
-- Manages development workflows
-- Improves development tooling
+### [Operator](./operator.md)
+Meta-development specialist. Maintains `.opencode/` infrastructure.
 
 **Use for:** Updating agent configs, improving dev workflows, tooling maintenance
 
@@ -95,10 +49,11 @@ This directory contains agent role definitions for developing site-nine itself.
 ## General Workflow for All Agents
 
 ### 1. Read Essential Documentation
+
 Before starting work:
 - `.opencode/README.md` - Project overview
 - `.opencode/docs/guides/AGENTS.md` - Development patterns
-- `.opencode/docs/guides/TASK_SIZING.md` - **How to size tasks (use t-shirt sizes, not time estimates)**
+- `.opencode/docs/guides/TASK_SIZING.md` - How to size tasks (use t-shirt sizes, not time estimates)
 - `.opencode/docs/guides/architecture.md` - System design
 - `.opencode/docs/procedures/COMMIT_GUIDELINES.md` - Commit format
 
@@ -144,8 +99,8 @@ If working on a task, update the task file:
 3. Added tests
 
 ## Files Changed
-- src/s9/cli/task.py - Added add-dependency command
-- src/s9/tasks/manager.py - Added dependency tracking
+- src/site_nine/cli/task.py - Added add-dependency command
+- src/site_nine/tasks/manager.py - Added dependency tracking
 - tests/cli/test_task.py - Added tests
 
 ## Commits
@@ -172,7 +127,7 @@ def my_command(
 
 **Database Operations (SQLAlchemy):**
 ```python
-from s9.core.database import Database
+from site_nine.core.database import Database
 
 db = Database()
 with db.get_session() as session:
@@ -184,7 +139,7 @@ with db.get_session() as session:
 
 **Template Rendering (Jinja2):**
 ```python
-from s9.core.renderer import TemplateRenderer
+from site_nine.core.renderer import TemplateRenderer
 
 renderer = TemplateRenderer()
 output = renderer.render("template.j2", {
@@ -206,61 +161,13 @@ output = renderer.render("template.j2", {
 
 **Project Structure:**
 ```
-src/s9/
+src/site_nine/
 ├── cli/            # Typer commands
 ├── core/           # Core business logic
 ├── tasks/          # Task management
 ├── agents/         # Agent sessions
 └── templates/      # Jinja2 templates
 ```
-
----
-
-## Role-Specific Guidance
-
-### For Architect
-- Read `guides/architecture.md` for system design
-- Read `guides/TASK_SIZING.md` for how to size tasks
-- Document design decisions
-- Create clear technical specifications
-- Use t-shirt sizes (XS, S, M, L, XL, XXL) for effort estimates, not time
-- Consider future extensibility
-
-### For Engineer
-- Write tests alongside code (TDD preferred)
-- Follow existing code patterns
-- Add type hints to all functions
-- Update docstrings
-
-### For Tester
-- Run full test suite: `make qa/test`
-- Test edge cases manually
-- Report findings clearly
-- Suggest test coverage improvements
-
-### For Documentarian
-- User docs: `docs/source/` (Sphinx/Markdown)
-- Internal docs: `.opencode/docs/` (this directory)
-- Keep examples up-to-date
-- Maintain consistent formatting
-
-### For Designer
-- Focus on CLI usability
-- Use Rich for beautiful output
-- Design clear error messages
-- Consider color-blind friendly colors
-
-### For Inspector
-- Look for code smells
-- Check for consistency issues
-- Validate test coverage
-- Suggest refactoring opportunities
-
-### For Operator
-- Update this documentation when processes change
-- Improve development workflows
-- Maintain tooling and scripts
-- Keep procedures up-to-date
 
 ---
 

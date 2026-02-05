@@ -106,6 +106,112 @@ This will guide you through selecting an agent role (Engineer, Tester, Architect
 - [CLI Reference](https://dusktreader.github.io/site-nine/reference) - Complete command documentation
 - [Full Documentation](https://dusktreader.github.io/site-nine)
 
+## Contributing / Development
+
+Want to contribute to site-nine or develop it locally? Here's how to get started.
+
+### Development Setup
+
+```bash
+# Install site-nine in editable mode (REQUIRED for development)
+uv sync
+
+# Install as uv tool (recommended for CLI access)
+uv tool install --editable .
+
+# Verify installation
+s9 --help
+
+# Configure environment (optional - Docker works without .env)
+cp .env.example .env
+# Edit .env if you need custom configuration
+
+# Start docker services and open web demo
+make demo
+# This starts Docker services and opens web demo at http://localhost:15000
+
+# Stop when done
+docker compose down
+```
+
+### Running Tests
+
+```bash
+# Start Docker services for testing
+docker compose up -d
+
+# Run all tests
+make qa/test-all
+
+# Run unit tests only
+make qa/test
+
+# Run integration tests
+make qa/test-integration
+```
+
+### Development Commands
+
+```bash
+# Quality checks
+make qa                      # Run all checks (test + lint + types)
+make qa/format               # Format code
+make qa/lint                 # Lint code
+
+# Docker (advanced)
+docker compose up -d         # Start services
+docker compose down          # Stop services
+docker compose logs -f       # View logs
+
+# Help
+make help                    # Show all available commands
+```
+
+### Technology Stack
+
+- **Python 3.12+** with uv for package management
+- **FastMCP** - Python framework
+- **SQLAlchemy** - Database access (PostgreSQL, MySQL, SQLite)
+- **DuckDB** - Knowledge base (embedded analytics)
+- **pytest/pytest-bdd** - Testing
+- **ruff** - Formatting and linting
+- **basedpyright** - Type checking
+
+### Project Structure
+
+```
+site-nine/
+├── src/
+│   └── site_nine/           # Main package
+│       ├── cli/             # CLI commands
+│       ├── core/            # Core framework
+│       └── templates/       # Project templates
+├── tests/                   # Unit tests
+├── .opencode/               # OpenCode agent configuration
+│   ├── docs/                # Agent instructions
+│   ├── work/                # Session logs and tasks
+│   ├── data/                # SQLite database
+│   └── scripts/             # Utility scripts
+├── .env.example             # Configuration template
+├── Makefile                 # Development tasks
+└── pyproject.toml           # Project config
+```
+
+### Agent Roles Overview
+
+site-nine development uses 8 specialized agent roles for different types of work:
+
+- **Administrator** - Primary interface and coordinator, delegates to specialized agents
+- **Architect** - Design and planning specialist, creates technical designs
+- **Engineer** - Implementation specialist, writes code and tests
+- **Tester** - Quality assurance specialist, runs tests and validates features
+- **Documentarian** - Documentation specialist, writes and maintains docs
+- **Designer** - User experience specialist, designs CLI output and workflows
+- **Inspector** - Code review specialist, reviews code and finds issues
+- **Operator** - Meta-development specialist, maintains `.opencode/` infrastructure
+
+For detailed role documentation, see [Agent Roles](https://dusktreader.github.io/site-nine/roles)
+
 ## License
 
 MIT License - See LICENSE.md for details

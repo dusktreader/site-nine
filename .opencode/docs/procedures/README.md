@@ -396,6 +396,6 @@ uv sync
 
 - **Architecture:** `.opencode/docs/guides/architecture.md`
 - **Design Philosophy:** `.opencode/docs/guides/design-philosophy.md`
-- **Agent Roles:** `.opencode/docs/agents/README.md`
+- **Agent Roles:** `.opencode/docs/roles/README.md`
 - **Development Patterns:** `.opencode/docs/guides/AGENTS.md`
 - **Project Overview:** `.opencode/README.md`
