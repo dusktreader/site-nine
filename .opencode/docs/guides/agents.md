@@ -2,89 +2,64 @@
 
 ## Overview
 
-This guide is for AI agents (like Claude, ChatGPT, Copilot, etc.) working on the **site-nine** project through OpenCode.
+This guide is for AI agents (like Claude, ChatGPT, Copilot, etc.) working on **projects enhanced with site-nine** through OpenCode.
 
-**Important:** This .opencode configuration is for **DEVELOPING** site-nine itself, not for using/operating it.
+**Important:** This .opencode configuration is for working on projects that **USE** site-nine, not for developing site-nine itself. If you need to develop site-nine, see the site-nine repository's own .opencode configuration.
 
 ---
 
-## Before You Start: Session Initialization
+## Before You Start: Mission Initialization
+
+### Understanding Sessions vs Missions
+
+**OpenCode Session**: Your conversation with the Director in the OpenCode TUI (the chat interface)
+
+**Mission**: A tracked unit of work within site-nine, registered in the database with a persona, role, and codename
+
+**Key distinction**: One OpenCode session may contain multiple missions, or you may resume a previous mission in a new session.
+
+### Mission Start Protocol
+
+**Quick start:** The Director initiates missions using the `/summon` command, which loads the `session-start` skill.
+
+**The skill handles:**
+- Role selection (or uses role from `/summon <role>`)
+- Persona selection (automatic or via `--persona` flag)
+- Mission registration in database
+- Task assignment (via `--task` or `--auto-assign` flags)
+- Setting up the mission file
+
+**Your responsibility:** Follow the session-start skill workflow. See `.opencode/skills/session-start/SKILL.md` for details.
 
 ### Required Reading Order
 
-You MUST read these files IN ORDER before responding:
+You MUST read these files IN ORDER before starting work:
 
 1. This file (`.opencode/docs/guides/agents.md`) - Complete development guide (CRITICAL)
-2. `.opencode/site-nine-dev/development/SITE_NINE_DEV.md` - Site-nine specific patterns
+2. `.opencode/site-nine-dev/development/SITE_NINE_DEV.md` - Site-nine specific patterns (if exists)
 3. `.opencode/docs/guides/commit-guidelines.md` - Commit format
 
 Use the Read tool to read ALL files. Do NOT skip this step.
 
-### Session Start Protocol
+### Mission Tracking
 
-Sessions are initiated by the Director using the `/summon` command.
+Every mission creates a markdown file in `.opencode/work/missions/` with format:  
+`YYYY-MM-DD.HH:MM:SS.role.persona.codename.md`
 
-**How sessions start:**
+**Track in mission file:**
+- Work performed
+- Decisions made
+- Files changed
+- Time spent
+- Tasks claimed/completed
 
-1. **Director invokes:** `/summon` command (or `/summon <role>` to skip role selection)
-
-2. Agent asks: **"Which role should I assume?"** (skipped if role provided)
-   - Administrator, Architect, Engineer, Tester, Documentarian, Designer, Inspector, or Operator
-   - **Pro tip:** Use `/summon operator` to start an Operator session immediately
-
-3. Agent suggests or asks for a **persona name** (from any religion's mythology)
-   - **Prefer unused names first** - use `s9 persona suggest <Role>` to get unused name suggestions
-   - 142+ names available from various mythologies (Greek, Egyptian, Norse, Hindu, Celtic, Japanese, and more)
-   - **Reusing names is OK** when good unused names are exhausted, but try fresh names first
-   - If name used before, adds roman numeral: `-ii`, `-iii`, `-iv`, etc.
-
-4. Agent introduces itself with **full name including suffix**: **"I'm [Name], your [Role] agent."**
-   - ✅ If first use: "I'm Seraphina, your Designer agent."
-   - ✅ If reused name: "I'm Seraphina-iii, your Designer agent." (includes `-iii` suffix)
-   - ❌ Wrong: "I'm Seraphina, your Designer agent." (when name is Seraphina-iii)
-
-5. Session file is created in `.opencode/work/sessions/` with format:  
-   `YYYY-mm-dd.HH:MM:SS.role.name.task-summary.md`
-
-6. Agent uses that name (with suffix if applicable) in all commits, changelog entries, and docs
-
-**Example (Choosing an Unused Name - Preferred):**
-```
-User: /summon
-Agent: Which role should I assume for this session?
-User: Engineer
-Agent: Let me suggest an unused name for Engineer role...
-       
-       I suggest "Belial" - a demon king from Hebrew tradition who taught humans metalworking.
-       This name hasn't been used yet.
-       Would you like to use this name or choose another?
-User: That works
-Agent: Great! I'm Belial, your Engineer agent. What would you like me to work on?
-```
-
-**Example (Direct Mode - Skip Role Selection):**
-```
-User: /summon operator
-Agent: I suggest "Hemera" (Greek goddess of day). Would you like to use this name?
-User: yes
-Agent: Great! I'm Hemera, your Operator agent. What would you like me to work on?
-```
-
-**Available mythologies:**
-- **Greek/Roman** - Zeus, Athena, Hephaestus, etc.
-- **Egyptian** - Ra, Thoth, Anubis, etc.
-- **Norse** - Odin, Thor, Freya, etc.
-- **Hindu/Buddhist** - Brahma, Shiva, Kali, etc.
-- **Celtic/Gaelic** - Brigid, Lugh, Morrigan, etc.
-- **Japanese** - Amaterasu, Susanoo, Benzaiten, etc.
-- **Mesopotamian** - Marduk, Ishtar, Enki, etc.
-- **Aztec/Mayan/African** - Quetzalcoatl, Anansi, etc.
-
-**Browse available names:**
+**Use CLI commands:**
 ```bash
-s9 persona list --role <Role>        # See all names for a role
-s9 persona list --unused-only        # See only unused names
-s9 persona suggest <Role> --count 3  # Get 3 unused suggestions
+s9 mission start <persona> --role <Role> --task "objective"    # Start mission
+s9 mission update <mission-id> --notes "progress update"       # Update mission
+s9 mission pause <mission-id> --reason "break for lunch"       # Pause mission
+s9 mission resume <mission-id>                                 # Resume mission  
+s9 mission end <mission-id>                                    # End mission
 ```
 
 ---
@@ -93,7 +68,7 @@ s9 persona suggest <Role> --count 3  # Get 3 unused suggestions
 
 **Project:** site-nine (s9) - Generic orchestration framework for AI agent workflows in software development
 
-**Purpose:** This .opencode configuration is for DEVELOPING site-nine, not for operating/using it.
+**Purpose:** This .opencode configuration is for working on projects that USE site-nine, not for developing site-nine itself.
 
 **Current Status:** See `.opencode/work/planning/PROJECT_STATUS.md` for current status and roadmap.
 
@@ -148,18 +123,18 @@ s9 mission end <mission-id>
 ### 13-Step Development Process
 
 1. Read required files (see Required Reading Order section above)
-2. Follow SESSION START PROTOCOL (choose role, pick name, create session file)
-3. Find work: `s9 task list --status TODO --role [YourRole]`
-4. Claim task: `s9 task claim TASK_ID --agent [YourName]`
+2. Follow MISSION START PROTOCOL (via `/summon` command - loads session-start skill)
+3. Find work: `s9 task list --status TODO --role [YourRole]` (or use `--auto-assign` flag)
+4. Claim task: `s9 task claim TASK_ID` (auto-claims if using `--task` or `--auto-assign`)
 5. Review `.opencode/docs/guides/agents.md` patterns before implementing
 6. Do the work assigned to your role
 7. Update task: `s9 task update TASK_ID --status UNDERWAY --notes 'Progress update'`
-8. Update session file with progress in Work Log section
+8. Update mission file with progress in Work Log section
 9. Run tests and quality checks before committing
-10. Commit with format: `type(scope): description [Agent: Role - Name]`
+10. Commit with format: `type(scope): description [Persona: Name - Role]` or `[Mission: codename]`
 11. Commit incrementally (not one large commit!)
 12. Close task: `s9 task close TASK_ID --notes 'Summary'`
-13. At session end: Update session file with end_time, status, outcomes, and files changed
+13. At mission end: Use `/handoff` skill or load `session-end` skill to properly close mission
 
 ### Commit Guidelines
 
@@ -373,14 +348,15 @@ For detailed role documentation, see `.opencode/docs/roles/README.md` and indivi
 
 ## Tips for Success
 
-### 1. Every Mission Starts with Role Selection
+### 1. Mission initialization via `/summon`
 
-Each development mission begins with the agent asking which role to assume and what persona to use. This creates consistency and accountability:
+Each development mission begins when the Director invokes `/summon`, which loads the `session-start` skill. The skill handles role and persona selection automatically. This creates consistency and accountability:
 
 - Agent uses the same persona throughout the mission
-- Commits include the persona: `[Persona: Azazel - Engineer]` or `[Persona: Seraphina - Designer]`
+- Commits include the persona: `[Persona: Azazel - Engineer]` or `[Mission: codename]`
 - Task artifacts document all work done
-- Mission history tracks all work done
+- Mission file tracks all work performed
+- Mission is registered in the database
 
 ### 2. Start with the Administrator (or Pick Your Role)
 
@@ -607,7 +583,7 @@ site-nine/
 │   │   ├── procedures/      # Operational how-tos
 │   │   └── skills/          # Reusable skill workflows
 │   ├── work/                # Tracking documents
-│   │   ├── sessions/        # Agent session logs
+│   │   ├── missions/        # Mission tracking files
 │   │   ├── tasks/           # Task artifacts
 │   │   └── planning/        # Strategic planning docs
 │   ├── data/                # Data storage
@@ -626,7 +602,6 @@ site-nine/
 - **Development patterns**: See `.opencode/docs/guides/agents.md` (this file)
 - **Architecture**: See `.opencode/docs/guides/architecture.md`
 - **Current status**: See `.opencode/work/planning/PROJECT_STATUS.md`
-- **Session tracking**: See `.opencode/work/sessions/README.md`
 - **Commands**: Run `make help`
 - **Commit format**: See `.opencode/docs/guides/commit-guidelines.md`
 - **Task workflow**: See `.opencode/docs/procedures/TASK_WORKFLOW.md`
@@ -636,6 +611,6 @@ site-nine/
 
 ---
 
-**Remember**: This `.opencode/` configuration is for **developing** site-nine (building the codebase), not for using site-nine in your projects (end-user operation).
+**Remember**: This `.opencode/` configuration is for working on **projects that use site-nine** (projects enhanced with the framework), not for developing site-nine itself (building the site-nine codebase).
 
 Happy building! 🚀
