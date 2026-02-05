@@ -12,7 +12,7 @@
 
 site-nine provides:
 
-- **Agent Session Management** - Track which AI agents are working on what, with specialized roles (Builder, Tester, Architect, etc.)
+- **Agent Session Management** - Track which AI agents are working on what, with specialized roles (Engineer, Tester, Architect, etc.)
 - **Task Management System** - SQLite-based project management with priorities and dependencies
 - **Daemon Naming System** - 145+ mythology-based names for agent instances
 - **Multi-Agent Workflows** - Run multiple specialized agents in parallel OpenCode terminals
@@ -21,7 +21,7 @@ site-nine provides:
 ## How It Works
 
 1. Initialize site-nine in your project: `s9 init`
-2. Launch OpenCode and summon an agent: `opencode` → `/summon`
+2. Summon a persona directly: `s9 summon operator` (or any role)
 3. Talk to your agents naturally - they handle tasks, write code, run tests, and coordinate with each other
 4. Run multiple agents in parallel terminals for complex workflows
 
@@ -68,9 +68,23 @@ ls .opencode/
 
 ## Next Steps
 
-### Start Working with Agents in OpenCode
+### Start Working with Agents
 
-Now that site-nine is initialized, launch OpenCode in your project directory:
+The Director (you) can summon agents in two ways:
+
+#### Option 1: Direct Summon (Recommended)
+
+Use the `s9 summon` command to launch OpenCode with an agent automatically:
+
+```bash
+s9 summon operator
+```
+
+This will start OpenCode and immediately initialize an agent session with the specified role.
+
+#### Option 2: Manual Summon via OpenCode
+
+Launch OpenCode manually and use the `/summon` slash command:
 
 ```bash
 opencode
@@ -82,7 +96,7 @@ Then execute the summon command to start an agent session:
 /summon
 ```
 
-This will guide you through selecting an agent role (Builder, Tester, Architect, etc.) and choosing a daemon name from mythology. Once summoned, you can talk to your agent naturally through conversation.
+This will guide you through selecting an agent role (Engineer, Tester, Architect, etc.) and choosing a daemon name from mythology. Once summoned, the Director can talk to the agent naturally through conversation.
 
 ## Documentation
 

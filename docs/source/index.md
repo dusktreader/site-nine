@@ -1,6 +1,6 @@
 ![site-nine Logo](images/site-nine.png){ .s9-logo }
 
-<p style="text-align: center; font-style: italic; margin-top: -1em; margin-bottom: 2em;">The headquarters for AI persona orchestration</p>
+<p style="text-align: center; font-style: italic; margin-top: -1em; margin-bottom: 2em;">The headquarters for AI agent orchestration</p>
 
 ## Overview
 
@@ -17,7 +17,7 @@ site-nine provides:
 ## How It Works
 
 1. Initialize site-nine in your project: `s9 init`
-2. Launch OpenCode and summon a persona: `opencode` → `/summon`
+2. Summon a persona directly: `s9 summon operator` (or any role)
 3. Talk to your personas naturally - they handle tasks, write code, run tests, and coordinate with each other
 4. Run multiple personas in parallel terminals for complex workflows
 

@@ -4,7 +4,11 @@
 
 Get up and running with site-nine in 5 minutes.
 
-**site-nine** is designed to work with [OpenCode](https://github.com/khulnasoft/opencode), an AI coding assistant. You'll interact with specialized personas through natural conversation in OpenCode, while site-nine manages project coordination, tasks, and missions behind the scenes.
+## The Director (You)
+
+**The Director** is you - the human orchestrating AI personas to accomplish work. Throughout this documentation, when we say "The Director," we're referring to you and your role in managing and coordinating AI agents through site-nine.
+
+**site-nine** is designed to work with [OpenCode](https://github.com/khulnasoft/opencode), an AI coding assistant. The Director interacts with specialized personas through natural conversation in OpenCode, while site-nine manages project coordination, tasks, and missions behind the scenes.
 
 ## Requirements
 
@@ -49,7 +53,7 @@ This launches an interactive wizard that asks:
 Skip the wizard by providing a YAML config:
 
 ```yaml
-# s9.yaml
+# s9-config.yaml
 project:
   name: my-project
   type: python
@@ -57,23 +61,19 @@ project:
 
 features:
   pm_system: true
-  mission_tracking: true
+  session_tracking: true
   commit_guidelines: true
-  persona_naming: true
+  daemon_naming: true
 
-persona_roles:
-  - name: Administrator
-    enabled: true
-  - name: Engineer
-    enabled: true
-  - name: Tester
-    enabled: true
+customization:
+  personas_theme: mythology
+  variables: {}
 ```
 
 Then run:
 
 ```bash
-s9 init --config s9.yaml
+s9 init --config s9-config.yaml
 ```
 
 
@@ -95,15 +95,29 @@ s9 dashboard
 
 ## Next Steps
 
-### Start Working with Personas in OpenCode
+### Start Working with Personas
 
-Now that site-nine is initialized, launch OpenCode in your project directory:
+The Director (you) can summon personas in two ways:
+
+#### Option 1: Direct Summon (Recommended)
+
+Use the `s9 summon` command to launch OpenCode with a persona automatically:
+
+```bash
+s9 summon operator
+```
+
+This will start OpenCode and immediately initialize a mission with the specified role.
+
+#### Option 2: Manual Summon via OpenCode Slash Commands
+
+Launch OpenCode manually and use the `/summon` slash command:
 
 ```bash
 opencode
 ```
 
-Then execute the summon command to start a mission:
+Then execute the summon slash command to start a mission:
 
 ```
 /summon
@@ -117,18 +131,20 @@ Or specify a role directly to skip the role selection step:
 /summon tester
 ```
 
-This will guide you through selecting a persona role (Engineer, Tester, Architect, etc.) if not provided, and choosing a persona name from mythology. Once summoned, you can talk to your persona naturally through conversation.
+This will guide the Director through selecting a persona name from mythology. Once summoned, the Director can talk to the persona naturally through conversation.
+
+**OpenCode Slash Commands**: OpenCode provides several slash commands that the Director can use during a session, including `/summon` for starting missions. Type `/help` in OpenCode to see all available commands.
 
 
 ## Working with Your Persona in OpenCode
 
-Once your mission starts, you interact through natural conversation in the OpenCode terminal. Here are some common workflows:
+Once a mission starts, the Director interacts through natural conversation in the OpenCode terminal. Here are some common workflows:
 
 ### Creating Tasks
 
-Simply ask your persona to create tasks:
+Simply ask the persona to create tasks:
 
-**You:**
+**The Director (You):**
 > Create a high-priority task for implementing user authentication
 
 **Persona (Administrator - Ishtar):**
@@ -140,13 +156,13 @@ Simply ask your persona to create tasks:
 >   Role: Engineer
 >   Status: TODO
 > 
-> The task has been added to the project database and is ready to be claimed by a Engineer persona.
+> The task has been added to the project database and is ready to be claimed by an Engineer persona.
 
 ### Investigating Code
 
-Ask personas to explore and explain your codebase:
+Ask personas to explore and explain the codebase:
 
-**You:**
+**The Director (You):**
 > What authentication libraries are we currently using?
 
 **Persona (Inspector - Argus):**
@@ -168,7 +184,7 @@ Ask personas to explore and explain your codebase:
 
 Direct personas to implement functionality:
 
-**You:**
+**The Director (You):**
 > Implement a password reset endpoint
 
 **Persona (Engineer - Goibniu):**
@@ -194,7 +210,7 @@ Direct personas to implement functionality:
 
 Ask personas to validate their work:
 
-**You:**
+**The Director (You):**
 > Run the authentication tests
 
 **Persona (Tester - Ah-Puch):**
@@ -216,7 +232,7 @@ Ask personas to validate their work:
 
 Ask about tasks and progress:
 
-**You:**
+**The Director (You):**
 > What tasks are pending?
 
 **Persona (Administrator - Marduk):**
@@ -237,9 +253,9 @@ Ask about tasks and progress:
 
 ### Within OpenCode
 
-Your persona can help you understand available commands and workflows:
+Personas can help the Director understand available commands and workflows:
 
-**You:**
+**The Director (You):**
 > How do I see the dashboard?
 
 **Persona:**
