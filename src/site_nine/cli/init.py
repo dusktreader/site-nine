@@ -38,36 +38,6 @@ def init_command(
 
     # Create .opencode directory
     opencode_dir.mkdir(exist_ok=True)
-
-    # Save configuration to .opencode/s9-config.yaml
-    import yaml
-
-    config_path = opencode_dir / "s9-config.yaml"
-    with open(config_path, "w") as f:
-        yaml.safe_dump(
-            {
-                "project": {
-                    "name": site_nine_config.project.name,
-                    "type": site_nine_config.project.type,
-                    "description": site_nine_config.project.description,
-                },
-                "features": {
-                    "pm_system": site_nine_config.features.pm_system,
-                    "session_tracking": site_nine_config.features.session_tracking,
-                    "commit_guidelines": site_nine_config.features.commit_guidelines,
-                    "daemon_naming": site_nine_config.features.daemon_naming,
-                },
-                "customization": {
-                    "personas_theme": site_nine_config.customization.personas_theme,
-                    "variables": site_nine_config.customization.variables,
-                },
-            },
-            f,
-            default_flow_style=False,
-            sort_keys=False,
-        )
-    console.print(f"[green]✓[/green] Saved configuration to {config_path}")
-
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -96,8 +66,7 @@ def init_command(
     console.print(f"\n[bold green]✓[/bold green] Successfully initialized .opencode at {opencode_dir}")
     console.print("\n[cyan]Next steps:[/cyan]")
     console.print("  1. Review .opencode/README.md")
-    console.print("  2. Review configuration in .opencode/s9-config.yaml")
-    console.print("  3. Customize agent roles in .opencode/docs/agents/")
+    console.print("  2. Start a session with: opencode")
     console.print("  4. Run: s9 dashboard")
 
 

@@ -158,3 +158,4 @@ SESSION_NOTES.md
 .opencode/package.json
 .opencode/package-lock.json
 .opencode/bun.lock
+.opencode/s9-config.yaml
