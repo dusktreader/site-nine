@@ -1,0 +1,1837 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="http://dusktreader.github.io/site-nine/epics/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Epics - site-nine documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CFira+Code:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Fira Code"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#epics" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="site-nine documentation" class="md-header__button md-logo" aria-label="site-nine documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            site-nine documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Epics
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/dusktreader/site-nine" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="site-nine documentation" class="md-nav__button md-logo" aria-label="site-nine documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    site-nine documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/dusktreader/site-nine" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Agents
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Working with Agents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/missions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Missions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/roles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/personas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Personas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Epics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Epics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="planning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Planning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="tracking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tracking Progress
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Epic Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/for-humans/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For Humans
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/for-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/complete/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Complete Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Directory Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Topics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-are-epics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What are epics?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#epic-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Epic lifecycle
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Epic lifecycle">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#creating-an-epic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating an epic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-tasks-to-an-epic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding tasks to an epic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tracking-progress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracking progress
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-epics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating epics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#completing-epics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Completing epics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aborting-epics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aborting epics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#epic-statuses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Epic statuses
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Epic statuses">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#todo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TODO (📋)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#underway" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UNDERWAY (🚧)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        COMPLETE (✅)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aborted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ABORTED (❌)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#epic-ids" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Epic IDs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#working-with-epics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working with epics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Working with epics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#listing-epics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Listing epics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dashboard-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dashboard integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#epic-markdown-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Epic markdown files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#syncing-epic-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Syncing epic files
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best practices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-to-use-epics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to use epics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#epic-naming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Epic naming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#breaking-down-epics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Breaking down epics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#priority-alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Priority alignment
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common workflows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#planning-a-new-feature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Planning a new feature
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#converting-standalone-tasks-to-epic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Converting standalone tasks to epic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reorganizing-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reorganizing work
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#database-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto-status-computation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-status computation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cascade-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cascade operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="epics">Epics<a class="headerlink" href="#epics" title="Permanent link">&para;</a></h1>
+<p>Epics are organizational containers for grouping related tasks under larger initiatives. They help you manage complex
+projects by breaking them down into manageable subtasks while maintaining visibility of overall progress.</p>
+<h2 id="what-are-epics">What are epics?<a class="headerlink" href="#what-are-epics" title="Permanent link">&para;</a></h2>
+<p>An <strong>epic</strong> represents a high-level project or initiative composed of multiple subtasks. For example, "User
+Authentication System" might be an epic containing tasks for architecture design, API implementation, frontend
+integration, testing, and documentation.</p>
+<p><strong>Key characteristics:</strong></p>
+<ul>
+<li><strong>Purely organizational</strong> - Epics group tasks but aren't assigned to agents or sessions</li>
+<li><strong>One task, one epic</strong> - Tasks belong to at most one epic (or remain standalone)</li>
+<li><strong>Auto-computed status</strong> - Epic status updates automatically based on subtask states</li>
+<li><strong>Database-driven</strong> - Database is the source of truth; markdown files are generated artifacts</li>
+<li><strong>Progress tracking</strong> - Epics show completion percentage and task counts</li>
+</ul>
+<h2 id="epic-lifecycle">Epic lifecycle<a class="headerlink" href="#epic-lifecycle" title="Permanent link">&para;</a></h2>
+<h3 id="creating-an-epic">Creating an epic<a class="headerlink" href="#creating-an-epic" title="Permanent link">&para;</a></h3>
+<p>Create a new epic with a title and priority:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>s9<span class="w"> </span>epic<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;User Authentication System&quot;</span><span class="w"> </span>--priority<span class="w"> </span>HIGH
+</span></code></pre></div>
+<p>Add a description for context:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>s9<span class="w"> </span>epic<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--title<span class="w"> </span><span class="s2">&quot;User Authentication System&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--priority<span class="w"> </span>HIGH<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--description<span class="w"> </span><span class="s2">&quot;Implement complete user authentication including login, registration, and password reset&quot;</span>
+</span></code></pre></div>
+<p><strong>Output:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>✓ Created epic EPC-H-0001
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  Title: User Authentication System
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  Priority: HIGH
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  Status: TODO
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  File: .opencode/work/epics/EPC-H-0001.md
+</span></code></pre></div></p>
+<h3 id="adding-tasks-to-an-epic">Adding tasks to an epic<a class="headerlink" href="#adding-tasks-to-an-epic" title="Permanent link">&para;</a></h3>
+<p><strong>Create new tasks linked to an epic:</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>s9<span class="w"> </span>task<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--title<span class="w"> </span><span class="s2">&quot;Design authentication architecture&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--role<span class="w"> </span>Architect<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--priority<span class="w"> </span>HIGH<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--epic<span class="w"> </span>EPC-H-0001
+</span></code></pre></div>
+<p><strong>Link existing tasks:</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>s9<span class="w"> </span>task<span class="w"> </span>link<span class="w"> </span>ARC-H-0015<span class="w"> </span>EPC-H-0001
+</span></code></pre></div>
+<p><strong>Unlink tasks:</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>s9<span class="w"> </span>task<span class="w"> </span>unlink<span class="w"> </span>ARC-H-0015
+</span></code></pre></div>
+<h3 id="tracking-progress">Tracking progress<a class="headerlink" href="#tracking-progress" title="Permanent link">&para;</a></h3>
+<p>View epic details and progress:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>s9<span class="w"> </span>epic<span class="w"> </span>show<span class="w"> </span>EPC-H-0001
+</span></code></pre></div>
+<p><strong>Example output:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Epic EPC-H-0001: User Authentication System
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Status: 🚧 UNDERWAY
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>Priority: HIGH
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>Created: 2026-02-04 10:30:00
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>Updated: 2026-02-04 15:45:00
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>Progress: 3/5 tasks complete (60%)
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>[████████████████████░░░░░░░░░░] 60%
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>Subtasks:
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┓
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>┃ Task ID    ┃ Title                          ┃ Status     ┃ Role         ┃ Priority ┃
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━┩
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>│ ARC-H-0015 │ Design auth architecture       │ ✅ COMPLETE│ Architect    │ HIGH     │
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>│ ENG-H-0016 │ Implement login endpoint       │ ✅ COMPLETE│ Engineer      │ HIGH     │
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>│ ENG-H-0017 │ Implement registration         │ 🔵 UNDERWAY│ Engineer      │ HIGH     │
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>│ TST-M-0018 │ Write auth tests               │ ⬜ TODO    │ Tester       │ MEDIUM   │
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>│ DOC-M-0019 │ Document auth API              │ ⬜ TODO    │ Documentarian│ MEDIUM   │
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>└────────────┴────────────────────────────────┴────────────┴──────────────┴──────────┘
+</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>
+</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>Description:
+</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>Implement complete user authentication including login, registration, and password reset
+</span></code></pre></div></p>
+<h3 id="updating-epics">Updating epics<a class="headerlink" href="#updating-epics" title="Permanent link">&para;</a></h3>
+<p>Update epic metadata:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>s9<span class="w"> </span>epic<span class="w"> </span>update<span class="w"> </span>EPC-H-0001<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;User Authentication and Authorization&quot;</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>s9<span class="w"> </span>epic<span class="w"> </span>update<span class="w"> </span>EPC-H-0001<span class="w"> </span>--priority<span class="w"> </span>CRITICAL
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>s9<span class="w"> </span>epic<span class="w"> </span>update<span class="w"> </span>EPC-H-0001<span class="w"> </span>--description<span class="w"> </span><span class="s2">&quot;Extended scope to include role-based access control&quot;</span>
+</span></code></pre></div>
+<h3 id="completing-epics">Completing epics<a class="headerlink" href="#completing-epics" title="Permanent link">&para;</a></h3>
+<p>Epics automatically transition to COMPLETE status when all subtasks reach COMPLETE status. No manual completion is
+needed!</p>
+<p>When the last task is completed:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>✓ Task ENG-H-0017 closed with status: COMPLETE
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>📋 Epic EPC-H-0001 status changed: UNDERWAY → COMPLETE
+</span></code></pre></div></p>
+<h3 id="aborting-epics">Aborting epics<a class="headerlink" href="#aborting-epics" title="Permanent link">&para;</a></h3>
+<p>If an epic becomes obsolete or requirements change, abort it:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>s9<span class="w"> </span>epic<span class="w"> </span>abort<span class="w"> </span>EPC-H-0001<span class="w"> </span>--reason<span class="w"> </span><span class="s2">&quot;Requirements changed; switching to OAuth instead&quot;</span>
+</span></code></pre></div>
+<p><strong>This operation:</strong></p>
+<ul>
+<li>Sets epic status to ABORTED</li>
+<li>Cascades to ALL subtasks (sets them to ABORTED)</li>
+<li>Requires confirmation unless you use <code>--yes</code></li>
+<li>Records the abort reason</li>
+<li>Prevents future auto-updates to the epic</li>
+</ul>
+<p><strong>Example confirmation prompt:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>⚠️  WARNING: Aborting epic will also abort ALL 5 subtasks
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>Epic: EPC-H-0001 - User Authentication System
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>Subtasks that will be aborted:
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  • ARC-H-0015 - Design auth architecture
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>  • ENG-H-0016 - Implement login endpoint
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>  • ENG-H-0017 - Implement registration
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>  • TST-M-0018 - Write auth tests
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>  • DOC-M-0019 - Document auth API
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>Abort reason: Requirements changed; switching to OAuth instead
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>
+</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>Continue? [y/N]:
+</span></code></pre></div></p>
+<h2 id="epic-statuses">Epic statuses<a class="headerlink" href="#epic-statuses" title="Permanent link">&para;</a></h2>
+<p>Epics have four possible statuses that auto-update based on subtask states:</p>
+<h3 id="todo">TODO (📋)<a class="headerlink" href="#todo" title="Permanent link">&para;</a></h3>
+<p>All subtasks are TODO or ABORTED. No active work has started.</p>
+<p><strong>Transition to UNDERWAY:</strong> When any subtask changes to UNDERWAY, BLOCKED, REVIEW, or PAUSED.</p>
+<h3 id="underway">UNDERWAY (🚧)<a class="headerlink" href="#underway" title="Permanent link">&para;</a></h3>
+<p>At least one subtask is actively being worked on (UNDERWAY, BLOCKED, REVIEW, or PAUSED status).</p>
+<p><strong>Transition to COMPLETE:</strong> When all subtasks reach COMPLETE status.</p>
+<p><strong>Transition back to TODO:</strong> When all active tasks are completed or aborted, leaving only TODO tasks.</p>
+<h3 id="complete">COMPLETE (✅)<a class="headerlink" href="#complete" title="Permanent link">&para;</a></h3>
+<p>All subtasks have been completed. The <code>completed_at</code> timestamp is automatically set.</p>
+<p><strong>This is a terminal state</strong> - completed epics don't transition to other statuses.</p>
+<h3 id="aborted">ABORTED (❌)<a class="headerlink" href="#aborted" title="Permanent link">&para;</a></h3>
+<p>Manually aborted via <code>s9 epic abort</code>. All subtasks are also aborted.</p>
+<p><strong>This is a protected terminal state</strong> - aborted epics never auto-update, even if subtask statuses change.</p>
+<h2 id="epic-ids">Epic IDs<a class="headerlink" href="#epic-ids" title="Permanent link">&para;</a></h2>
+<p>Epics use a structured ID format that encodes priority:</p>
+<p><strong>Format:</strong> <code>EPC-[P]-[NNNN]</code></p>
+<p><strong>Components:</strong></p>
+<ul>
+<li><code>EPC</code> - Epic prefix (constant)</li>
+<li><code>[P]</code> - Priority code (single letter)<ul>
+<li><code>C</code> = CRITICAL</li>
+<li><code>H</code> = HIGH</li>
+<li><code>M</code> = MEDIUM</li>
+<li><code>L</code> = LOW</li>
+</ul>
+</li>
+<li><code>[NNNN]</code> - Sequential 4-digit number (padded with zeros)</li>
+</ul>
+<p><strong>Examples:</strong></p>
+<ul>
+<li><code>EPC-H-0001</code> - First HIGH priority epic</li>
+<li><code>EPC-C-0015</code> - Epic #15 (CRITICAL priority)</li>
+<li><code>EPC-M-0042</code> - Epic #42 (MEDIUM priority)</li>
+</ul>
+<p>The priority prefix makes it easy to identify critical work at a glance.</p>
+<h2 id="working-with-epics">Working with epics<a class="headerlink" href="#working-with-epics" title="Permanent link">&para;</a></h2>
+<h3 id="listing-epics">Listing epics<a class="headerlink" href="#listing-epics" title="Permanent link">&para;</a></h3>
+<p>View all epics:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>s9<span class="w"> </span>epic<span class="w"> </span>list
+</span></code></pre></div>
+<p>Filter by status:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>s9<span class="w"> </span>epic<span class="w"> </span>list<span class="w"> </span>--status<span class="w"> </span>TODO
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>s9<span class="w"> </span>epic<span class="w"> </span>list<span class="w"> </span>--status<span class="w"> </span>UNDERWAY
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>s9<span class="w"> </span>epic<span class="w"> </span>list<span class="w"> </span>--status<span class="w"> </span>COMPLETE
+</span></code></pre></div>
+<p>Filter by priority:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>s9<span class="w"> </span>epic<span class="w"> </span>list<span class="w"> </span>--priority<span class="w"> </span>HIGH
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>s9<span class="w"> </span>epic<span class="w"> </span>list<span class="w"> </span>--priority<span class="w"> </span>CRITICAL
+</span></code></pre></div>
+<p>Combine filters:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>s9<span class="w"> </span>epic<span class="w"> </span>list<span class="w"> </span>--status<span class="w"> </span>UNDERWAY<span class="w"> </span>--priority<span class="w"> </span>HIGH
+</span></code></pre></div>
+<p><strong>Example output:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>                                    Epics
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┓
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>┃ ID         ┃ Title                      ┃ Status     ┃ Priority ┃ Progress ┃ Created            ┃
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━┩
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>│ EPC-H-0001 │ User Authentication System │ 🚧 UNDERWAY│ HIGH     │ 3/5 (60%)│ 2026-02-04 10:30:00│
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>│ EPC-H-0002 │ API Documentation          │ 📋 TODO    │ HIGH     │ 0/3 (0%) │ 2026-02-04 11:15:00│
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>│ EPC-M-0003 │ UI Refactoring             │ 🚧 UNDERWAY│ MEDIUM   │ 2/8 (25%)│ 2026-02-04 12:00:00│
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>└────────────┴────────────────────────────┴────────────┴──────────┴──────────┴────────────────────┘
+</span></code></pre></div></p>
+<h3 id="dashboard-integration">Dashboard integration<a class="headerlink" href="#dashboard-integration" title="Permanent link">&para;</a></h3>
+<p>The main dashboard shows active epics:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>s9<span class="w"> </span>dashboard
+</span></code></pre></div>
+<p>View epic-specific dashboard:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>s9<span class="w"> </span>dashboard<span class="w"> </span>--epic<span class="w"> </span>EPC-H-0001
+</span></code></pre></div>
+<p><strong>Epic dashboard output:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>📦 Epic: EPC-H-0001 - User Authentication System
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>Status: 🚧 UNDERWAY | Priority: HIGH | Progress: 3/5 (60%)
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>[████████████████████░░░░░░░░░░] 60%
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>Subtasks:
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┓
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>┃ Task ID    ┃ Title                          ┃ Status     ┃ Role         ┃ Priority ┃
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━┩
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>│ ARC-H-0015 │ Design auth architecture       │ ✅ COMPLETE│ Architect    │ HIGH     │
+</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>│ ENG-H-0016 │ Implement login endpoint       │ ✅ COMPLETE│ Engineer      │ HIGH     │
+</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a>│ ENG-H-0017 │ Implement registration         │ 🔵 UNDERWAY│ Engineer      │ HIGH     │
+</span><span id="__span-19-12"><a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a>│ TST-M-0018 │ Write auth tests               │ ⬜ TODO    │ Tester       │ MEDIUM   │
+</span><span id="__span-19-13"><a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a>│ DOC-M-0019 │ Document auth API              │ ⬜ TODO    │ Documentarian│ MEDIUM   │
+</span><span id="__span-19-14"><a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a>└────────────┴────────────────────────────────┴────────────┴──────────────┴──────────┘
+</span></code></pre></div></p>
+<h3 id="epic-markdown-files">Epic markdown files<a class="headerlink" href="#epic-markdown-files" title="Permanent link">&para;</a></h3>
+<p>Each epic has a markdown file at <code>.opencode/work/epics/{EPIC_ID}.md</code>. These files are automatically generated and
+updated.</p>
+<p><strong>File structure:</strong></p>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="gh"># Epic EPC-H-0001: User Authentication System</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="gs">**Status:**</span> 🚧 UNDERWAY
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="gs">**Priority:**</span> HIGH
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="gs">**Created:**</span> 2026-02-04 10:30:00
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="gs">**Updated:**</span> 2026-02-04 15:45:00
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="gu">## Progress</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="gs">**Tasks:**</span> 3/5 complete (60%)
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a>[████████████████████░░░░░░░░░░] 60%
+</span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a>
+</span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a><span class="gu">## Subtasks</span>
+</span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a>
+</span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a>| Task ID | Title | Status | Role | Priority |
+</span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a>|---------|-------|--------|------|----------|
+</span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a>| ARC-H-0015 | Design auth architecture | ✅ COMPLETE | Architect | HIGH |
+</span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a>| ENG-H-0016 | Implement login endpoint | ✅ COMPLETE | Engineer | HIGH |
+</span><span id="__span-20-19"><a id="__codelineno-20-19" name="__codelineno-20-19" href="#__codelineno-20-19"></a>| ENG-H-0017 | Implement registration | 🔵 UNDERWAY | Engineer | HIGH |
+</span><span id="__span-20-20"><a id="__codelineno-20-20" name="__codelineno-20-20" href="#__codelineno-20-20"></a>| TST-M-0018 | Write auth tests | ⬜ TODO | Tester | MEDIUM |
+</span><span id="__span-20-21"><a id="__codelineno-20-21" name="__codelineno-20-21" href="#__codelineno-20-21"></a>| DOC-M-0019 | Document auth API | ⬜ TODO | Documentarian | MEDIUM |
+</span><span id="__span-20-22"><a id="__codelineno-20-22" name="__codelineno-20-22" href="#__codelineno-20-22"></a>
+</span><span id="__span-20-23"><a id="__codelineno-20-23" name="__codelineno-20-23" href="#__codelineno-20-23"></a><span class="gu">## Description</span>
+</span><span id="__span-20-24"><a id="__codelineno-20-24" name="__codelineno-20-24" href="#__codelineno-20-24"></a>
+</span><span id="__span-20-25"><a id="__codelineno-20-25" name="__codelineno-20-25" href="#__codelineno-20-25"></a>Implement complete user authentication including login, registration, and password reset
+</span><span id="__span-20-26"><a id="__codelineno-20-26" name="__codelineno-20-26" href="#__codelineno-20-26"></a>
+</span><span id="__span-20-27"><a id="__codelineno-20-27" name="__codelineno-20-27" href="#__codelineno-20-27"></a><span class="gu">## Goals</span>
+</span><span id="__span-20-28"><a id="__codelineno-20-28" name="__codelineno-20-28" href="#__codelineno-20-28"></a>
+</span><span id="__span-20-29"><a id="__codelineno-20-29" name="__codelineno-20-29" href="#__codelineno-20-29"></a><span class="k">-</span><span class="w"> </span>Secure user authentication with JWT tokens
+</span><span id="__span-20-30"><a id="__codelineno-20-30" name="__codelineno-20-30" href="#__codelineno-20-30"></a><span class="k">-</span><span class="w"> </span>Password reset flow via email
+</span><span id="__span-20-31"><a id="__codelineno-20-31" name="__codelineno-20-31" href="#__codelineno-20-31"></a><span class="k">-</span><span class="w"> </span>Account registration with email verification
+</span><span id="__span-20-32"><a id="__codelineno-20-32" name="__codelineno-20-32" href="#__codelineno-20-32"></a><span class="k">-</span><span class="w"> </span>Session management
+</span><span id="__span-20-33"><a id="__codelineno-20-33" name="__codelineno-20-33" href="#__codelineno-20-33"></a>
+</span><span id="__span-20-34"><a id="__codelineno-20-34" name="__codelineno-20-34" href="#__codelineno-20-34"></a><span class="gu">## Success Criteria</span>
+</span><span id="__span-20-35"><a id="__codelineno-20-35" name="__codelineno-20-35" href="#__codelineno-20-35"></a>
+</span><span id="__span-20-36"><a id="__codelineno-20-36" name="__codelineno-20-36" href="#__codelineno-20-36"></a><span class="k">-</span><span class="w"> </span>All auth endpoints fully implemented and tested
+</span><span id="__span-20-37"><a id="__codelineno-20-37" name="__codelineno-20-37" href="#__codelineno-20-37"></a><span class="k">-</span><span class="w"> </span>Security audit passed
+</span><span id="__span-20-38"><a id="__codelineno-20-38" name="__codelineno-20-38" href="#__codelineno-20-38"></a><span class="k">-</span><span class="w"> </span>Documentation complete
+</span><span id="__span-20-39"><a id="__codelineno-20-39" name="__codelineno-20-39" href="#__codelineno-20-39"></a><span class="k">-</span><span class="w"> </span>Integration tests passing
+</span><span id="__span-20-40"><a id="__codelineno-20-40" name="__codelineno-20-40" href="#__codelineno-20-40"></a>
+</span><span id="__span-20-41"><a id="__codelineno-20-41" name="__codelineno-20-41" href="#__codelineno-20-41"></a><span class="gu">## Notes</span>
+</span><span id="__span-20-42"><a id="__codelineno-20-42" name="__codelineno-20-42" href="#__codelineno-20-42"></a>
+</span><span id="__span-20-43"><a id="__codelineno-20-43" name="__codelineno-20-43" href="#__codelineno-20-43"></a>[Epic-level notes, decisions, blockers, and context]
+</span></code></pre></div>
+<p><strong>You can edit these sections manually:</strong></p>
+<ul>
+<li>Description</li>
+<li>Goals</li>
+<li>Success Criteria</li>
+<li>Notes</li>
+</ul>
+<p><strong>These sections are auto-generated (your edits will be overwritten):</strong></p>
+<ul>
+<li>Header (status, priority, timestamps)</li>
+<li>Progress</li>
+<li>Subtasks table</li>
+</ul>
+<h3 id="syncing-epic-files">Syncing epic files<a class="headerlink" href="#syncing-epic-files" title="Permanent link">&para;</a></h3>
+<p>Epic markdown files automatically sync on most operations, but you can manually regenerate them:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># Sync all epics</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>s9<span class="w"> </span>epic<span class="w"> </span>sync
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="c1"># Sync specific epic</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>s9<span class="w"> </span>epic<span class="w"> </span>sync<span class="w"> </span>--epic<span class="w"> </span>EPC-H-0001
+</span></code></pre></div>
+<h2 id="best-practices">Best practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
+<h3 id="when-to-use-epics">When to use epics<a class="headerlink" href="#when-to-use-epics" title="Permanent link">&para;</a></h3>
+<p><strong>Good use cases:</strong></p>
+<ul>
+<li>Features requiring multiple roles (architect → engineer → tester → documentarian)</li>
+<li>Projects spanning multiple weeks</li>
+<li>Work requiring coordination across 3+ tasks</li>
+<li>Initiatives with clear milestones and deliverables</li>
+</ul>
+<p><strong>Not necessary for:</strong></p>
+<ul>
+<li>Single-task work items</li>
+<li>Quick fixes or small changes</li>
+<li>Tasks that naturally complete in isolation</li>
+</ul>
+<h3 id="epic-naming">Epic naming<a class="headerlink" href="#epic-naming" title="Permanent link">&para;</a></h3>
+<p>Use clear, descriptive titles that convey the business value:</p>
+<p><strong>Good names:</strong></p>
+<ul>
+<li>"User Authentication System"</li>
+<li>"Database Migration to PostgreSQL"</li>
+<li>"API Rate Limiting Implementation"</li>
+<li>"Customer Dashboard Redesign"</li>
+</ul>
+<p><strong>Less helpful:</strong></p>
+<ul>
+<li>"Sprint 3 Work"</li>
+<li>"Backend Tasks"</li>
+<li>"Improvements"</li>
+</ul>
+<h3 id="breaking-down-epics">Breaking down epics<a class="headerlink" href="#breaking-down-epics" title="Permanent link">&para;</a></h3>
+<p>Aim for 3-10 tasks per epic. If you have more than 10 tasks, consider:</p>
+<ul>
+<li>Splitting into multiple epics</li>
+<li>Grouping very small tasks together</li>
+<li>Creating sub-epics (though this isn't directly supported, you can create separate epics with related names)</li>
+</ul>
+<h3 id="priority-alignment">Priority alignment<a class="headerlink" href="#priority-alignment" title="Permanent link">&para;</a></h3>
+<p>Epic priority doesn't automatically determine subtask priority. You can have:</p>
+<ul>
+<li>HIGH priority epic with mix of HIGH and MEDIUM tasks</li>
+<li>CRITICAL epic with LOW priority documentation tasks</li>
+</ul>
+<p>Set task priorities based on when they need to be completed, not just the epic's overall priority.</p>
+<h2 id="common-workflows">Common workflows<a class="headerlink" href="#common-workflows" title="Permanent link">&para;</a></h2>
+<h3 id="planning-a-new-feature">Planning a new feature<a class="headerlink" href="#planning-a-new-feature" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p>Create the epic:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>s9<span class="w"> </span>epic<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;User Dashboard&quot;</span><span class="w"> </span>--priority<span class="w"> </span>HIGH
+</span></code></pre></div></p>
+</li>
+<li>
+<p>Break down into tasks:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>s9<span class="w"> </span>task<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Design dashboard wireframes&quot;</span><span class="w"> </span>--role<span class="w"> </span>Designer<span class="w"> </span>--priority<span class="w"> </span>HIGH<span class="w"> </span>--epic<span class="w"> </span>EPC-H-0001
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>s9<span class="w"> </span>task<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Implement dashboard backend&quot;</span><span class="w"> </span>--role<span class="w"> </span>Engineer<span class="w"> </span>--priority<span class="w"> </span>HIGH<span class="w"> </span>--epic<span class="w"> </span>EPC-H-0001
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>s9<span class="w"> </span>task<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Implement dashboard frontend&quot;</span><span class="w"> </span>--role<span class="w"> </span>Engineer<span class="w"> </span>--priority<span class="w"> </span>HIGH<span class="w"> </span>--epic<span class="w"> </span>EPC-H-0001
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>s9<span class="w"> </span>task<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Write dashboard tests&quot;</span><span class="w"> </span>--role<span class="w"> </span>Tester<span class="w"> </span>--priority<span class="w"> </span>MEDIUM<span class="w"> </span>--epic<span class="w"> </span>EPC-H-0001
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>s9<span class="w"> </span>task<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Document dashboard features&quot;</span><span class="w"> </span>--role<span class="w"> </span>Documentarian<span class="w"> </span>--priority<span class="w"> </span>MEDIUM<span class="w"> </span>--epic<span class="w"> </span>EPC-H-0001
+</span></code></pre></div></p>
+</li>
+<li>
+<p>Set up dependencies if needed:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>s9<span class="w"> </span>task<span class="w"> </span>add-dependency<span class="w"> </span>ENG-H-0016<span class="w"> </span>ARC-H-0015<span class="w">  </span><span class="c1"># Backend depends on architecture</span>
+</span></code></pre></div></p>
+</li>
+<li>
+<p>Monitor progress:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>s9<span class="w"> </span>dashboard<span class="w"> </span>--epic<span class="w"> </span>EPC-H-0001
+</span></code></pre></div></p>
+</li>
+</ol>
+<h3 id="converting-standalone-tasks-to-epic">Converting standalone tasks to epic<a class="headerlink" href="#converting-standalone-tasks-to-epic" title="Permanent link">&para;</a></h3>
+<p>If you realize related tasks should be grouped:</p>
+<ol>
+<li>
+<p>Create the epic:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>s9<span class="w"> </span>epic<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Payment Integration&quot;</span><span class="w"> </span>--priority<span class="w"> </span>HIGH
+</span></code></pre></div></p>
+</li>
+<li>
+<p>Link existing tasks:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>s9<span class="w"> </span>task<span class="w"> </span>link<span class="w"> </span>ENG-H-0023<span class="w"> </span>EPC-H-0002
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>s9<span class="w"> </span>task<span class="w"> </span>link<span class="w"> </span>TST-M-0024<span class="w"> </span>EPC-H-0002
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>s9<span class="w"> </span>task<span class="w"> </span>link<span class="w"> </span>DOC-M-0025<span class="w"> </span>EPC-H-0002
+</span></code></pre></div></p>
+</li>
+</ol>
+<h3 id="reorganizing-work">Reorganizing work<a class="headerlink" href="#reorganizing-work" title="Permanent link">&para;</a></h3>
+<p>Move task from one epic to another:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1"># Unlink from old epic</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>s9<span class="w"> </span>task<span class="w"> </span>unlink<span class="w"> </span>ENG-H-0023
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="c1"># Link to new epic</span>
+</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>s9<span class="w"> </span>task<span class="w"> </span>link<span class="w"> </span>ENG-H-0023<span class="w"> </span>EPC-H-0003
+</span></code></pre></div>
+<h2 id="technical-details">Technical details<a class="headerlink" href="#technical-details" title="Permanent link">&para;</a></h2>
+<h3 id="database-structure">Database structure<a class="headerlink" href="#database-structure" title="Permanent link">&para;</a></h3>
+<p>Epics are stored in the <code>epics</code> table with these fields:</p>
+<ul>
+<li><code>id</code> - Epic ID (EPC-[P]-[NNNN])</li>
+<li><code>title</code> - Epic title</li>
+<li><code>description</code> - Optional description</li>
+<li><code>status</code> - TODO, UNDERWAY, COMPLETE, or ABORTED</li>
+<li><code>priority</code> - CRITICAL, HIGH, MEDIUM, or LOW</li>
+<li><code>aborted_reason</code> - Reason if manually aborted</li>
+<li><code>created_at</code> - Creation timestamp</li>
+<li><code>updated_at</code> - Last update timestamp</li>
+<li><code>completed_at</code> - Completion timestamp (auto-set)</li>
+<li><code>aborted_at</code> - Abort timestamp</li>
+<li><code>file_path</code> - Path to markdown file</li>
+</ul>
+<p>Tasks link to epics via the <code>epic_id</code> foreign key field.</p>
+<h3 id="auto-status-computation">Auto-status computation<a class="headerlink" href="#auto-status-computation" title="Permanent link">&para;</a></h3>
+<p>Epic status is computed from subtask states via database triggers:</p>
+<p><strong>Status logic:</strong></p>
+<ul>
+<li><strong>All subtasks COMPLETE</strong> → Epic becomes COMPLETE</li>
+<li><strong>Any subtask is UNDERWAY/BLOCKED/REVIEW/PAUSED</strong> → Epic becomes UNDERWAY</li>
+<li><strong>All subtasks TODO or ABORTED</strong> → Epic stays/returns to TODO</li>
+<li><strong>Manually aborted</strong> → Status locked to ABORTED (no auto-updates)</li>
+</ul>
+<p><strong>Triggers fire on:</strong></p>
+<ul>
+<li>Task status changes</li>
+<li>Tasks added to epic</li>
+<li>Tasks removed from epic</li>
+</ul>
+<p>This ensures epic status always reflects the current state of work without manual updates.</p>
+<h3 id="cascade-operations">Cascade operations<a class="headerlink" href="#cascade-operations" title="Permanent link">&para;</a></h3>
+<p>Aborting an epic cascades to all subtasks:</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="c1">-- When epic is aborted</span>
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="k">UPDATE</span><span class="w"> </span><span class="n">tasks</span><span class="w"> </span>
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="k">SET</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;ABORTED&#39;</span><span class="p">,</span><span class="w"> </span>
+</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="w">    </span><span class="n">aborted_at</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">datetime</span><span class="p">(</span><span class="s1">&#39;now&#39;</span><span class="p">),</span>
+</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="w">    </span><span class="n">updated_at</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">datetime</span><span class="p">(</span><span class="s1">&#39;now&#39;</span><span class="p">)</span>
+</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">epic_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;EPC-H-0001&#39;</span><span class="p">;</span>
+</span></code></pre></div>
+<p>This ensures organizational consistency - if an epic is cancelled, all its work items reflect that decision.</p>
+<h2 id="cli-reference">CLI reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h2>
+<p>Quick reference of all epic commands:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="c1"># Create</span>
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>s9<span class="w"> </span>epic<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;NAME&quot;</span><span class="w"> </span>--priority<span class="w"> </span>PRIORITY<span class="w"> </span><span class="o">[</span>--description<span class="w"> </span>DESC<span class="o">]</span>
+</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>
+</span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a><span class="c1"># List</span>
+</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a>s9<span class="w"> </span>epic<span class="w"> </span>list<span class="w"> </span><span class="o">[</span>--status<span class="w"> </span>STATUS<span class="o">]</span><span class="w"> </span><span class="o">[</span>--priority<span class="w"> </span>PRIORITY<span class="o">]</span>
+</span><span id="__span-30-6"><a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a>
+</span><span id="__span-30-7"><a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a><span class="c1"># Show</span>
+</span><span id="__span-30-8"><a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a>s9<span class="w"> </span>epic<span class="w"> </span>show<span class="w"> </span>EPIC_ID
+</span><span id="__span-30-9"><a id="__codelineno-30-9" name="__codelineno-30-9" href="#__codelineno-30-9"></a>
+</span><span id="__span-30-10"><a id="__codelineno-30-10" name="__codelineno-30-10" href="#__codelineno-30-10"></a><span class="c1"># Update</span>
+</span><span id="__span-30-11"><a id="__codelineno-30-11" name="__codelineno-30-11" href="#__codelineno-30-11"></a>s9<span class="w"> </span>epic<span class="w"> </span>update<span class="w"> </span>EPIC_ID<span class="w"> </span><span class="o">[</span>--title<span class="w"> </span>TITLE<span class="o">]</span><span class="w"> </span><span class="o">[</span>--description<span class="w"> </span>DESC<span class="o">]</span><span class="w"> </span><span class="o">[</span>--priority<span class="w"> </span>PRIORITY<span class="o">]</span>
+</span><span id="__span-30-12"><a id="__codelineno-30-12" name="__codelineno-30-12" href="#__codelineno-30-12"></a>
+</span><span id="__span-30-13"><a id="__codelineno-30-13" name="__codelineno-30-13" href="#__codelineno-30-13"></a><span class="c1"># Abort</span>
+</span><span id="__span-30-14"><a id="__codelineno-30-14" name="__codelineno-30-14" href="#__codelineno-30-14"></a>s9<span class="w"> </span>epic<span class="w"> </span>abort<span class="w"> </span>EPIC_ID<span class="w"> </span>--reason<span class="w"> </span>REASON<span class="w"> </span><span class="o">[</span>--yes<span class="o">]</span>
+</span><span id="__span-30-15"><a id="__codelineno-30-15" name="__codelineno-30-15" href="#__codelineno-30-15"></a>
+</span><span id="__span-30-16"><a id="__codelineno-30-16" name="__codelineno-30-16" href="#__codelineno-30-16"></a><span class="c1"># Sync</span>
+</span><span id="__span-30-17"><a id="__codelineno-30-17" name="__codelineno-30-17" href="#__codelineno-30-17"></a>s9<span class="w"> </span>epic<span class="w"> </span>sync<span class="w"> </span><span class="o">[</span>--epic<span class="w"> </span>EPIC_ID<span class="o">]</span>
+</span><span id="__span-30-18"><a id="__codelineno-30-18" name="__codelineno-30-18" href="#__codelineno-30-18"></a>
+</span><span id="__span-30-19"><a id="__codelineno-30-19" name="__codelineno-30-19" href="#__codelineno-30-19"></a><span class="c1"># Task linking</span>
+</span><span id="__span-30-20"><a id="__codelineno-30-20" name="__codelineno-30-20" href="#__codelineno-30-20"></a>s9<span class="w"> </span>task<span class="w"> </span>create<span class="w"> </span>--epic<span class="w"> </span>EPIC_ID<span class="w"> </span><span class="o">[</span>other<span class="w"> </span>options...<span class="o">]</span>
+</span><span id="__span-30-21"><a id="__codelineno-30-21" name="__codelineno-30-21" href="#__codelineno-30-21"></a>s9<span class="w"> </span>task<span class="w"> </span>link<span class="w"> </span>TASK_ID<span class="w"> </span>EPIC_ID
+</span><span id="__span-30-22"><a id="__codelineno-30-22" name="__codelineno-30-22" href="#__codelineno-30-22"></a>s9<span class="w"> </span>task<span class="w"> </span>unlink<span class="w"> </span>TASK_ID
+</span><span id="__span-30-23"><a id="__codelineno-30-23" name="__codelineno-30-23" href="#__codelineno-30-23"></a>
+</span><span id="__span-30-24"><a id="__codelineno-30-24" name="__codelineno-30-24" href="#__codelineno-30-24"></a><span class="c1"># Dashboard</span>
+</span><span id="__span-30-25"><a id="__codelineno-30-25" name="__codelineno-30-25" href="#__codelineno-30-25"></a>s9<span class="w"> </span>dashboard<span class="w"> </span>--epic<span class="w"> </span>EPIC_ID
+</span></code></pre></div>
+<p>See the <a href="../cli/overview/">CLI Reference</a> for detailed parameter descriptions and examples.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.expand", "navigation.footer", "navigation.tracking", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
