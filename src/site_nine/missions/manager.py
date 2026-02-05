@@ -123,6 +123,7 @@ class MissionManager:
 
     def start_mission(self, persona_name: str, role: str, objective: str, mission_file: str | None = None) -> int:
         """Start a new mission"""
+        from site_nine.core.paths import get_opencode_dir
 
         # Generate mission file name if not provided
         if not mission_file:
@@ -173,7 +174,88 @@ class MissionManager:
             {"persona_name": persona_name},
         )
 
+        # Create the mission file
+        self._create_mission_file(
+            mission_file=mission_file,
+            persona_name=persona_name,
+            role=role,
+            codename=codename,
+            objective=objective,
+        )
+
         return mission_id
+
+    def _create_mission_file(
+        self,
+        mission_file: str,
+        persona_name: str,
+        role: str,
+        codename: str,
+        objective: str,
+    ) -> None:
+        """Create initial mission file with frontmatter and structure"""
+        from site_nine.core.paths import get_opencode_dir
+
+        # Get absolute path
+        opencode_dir = get_opencode_dir()
+        project_root = opencode_dir.parent
+        mission_path = project_root / mission_file
+
+        # Ensure parent directory exists
+        mission_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Get current datetime for timestamps
+        now = datetime.now()
+        start_date = now.strftime("%Y-%m-%d")
+        start_time = now.strftime("%H:%M:%S")
+
+        # Get persona info from database for mythology/description
+        persona_info = self.db.execute_query(
+            "SELECT mythology, description FROM personas WHERE name = :name", {"name": persona_name}
+        )
+        mythology = persona_info[0]["mythology"] if persona_info else "Unknown"
+        description = persona_info[0]["description"] if persona_info else ""
+
+        # Create mission file content
+        content = f"""# Mission: {codename}
+
+**Persona:** {persona_name} ({mythology} - {description})  
+**Role:** {role}  
+**Start:** {start_date} {start_time}  
+**End:** TBD  
+**Duration:** TBD  
+**Objective:** {objective}
+
+## Summary
+
+[To be filled in during mission]
+
+## Files Changed
+
+[To be filled in during mission]
+
+## Work Log
+
+### {start_time[:5]} - Mission Start
+- Summoned as {persona_name}, {role} persona
+- Mission codename: {codename}
+- Objective: {objective}
+
+## Outcomes
+
+[To be filled in during mission]
+
+## Next Steps
+
+[To be filled in during mission]
+
+## Technical Notes
+
+[To be filled in during mission]
+"""
+
+        # Write the file
+        mission_path.write_text(content)
 
     def end_mission(self, mission_id: int) -> None:
         """End a mission and update both database and mission file"""
