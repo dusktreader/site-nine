@@ -2,58 +2,8 @@
 
 Quick command references for common development tasks.
 
-> **Note:** For commit message guidelines, see `.opencode/docs/guides/commit-guidelines.md`
-
----
-
-## Testing Procedures
-
-### Running Tests
-
-```bash
-# All tests
-uv run pytest
-
-# Specific test file
-uv run pytest tests/cli/test_task.py
-
-# Specific test
-uv run pytest tests/cli/test_task.py::test_create_task
-
-# With coverage
-uv run pytest --cov=src/s9 --cov-report=term-missing
-
-# Verbose output
-uv run pytest -vv
-```
-
-### Writing Tests
-
-**Test file location:**
-```
-src/s9/cli/task.py  →  tests/cli/test_task.py
-src/s9/core/renderer.py  →  tests/core/test_renderer.py
-```
-
-**Test structure:**
-```python
-import pytest
-from s9.cli.task import create_task
-
-def test_create_task_success():
-    """Test successful task creation"""
-    # Arrange
-    title = "Test task"
-    role = "Engineer"
-    priority = "HIGH"
-    
-    # Act
-    result = create_task(title=title, role=role, priority=priority)
-    
-    # Assert
-    assert result.id.startswith("ENG-H-")
-    assert result.title == title
-```
+> **Note:** For commit message guidelines, see `.opencode/docs/guides/commit-guidelines.md`  
+> **Note:** For testing guidelines and patterns, see `.opencode/docs/guides/testing.md`
 
 ---
 
