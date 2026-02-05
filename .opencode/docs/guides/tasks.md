@@ -247,6 +247,56 @@ TODO → UNDERWAY → BLOCKED → UNDERWAY → COMPLETE
 TODO → UNDERWAY → PAUSED → UNDERWAY → COMPLETE
 ```
 
+## Quick Command Reference
+
+### Finding Work
+
+```bash
+# Find available work for your role
+s9 task list --role YourRole --status TODO
+
+# Find high-priority work
+s9 task list --priority CRITICAL,HIGH --status TODO
+
+# See what you're working on
+s9 task list --agent "YourName" --status UNDERWAY
+```
+
+### Working on Tasks
+
+```bash
+# Claim a task
+s9 task claim TASK_ID --agent-name "YourName"
+
+# Update progress
+s9 task update TASK_ID --notes "Progress made" --actual-hours 2.0
+
+# Close when done
+s9 task close TASK_ID --status COMPLETE --notes "Task complete"
+```
+
+### Creating Tasks
+
+```bash
+# Create new task (ID auto-generated)
+s9 task create \
+  --title "Task Title" \
+  --objective "What it accomplishes" \
+  --role Engineer \
+  --priority HIGH \
+  --category "Category"
+```
+
+### Viewing Details
+
+```bash
+# Show full task details
+s9 task show TASK_ID
+
+# Generate report
+s9 task report --format markdown
+```
+
 ## Database Location
 
 All task data is stored in:
