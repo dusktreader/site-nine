@@ -111,7 +111,7 @@ Documentarian: I'll update the quickstart:
 ## Documentation Standards
 
 ### Follow the Markdown Style Guide
-Always follow `.opencode/docs/MARKDOWN_STYLE_GUIDE.md`:
+Always follow `.opencode/docs/guides/markdown-style.md`:
 - Use ATX-style headers (`#`)
 - One blank line between sections
 - Code blocks with language tags

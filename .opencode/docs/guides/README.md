@@ -59,6 +59,21 @@ Essential reference for the s9 task system:
 
 ---
 
+### markdown-style.md ⚠️ **REQUIRED FOR ALL MARKDOWN**
+**Markdown formatting standards and style conventions**
+
+Comprehensive markdown formatting guide:
+- Line wrapping (120 characters)
+- Heading styles (ATX format, title case)
+- Code block formatting
+- List and table formatting
+- Blank line spacing rules
+- Emphasis and link styles
+
+**Read before writing any markdown files. Follow these standards strictly.**
+
+---
+
 ## How to Use These Guides
 
 ### For New Contributors

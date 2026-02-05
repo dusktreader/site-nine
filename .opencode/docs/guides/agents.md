@@ -569,7 +569,7 @@ make qa/test-integration
 ### For Development
 - **`.opencode/docs/guides/agents.md`** - Development patterns (READ THIS FIRST!)
 - **`.opencode/site-nine-dev/development/SITE_NINE_DEV.md`** - Site-nine specific patterns
-- **`.opencode/docs/MARKDOWN_STYLE_GUIDE.md`** - Markdown formatting standards (REQUIRED for all markdown files)
+- **`.opencode/docs/guides/markdown-style.md`** - Markdown formatting standards (REQUIRED for all markdown files)
 - **`s9`** - Unified project management CLI (tasks, missions, personas)
 - **`.opencode/data/README.md`** - Complete s9 system reference
 - **`.opencode/work/missions/README.md`** - Mission tracking format and guidelines
