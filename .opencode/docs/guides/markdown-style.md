@@ -119,6 +119,22 @@ s9 task create "Fix bug in parser"
 
 ## Lists
 
+**When to use lists:**
+- Enumerating distinct items, features, or options
+- Sequential steps in a process
+- Multiple related examples or cases
+- Key points that benefit from visual separation
+
+**When NOT to use lists:**
+- Content that flows naturally as prose
+- Explanations that need narrative structure
+- Single items (just use a paragraph)
+- Excessive nesting (more than 2 levels deep)
+
+**Golden rule:** Use lists when enumeration adds clarity. If the content reads better as flowing prose, skip the
+bullets. Lists are tools for clarity, not default formatting.
+
+
 ### Unordered lists
 
 Use hyphens (`-`) as bullets. Use 2-space indentation for nested items.
@@ -132,9 +148,6 @@ Use hyphens (`-`) as bullets. Use 2-space indentation for nested items.
 ```
 
 Place a blank line before and after lists when separating from other block elements (paragraphs, headings, code blocks).
-
-**User-facing documentation:** Avoid overusing bullet lists. Use prose paragraphs when appropriate to improve
-readability and flow. Reserve lists for cases where enumeration adds clarity.
 
 
 ### Ordered lists
