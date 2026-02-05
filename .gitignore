@@ -164,6 +164,7 @@ SESSION_NOTES.md
 .opencode/data/*.db
 .opencode/data/*.db-journal
 .opencode/data/*.db-wal
+.opencode/data/*.db.backup*
 
 # Exception: Track site-nine's own project database (contains historical dev data)
 !.opencode/data/project.db
