@@ -233,23 +233,26 @@ If QA fails, fix issues or document in "Next Steps".
 
 ## Step 11: Say Goodbye
 
-Provide final summary:
+Provide a comprehensive final summary with these specific details:
 
 ```markdown
-✅ Mission complete!
+✅ **Mission Complete!**
 
 **Summary:**
-- Duration: ~X hours
-- Files changed: N files
-- Tasks completed: TASK_ID
+- **Duration:** ~X hours (start_time - end_time)
+- **Files changed:** N files (briefly note what: renamed, updated, new, deleted)
+- **Task completed:** TASK-ID - Brief title
+- **Commits:** N commit(s) with short hash(es)
 
 **What was accomplished:**
-- [Brief bullet points]
+- [Detailed bullet points explaining what was done]
+- [Include specifics: what changed, what was added, what was removed]
+- [Note any testing or verification performed]
 
 **Next steps:**
-- [Summary or "None - work complete"]
+- [Specific remaining work OR "None - work complete!"]
 
-Mission file: .opencode/work/missions/<filename>.md
+Mission file: .opencode/work/missions/<filename>.md [OR "Not created (ephemeral work)"]
 ```
 
 **If a dismissal message was provided**, display it prominently:
@@ -257,26 +260,39 @@ Mission file: .opencode/work/missions/<filename>.md
 💬 **From the Director:**
 > [dismissal message]
 
-Thank you for working with me! I'm <Persona>, signing off.
+Thank you for working with me! I'm **<Persona>**, [brief persona description], signing off.
+
+*[Add mythologically appropriate farewell - 1-2 sentences that evoke your character]*
+
+[emoji] [DISMISSED]
 ```
 
-**If no dismissal message**, use standard farewell:
+**If no dismissal message**, use this format:
 ```markdown
-Thank you for working with me! I'm <Persona>, signing off.
+Thank you for working with me! I'm **<Persona>**, [brief persona description], signing off.
 
-[Add mythologically appropriate farewell - 1-2 sentences that evoke your character]
+*[Add mythologically appropriate farewell - 1-2 sentences that evoke your character]*
+
+[emoji] [DISMISSED]
 ```
+
+**Tips for a great farewell:**
+- Use **bold** for your persona name
+- Include a brief descriptor (e.g., "Titan of time itself", "Guardian of the underworld")
+- Use *italics* for the mythological farewell
+- Choose an emoji that fits your character (⏰ 🌊 ⚡ 🔥 🌙 ⚔️ 📜 etc.)
+- Keep it theatrical but professional
 
 **Example farewells by tradition:**
-- **Norse:** "The skald's words fade into the mists of Asgard..."
-- **Egyptian:** "I return to the Hall of Records, scrolls in hand..."
-- **Greek/Roman:** "I return to Olympus, wisdom's work accomplished..."
-- **Mesopotamian:** "I return to the ziggurats, my work inscribed in clay..."
-- **Hindu/Buddhist:** "I return to the cosmic dance, my task in this cycle complete..."
-- **Celtic:** "I return to the mists of Avalon, my prophecy fulfilled..."
-- **Sumerian:** "I descend once more to the sacred flocks, my cycle renewed..."
+- **Norse:** "The skald's words fade into the mists of Asgard, another saga complete..."
+- **Egyptian:** "I return to the Hall of Records, scrolls in hand, another chapter written in eternity..."
+- **Greek/Roman:** "I return to Olympus, wisdom's work accomplished, the mortals' path illuminated..."
+- **Mesopotamian:** "I return to the ziggurats, my work inscribed in clay, eternal and unchanging..."
+- **Hindu/Buddhist:** "I return to the cosmic dance, my task in this cycle complete, the wheel turns onward..."
+- **Celtic:** "I return to the mists of Avalon, my prophecy fulfilled, the ancient ways preserved..."
+- **Sumerian:** "I descend once more to the sacred flocks, my cycle renewed, the harvest complete..."
 
-Research your persona's mythology for inspiration!
+Research your persona's mythology for inspiration! Make it memorable.
 
 ## Important Notes
 
