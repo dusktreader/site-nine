@@ -201,13 +201,13 @@ The task's status is automatically changed to REVIEW.
 ### Suggesting Persona Names
 
 ```bash
-s9 name suggest <Role> --count <number>
+s9 persona suggest <Role> --count <number>
 ```
 
 Example:
 
 ```bash
-s9 name suggest Operator --count 3
+s9 persona suggest Operator --count 3
 ```
 
 Returns unused persona names for the specified role.
@@ -215,13 +215,13 @@ Returns unused persona names for the specified role.
 ### Setting Persona Biography
 
 ```bash
-s9 name set-bio <persona-name> "<biography-text>"
+s9 persona set-bio <persona-name> "<biography-text>"
 ```
 
 Example:
 
 ```bash
-s9 name set-bio cronos "I am Cronos, the Titan of time itself..."
+s9 persona set-bio cronos "I am Cronos, the Titan of time itself..."
 ```
 
 ## Information & Inspection
@@ -257,7 +257,7 @@ s9 handoff list --json
 s9 mission roles
 
 # 2. Get persona suggestion
-s9 name suggest Operator --count 3
+s9 persona suggest Operator --count 3
 
 # 3. Start mission
 s9 mission start cronos --role Operator --task "System improvements"

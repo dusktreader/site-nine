@@ -1510,12 +1510,12 @@ s9 config validate <file>
 
 ---
 
-### `s9 name list`
+### `s9 persona list`
 
 List persona names with optional filters.
 
 ```bash
-s9 name list [OPTIONS]
+s9 persona list [OPTIONS]
 ```
 
 **Options:**
@@ -1527,17 +1527,17 @@ s9 name list [OPTIONS]
 
 List all names:
 ```bash
-s9 name list
+s9 persona list
 ```
 
 List unused Engineer names:
 ```bash
-s9 name list --role Engineer --unused-only
+s9 persona list --role Engineer --unused-only
 ```
 
 Sort by most-used:
 ```bash
-s9 name list --by-usage
+s9 persona list --by-usage
 ```
 
 **Output:**
@@ -1554,12 +1554,12 @@ s9 name list --by-usage
 
 ---
 
-### `s9 name suggest`
+### `s9 persona suggest`
 
 Suggest unused persona names for a specific role.
 
 ```bash
-s9 name suggest <role> [OPTIONS]
+s9 persona suggest <role> [OPTIONS]
 ```
 
 **Arguments:**
@@ -1572,12 +1572,12 @@ s9 name suggest <role> [OPTIONS]
 
 Get 3 suggestions for Engineer:
 ```bash
-s9 name suggest Engineer
+s9 persona suggest Engineer
 ```
 
 Get 5 suggestions:
 ```bash
-s9 name suggest Documentarian --count 5
+s9 persona suggest Documentarian --count 5
 ```
 
 **Output:**
@@ -1596,12 +1596,12 @@ Suggested names for Engineer:
 
 ---
 
-### `s9 name usage`
+### `s9 persona usage`
 
 Show usage history for a persona name.
 
 ```bash
-s9 name usage <name>
+s9 persona usage <name>
 ```
 
 **Arguments:**
@@ -1609,7 +1609,7 @@ s9 name usage <name>
 
 **Example:**
 ```bash
-s9 name usage atlas
+s9 persona usage atlas
 ```
 
 **Output:**
@@ -1630,12 +1630,12 @@ Missions:
 
 ---
 
-### `s9 name add`
+### `s9 persona add`
 
 Add a new persona name to the database.
 
 ```bash
-s9 name add <name> --role <ROLE> --mythology <MYTHOLOGY> --description <DESCRIPTION>
+s9 persona add <name> --role <ROLE> --mythology <MYTHOLOGY> --description <DESCRIPTION>
 ```
 
 **Arguments:**
@@ -1648,7 +1648,7 @@ s9 name add <name> --role <ROLE> --mythology <MYTHOLOGY> --description <DESCRIPT
 
 **Example:**
 ```bash
-s9 name add sekhmet \
+s9 persona add sekhmet \
   --role Tester \
   --mythology Egyptian \
   --description "Lion-headed goddess of war and destruction"

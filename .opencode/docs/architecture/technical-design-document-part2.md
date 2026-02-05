@@ -51,7 +51,7 @@ steps:
       command: s9 mission roles
     validate:
       type: enum
-      values: [Administrator, Architect, Builder, Tester, Documentarian, Designer, Inspector, Operator]
+      values: [Administrator, Architect, Engineer, Tester, Documentarian, Designer, Inspector, Operator]
     store_as: selected_role
     
   # Step 4: Conditional logic
@@ -65,7 +65,7 @@ steps:
   # Step 5: Loop
   - id: suggest-names
     type: command
-    command: s9 name suggest {selected_role} --count 3
+    command: s9 persona suggest {selected_role} --count 3
     store_as: name_suggestions
     
   - id: select-name

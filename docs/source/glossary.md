@@ -24,7 +24,7 @@ A mythology-based name assigned to an AI agent for a specific mission. Each pers
 **Usage:**
 ```bash
 # Suggest persona names for a role
-s9 name suggest Documentarian --count 3
+s9 persona suggest Documentarian --count 3
 ```
 
 **See also:** [Role](#role), [Mission](#mission)
@@ -715,7 +715,7 @@ The command-line interface for interacting with site-nine, providing commands fo
 - **Task management** - `s9 task create|claim|show|close|list`
 - **Epic management** - `s9 epic create|show|list|abort|sync`
 - **Mission management** - `s9 mission start|end|list|update`
-- **Persona operations** - `s9 name suggest|claim|release`
+- **Persona operations** - `s9 persona suggest|claim|release`
 - **Handoffs** - `s9 handoff create|list|accept|show`
 - **Reviews** - `s9 review create|list|approve`
 

@@ -1,4 +1,4 @@
-"""Persona name management commands"""
+"""Persona management commands"""
 
 import typer
 from loguru import logger
@@ -10,7 +10,7 @@ from site_nine.cli.json_utils import format_json_response, output_json
 from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
 
-app = typer.Typer(help="Manage persona names")
+app = typer.Typer(help="Manage personas")
 console = Console()
 
 # Valid roles matching config.py defaults
@@ -203,7 +203,7 @@ def suggest(
             logger.debug("Suggested 0 personas (JSON)")
             return
         console.print(f"[yellow]No personas found for role: {role}[/yellow]")
-        console.print("[dim]Tip: Add personas with 's9 name add'[/dim]")
+        console.print("[dim]Tip: Add personas with 's9 persona add'[/dim]")
         return
 
     if json_output:

@@ -115,7 +115,7 @@ CREATE TABLE missions (
     id INTEGER PRIMARY KEY,
     codename TEXT NOT NULL,             -- Auto-generated mission codename (e.g., "azure-shadow")
     persona_name TEXT NOT NULL,         -- Persona name (e.g., "kuk", "thoth")
-    role TEXT NOT NULL,                 -- Role (Builder, Tester, etc.)
+    role TEXT NOT NULL,                 -- Role (Engineer, Tester, etc.)
     status TEXT NOT NULL,               -- active, paused, completed
     mission_file TEXT,                  -- Path to mission markdown file
     objective TEXT,
@@ -125,7 +125,7 @@ CREATE TABLE missions (
 
 -- Tasks
 CREATE TABLE tasks (
-    id TEXT PRIMARY KEY,                -- Format: ROLE-PRIORITY-NUMBER (e.g., BLD-H-0003)
+    id TEXT PRIMARY KEY,                -- Format: ROLE-PRIORITY-NUMBER (e.g., ENG-H-0003)
     title TEXT NOT NULL,
     objective TEXT,
     status TEXT NOT NULL,               -- TODO, IN_PROGRESS, COMPLETE
@@ -176,7 +176,7 @@ context = {
     "project_description": "My project description",
     "agent_roles": [
         {"name": "Administrator", "enabled": True},
-        {"name": "Builder", "enabled": True},
+        {"name": "Engineer", "enabled": True},
         # ...
     ],
     "features": {
@@ -228,7 +228,7 @@ features:
 agent_roles:
   - name: Administrator
     enabled: true
-  - name: Builder
+  - name: Engineer
     enabled: true
   - name: Tester
     enabled: true
@@ -268,7 +268,7 @@ Success! Project ready for agent orchestration
 ### 2. Mission Start (`s9 mission start`)
 
 ```
-User runs: s9 mission start <name> --role Builder --task "Build auth"
+User runs: s9 mission start <name> --role Engineer --task "Build auth"
     ↓
 Check persona name availability
     ↓
@@ -284,13 +284,13 @@ Return mission ID for tracking
 ### 3. Task Creation (`s9 task create`)
 
 ```
-User runs: s9 task create --title "Login" --role Builder --priority HIGH
+User runs: s9 task create --title "Login" --role Engineer --priority HIGH
     ↓
-Generate task ID (BLD-H-0001)
+Generate task ID (ENG-H-0001)
     ↓
 Create task record in database
     ↓
-Create task markdown file (.opencode/work/tasks/BLD-H-0001.md)
+Create task markdown file (.opencode/work/tasks/ENG-H-0001.md)
     ↓
 Return task ID
 ```
@@ -386,7 +386,7 @@ EOF
 Add names from your favorite mythology:
 
 ```bash
-s9 name add --name "MyPersona" --role Builder --mythology "Custom"
+s9 persona add --name "MyPersona" --role Engineer --mythology "Custom"
 ```
 
 ---

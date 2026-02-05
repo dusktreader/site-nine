@@ -68,7 +68,7 @@ make qa/test-all
    - **Pro tip:** Use `/summon operator` to start an Operator session immediately
 
 3. Agent suggests or asks for a **persona name** (from any religion's mythology)
-   - **Prefer unused names first** - use `s9 name suggest <Role>` to get unused name suggestions
+   - **Prefer unused names first** - use `s9 persona suggest <Role>` to get unused name suggestions
    - 142+ names available from various mythologies (Greek, Egyptian, Norse, Hindu, Celtic, Japanese, and more)
    - **Reusing names is OK** when good unused names are exhausted, but try fresh names first
    - If name used before, adds roman numeral: `-ii`, `-iii`, `-iv`, etc.
@@ -133,8 +133,8 @@ The agent will use their assigned role and name consistently throughout the sess
 **IMPORTANT: Prefer unused names over reusing existing names.**
 
 Before suggesting a name:
-1. Use `s9 name suggest <Role>` to get unused name suggestions
-2. Use `s9 name usage <name>` to check if a name has been used
+1. Use `s9 persona suggest <Role>` to get unused name suggestions
+2. Use `s9 persona usage <name>` to check if a name has been used
 3. **Always prefer an unused name** from the 142+ names available
 4. Only reuse a name (with roman numeral suffix) when most good names are taken
 
@@ -156,9 +156,9 @@ Before suggesting a name:
 
 **Browse available names**:
 ```bash
-s9 name list --role <Role>        # See all names for a role
-s9 name list --unused-only        # See only unused names
-s9 name suggest <Role> --count 3  # Get 3 unused suggestions
+s9 persona list --role <Role>        # See all names for a role
+s9 persona list --unused-only        # See only unused names
+s9 persona suggest <Role> --count 3  # Get 3 unused suggestions
 ```
 
 
@@ -494,7 +494,7 @@ s9 doctor                   # Run diagnostics (read-only)
 s9 doctor --fix             # Fix issues automatically
 
 # View available persona names
-s9 name suggest <Role>
+s9 persona suggest <Role>
 
 # Start mission (auto-registers and tracks usage)
 s9 mission start <name> --role <Role> --task "..."

@@ -15,7 +15,7 @@
 **Example:**
 ```bash
 # site-nine generates standard agent roles
-s9 init  # Creates Administrator, Builder, Tester, etc.
+s9 init  # Creates Administrator, Engineer, Tester, etc.
 
 # But you can add your own
 echo "# SecurityAuditor" > .opencode/agents/security-auditor.md
@@ -40,7 +40,7 @@ echo "# SecurityAuditor" > .opencode/agents/security-auditor.md
 
 **Example:**
 ```markdown
-# Task: BLD-H-0003 - Implement Login
+# Task: ENG-H-0003 - Implement Login
 
 ## Objective
 Build user authentication system with email/password
@@ -50,7 +50,7 @@ Build user authentication system with email/password
 - [ ] User can log in
 - [ ] Session management works
 
-## Agent: Azazel (Builder)
+## Agent: Azazel (Engineer)
 ## Status: IN_PROGRESS
 ```
 
@@ -92,7 +92,7 @@ Build user authentication system with email/password
 
 **Example conventions:**
 ```
-Task IDs:     BLD-H-0003 (Builder, High priority, task #3)
+Task IDs:     ENG-H-0003 (Engineer, High priority, task #3)
               TST-M-0001 (Tester, Medium priority, task #1)
 
 Session files: 2026-02-02.14:30:00.builder.azazel.implement-auth.md
@@ -205,7 +205,7 @@ Use conventional commits: `feat:`, `fix:`, `docs:`
 - 145+ pre-populated names in database
 - Suggests unused names first
 - Adds roman numerals for reuse (azazel, azazel-ii, azazel-iii)
-- `s9 name suggest Builder` shows unused names for role
+- `s9 persona suggest Engineer` shows unused names for role
 
 **Trade-off:**
 - ✅ Memorable, distinctive, fun
@@ -258,22 +258,22 @@ Use conventional commits: `feat:`, `fix:`, `docs:`
 
 ```bash
 # 1. Create task (standard ID format)
-s9 task create --title "Add rate limiting" --role Builder --priority HIGH
-# → Creates BLD-H-0004 in database + markdown file
+s9 task create --title "Add rate limiting" --role Engineer --priority HIGH
+# → Creates ENG-H-0004 in database + markdown file
 
 # 2. Agent claims task
-s9 task claim BLD-H-0004 --agent azazel
+s9 task claim ENG-H-0004 --agent azazel
 # → Updates database, agent can now work on it
 
 # 3. Agent documents work in markdown
-# .opencode/work/tasks/BLD-H-0004.md gets updated with:
+# .opencode/work/tasks/ENG-H-0004.md gets updated with:
 # - Implementation steps
 # - Files changed
 # - Commit SHAs
 # - Key learnings
 
 # 4. Agent completes task
-s9 task close BLD-H-0004 --status COMPLETE
+s9 task close ENG-H-0004 --status COMPLETE
 # → Updates database, preserves markdown history
 
 # 5. Generate changelog

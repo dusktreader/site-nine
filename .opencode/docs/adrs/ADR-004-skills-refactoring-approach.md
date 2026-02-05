@@ -165,7 +165,7 @@ steps:
     
   - id: suggest-daemon-name
     type: command
-    command: s9 name suggest {role} --count 3
+    command: s9 persona suggest {role} --count 3
     description: Get unused daemon name suggestions
     
   - id: confirm-name

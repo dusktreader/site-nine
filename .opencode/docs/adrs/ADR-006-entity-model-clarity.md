@@ -140,7 +140,7 @@ CREATE TABLE personas (
 CREATE TABLE missions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     persona_name TEXT NOT NULL,      -- Which persona is on this mission
-    role TEXT NOT NULL,              -- Operator, Builder, etc.
+    role TEXT NOT NULL,              -- Operator, Engineer, etc.
     codename TEXT NOT NULL,          -- "swift-thunder", "operation-refactor"
     mission_file TEXT NOT NULL,      -- Path to markdown file
     start_date TEXT NOT NULL,        -- "2026-02-03"
@@ -246,7 +246,7 @@ Mission codenames are prominently displayed in the OpenCode TUI session title, m
 
 **Examples:**
 - "Hemera - Operator - swift-thunder"
-- "Nereus - Builder - quantum-phoenix"  
+- "Nereus - Engineer - quantum-phoenix"  
 - "Brigid - Administrator - void-matrix"
 
 **Note:** Persona name is capitalized (proper noun) in the session title.
@@ -468,7 +468,7 @@ This is a **breaking change** with no backward compatibility. Backup is for disa
 
 **Phase 4: CLI updates**
 - Update commands: `s9 mission` → `s9 mission`
-- Update commands: `s9 name` → `s9 persona`
+- Update commands: `s9 persona` (already renamed from `s9 name`)
 - Update `s9 mission rename-tui` to accept codename parameter (3 positional args)
 - Add codename generation to mission creation
 - Update help text and command documentation

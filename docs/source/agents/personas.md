@@ -99,7 +99,7 @@ Each role has approximately 25-30 personas available, ensuring variety across ma
 See information about a persona:
 
 ```bash
-s9 name show <persona-name>
+s9 persona show <persona-name>
 ```
 
 Output includes:

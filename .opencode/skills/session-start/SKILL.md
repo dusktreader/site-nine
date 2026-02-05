@@ -116,7 +116,7 @@ Stop execution and wait for the Director to restart with correct arguments.
 
 1. Check if persona exists in database:
    ```bash
-   s9 name show <persona-name>
+   s9 persona show <persona-name>
    ```
 
 2. **If persona exists:**
@@ -141,7 +141,7 @@ Stop execution and wait for the Director to restart with correct arguments.
    
 4. **Create the new persona in database:**
    ```bash
-   s9 name add <persona-name> --role <Role> --mythology <mythology-type> --description "<description>"
+   s9 persona add <persona-name> --role <Role> --mythology <mythology-type> --description "<description>"
    ```
 
 5. **Generate and save bio:**
@@ -149,9 +149,9 @@ Stop execution and wait for the Director to restart with correct arguments.
    - Generate a whimsical first-person bio (follow bio guidelines in Step 5c)
    - Display the bio to the Director
    - Save it:
-     ```bash
-     s9 name set-bio <persona-name> "<generated-bio-text>"
-     ```
+      ```bash
+      s9 persona set-bio <persona-name> "<generated-bio-text>"
+      ```
 
 6. Proceed to Step 4 (Register Mission)
 
@@ -161,7 +161,7 @@ Automatically select the first unused persona name:
 
 1. Get suggestions:
    ```bash
-   s9 name suggest <Role> --count 3
+   s9 persona suggest <Role> --count 3
    ```
 
 2. Select the first unused name from the suggestions
@@ -196,7 +196,7 @@ Display the persona's whimsical bio using lazy generation:
 ### Step 5a: Check for existing bio
 
 ```bash
-s9 name show <persona-name>
+s9 persona show <persona-name>
 ```
 
 ### Step 5b: Display bio if available
@@ -218,7 +218,7 @@ s9 name show <persona-name>
 3. **Save it for future use:**
 
 ```bash
-s9 name set-bio <persona-name> "<generated-bio-text>"
+s9 persona set-bio <persona-name> "<generated-bio-text>"
 ```
 
 **Bio Guidelines:**

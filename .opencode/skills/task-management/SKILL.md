@@ -35,15 +35,15 @@ The `pm` script provides unified management of tasks, agent sessions, and daemon
 ```bash
 
 # Task commands
-s9 task create --title "..." --objective "..." --role Builder --priority HIGH  # Task ID auto-generated
-s9 task list --role Builder --active-only
+s9 task create --title "..." --objective "..." --role Engineer --priority HIGH  # Task ID auto-generated
+s9 task list --role Engineer --active-only
 s9 task claim TASK_ID --agent-name "YourName" --agent-id YOUR_ID
 s9 task update TASK_ID --notes "..." --actual-hours X.X
 s9 task close TASK_ID --status COMPLETE --notes "..."
 
-# See also: mission and name commands
+# See also: mission and persona commands
 s9 mission start <name> --role <Role> --session-file "..." --task-summary "..."
-s9 name suggest <Role>
+s9 persona suggest <Role>
 ```
 
 **Documentation:**
@@ -78,7 +78,7 @@ s9 task <command> [options]
 s9 task create \
   --title "Brief task title" \
   --objective "What this task accomplishes" \
-  --role {Administrator|Architect|Builder|Tester|Documentarian|Designer|Inspector|Operator|Historian} \
+  --role {Administrator|Architect|Engineer|Tester|Documentarian|Designer|Inspector|Operator|Historian} \
   --priority {CRITICAL|HIGH|MEDIUM|LOW} \
   [--category "Category name"] \
   [--description "Detailed description"]
@@ -90,14 +90,14 @@ s9 task create \
 
 **Task IDs are auto-generated** using the format: `PREFIX-PRIORITY-NUMBER`
 
-- **PREFIX**: 3-letter role code (e.g., OPR for Operator, BLD for Builder)
+- **PREFIX**: 3-letter role code (e.g., OPR for Operator, BLD for Engineer)
 - **PRIORITY**: Single letter (C=Critical, H=High, M=Medium, L=Low)
 - **NUMBER**: 4-digit global sequential counter (0001-9999)
 
 **Role Prefixes:**
 - `MAN` - Administrator
 - `ARC` - Architect  
-- `BLD` - Builder
+- `BLD` - Engineer
 - `TST` - Tester
 - `DOC` - Documentarian
 - `DES` - Designer
@@ -107,7 +107,7 @@ s9 task create \
 
 **Examples:**
 - `OPR-H-0001` - First high-priority Operator task
-- `BLD-C-0005` - Critical Builder task (fifth task overall)
+- `ENG-C-0005` - Critical Engineer task (fifth task overall)
 - `DOC-M-0042` - Medium-priority Documentarian task (42nd task overall)
 
 The number increments globally across all roles and priorities, ensuring each task has a unique ID.
@@ -144,7 +144,7 @@ Assign to the role that will do most of the work:
 
 - **Administrator** - Planning, coordination, prioritization
 - **Architect** - System design, ADRs, technical direction
-- **Builder** - Implementation, coding, integration
+- **Engineer** - Implementation, coding, integration
 - **Tester** - Test writing, validation, QA
 - **Documentarian** - Documentation, guides, examples
 - **Designer** - UI/UX, visual design
@@ -187,22 +187,22 @@ s9 task create H038 \
 ### Example: Creating a Task
 
 ```bash
-# Create a high-priority Builder task (ID will be auto-generated)
+# Create a high-priority Engineer task (ID will be auto-generated)
 s9 task create \
   --title "Implement Rate Limiting Middleware" \
   --objective "Add rate limiting to protect API endpoints from abuse" \
-  --role Builder \
+  --role Engineer \
   --priority HIGH \
   --category "Security" \
   --description "Implement token bucket rate limiting with configurable limits per endpoint"
 
-# Output: ✓ Created task BLD-H-0007: Implement Rate Limiting Middleware
+# Output: ✓ Created task ENG-H-0007: Implement Rate Limiting Middleware
 ```
 
 **What happens:**
-1. ✅ Task ID auto-generated (e.g., BLD-H-0007)
+1. ✅ Task ID auto-generated (e.g., ENG-H-0007)
 2. ✅ Database entry created in `project.db`
-3. ✅ Markdown file created at `.opencode/work/planning/BLD-H-0007.md` with template
+3. ✅ Markdown file created at `.opencode/work/planning/ENG-H-0007.md` with template
 4. ✅ Status set to `TODO`
 
 ### Validation
@@ -218,7 +218,7 @@ The CLI validates:
 Verify task was created:
 ```bash
 # Use the auto-generated task ID from the create command output
-s9 task show BLD-H-0007
+s9 task show ENG-H-0007
 ```
 
 ---
@@ -236,7 +236,7 @@ s9 task list --status TODO,UNDERWAY
 
 **By role:**
 ```bash
-s9 task list --role Builder --status TODO
+s9 task list --role Engineer --status TODO
 s9 task list --role Administrator --status TODO
 ```
 
@@ -286,7 +286,7 @@ s9 task report --format table
 s9 task report --format json
 
 # Filter by role
-s9 task report --role Builder --format markdown
+s9 task report --role Engineer --format markdown
 ```
 
 ---
@@ -313,17 +313,17 @@ s9 task claim TASK_ID --agent-name "YourName"
 
 Use your daemon name from the session:
 - ✅ "Goibniu", "Ishtar", "Thoth-iii"
-- ❌ Not "Builder" or "Administrator" (that's your role, not name)
+- ❌ Not "Engineer" or "Administrator" (that's your role, not name)
 
 ### Example: Claiming a Task
 
 ```bash
 
 # Find available tasks for your role
-s9 task list --role Builder --status TODO
+s9 task list --role Engineer --status TODO
 
 # Output shows H037 is available
-# H037 | Implement Rate Limiting Middleware | TODO | HIGH | Builder
+# H037 | Implement Rate Limiting Middleware | TODO | HIGH | Engineer
 
 # Claim it
 s9 task claim H037 --agent-name "Goibniu"
@@ -582,7 +582,7 @@ TODO (created)
 ```bash
 
 # 1. Find work
-s9 task list --role Builder --status TODO
+s9 task list --role Engineer --status TODO
 
 # 2. Claim task
 s9 task claim H037 --agent-name "Goibniu"
@@ -633,7 +633,7 @@ s9 task update H038 --status UNDERWAY --notes "H037 complete, resuming"
 s9 task create --title "Design Gateway" --objective "Design gateway architecture" --role Architect --priority HIGH
 
 # Create implementation task
-s9 task create --title "Implement Gateway" --objective "Implement gateway" --role Builder --priority HIGH
+s9 task create --title "Implement Gateway" --objective "Implement gateway" --role Engineer --priority HIGH
 
 # Create testing task  
 s9 task create --title "Test Gateway" --objective "Test gateway" --role Tester --priority HIGH
@@ -734,7 +734,7 @@ s9 task create --title "Test Gateway" --objective "Test gateway" --role Tester -
 ### Role Values
 - `Administrator` - Planning, coordination
 - `Architect` - Design, ADRs
-- `Builder` - Implementation
+- `Engineer` - Implementation
 - `Tester` - Testing, QA
 - `Documentarian` - Documentation
 - `Designer` - UI/UX design
