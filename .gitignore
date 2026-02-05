@@ -159,3 +159,11 @@ SESSION_NOTES.md
 .opencode/package-lock.json
 .opencode/bun.lock
 .opencode/s9-config.yaml
+
+# Database files (generated locally, should not be committed)
+.opencode/data/*.db
+.opencode/data/*.db-journal
+.opencode/data/*.db-wal
+
+# Exception: Track site-nine's own project database (contains historical dev data)
+!.opencode/data/project.db
