@@ -129,6 +129,10 @@ Inspector: Security audit complete:
 
 ## Code Review Checklist
 
+**For comprehensive checklist and best practices, see:** `.opencode/docs/guides/code-review.md`
+
+Quick checklist for reviews:
+
 ### Functionality
 - [ ] Does code work as intended?
 - [ ] Are edge cases handled?

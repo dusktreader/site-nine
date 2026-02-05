@@ -4,39 +4,9 @@ Quick command references for common development tasks.
 
 > **Note:** For commit message guidelines, see `.opencode/docs/guides/commit-guidelines.md`  
 > **Note:** For testing guidelines and patterns, see `.opencode/docs/guides/testing.md`  
+> **Note:** For code review checklist and best practices, see `.opencode/docs/guides/code-review.md`  
 > **Note:** For task management workflow, use the `task-management` skill  
 > **Note:** For mission/session workflows, use the `session-start` and `session-end` skills
-
----
-
-## Code Review Checklist
-
-Before submitting PR or merging:
-
-**Code Quality:**
-- [ ] Follows existing code patterns
-- [ ] Has type hints on all functions
-- [ ] Has docstrings on public APIs
-- [ ] No commented-out code
-- [ ] No debug print statements
-
-**Testing:**
-- [ ] All tests pass (`make qa/test`)
-- [ ] New features have tests
-- [ ] Edge cases covered
-- [ ] Test coverage >85%
-
-**Documentation:**
-- [ ] User docs updated (if user-facing)
-- [ ] Docstrings added/updated
-- [ ] CHANGELOG entry (if applicable)
-- [ ] README updated (if needed)
-
-**Git:**
-- [ ] Commits follow Conventional Commits
-- [ ] Persona attribution in commits
-- [ ] Commit messages are clear
-- [ ] No merge commits (rebase preferred)
 
 ---
 
