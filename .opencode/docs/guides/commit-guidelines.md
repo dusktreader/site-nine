@@ -63,6 +63,22 @@ changes
 4. Commit with proper format
 5. Push when ready
 
+### Before Every Commit
+
+Always run quality checks before committing:
+
+```bash
+# Run all quality checks
+make qa
+
+# Or run individually:
+make qa/format    # Format code with ruff
+make qa/lint      # Lint with ruff
+make qa/test      # Run pytest
+```
+
+This ensures code quality and prevents CI failures.
+
 ## Related
 
 - **Development Procedures:** `.opencode/docs/procedures/README.md` - Command references for common tasks

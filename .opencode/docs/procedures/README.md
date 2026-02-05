@@ -8,18 +8,6 @@ Quick command references for common development tasks.
 
 ## Testing Procedures
 
-### Before Every Commit
-
-```bash
-# Run all quality checks
-make qa
-
-# Or run individually:
-make qa/format    # Format code with ruff
-make qa/lint      # Lint with ruff
-make qa/test      # Run pytest
-```
-
 ### Running Tests
 
 ```bash
