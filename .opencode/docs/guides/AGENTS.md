@@ -16,7 +16,7 @@ You MUST read these files IN ORDER before responding:
 
 1. This file (`.opencode/docs/guides/AGENTS.md`) - Complete development guide (CRITICAL)
 2. `.opencode/site-nine-dev/development/SITE_NINE_DEV.md` - Site-nine specific patterns
-3. `.opencode/docs/procedures/COMMIT_GUIDELINES.md` - Commit format
+3. `.opencode/docs/guides/commit-guidelines.md` - Commit format
 
 Use the Read tool to read ALL files. Do NOT skip this step.
 
@@ -180,7 +180,7 @@ git commit -m "docs(readme): update setup guide [Persona: Seraphina - Documentar
 4. Commit with conventional format
 5. Repeat for next unit of work
 
-**See**: `.opencode/docs/procedures/COMMIT_GUIDELINES.md` for complete reference and examples.
+**See**: `.opencode/docs/guides/commit-guidelines.md` for complete reference and examples.
 
 ### Task Artifact Updates
 
@@ -575,7 +575,7 @@ make qa/test-integration
 - **`.opencode/work/missions/README.md`** - Mission tracking format and guidelines
 - **`.opencode/work/planning/build.md`** - Implementation phases
 - **`.opencode/work/planning/PROJECT_STATUS.md`** - Current project status and progress (use this!)
-- **`.opencode/docs/procedures/COMMIT_GUIDELINES.md`** - Commit format reference
+- **`.opencode/docs/guides/commit-guidelines.md`** - Commit format reference
 - **`.opencode/docs/procedures/TASK_WORKFLOW.md`** - Task-first documentation workflow
 - **`Makefile`** - Development commands
 - **`.env.example`** - Configuration template
@@ -628,7 +628,7 @@ site-nine/
 - **Current status**: See `.opencode/work/planning/PROJECT_STATUS.md`
 - **Session tracking**: See `.opencode/work/sessions/README.md`
 - **Commands**: Run `make help`
-- **Commit format**: See `.opencode/docs/procedures/COMMIT_GUIDELINES.md`
+- **Commit format**: See `.opencode/docs/guides/commit-guidelines.md`
 - **Task workflow**: See `.opencode/docs/procedures/TASK_WORKFLOW.md`
 - **Change history**: Run `s9 changelog`
 - **Workflows**: See `.opencode/docs/procedures/WORKFLOWS.md`

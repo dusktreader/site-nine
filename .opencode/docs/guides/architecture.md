@@ -202,10 +202,10 @@ context = {
 │   └── ...
 ├── guides/
 │   ├── AGENTS.md                # From templates/guides/AGENTS.md.j2
+│   ├── commit-guidelines.md
 │   └── ...
 └── procedures/
-    ├── COMMIT_GUIDELINES.md
-    └── ...
+    └── README.md                # Command references
 ```
 
 ### 4. Configuration System (`src/s9/core/config.py`)
