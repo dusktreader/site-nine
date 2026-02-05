@@ -4,51 +4,8 @@ Quick command references for common development tasks.
 
 > **Note:** For commit message guidelines, see `.opencode/docs/guides/commit-guidelines.md`  
 > **Note:** For testing guidelines and patterns, see `.opencode/docs/guides/testing.md`  
-> **Note:** For task management workflow, use the `task-management` skill
-
----
-
-## Agent Session Workflow
-
-### Starting a Session
-
-```bash
-# Start mission
-s9 mission start azazel \
-  --role Engineer \
-  --task "Implement task dependencies"
-
-# Returns mission ID: 42
-```
-
-### During Session
-
-- Update task artifacts as you work
-- Commit frequently with proper format
-- Run tests before committing
-
-### Ending Session
-
-```bash
-# End mission
-s9 mission end 42
-
-# Or if interrupted
-s9 mission end 42 --reason "Need to switch tasks"
-```
-
-### Session Files
-
-Sessions auto-create files in `.opencode/work/missions/`:
-```
-2026-02-02.14:30:00.builder.azazel.implement-dependencies.md
-```
-
-Update these files with:
-- Work log (what you did)
-- Decisions made
-- Issues encountered
-- Next steps
+> **Note:** For task management workflow, use the `task-management` skill  
+> **Note:** For mission/session workflows, use the `session-start` and `session-end` skills
 
 ---
 
