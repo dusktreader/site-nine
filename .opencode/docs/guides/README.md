@@ -4,7 +4,7 @@ Essential guides for developing site-nine.
 
 ## Core Guides
 
-### agents.md ⭐ **START HERE**
+### agents.md ⭐ **START HERE FOR DEVELOPMENT**
 **Development patterns and best practices for working on site-nine**
 
 This is THE most important document for agents. Contains:
@@ -42,6 +42,20 @@ Why we made the choices we made:
 - What we value and why
 
 **Read when making design decisions or understanding project priorities.**
+
+---
+
+### tasks.md
+**Task management system reference**
+
+Essential reference for the s9 task system:
+- Task ID format and structure
+- Valid status values (TODO, UNDERWAY, BLOCKED, etc.)
+- Priority levels (CRITICAL, HIGH, MEDIUM, LOW)
+- Task lifecycle overview
+- Role prefixes and values
+
+**Read when working with tasks or learning the task system.**
 
 ---
 

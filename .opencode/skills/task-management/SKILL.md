@@ -133,34 +133,6 @@ s9 task show TASK_ID
 s9 task report --format markdown
 ```
 
-## Valid Values Reference
-
-### Status Values
-- `TODO` - Not started
-- `UNDERWAY` - In progress
-- `BLOCKED` - Can't proceed
-- `PAUSED` - Temporarily stopped
-- `REVIEW` - Awaiting review
-- `COMPLETE` - Finished
-- `ABORTED` - Cancelled
-
-### Priority Values
-- `CRITICAL` - Immediate action required
-- `HIGH` - Important, do soon
-- `MEDIUM` - Nice to have
-- `LOW` - Do when time permits
-
-### Role Values
-- `Administrator` - Planning, coordination
-- `Architect` - Design, ADRs
-- `Engineer` - Implementation
-- `Tester` - Testing, QA
-- `Documentarian` - Documentation
-- `Designer` - UI/UX design
-- `Inspector` - Reviews, audits
-- `Operator` - Deployment, infrastructure
-- `Historian` - Recording decisions
-
 ## Common Workflows
 
 ### Workflow 1: Complete a Task End-to-End
@@ -209,33 +181,21 @@ s9 task close OPR-H-0038 --status BLOCKED --notes "Blocked by BLD-H-0037"
 s9 task update OPR-H-0038 --status UNDERWAY --notes "BLD-H-0037 complete, resuming"
 ```
 
-## Task ID Format
+## Reference Information
 
-Task IDs are auto-generated using format: `PREFIX-PRIORITY-NUMBER`
-
-**Examples:**
-- `BLD-H-0037` - Builder (Engineer), High priority, task #37
-- `OPR-C-0003` - Operator, Critical priority, task #3
-- `DOC-M-0019` - Documentarian, Medium priority, task #19
-
-**Role Prefixes:**
-- `MAN` - Administrator
-- `ARC` - Architect
-- `BLD` - Engineer
-- `TST` - Tester
-- `DOC` - Documentarian
-- `DES` - Designer
-- `INS` - Inspector
-- `OPR` - Operator
-- `HIS` - Historian
-
-**Priority Letters:**
-- `C` - Critical
-- `H` - High
-- `M` - Medium
-- `L` - Low
+For detailed reference information, see **`.opencode/docs/guides/tasks.md`**:
+- Task ID format and structure
+- Valid status values and when to use them
+- Priority levels and guidelines  
+- Role prefixes
+- Task lifecycle diagrams
 
 ## See Also
+
+**Guides:**
+- `.opencode/docs/guides/tasks.md` - Task system reference (statuses, priorities, ID format)
+- `.opencode/docs/guides/task-sizing.md` - Task sizing guidelines
+- `.opencode/docs/roles/README.md` - Detailed role descriptions
 
 **Documentation:**
 - `.opencode/data/README.md` - Complete s9 system reference
