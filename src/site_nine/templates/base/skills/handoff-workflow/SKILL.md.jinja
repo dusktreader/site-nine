@@ -115,11 +115,10 @@ git log --oneline -5 --pretty=format:"%h - %s"
 
 ```bash
 # Check for tasks claimed by you
-cd .opencode/scripts
-./pm task mine --agent-name "YourName"
+s9 task mine --agent-name "YourName"
 
 # Show task details
-./pm task show TASK_ID
+s9 task show TASK_ID
 ```
 
 **Capture:**
@@ -366,7 +365,7 @@ Inspector finds issues → /handoff Engineer → Engineer improves
 - Session file is recommended but not strictly required
 
 ### "I don't know what to hand off"
-- Check your active tasks: `cd .opencode/scripts && ./pm task mine --agent-name "YourName"`
+- Check your active tasks: `s9 task mine --agent-name "YourName"`
 - Review your recent commits: `git log -5`
 - Read your session file for context
 - Ask the user: "What should I hand off to [Role]?"
@@ -402,8 +401,7 @@ git status
 # On branch feature/query-caching
 # nothing to commit
 
-cd .opencode/scripts
-./pm task list --status TODO --role Engineer
+s9 task list --status TODO --role Engineer
 # H040 - Implement database query caching (TODO)
 
 # Step 5: Create handoff
@@ -429,8 +427,7 @@ git status
 git log -1
 # feat(database): implement query caching [Agent: Engineer - Goibniu]
 
-cd .opencode/scripts
-./pm task show H040
+s9 task show H040
 # Status: UNDERWAY, 90% complete
 
 # Step 5: Create handoff
@@ -454,8 +451,7 @@ git status
 # On branch feature/query-caching
 # nothing to commit
 
-cd .opencode/scripts
-./pm task show H040
+s9 task show H040
 # Status: REVIEW
 
 # Step 4: Identify issues
@@ -477,7 +473,7 @@ cd .opencode/scripts
 # 1. Check current state
 git status
 git branch --show-current
-cd .opencode/scripts && ./pm task mine --agent-name "YourName"
+s9 task mine --agent-name "YourName"
 
 # 2. Determine target role
 # (User specifies or you ask)

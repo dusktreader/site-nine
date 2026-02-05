@@ -27,14 +27,13 @@ This gives you a bird's-eye view of all project work.
 The new `pm` script provides unified management:
 
 ```bash
-cd .opencode/scripts
 
 # Generate report (active tasks only)
-./pm task report --active-only
+s9 task report --active-only
 
 # List tasks with filters
-./pm task list --role Engineer --active-only
-./pm task list --status TODO --priority HIGH
+s9 task list --role Engineer --active-only
+s9 task list --status TODO --priority HIGH
 ```
 
 **Legacy System (Still Available)**
@@ -64,7 +63,7 @@ Use this skill when:
 
 **Note:** For a comprehensive project overview including active sessions and project stats, use the dashboard instead:
 ```bash
-cd .opencode/scripts && ./pm dashboard
+s9 dashboard
 ```
 
 Don't use when:
@@ -84,8 +83,7 @@ Don't use when:
 If the user wants comprehensive project status (not just tasks), use the dashboard:
 
 ```bash
-cd .opencode/scripts
-./pm dashboard [--compact] [--role ROLE]
+s9 dashboard [--compact] [--role ROLE]
 ```
 
 This shows:
@@ -102,8 +100,7 @@ The dashboard is particularly useful when starting a session or planning work.
 **Option A: New PM System (Recommended)**
 
 ```bash
-cd .opencode/scripts
-./pm task report --active-only
+s9 task report --active-only
 ```
 
 **Option B: Legacy System**
@@ -446,9 +443,8 @@ cd .opencode/tasks && ./tasks.py report
 
 ## See Also
 
-**New PM System:**
-- `.opencode/scripts/README.md` - Quick start guide for unified PM system
-- `.opencode/data/README.md` - Complete PM system reference (includes dashboard documentation)
+**s9 CLI:**
+- `.opencode/data/README.md` - Complete s9 system reference (includes dashboard documentation)
 - `.opencode/commands/tasks.md` - `/tasks` command
 
 **Dashboard Command:**

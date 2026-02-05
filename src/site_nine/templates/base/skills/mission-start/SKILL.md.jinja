@@ -24,7 +24,7 @@ I help you start a new development session on the {{ project_name }} project by:
 Run the project dashboard:
 
 ```bash
-cd .opencode/scripts && ./pm dashboard --compact
+s9 dashboard --compact
 ```
 
 Then present a **concise table** to help the user choose the right role:
@@ -116,7 +116,7 @@ All daemon names are now stored in the project management database. Use the `pm`
 Use the pm script to get unused name suggestions for the role:
 
 ```bash
-cd .opencode/scripts && ./pm name suggest <Role> --count 3
+s9 name suggest <Role> --count 3
 ```
 
 This shows 3 unused or least-used names appropriate for the role, with descriptions.
@@ -140,7 +140,7 @@ Suggested names for Operator:
 If suggesting a specific name, check its usage:
 
 ```bash
-cd .opencode/scripts && ./pm name usage <chosen-name>
+s9 name usage <chosen-name>
 ```
 
 This shows:
@@ -266,7 +266,7 @@ Session started with /summon command.
 After creating the session file, register the agent in the project database:
 
 ```bash
-cd .opencode/scripts && ./pm agent start <full-name-with-suffix> \
+s9 agent start <full-name-with-suffix> \
   --role <Role> \
   --session-file "<path-to-session-file>" \
   --task-summary "<brief-summary>"
@@ -274,7 +274,7 @@ cd .opencode/scripts && ./pm agent start <full-name-with-suffix> \
 
 **Example:**
 ```bash
-cd .opencode/scripts && ./pm agent start terminus \
+s9 agent start terminus \
   --role Operator \
   --session-file ".opencode/sessions/2026-01-30.09:15:55.operator.terminus.expand-task-db.md" \
   --task-summary "expand-task-db"
@@ -359,12 +359,12 @@ After sharing your mythological background, automatically rename the OpenCode TU
 
 **Run this command:**
 ```bash
-cd .opencode/scripts && ./pm agent rename-tui <name> <Role>
+s9 agent rename-tui <name> <Role>
 ```
 
 **Example:**
 ```bash
-cd .opencode/scripts && ./pm agent rename-tui brigid Manager
+s9 agent rename-tui brigid Manager
 ```
 
 **This command:**
@@ -513,7 +513,7 @@ I've reviewed the project documentation. Let me check the project dashboard...
 Run the dashboard to see current status:
 
 ```bash
-cd .opencode/scripts && ./pm dashboard --compact
+s9 dashboard --compact
 ```
 
 Then summarize what you see:
@@ -530,7 +530,7 @@ Then summarize what you see:
 
 **To find more tasks for my role:**
 ```bash
-cd .opencode/scripts && ./pm task list --role [Role] --active-only
+s9 task list --role [Role] --active-only
 ```
 
 **What would you like me to work on?**

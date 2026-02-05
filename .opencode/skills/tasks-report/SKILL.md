@@ -451,9 +451,8 @@ cd .opencode/tasks && ./tasks.py report
 
 ## See Also
 
-**New PM System:**
-- `.opencode/scripts/README.md` - Quick start guide for unified PM system
-- `.opencode/data/README.md` - Complete PM system reference (includes dashboard documentation)
+**s9 CLI:**
+- `.opencode/data/README.md` - Complete s9 system reference (includes dashboard documentation)
 - `.opencode/commands/tasks.md` - `/tasks` command
 
 **Dashboard Command:**

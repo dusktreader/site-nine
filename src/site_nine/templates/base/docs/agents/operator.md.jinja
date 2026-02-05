@@ -164,27 +164,23 @@ Questions:
 
 ### 3. Implement
 ```bash
-# For scripts
-vim .opencode/scripts/new_utility.py
-chmod +x .opencode/scripts/new_utility.py
+# For documentation
+vim .opencode/docs/guides/new_guide.md
 
 # For agent definitions
-vim .opencode/agents/new_agent.md
+vim .opencode/docs/roles/new_agent.md
 
 # For procedures
-vim .opencode/procedures/new_procedure.md
+vim .opencode/docs/procedures/new_procedure.md
 ```
 
 ### 4. Test
 ```bash
-# Test scripts
-python .opencode/scripts/new_utility.py --dry-run
-
 # Validate markdown
 make qa/lint  # If applicable
 
 # Check cross-references
-grep -r "new_utility" .opencode/
+grep -r "new_guide" .opencode/
 ```
 
 ### 5. Document
@@ -198,8 +194,8 @@ Update:
 ### 6. Deploy
 ```bash
 # Commit with operator attribution
-git add .opencode/scripts/new_utility.py
-git commit -m "feat(scripts): add task queue sync utility [Agent: Operator - Name]"
+git add .opencode/docs/
+git commit -m "docs(guides): add new development guide [Agent: Operator - Name]"
 ```
 
 ## Common Tasks
@@ -208,7 +204,7 @@ git commit -m "feat(scripts): add task queue sync utility [Agent: Operator - Nam
 
 1. **Create agent definition file**
    ```bash
-   vim .opencode/agents/new_agent.md
+   vim .opencode/docs/roles/new_agent.md
    ```
 
 2. **Use template structure** (see existing agents):

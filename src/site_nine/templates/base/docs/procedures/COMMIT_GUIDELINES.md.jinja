@@ -357,14 +357,14 @@ feat: updated docs
 
 ## Workflow Summary
 
-1. **Claim task**: `cd .opencode/scripts && ./pm task claim TASK_ID --agent-name <name>`
+1. **Claim task**: `s9 task claim TASK_ID --agent-name <name>`
 2. **Make changes** to code/docs/tests
 3. **Update task artifact** (.opencode/data/tasks/TASK_ID.md) with progress
 4. **Run `make qa`** to verify quality
 5. **Stage files**: `git add <files> .opencode/data/tasks/TASK_ID.md`
 6. **Commit**: `git commit -m "type(scope): description [Agent: Type & Name] [Task: ID]"`
 7. **Repeat** for next logical unit of work
-8. **Complete task**: `cd .opencode/scripts && ./pm task close TASK_ID`
+8. **Complete task**: `s9 task close TASK_ID`
 
 
 ## Conventional Commits Quick Reference

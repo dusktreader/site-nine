@@ -65,8 +65,7 @@ Look for commits with your agent name in the format: `[Agent: Role - Name]`
 
 If you claimed any tasks, check their status:
 ```bash
-cd .opencode/scripts
-./pm task mine --agent-name "<your-name>"
+s9 task mine --agent-name "<your-name>"
 ```
 
 ## Step 3: Determine Session Status
@@ -170,13 +169,12 @@ If you claimed tasks during this session, close them:
 
 ### Check Tasks
 ```bash
-cd .opencode/scripts
-./pm task mine --agent-name "<your-name>" | grep UNDERWAY
+s9 task mine --agent-name "<your-name>" | grep UNDERWAY
 ```
 
 ### Close Completed Tasks
 ```bash
-./pm task close TASK_ID --status COMPLETE --notes "Brief summary of what was done"
+s9 task close TASK_ID --status COMPLETE --notes "Brief summary of what was done"
 ```
 
 **Status options:**
@@ -187,7 +185,7 @@ cd .opencode/scripts
 ### Update Task Hours
 If you tracked time:
 ```bash
-./pm task update TASK_ID --actual-hours X.X
+s9 task update TASK_ID --actual-hours X.X
 ```
 
 ## Step 5a: Mark Handoffs as Complete (If Applicable)
@@ -263,8 +261,7 @@ If missing details, update the task artifact:
 
 Use the `pm` CLI to update:
 ```bash
-cd .opencode/scripts
-./pm task update TASK_ID
+s9 task update TASK_ID
 ```
 
 ## Step 8: Final Git Check
@@ -438,7 +435,7 @@ If you started without `/summon` and never created a session file:
 ### Forgot what I worked on
 - Check git log: `git log --oneline -20`
 - Check git diff: `git diff main...HEAD --name-status`
-- Check task updates: `cd .opencode/scripts && ./pm task mine --agent-name "your-name"`
+- Check task updates: `s9 task mine --agent-name "your-name"`
 
 ### Session file is corrupted
 - Don't panic - git has history

@@ -46,35 +46,34 @@ Don't create a task for:
 
 ```bash
 # Navigate to scripts directory
-cd .opencode/scripts
 
 # List all tasks
-./pm task list
+s9 task list
 
 # List by status
-./pm task list --status todo
-./pm task list --status underway
-./pm task list --status complete
+s9 task list --status todo
+s9 task list --status underway
+s9 task list --status complete
 
 # Show task details
-./pm task show TASK_ID
+s9 task show TASK_ID
 
 # Create new task
-./pm task create
+s9 task create
 
 # Claim a task
-./pm task claim TASK_ID
+s9 task claim TASK_ID
 
 # Update task status
-./pm task update TASK_ID --status underway
+s9 task update TASK_ID --status underway
 
 # Close task
-./pm task close TASK_ID
+s9 task close TASK_ID
 
 # Generate changelog
-./pm changelog
-./pm changelog --since 2026-01-01
-./pm changelog --format json
+s9 changelog
+s9 changelog --since 2026-01-01
+s9 changelog --format json
 ```
 
 
@@ -542,14 +541,13 @@ Acceptance criteria verified:
 
 ```bash
 # List available tasks
-cd .opencode/scripts
-./pm task list --status todo
+s9 task list --status todo
 
 # Show task details to understand requirements
-./pm task show H027
+s9 task show H027
 
 # Claim the task
-./pm task claim H027
+s9 task claim H027
 ```
 
 ### 2. Read the Task Artifact
@@ -569,7 +567,7 @@ cat .opencode/data/tasks/H027.md
 
 ```bash
 # Update status to UNDERWAY
-./pm task update H027 --status underway
+s9 task update H027 --status underway
 ```
 
 ### 4. Work and Document Progress
@@ -656,7 +654,7 @@ When all acceptance criteria are met:
 # - Key Learnings (insights for future)
 
 # Close the task
-./pm task close H027
+s9 task close H027
 ```
 
 ### 9. Final Commit
@@ -685,8 +683,7 @@ Create a task when you identify work that needs to be done:
 ### Using pm task create
 
 ```bash
-cd .opencode/scripts
-./pm task create
+s9 task create
 ```
 
 This will prompt you for:
@@ -801,19 +798,18 @@ $ git commit -m "docs(task): create task H042 for query cost estimation [Agent: 
 Task artifacts are the source of truth. Generate changelogs on-demand:
 
 ```bash
-cd .opencode/scripts
 
 # Generate full changelog
-./pm changelog
+s9 changelog
 
 # Generate changelog since date
-./pm changelog --since 2026-01-01
+s9 changelog --since 2026-01-01
 
 # Generate JSON format
-./pm changelog --format json
+s9 changelog --format json
 
 # Generate for specific date range
-./pm changelog --since 2026-01-01 --until 2026-01-31
+s9 changelog --since 2026-01-01 --until 2026-01-31
 ```
 
 The changelog is generated from:

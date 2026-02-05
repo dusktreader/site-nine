@@ -314,7 +314,7 @@ Task artifacts are located in `.opencode/data/tasks/{TASK_ID}.md`
 
 **Generate changelog from tasks:**
 ```bash
-cd .opencode/scripts && ./pm changelog --since 2026-01-29
+s9 changelog --since 2026-01-29
 ```
 
 **See**: `.opencode/procedures/COMMIT_GUIDELINES.md` for task workflow details.
@@ -448,52 +448,50 @@ When working on {{ project_name }}:
 **New unified PM system** for tasks, agent sessions, and daemon names:
 
 ```bash
-cd .opencode/scripts
 
 # Quick project overview
-./pm dashboard                # Show current status, active work, and available tasks
+s9 dashboard                # Show current status, active work, and available tasks
 
 # Health checks and data integrity
-./pm doctor                   # Run diagnostics (read-only)
-./pm doctor --fix             # Fix issues automatically
+s9 doctor                   # Run diagnostics (read-only)
+s9 doctor --fix             # Fix issues automatically
 
 # View available daemon names
-./pm name suggest <Role>
+s9 name suggest <Role>
 
 # Start agent session (auto-registers and tracks usage)
-./pm agent start <name> --role <Role> --session-file "..." --task-summary "..."
+s9 agent start <name> --role <Role> --session-file "..." --task-summary "..."
 
 # Manage agent sessions
-./pm agent pause <agent-id> [--reason "reason"]     # Pause active session
-./pm agent resume <agent-id>                        # Resume paused session
-./pm agent update <agent-id> [--task-summary "..."] [--role NewRole]  # Update session
+s9 agent pause <agent-id> [--reason "reason"]     # Pause active session
+s9 agent resume <agent-id>                        # Resume paused session
+s9 agent update <agent-id> [--task-summary "..."] [--role NewRole]  # Update session
 
 # Manage tasks
-./pm task next --role <Role>                    # Get smart task suggestions
-./pm task search "<keyword>" --active-only      # Search for tasks
-./pm task mine --agent-name <name>              # Show your claimed tasks
-./pm task list --role <Role> --active-only
-./pm task report --active-only                  # Generate task summary report
-./pm task create <TASK_ID> --from-template <template-id> --var key=value  # Create from template
-./pm task claim <TASK_ID> --agent-name <name> --agent-id <ID>
-./pm task update <TASK_ID> --notes "..." --actual-hours X.X
-./pm task close <TASK_ID> --status COMPLETE
+s9 task next --role <Role>                    # Get smart task suggestions
+s9 task search "<keyword>" --active-only      # Search for tasks
+s9 task mine --agent-name <name>              # Show your claimed tasks
+s9 task list --role <Role> --active-only
+s9 task report --active-only                  # Generate task summary report
+s9 task create <TASK_ID> --from-template <template-id> --var key=value  # Create from template
+s9 task claim <TASK_ID> --agent-name <name> --agent-id <ID>
+s9 task update <TASK_ID> --notes "..." --actual-hours X.X
+s9 task close <TASK_ID> --status COMPLETE
 
 # Manage task templates (reusable task patterns)
-./pm template list                              # See available templates
-./pm template show <template-id>                # View template details
+s9 template list                              # See available templates
+s9 template show <template-id>                # View template details
 
 # End session
-./pm agent end <ID> --status completed
+s9 agent end <ID> --status completed
 ```
 
 **Documentation:**
-- **`.opencode/scripts/README.md`** - Quick start guide with examples
 - **`.opencode/data/README.md`** - Complete reference (schema, commands, workflows)
-- **`.opencode/data/project.db`** - SQLite database (145 daemon names, 72 tasks, agent sessions)
+- **`.opencode/data/project.db`** - SQLite database (personas, tasks, missions)
 
 **Legacy system** (preserved for reference, migration complete):
-- **`.opencode/tasks/tasks.py`** - Original task CLI (use `pm` instead)
+- **`.opencode/tasks/tasks.py`** - Original task CLI (use `s9` instead)
 - **`.opencode/tasks/tasks.db`** - Original database (data migrated to project.db)
 
 
@@ -501,9 +499,8 @@ cd .opencode/scripts
 
 ### For Development
 - **`.opencode/guides/AGENTS.md`** - Development patterns (READ THIS FIRST!)
-- **`.opencode/scripts/pm`** - **Unified project management CLI (tasks, agents, names)**
-- **`.opencode/scripts/README.md`** - **PM system quick start (START HERE!)**
-- **`.opencode/data/README.md`** - **Complete PM system reference**
+- **`s9`** - **Unified project management CLI (tasks, missions, personas)**
+- **`.opencode/data/README.md`** - **Complete s9 system reference**
 - **`.opencode/sessions/README.md`** - Session tracking format and guidelines
 - **`.opencode/planning/build.md`** - Implementation phases
 - **`.opencode/work/planning/PROJECT_STATUS.md`** - **Current project status and progress** (use this!)
@@ -636,7 +633,7 @@ make qa/test-integration
 - **Not sure which agent**: Start a session and choose a role
 - **Commit format**: See `.opencode/procedures/COMMIT_GUIDELINES.md`
 - **Task workflow**: See `.opencode/procedures/TASK_WORKFLOW.md`
-- **Change history**: Run `cd .opencode/scripts && ./pm changelog`
+- **Change history**: Run `s9 changelog`
 - **Workflows**: See `.opencode/procedures/WORKFLOWS.md`
 - **Troubleshooting**: See `.opencode/procedures/TROUBLESHOOTING.md`
 
