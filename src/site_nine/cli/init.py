@@ -111,7 +111,6 @@ def render_all_templates(renderer: TemplateRenderer, output_dir: Path, context: 
         "base/docs/procedures/WORKFLOWS.md.jinja": "docs/procedures/WORKFLOWS.md",
         "base/docs/procedures/TROUBLESHOOTING.md.jinja": "docs/procedures/TROUBLESHOOTING.md",
         "base/docs/procedures/TASK_WORKFLOW.md.jinja": "docs/procedures/TASK_WORKFLOW.md",
-        "base/docs/procedures/README.md.jinja": "docs/procedures/README.md",
         # Planning
         "base/work/planning/PROJECT_STATUS.md.jinja": "work/planning/PROJECT_STATUS.md",
         # Commands

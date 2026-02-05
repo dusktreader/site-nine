@@ -639,4 +639,4 @@ git diff
 - **Testing Guide:** `.opencode/docs/guides/testing.md` - Test patterns and debugging
 - **Commit Guidelines:** `.opencode/docs/guides/commit-guidelines.md` - Git workflow
 - **Architecture Guide:** `.opencode/docs/guides/architecture.md` - System overview
-- **Development Procedures:** `.opencode/docs/procedures/README.md` - Command references
+- **Code Review Guide:** `.opencode/docs/guides/code-review.md` - Review checklist and best practices

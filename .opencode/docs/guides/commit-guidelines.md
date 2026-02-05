@@ -81,5 +81,5 @@ This ensures code quality and prevents CI failures.
 
 ## Related
 
-- **Development Procedures:** `.opencode/docs/procedures/README.md` - Command references for common tasks
+- **Testing Guide:** `.opencode/docs/guides/testing.md` - Testing patterns and best practices
 - **Agent Guide:** `.opencode/docs/guides/AGENTS.md` - Agent workflows and responsibilities
