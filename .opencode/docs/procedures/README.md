@@ -44,11 +44,11 @@ Optional longer description explaining why (not just what).
 
 **Good commits:**
 ```bash
-feat(cli): add task dependency command [Agent: Builder - Azazel]
-fix(database): handle missing daemon names [Agent: Builder - Lucifer]
+feat(cli): add task dependency command [Agent: Engineer - Azazel]
+fix(database): handle missing daemon names [Agent: Engineer - Lucifer]
 docs(readme): update quickstart guide [Agent: Documentarian - Thoth]
-test(cli): add agent session tests [Agent: Builder - Azazel]
-refactor(core): simplify template rendering [Agent: Builder - Mephistopheles]
+test(cli): add agent session tests [Agent: Engineer - Azazel]
+refactor(core): simplify template rendering [Agent: Engineer - Mephistopheles]
 ```
 
 **Bad commits:**
@@ -119,14 +119,14 @@ def test_create_task_success():
     """Test successful task creation"""
     # Arrange
     title = "Test task"
-    role = "Builder"
+    role = "Engineer"
     priority = "HIGH"
     
     # Act
     result = create_task(title=title, role=role, priority=priority)
     
     # Assert
-    assert result.id.startswith("BLD-H-")
+    assert result.id.startswith("ENG-H-")
     assert result.title == title
 ```
 
@@ -140,11 +140,11 @@ def test_create_task_success():
 # Create a new task (auto-generates ID)
 s9 task create \
   --title "Add CLI command for X" \
-  --role Builder \
+  --role Engineer \
   --priority HIGH \
   --objective "Implement feature X with tests"
 
-# Returns: BLD-H-0001
+# Returns: ENG-H-0001
 ```
 
 ### Working on Tasks
@@ -154,16 +154,16 @@ s9 task create \
 s9 task list --status TODO
 
 # Claim a task
-s9 task claim BLD-H-0001 --agent azazel
+s9 task claim ENG-H-0001 --agent azazel
 
 # Update progress
-s9 task update BLD-H-0001 --status IN_PROGRESS
+s9 task update ENG-H-0001 --status IN_PROGRESS
 
 # Add notes (in task markdown file)
-# Edit .opencode/work/tasks/BLD-H-0001.md
+# Edit .opencode/work/tasks/ENG-H-0001.md
 
 # Close task
-s9 task close BLD-H-0001 --status COMPLETE
+s9 task close ENG-H-0001 --status COMPLETE
 ```
 
 ### Task Artifact Structure
@@ -171,7 +171,7 @@ s9 task close BLD-H-0001 --status COMPLETE
 Task files (`.opencode/work/tasks/TASK_ID.md`) should include:
 
 ```markdown
-# Task: BLD-H-0001 - Add CLI command
+# Task: ENG-H-0001 - Add CLI command
 
 ## Objective
 Implement feature X with full test coverage
@@ -210,7 +210,7 @@ COMPLETE - Merged and deployed
 ```bash
 # Start mission
 s9 mission start azazel \
-  --role Builder \
+  --role Engineer \
   --task "Implement task dependencies"
 
 # Returns mission ID: 42

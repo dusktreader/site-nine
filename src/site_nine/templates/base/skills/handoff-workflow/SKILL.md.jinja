@@ -26,7 +26,7 @@ This ensures smooth transitions between agents with no loss of context.
 Use this skill when:
 - ✅ User types `/handoff [Role]`
 - ✅ Manager delegates work to another agent
-- ✅ User says "hand off to Builder/Tester/etc."
+- ✅ User says "hand off to Engineer/Tester/etc."
 - ✅ You're done with your part and someone else needs to continue
 - ✅ Context needs to be preserved for next agent
 
@@ -71,22 +71,22 @@ ls .opencode/sessions/*your-name*.md
 
 Ask the user if not specified:
 
-**If user said: `/handoff Builder`**
-- Target role: Builder
-- Target name: Any Builder agent (to be determined by `/summon`)
+**If user said: `/handoff Engineer`**
+- Target role: Engineer
+- Target name: Any Engineer agent (to be determined by `/summon`)
 
 **If user said: `/handoff`**
 - Ask: "Which agent role should I hand off to?"
-- Options: Manager, Architect, Builder, Tester, Documentarian, Designer, Inspector, Operator
+- Options: Manager, Architect, Engineer, Tester, Documentarian, Designer, Inspector, Operator
 
 **Common handoff patterns:**
-- Manager → Builder (implement)
+- Manager → Engineer (implement)
 - Manager → Architect (design)
-- Builder → Tester (validate)
-- Tester → Builder (fix bugs)
-- Builder → Inspector (review)
+- Engineer → Tester (validate)
+- Tester → Engineer (fix bugs)
+- Engineer → Inspector (review)
 - Inspector → Documentarian (document)
-- Architect → Builder (implement design)
+- Architect → Engineer (implement design)
 
 ### Step 3: Gather Current State
 
@@ -165,7 +165,7 @@ Generate handoff document using the template.
 
 **Example:**
 ```
-.opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.pending.md
+.opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md
 ```
 
 **Use the template at:** `.opencode/templates/handoff-template.md`
@@ -196,13 +196,13 @@ Add handoff information to your session file.
 ## Handoff
 
 **Date:** 2026-01-29 16:30:00
-**To:** Builder
-**Document:** `.opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.pending.md`
+**To:** Engineer
+**Document:** `.opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md`
 
-**Summary:** Handed off task H040 (database query caching) to Builder agent. All planning complete, ready for implementation.
+**Summary:** Handed off task H040 (database query caching) to Engineer agent. All planning complete, ready for implementation.
 
 **Next Agent Should:**
-1. Use `/summon` to start Builder session
+1. Use `/summon` to start Engineer session
 2. Read handoff document
 3. Claim task H040
 4. Begin implementation
@@ -216,11 +216,11 @@ Tell the user the handoff is ready:
 ✅ Handoff created successfully!
 
 **From:** Manager (Ishtar)
-**To:** Builder (any)
+**To:** Engineer (any)
 **Created:** 2026-01-29 16:30:00
 
 **Handoff Document:**
-.opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.pending.md
+.opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md
 
 **Summary:**
 - Task: H040 - Implement database query caching
@@ -230,7 +230,7 @@ Tell the user the handoff is ready:
 - Context: Full planning complete, ready for implementation
 
 **For Next Agent:**
-When the Builder agent starts with `/summon`, they'll be notified of this pending handoff.
+When the Engineer agent starts with `/summon`, they'll be notified of this pending handoff.
 ```
 
 Show them the key points from the handoff.
@@ -268,11 +268,11 @@ Thank you for the session! I'm <Name>, handing off now.
 ✅ Handoff created successfully!
 
 **From:** Manager (Ishtar)
-**To:** Builder (any)
+**To:** Engineer (any)
 **Created:** 2026-01-29 16:30:00
 
 **Handoff Document:**
-.opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.pending.md
+.opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md
 
 **Summary:**
 - Task: H040 - Implement database query caching
@@ -335,27 +335,27 @@ Thank you for the session! I'm Ishtar, handing off now.
 
 **Manager delegates implementation:**
 ```
-Manager completes planning → /handoff Builder → Builder implements
+Manager completes planning → /handoff Engineer → Engineer implements
 ```
 
-**Builder needs validation:**
+**Engineer needs validation:**
 ```
-Builder completes feature → /handoff Tester → Tester validates
+Engineer completes feature → /handoff Tester → Tester validates
 ```
 
 **Tester finds bugs:**
 ```
-Tester identifies issues → /handoff Builder → Builder fixes
+Tester identifies issues → /handoff Engineer → Engineer fixes
 ```
 
-**Builder needs review:**
+**Engineer needs review:**
 ```
-Builder finishes code → /handoff Inspector → Inspector reviews
+Engineer finishes code → /handoff Inspector → Inspector reviews
 ```
 
 **Inspector identifies improvements:**
 ```
-Inspector finds issues → /handoff Builder → Builder improves
+Inspector finds issues → /handoff Engineer → Engineer improves
 ```
 
 ## Troubleshooting
@@ -378,7 +378,7 @@ Inspector finds issues → /handoff Builder → Builder improves
 
 ### "Target role unclear"
 - Ask the user which role should receive the handoff
-- Consider the type of work: code → Builder, tests → Tester, docs → Documentarian
+- Consider the type of work: code → Engineer, tests → Tester, docs → Documentarian
 - Check WORKFLOWS.md for typical patterns
 
 ### "Not sure what to include"
@@ -389,9 +389,9 @@ Inspector finds issues → /handoff Builder → Builder improves
 
 ## Examples
 
-### Example 1: Manager → Builder (Feature Implementation)
+### Example 1: Manager → Engineer (Feature Implementation)
 
-**Context:** Manager planned query caching feature, ready for Builder to implement.
+**Context:** Manager planned query caching feature, ready for Engineer to implement.
 
 ```bash
 # Step 3: Gather state
@@ -403,23 +403,23 @@ git status
 # nothing to commit
 
 cd .opencode/scripts
-./pm task list --status TODO --role Builder
+./pm task list --status TODO --role Engineer
 # H040 - Implement database query caching (TODO)
 
 # Step 5: Create handoff
-# File: .opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.pending.md
+# File: .opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md
 # (Full content using template, specifying task H040, approach, files, etc.)
 
 # Step 6: Update session file
 # Added handoff section to current session
 
 # Step 7: Confirm
-"✅ Handoff created for Builder to implement H040"
+"✅ Handoff created for Engineer to implement H040"
 ```
 
-### Example 2: Builder → Tester (Feature Validation)
+### Example 2: Engineer → Tester (Feature Validation)
 
-**Context:** Builder implemented feature, needs Tester validation.
+**Context:** Engineer implemented feature, needs Tester validation.
 
 ```bash
 # Step 3: Gather state
@@ -427,14 +427,14 @@ git status
 # 3 files changed, 1 file staged for commit
 
 git log -1
-# feat(database): implement query caching [Agent: Builder - Goibniu]
+# feat(database): implement query caching [Agent: Engineer - Goibniu]
 
 cd .opencode/scripts
 ./pm task show H040
 # Status: UNDERWAY, 90% complete
 
 # Step 5: Create handoff
-# File: .opencode/sessions/handoffs/2026-01-29.18:45:00.builder-goibniu.tester.pending.md
+# File: .opencode/sessions/handoffs/2026-01-29.18:45:00.engineer-goibniu.tester.pending.md
 # Context: Feature implemented, all unit tests passing, needs integration testing
 
 # Step 6: Update session
@@ -444,9 +444,9 @@ cd .opencode/scripts
 "✅ Handoff created for Tester to validate query caching feature"
 ```
 
-### Example 3: Tester → Builder (Bug Fixes)
+### Example 3: Tester → Engineer (Bug Fixes)
 
-**Context:** Tester found 2 bugs, needs Builder to fix.
+**Context:** Tester found 2 bugs, needs Engineer to fix.
 
 ```bash
 # Step 3: Gather state
@@ -463,11 +463,11 @@ cd .opencode/scripts
 # Bug 2: TTL not configurable via environment
 
 # Step 5: Create handoff
-# File: .opencode/sessions/handoffs/2026-01-29.19:30:00.tester-eris.builder.pending.md
+# File: .opencode/sessions/handoffs/2026-01-29.19:30:00.tester-eris.engineer.pending.md
 # Lists 2 specific bugs with file locations and reproduction steps
 
 # Step 7: Confirm
-"✅ Handoff created for Builder to fix 2 bugs in query caching"
+"✅ Handoff created for Engineer to fix 2 bugs in query caching"
 ```
 
 ## Quick Reference

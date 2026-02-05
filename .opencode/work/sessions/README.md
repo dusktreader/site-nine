@@ -13,15 +13,15 @@ Each session is a separate markdown file with metadata and detailed work log.
 **Format:** `<YYYY-mm-dd>.<HH:MM:SS>.<role>.<name>.<task-summary>.md`
 
 **Examples:**
-- `2026-01-29.14:30:45.builder.azazel.add-rate-limiting.md`
+- `2026-01-29.14:30:45.engineer.azazel.add-rate-limiting.md`
 - `2026-01-29.16:15:00.documentarian.seraphina.update-readme.md`
 - `2026-01-30.09:00:00.architect.mephistopheles.design-auth-system.md`
-- `2026-01-30.11:00:00.builder.azazel-ii.refactor-queries.md` (second use of "azazel")
+- `2026-01-30.11:00:00.engineer.azazel-ii.refactor-queries.md` (second use of "azazel")
 
 **Components:**
 - `YYYY-mm-dd` - Session start date
 - `HH:MM:SS` - Session start time (24-hour format)
-- `role` - Agent role (lowercase: manager, architect, builder, tester, documentarian, inspector, operator)
+- `role` - Agent role (lowercase: manager, architect, engineer, tester, documentarian, inspector, operator)
 - `name` - Agent daemon name (lowercase, from any religion's mythology)
   - First use: just the name (e.g., `lucifer`)
   - Subsequent uses: append roman numeral (e.g., `lucifer-ii`, `lucifer-iii`)

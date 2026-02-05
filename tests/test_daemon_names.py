@@ -25,21 +25,21 @@ def test_load_daemon_names_has_expected_roles():
     roles = {n["role"] for n in names}
 
     # Should have common roles
-    expected_roles = {"Architect", "Builder", "Designer", "Documentarian"}
+    expected_roles = {"Architect", "Engineer", "Designer", "Documentarian"}
     assert expected_roles.issubset(roles), f"Missing roles: {expected_roles - roles}"
 
 
 def test_get_names_by_role():
     """Test filtering names by role"""
-    builders = get_names_by_role("Builder")
+    engineers = get_names_by_role("Engineer")
 
-    # Should return a list of builders
-    assert isinstance(builders, list)
-    assert len(builders) > 0
+    # Should return a list of engineers
+    assert isinstance(engineers, list)
+    assert len(engineers) > 0
 
-    # All should be builders
-    for name in builders:
-        assert name["role"] == "Builder"
+    # All should be engineers
+    for name in engineers:
+        assert name["role"] == "Engineer"
         assert "name" in name
 
 
@@ -54,24 +54,24 @@ def test_get_names_by_role_nonexistent():
 
 def test_suggest_name_returns_name_for_role():
     """Test suggesting a name for a role"""
-    suggestion = suggest_name("Builder")
+    suggestion = suggest_name("Engineer")
 
     # Should return a name dict
     assert suggestion is not None
     assert "name" in suggestion
     assert "role" in suggestion
-    assert suggestion["role"] == "Builder"
+    assert suggestion["role"] == "Engineer"
 
 
 def test_suggest_name_excludes_names():
     """Test suggesting a name with exclusions"""
-    # Get all builder names
-    all_builders = get_names_by_role("Builder")
-    assert len(all_builders) > 1, "Need at least 2 builders for this test"
+    # Get all engineer names
+    all_engineers = get_names_by_role("Engineer")
+    assert len(all_engineers) > 1, "Need at least 2 engineers for this test"
 
     # Exclude the first one
-    first_name = all_builders[0]["name"]
-    suggestion = suggest_name("Builder", exclude=[first_name])
+    first_name = all_engineers[0]["name"]
+    suggestion = suggest_name("Engineer", exclude=[first_name])
 
     # Should not suggest the excluded name
     assert suggestion is not None
@@ -81,11 +81,11 @@ def test_suggest_name_excludes_names():
 def test_suggest_name_all_excluded():
     """Test suggesting when all names are excluded"""
     # Get all names for a role
-    all_builders = get_names_by_role("Builder")
-    all_names = [b["name"] for b in all_builders]
+    all_engineers = get_names_by_role("Engineer")
+    all_names = [b["name"] for b in all_engineers]
 
     # Exclude everything
-    suggestion = suggest_name("Builder", exclude=all_names)
+    suggestion = suggest_name("Engineer", exclude=all_names)
 
     # Should return None
     assert suggestion is None
@@ -103,7 +103,7 @@ def test_suggest_name_with_usage_count():
     """Test that suggest_name prefers names with lower usage count"""
     # We can't easily test usage_count sorting without mocking,
     # but we can verify the function handles usage_count field
-    suggestion = suggest_name("Builder")
+    suggestion = suggest_name("Engineer")
 
     # Should work and return a suggestion
     assert suggestion is not None

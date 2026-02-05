@@ -155,8 +155,8 @@ class TestEpicManager:
         epic2 = manager.create_epic("Epic 2", "MEDIUM")
 
         # Create task for epic1 to make it UNDERWAY
-        task_id = task_manager.generate_task_id("Builder", "HIGH")
-        task_manager.create_task(task_id, "Test Task", "Builder", "HIGH")
+        task_id = task_manager.generate_task_id("Engineer", "HIGH")
+        task_manager.create_task(task_id, "Test Task", "Engineer", "HIGH")
         manager.link_task(task_id, epic1.id)
         task_manager.update_status(task_id, "UNDERWAY")
 
@@ -213,12 +213,12 @@ class TestEpicManager:
         # Create epic with tasks
         epic = manager.create_epic("Test Epic", "HIGH")
 
-        task1_id = task_manager.generate_task_id("Builder", "HIGH")
-        task_manager.create_task(task1_id, "Task 1", "Builder", "HIGH")
+        task1_id = task_manager.generate_task_id("Engineer", "HIGH")
+        task_manager.create_task(task1_id, "Task 1", "Engineer", "HIGH")
         manager.link_task(task1_id, epic.id)
 
-        task2_id = task_manager.generate_task_id("Builder", "MEDIUM")
-        task_manager.create_task(task2_id, "Task 2", "Builder", "MEDIUM")
+        task2_id = task_manager.generate_task_id("Engineer", "MEDIUM")
+        task_manager.create_task(task2_id, "Task 2", "Engineer", "MEDIUM")
         manager.link_task(task2_id, epic.id)
 
         # Abort epic
@@ -242,8 +242,8 @@ class TestEpicManager:
         epic = manager.create_epic("Test Epic", "HIGH")
 
         # Create tasks
-        task1_id = task_manager.generate_task_id("Builder", "HIGH")
-        task_manager.create_task(task1_id, "Task 1", "Builder", "HIGH")
+        task1_id = task_manager.generate_task_id("Engineer", "HIGH")
+        task_manager.create_task(task1_id, "Task 1", "Engineer", "HIGH")
         manager.link_task(task1_id, epic.id)
 
         task2_id = task_manager.generate_task_id("Tester", "MEDIUM")
@@ -261,8 +261,8 @@ class TestEpicManager:
         task_manager = TaskManager(test_db)
 
         epic = manager.create_epic("Test Epic", "HIGH")
-        task_id = task_manager.generate_task_id("Builder", "HIGH")
-        task_manager.create_task(task_id, "Test Task", "Builder", "HIGH")
+        task_id = task_manager.generate_task_id("Engineer", "HIGH")
+        task_manager.create_task(task_id, "Test Task", "Engineer", "HIGH")
 
         # Link task
         manager.link_task(task_id, epic.id)
@@ -276,8 +276,8 @@ class TestEpicManager:
         manager = EpicManager(test_db)
         task_manager = TaskManager(test_db)
 
-        task_id = task_manager.generate_task_id("Builder", "HIGH")
-        task_manager.create_task(task_id, "Test Task", "Builder", "HIGH")
+        task_id = task_manager.generate_task_id("Engineer", "HIGH")
+        task_manager.create_task(task_id, "Test Task", "Engineer", "HIGH")
 
         with pytest.raises(ValueError, match="not found"):
             manager.link_task(task_id, "EPC-H-9999")
@@ -288,8 +288,8 @@ class TestEpicManager:
         task_manager = TaskManager(test_db)
 
         epic = manager.create_epic("Test Epic", "HIGH")
-        task_id = task_manager.generate_task_id("Builder", "HIGH")
-        task_manager.create_task(task_id, "Test Task", "Builder", "HIGH")
+        task_id = task_manager.generate_task_id("Engineer", "HIGH")
+        task_manager.create_task(task_id, "Test Task", "Engineer", "HIGH")
 
         # Link then unlink
         manager.link_task(task_id, epic.id)
@@ -309,8 +309,8 @@ class TestEpicStatusTriggers:
         task_manager = TaskManager(test_db)
 
         epic = manager.create_epic("Test Epic", "HIGH")
-        task_id = task_manager.generate_task_id("Builder", "HIGH")
-        task_manager.create_task(task_id, "Test Task", "Builder", "HIGH")
+        task_id = task_manager.generate_task_id("Engineer", "HIGH")
+        task_manager.create_task(task_id, "Test Task", "Engineer", "HIGH")
         manager.link_task(task_id, epic.id)
 
         # Update task to UNDERWAY
@@ -328,8 +328,8 @@ class TestEpicStatusTriggers:
         epic = manager.create_epic("Test Epic", "HIGH")
 
         # Create two tasks
-        task1_id = task_manager.generate_task_id("Builder", "HIGH")
-        task_manager.create_task(task1_id, "Task 1", "Builder", "HIGH")
+        task1_id = task_manager.generate_task_id("Engineer", "HIGH")
+        task_manager.create_task(task1_id, "Task 1", "Engineer", "HIGH")
         manager.link_task(task1_id, epic.id)
 
         task2_id = task_manager.generate_task_id("Tester", "MEDIUM")
@@ -360,8 +360,8 @@ class TestEpicStatusTriggers:
 
         epic = manager.create_epic("Test Epic", "HIGH")
 
-        task_id = task_manager.generate_task_id("Builder", "HIGH")
-        task_manager.create_task(task_id, "Test Task", "Builder", "HIGH")
+        task_id = task_manager.generate_task_id("Engineer", "HIGH")
+        task_manager.create_task(task_id, "Test Task", "Engineer", "HIGH")
         manager.link_task(task_id, epic.id)
 
         # Epic should remain TODO
@@ -374,8 +374,8 @@ class TestEpicStatusTriggers:
         task_manager = TaskManager(test_db)
 
         epic = manager.create_epic("Test Epic", "HIGH")
-        task_id = task_manager.generate_task_id("Builder", "HIGH")
-        task_manager.create_task(task_id, "Test Task", "Builder", "HIGH")
+        task_id = task_manager.generate_task_id("Engineer", "HIGH")
+        task_manager.create_task(task_id, "Test Task", "Engineer", "HIGH")
         manager.link_task(task_id, epic.id)
 
         # Abort epic

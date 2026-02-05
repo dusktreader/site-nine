@@ -55,7 +55,7 @@ make qa/test-all
 1. **You say:** "let's go" or "start" (generic opening)
 
 2. Agent asks: **"Which role should I assume?"**
-   - Manager, Architect, Builder, Tester, Documentarian, Designer, or Inspector
+   - Manager, Architect, Engineer, Tester, Documentarian, Designer, or Inspector
 
 3. Agent suggests or asks for a **daemon name** (from any religion's mythology)
    - **Prefer unused names first** - check `.opencode/sessions/` to see which names have been used
@@ -77,14 +77,14 @@ make qa/test-all
 ```
 You: let's go
 Agent: Which role should I assume for this session?
-You: Builder
+You: Engineer
 Agent: Looking at .opencode/sessions/, I see these names have been used: Azazel, Seraphina, Thoth, 
        Azrael, Hermes, Loki.
        
        I suggest "Belial" - a demon king from Hebrew tradition. This name hasn't been used yet.
        Would you like to use this name or choose another?
 You: That works
-Agent: Great! I'm Belial, your Builder agent. What would you like me to work on?
+Agent: Great! I'm Belial, your Engineer agent. What would you like me to work on?
 ```
 
 **Example (Reusing Name When Necessary):**
@@ -155,7 +155,7 @@ ls -1 .opencode/sessions/*.md | grep -oE '\.[^.]+\.[^.]+\.md$' | cut -d'.' -f2 |
 **Example**:
 ```
 "Add rate limiting to external MCP calls"
-→ Manager coordinates: Architect → Builder → Tester → Documentarian
+→ Manager coordinates: Architect → Engineer → Tester → Documentarian
 ```
 
 
@@ -174,18 +174,18 @@ ls -1 .opencode/sessions/*.md | grep -oE '\.[^.]+\.[^.]+\.md$' | cut -d'.' -f2 |
 ```
 
 
-### Builder
+### Engineer
 
-**File**: `agents/builder.md`
+**File**: `agents/engineer.md`
 
 **Use for**: Implementing features, writing code AND tests, fixing bugs
 
-**Invoke**: `@builder`
+**Invoke**: `@engineer`
 
 **Example**:
 ```
 "Implement the rate limiting feature"
-→ Builder writes code + tests, runs QA checks
+→ Engineer writes code + tests, runs QA checks
 ```
 
 
@@ -273,7 +273,7 @@ ls -1 .opencode/sessions/*.md | grep -oE '\.[^.]+\.[^.]+\.md$' | cut -d'.' -f2 |
 
 **Format:**
 ```bash
-git commit -m "feat(database): add connection pooling [Agent: Builder - Azazel]"
+git commit -m "feat(database): add connection pooling [Agent: Engineer - Azazel]"
 git commit -m "docs(readme): update setup guide [Agent: Documentarian - Seraphina-iii]"
 ```
 
@@ -329,14 +329,14 @@ cd .opencode/scripts && ./pm changelog --since 2026-01-29
 1. Manager → @architect (design)
 2. Manager → @designer (UI/UX specs, if user-facing)
 3. You approve
-4. Manager → @builder (implement + tests)
+4. Manager → @engineer (implement + tests)
 5. Manager → @tester (validate)
 6. Manager → @documentarian (docs)
 7. Manager → @inspector (review)
 
 **Fixing a Bug:**
 1. Manager → @tester (reproduce)
-2. Manager → @builder (fix + test)
+2. Manager → @engineer (fix + test)
 3. Manager → @tester (verify)
 
 **See**: `.opencode/procedures/WORKFLOWS.md` for detailed workflows, parallel work patterns, and more examples.
@@ -558,7 +558,7 @@ See `.opencode/work/planning/PROJECT_STATUS.md` for current project status and p
 Each development session begins with the agent asking which role to assume and what name to use. This creates consistency and accountability:
 
 - Agent uses the same name (including suffix) throughout the session
-- Commits include the agent name: `[Agent: Builder - Azazel]` or `[Agent: Designer - Seraphina-iii]`
+- Commits include the agent name: `[Agent: Engineer - Azazel]` or `[Agent: Designer - Seraphina-iii]`
 - Task artifacts document all work done
 - Session history tracks all work done
 
@@ -575,16 +575,16 @@ If you're starting a new task and aren't sure which role is best, choose Manager
 
 The agents are configured to read `.opencode/guides/AGENTS.md` for patterns. Keep it updated with lessons learned.
 
-### 5. Builder Writes Tests, Tester Runs Them
+### 5. Engineer Writes Tests, Tester Runs Them
 
-- **Builder**: Implements features AND writes tests
+- **Engineer**: Implements features AND writes tests
 - **Tester**: Runs tests, manual testing, validation
 
 This distinction ensures tests are written as part of implementation.
 
 ### 6. Approve Designs Before Implementation
 
-When Architect proposes a design, review and approve it before Builder starts. This saves time.
+When Architect proposes a design, review and approve it before Engineer starts. This saves time.
 
 ### 7. Inspector for Reviews, Not Just Bugs
 

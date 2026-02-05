@@ -40,7 +40,7 @@ The new `pm` script provides unified management:
 s9 task report --active-only
 
 # List tasks with filters
-s9 task list --role Builder --active-only
+s9 task list --role Engineer --active-only
 s9 task list --status TODO --priority HIGH
 ```
 
@@ -55,7 +55,7 @@ cd .opencode/tasks
 ./tasks.py report --active-only
 
 # List tasks
-./tasks.py list --role Builder --active-only
+./tasks.py list --role Engineer --active-only
 ```
 
 > **Note:** Both systems work independently. The instructions below apply to both systems as the commands are nearly identical. For the new PM system, use `s9 task` instead of `./tasks.py`.
@@ -224,7 +224,7 @@ cd .opencode/tasks && ./tasks.py list --status BLOCKED
 
 **Filter by role:**
 ```bash
-cd .opencode/tasks && ./tasks.py list --role Builder
+cd .opencode/tasks && ./tasks.py list --role Engineer
 cd .opencode/tasks && ./tasks.py list --role Tester
 ```
 
@@ -236,7 +236,7 @@ cd .opencode/tasks && ./tasks.py list --priority HIGH
 
 **Combine filters:**
 ```bash
-cd .opencode/tasks && ./tasks.py list --status TODO --role Builder --priority HIGH
+cd .opencode/tasks && ./tasks.py list --status TODO --role Engineer --priority HIGH
 ```
 
 Show the filtered results and ask if they want to see more or claim a task.
@@ -433,7 +433,7 @@ cd .opencode/tasks && ./tasks.py report
 ./tasks.py list --status UNDERWAY
 
 # By role
-./tasks.py list --role Builder
+./tasks.py list --role Engineer
 ./tasks.py list --role Tester
 
 # By priority  
@@ -441,7 +441,7 @@ cd .opencode/tasks && ./tasks.py report
 ./tasks.py list --priority CRITICAL
 
 # Combined filters
-./tasks.py list --status TODO --role Builder --priority HIGH
+./tasks.py list --status TODO --role Engineer --priority HIGH
 ```
 
 **Task details:**

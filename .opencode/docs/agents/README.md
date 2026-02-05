@@ -26,7 +26,7 @@ This directory contains agent role definitions for developing site-nine itself.
 
 ---
 
-### Builder
+### Engineer
 **Implementation specialist**
 - Writes code according to designs
 - Implements features
@@ -42,7 +42,7 @@ This directory contains agent role definitions for developing site-nine itself.
 - Runs tests and validates features
 - Manual testing workflows
 - Reports issues found
-- Does NOT write tests (Builder does that)
+- Does NOT write tests (Engineer does that)
 
 **Use for:** Running test suites, manual validation, regression testing
 
@@ -116,9 +116,9 @@ make qa/test             # Run tests
 **Commit Format:**
 ```bash
 # Use Conventional Commits with agent attribution
-git commit -m "feat(cli): add task dependency commands [Agent: Builder - Azazel]"
+git commit -m "feat(cli): add task dependency commands [Agent: Engineer - Azazel]"
 git commit -m "docs(readme): update quickstart guide [Agent: Documentarian - Thoth]"
-git commit -m "fix(database): handle missing task files [Agent: Builder - Azazel]"
+git commit -m "fix(database): handle missing task files [Agent: Engineer - Azazel]"
 ```
 
 **Types:**
@@ -133,7 +133,7 @@ git commit -m "fix(database): handle missing task files [Agent: Builder - Azazel
 
 If working on a task, update the task file:
 ```markdown
-# .opencode/work/tasks/BLD-H-0003.md
+# .opencode/work/tasks/ENG-H-0003.md
 
 ## Size
 **L** (Large - significant feature with testing requirements)
@@ -226,7 +226,7 @@ src/s9/
 - Use t-shirt sizes (XS, S, M, L, XL, XXL) for effort estimates, not time
 - Consider future extensibility
 
-### For Builder
+### For Engineer
 - Write tests alongside code (TDD preferred)
 - Follow existing code patterns
 - Add type hints to all functions

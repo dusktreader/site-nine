@@ -61,7 +61,7 @@ The scope should describe the area of change:
 ### Agent Attribution
 Always include agent type and name in the commit message:
 - `[Agent: Manager]`
-- `[Agent: Builder - Azazel]`
+- `[Agent: Engineer - Azazel]`
 - `[Agent: Architect]`
 - `[Agent: Tester - Mephistopheles]`
 - `[Agent: Designer - Seraphina-iii]` (include suffix if name has been used before)
@@ -81,7 +81,7 @@ Include the task ID if working on a specific task:
 ### Good Commit Messages
 
 ```
-feat(rate-limit): add rate limiting to database tools [Agent: Builder - Azazel] [Task: H015]
+feat(rate-limit): add rate limiting to database tools [Agent: Engineer - Azazel] [Task: H015]
 
 Applied @rate_limited decorator to crol_query_database and
 crol_learn_database tools to protect databases from query overload.
@@ -107,7 +107,7 @@ See task artifact .opencode/data/tasks/H001.md for full context.
 ```
 
 ```
-fix(auth): resolve token validation error [Agent: Builder - Lucifer] [Task: M016]
+fix(auth): resolve token validation error [Agent: Engineer - Lucifer] [Task: M016]
 
 Fixed issue where expired tokens were not being rejected.
 Added proper timestamp comparison with timezone awareness.
@@ -119,7 +119,7 @@ See task artifact .opencode/data/tasks/M016.md for full context.
 ```
 
 ```
-refactor(database): improve query validation performance [Agent: Builder] [Task: L004]
+refactor(database): improve query validation performance [Agent: Engineer] [Task: L004]
 
 Optimized query validation by compiling regexes once at module level
 instead of on every validation call. 3x performance improvement.
@@ -225,10 +225,10 @@ When multiple agents work together on a task:
 feat(rate-limit): add design document [Agent: Architect] [Task: H015]
 # Commit ^
 
-feat(rate-limit): implement RateLimiter class [Agent: Builder] [Task: H015]
+feat(rate-limit): implement RateLimiter class [Agent: Engineer] [Task: H015]
 # Commit ^
 
-feat(rate-limit): apply to database tools [Agent: Builder] [Task: H015]
+feat(rate-limit): apply to database tools [Agent: Engineer] [Task: H015]
 # Commit ^
 
 test(rate-limit): validate with 100 concurrent requests [Agent: Tester] [Task: H015]
@@ -243,15 +243,15 @@ Each agent commits their portion incrementally. Don't wait for everyone to finis
 ### Pattern 2: Parallel Work
 If agents work on different files/components, they can commit in parallel:
 ```
-feat(component-x): implement X component [Agent: Builder - Azazel] [Task: H020]
-feat(component-y): implement Y component [Agent: Builder - Lucifer-ii] [Task: H021]
+feat(component-x): implement X component [Agent: Engineer - Azazel] [Task: H020]
+feat(component-y): implement Y component [Agent: Engineer - Lucifer-ii] [Task: H021]
 docs(readme): update feature list [Agent: Documentarian] [Task: M008]
 ```
 
 ### Pattern 3: Manager Coordinates
 ```
-Manager delegates to Builder: "Implement rate limiting"
-feat(rate-limit): implement core rate limiter [Agent: Builder] [Task: H015]
+Manager delegates to Engineer: "Implement rate limiting"
+feat(rate-limit): implement core rate limiter [Agent: Engineer] [Task: H015]
 
 Manager delegates to Tester: "Validate rate limiting"
 test(rate-limit): add stress tests [Agent: Tester] [Task: H015]

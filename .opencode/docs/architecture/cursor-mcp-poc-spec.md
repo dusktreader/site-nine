@@ -593,7 +593,7 @@ Output: Role selection, daemon name, etc.
 User: "Create a task for implementing auth"
 Cursor: [Invokes s9-task-create]
 Site-nine: Creates task in database
-Output: "Created task BLD-H-0042"
+Output: "Created task ENG-H-0042"
 ```
 
 **Step 4: User lists tasks**

@@ -2,8 +2,8 @@
 """
 Migrate tasks from old ID format to new format.
 
-Old format: [ROLE_PREFIX][NUMBER] (e.g., OP001, BLD001)
-New format: [ROLE_PREFIX]-[PRIORITY]-[NUMBER] (e.g., OPR-H-0001, BLD-H-0003)
+Old format: [ROLE_PREFIX][NUMBER] (e.g., OP001, ENG001)
+New format: [ROLE_PREFIX]-[PRIORITY]-[NUMBER] (e.g., OPR-H-0001, ENG-H-0003)
 
 This script:
 1. Updates task IDs in database
@@ -20,7 +20,7 @@ from pathlib import Path
 # Migration mapping
 OLD_TO_NEW_PREFIX = {
     "OP": "OPR",
-    "BLD": "BLD",
+    "ENG": "ENG",
     "DOC": "DOC",
     "MAN": "MAN",
     "ARC": "ARC",
@@ -33,7 +33,7 @@ OLD_TO_NEW_PREFIX = {
 TASK_MIGRATIONS = {
     "OP001": "OPR-H-0001",  # Operator, HIGH
     "DOC001": "DOC-M-0002",  # Documentarian, MEDIUM
-    "BLD001": "BLD-H-0003",  # Builder, HIGH
+    "ENG001": "ENG-H-0003",  # Engineer, HIGH
     "OP002": "OPR-H-0004",  # Operator, HIGH
     "OP003": "OPR-H-0005",  # Operator, HIGH
     "OP004": "OPR-H-0006",  # Operator, HIGH
@@ -76,7 +76,7 @@ def migrate_database():
                 priority TEXT NOT NULL
                     CHECK(priority IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')),
                 role TEXT NOT NULL
-                    CHECK(role IN ('Manager', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+                    CHECK(role IN ('Manager', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
                 category TEXT,
                 agent_name TEXT,
                 agent_id INTEGER,
@@ -268,8 +268,8 @@ def main():
     print("=" * 60)
     print()
     print("This will migrate task IDs from old format to new format:")
-    print("  Old: OP001, BLD001, DOC001")
-    print("  New: OPR-H-0001, BLD-H-0003, DOC-M-0002")
+    print("  Old: OP001, ENG001, DOC001")
+    print("  New: OPR-H-0001, ENG-H-0003, DOC-M-0002")
     print()
 
     # Check if we're in the right directory

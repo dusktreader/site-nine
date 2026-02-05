@@ -29,7 +29,7 @@ def test_reset_requires_confirmation(initialized_project: Path):
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     db = Database(db_path)
     agent_manager = AgentSessionManager(db)
-    agent_manager.start_session(name="test", role="Builder", task_summary="test")
+    agent_manager.start_session(name="test", role="Engineer", task_summary="test")
 
     result = runner.invoke(
         app,
@@ -51,7 +51,7 @@ def test_reset_requires_exact_text_confirmation(initialized_project: Path):
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     db = Database(db_path)
     agent_manager = AgentSessionManager(db)
-    agent_manager.start_session(name="test", role="Builder", task_summary="test")
+    agent_manager.start_session(name="test", role="Engineer", task_summary="test")
 
     result = runner.invoke(
         app,
@@ -79,7 +79,7 @@ def test_reset_deletes_all_data(initialized_project: Path):
     # Create agents
     _ = agent_manager.start_session(
         name="agent1",
-        role="Builder",
+        role="Engineer",
         task_summary="Task 1",
     )
     _ = agent_manager.start_session(
@@ -89,12 +89,12 @@ def test_reset_deletes_all_data(initialized_project: Path):
     )
 
     # Create tasks
-    task1_id = task_manager.generate_task_id(role="Builder", priority="HIGH")
+    task1_id = task_manager.generate_task_id(role="Engineer", priority="HIGH")
     task_manager.create_task(
         task_id=task1_id,
         title="Test task 1",
         priority="HIGH",
-        role="Builder",
+        role="Engineer",
     )
     task2_id = task_manager.generate_task_id(role="Designer", priority="MEDIUM")
     task_manager.create_task(
@@ -135,13 +135,13 @@ def test_reset_deletes_session_files(initialized_project: Path):
 
     _session_id = manager.start_session(
         name="test-agent",
-        role="Builder",
+        role="Engineer",
         task_summary="test-task",
     )
 
     # Create a session file
     sessions_dir = initialized_project / ".opencode" / "work" / "sessions"
-    session_file = sessions_dir / "2026-02-02.12:00:00.builder.test-agent.test-task.md"
+    session_file = sessions_dir / "2026-02-02.12:00:00.engineer.test-agent.test-task.md"
     session_file.write_text("# Test session")
 
     # Verify file exists
@@ -171,12 +171,12 @@ def test_reset_deletes_task_files(initialized_project: Path):
     db = Database(db_path)
     task_manager = TaskManager(db)
 
-    task_id = task_manager.generate_task_id(role="Builder", priority="HIGH")
+    task_id = task_manager.generate_task_id(role="Engineer", priority="HIGH")
     task_manager.create_task(
         task_id=task_id,
         title="Test task",
         priority="HIGH",
-        role="Builder",
+        role="Engineer",
     )
 
     # Verify task file exists
@@ -209,7 +209,7 @@ def test_reset_resets_daemon_usage_counts(initialized_project: Path):
 
     _session_id = manager.start_session(
         name="azazel",
-        role="Builder",
+        role="Engineer",
         task_summary="test-task",
     )
 
@@ -291,9 +291,9 @@ def test_reset_shows_counts_before_deletion(initialized_project: Path):
     agent_manager = AgentSessionManager(db)
     task_manager = TaskManager(db)
 
-    agent_manager.start_session(name="agent1", role="Builder", task_summary="Task 1")
-    task_id = task_manager.generate_task_id(role="Builder", priority="HIGH")
-    task_manager.create_task(task_id=task_id, title="Test task", priority="HIGH", role="Builder")
+    agent_manager.start_session(name="agent1", role="Engineer", task_summary="Task 1")
+    task_id = task_manager.generate_task_id(role="Engineer", priority="HIGH")
+    task_manager.create_task(task_id=task_id, title="Test task", priority="HIGH", role="Engineer")
 
     result = runner.invoke(
         app,
@@ -313,7 +313,7 @@ def test_reset_with_yes_flag_skips_first_confirmation(initialized_project: Path)
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     db = Database(db_path)
     agent_manager = AgentSessionManager(db)
-    agent_manager.start_session(name="test", role="Builder", task_summary="test")
+    agent_manager.start_session(name="test", role="Engineer", task_summary="test")
 
     result = runner.invoke(
         app,
@@ -334,7 +334,7 @@ def test_reset_shows_summary_after_deletion(initialized_project: Path):
     db = Database(db_path)
     agent_manager = AgentSessionManager(db)
 
-    agent_manager.start_session(name="agent1", role="Builder", task_summary="Task 1")
+    agent_manager.start_session(name="agent1", role="Engineer", task_summary="Task 1")
 
     result = runner.invoke(
         app,
@@ -366,13 +366,13 @@ def test_reset_deletes_handoff_files(initialized_project: Path):
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     db = Database(db_path)
     agent_manager = AgentSessionManager(db)
-    agent_manager.start_session(name="test", role="Builder", task_summary="test")
+    agent_manager.start_session(name="test", role="Engineer", task_summary="test")
 
     # Create handoff directory and file
     handoffs_dir = initialized_project / ".opencode" / "work" / "sessions" / "handoffs"
     handoffs_dir.mkdir(parents=True, exist_ok=True)
 
-    handoff_file = handoffs_dir / "2026-02-02.12:00:00.builder.tester.pending.md"
+    handoff_file = handoffs_dir / "2026-02-02.12:00:00.engineer.tester.pending.md"
     handoff_file.write_text("# Handoff")
 
     assert handoff_file.exists()
@@ -394,10 +394,10 @@ def test_reset_deletes_task_dependencies(initialized_project: Path):
     task_manager = TaskManager(db)
 
     # Create tasks with dependencies
-    task1_id = task_manager.generate_task_id(role="Builder", priority="HIGH")
-    task_manager.create_task(task_id=task1_id, title="Task 1", priority="HIGH", role="Builder")
-    task2_id = task_manager.generate_task_id(role="Builder", priority="HIGH")
-    task_manager.create_task(task_id=task2_id, title="Task 2", priority="HIGH", role="Builder")
+    task1_id = task_manager.generate_task_id(role="Engineer", priority="HIGH")
+    task_manager.create_task(task_id=task1_id, title="Task 1", priority="HIGH", role="Engineer")
+    task2_id = task_manager.generate_task_id(role="Engineer", priority="HIGH")
+    task_manager.create_task(task_id=task2_id, title="Task 2", priority="HIGH", role="Engineer")
 
     # Add dependency (task2 depends on task1)
     db.execute_update(

@@ -17,12 +17,12 @@ Manager:
 
 2. [You approve the plan]
 
-3. @builder - Implement rate limiting + tests
-   → Builder writes code in src/{{ project_name_underscore }}/rate_limit.py
-   → Builder writes tests in tests/test_rate_limit.py
-   → Builder runs `make qa` to verify
-   → Builder updates task artifact with progress
-   → Builder commits with conventional format
+3. @engineer - Implement rate limiting + tests
+   → Engineer writes code in src/{{ project_name_underscore }}/rate_limit.py
+   → Engineer writes tests in tests/test_rate_limit.py
+   → Engineer runs `make qa` to verify
+   → Engineer updates task artifact with progress
+   → Engineer commits with conventional format
 
 4. @tester - Test rate limiting functionality
    → Tester runs all tests
@@ -47,7 +47,7 @@ Result: Feature complete with code, tests, and docs ✅
 **Key points:**
 - Each agent commits their work incrementally
 - Manager coordinates but doesn't code
-- Builder writes both code AND tests
+- Engineer writes both code AND tests
 - Tester validates, doesn't write tests
 - Documentation happens in parallel with implementation
 
@@ -68,14 +68,14 @@ Manager:
    → Tester documents steps to trigger
    → Tester identifies conditions (connection pool exhausted)
 
-2. @builder - Fix timeout handling + add test
-   → Builder adds timeout configuration
-   → Builder adds test that reproduces bug
-   → Builder verifies test fails before fix
-   → Builder implements fix
-   → Builder verifies test passes after fix
-   → Builder updates task artifact with implementation steps
-   → Builder commits: "fix(database): add query timeout handling [Agent: Builder] [Task: ID]"
+2. @engineer - Fix timeout handling + add test
+   → Engineer adds timeout configuration
+   → Engineer adds test that reproduces bug
+   → Engineer verifies test fails before fix
+   → Engineer implements fix
+   → Engineer verifies test passes after fix
+   → Engineer updates task artifact with implementation steps
+   → Engineer commits: "fix(database): add query timeout handling [Agent: Engineer] [Task: ID]"
 
 3. @tester - Verify fix works
    → Tester runs new test
@@ -124,12 +124,12 @@ Manager:
      2. No test for expired tokens (tests/test_auth.py missing case)
      3. Missing docstring on verify_token() function"
 
-3. @builder - Fix any issues found
-   → Builder fixes timezone handling
-   → Builder adds expired token test
-   → Builder adds docstring
-   → Builder runs `make qa`
-   → Builder commits: "fix(auth): use timezone-aware token expiration [Agent: Builder]"
+3. @engineer - Fix any issues found
+   → Engineer fixes timezone handling
+   → Engineer adds expired token test
+   → Engineer adds docstring
+   → Engineer runs `make qa`
+   → Engineer commits: "fix(auth): use timezone-aware token expiration [Agent: Engineer]"
 
 4. @documentarian - Update docs if needed
    → Documentarian adds token expiration to README if not documented
@@ -140,7 +140,7 @@ Result: Issues identified and fixed ✅
 
 **Key points:**
 - Inspector doesn't fix, just reports
-- Builder fixes with tests
+- Engineer fixes with tests
 - Each fix is a separate commit
 - Re-review after fixes if major changes
 
@@ -166,14 +166,14 @@ Manager:
    → Architect creates test plan document
    → [You approve]
 
-3. @builder - Implement tests
-   → Builder creates test files in features/
-   → Builder writes BDD scenarios
-   → Builder implements step definitions
-   → Builder runs tests (expect some to fail initially)
-   → Builder fixes issues to make tests pass
-   → Builder updates task artifact with testing progress
-   → Builder commits incrementally as tests complete
+3. @engineer - Implement tests
+   → Engineer creates test files in features/
+   → Engineer writes BDD scenarios
+   → Engineer implements step definitions
+   → Engineer runs tests (expect some to fail initially)
+   → Engineer fixes issues to make tests pass
+   → Engineer updates task artifact with testing progress
+   → Engineer commits incrementally as tests complete
 
 4. @tester - Run and validate
    → Tester runs full test suite
@@ -222,13 +222,13 @@ Manager:
    → Inspector suggests consolidation approach
    → Inspector prioritizes by impact
 
-3. @builder - Refactor
-   → Builder extracts common validation to database/validation.py
-   → Builder updates all call sites
-   → Builder ensures tests still pass
-   → Builder adds tests for extracted functions
-   → Builder commits: "refactor(database): extract common validation logic [Agent: Builder]"
-   → Builder repeats for each duplication
+3. @engineer - Refactor
+   → Engineer extracts common validation to database/validation.py
+   → Engineer updates all call sites
+   → Engineer ensures tests still pass
+   → Engineer adds tests for extracted functions
+   → Engineer commits: "refactor(database): extract common validation logic [Agent: Engineer]"
+   → Engineer repeats for each duplication
 
 4. @tester - Validate no regressions
    → Tester runs full test suite
@@ -294,11 +294,11 @@ Manager:
    → Tester checks recent changes
    → Tester identifies trigger
 
-2. @builder - Fast fix + test
-   → Builder implements fix
-   → Builder adds test
-   → Builder runs `make qa`
-   → Builder commits immediately
+2. @engineer - Fast fix + test
+   → Engineer implements fix
+   → Engineer adds test
+   → Engineer runs `make qa`
+   → Engineer commits immediately
 
 3. @tester - Validate fix
    → Tester confirms fix works
@@ -346,11 +346,11 @@ Manager:
      - Optimize query validation
    → [You approve approach]
 
-3. @builder - Implement optimization
-   → Builder implements connection pooling
-   → Builder adds benchmarks
-   → Builder verifies improvement
-   → Builder commits with benchmark results
+3. @engineer - Implement optimization
+   → Engineer implements connection pooling
+   → Engineer adds benchmarks
+   → Engineer verifies improvement
+   → Engineer commits with benchmark results
 
 4. @tester - Validate improvement
    → Tester re-runs benchmarks
@@ -384,7 +384,7 @@ You: "Implement authentication system"
 Manager delegates in parallel:
 
 @architect → Design auth architecture (30 min)
-@builder → Set up project structure (15 min)
+@engineer → Set up project structure (15 min)
 @documentarian → Research auth best practices (30 min)
 
 [All work in parallel, no conflicts]
@@ -394,9 +394,9 @@ Then sequential:
 @architect → Present design
 [You approve]
 
-@builder → Implement TokenService (commits)
-@builder → Implement AuthMiddleware (commits)
-@builder → Add tests (commits)
+@engineer → Implement TokenService (commits)
+@engineer → Implement AuthMiddleware (commits)
+@engineer → Add tests (commits)
 
 @tester → Validate implementation
 @documentarian → Document configuration
@@ -407,7 +407,7 @@ Result: Fast completion through parallelization ✅
 
 **Key points:**
 - Architect and Documentarian can work in parallel
-- Builder works sequentially (code → tests)
+- Engineer works sequentially (code → tests)
 - Each agent commits their own work
 - No one waits for others unnecessarily
 
@@ -418,16 +418,16 @@ Result: Fast completion through parallelization ✅
 ## Tips for Efficient Workflows
 
 ### 1. Start with Planning
-Always let Architect plan before Builder codes (except trivial changes).
+Always let Architect plan before Engineer codes (except trivial changes).
 
 ### 2. Commit Incrementally
 Each agent commits their portion as they complete it, not at the end.
 
 ### 3. Tests with Implementation
-Builder writes tests as part of implementation, not after.
+Engineer writes tests as part of implementation, not after.
 
 ### 4. Parallel When Possible
-Architect and Documentarian can work while Builder codes.
+Architect and Documentarian can work while Engineer codes.
 
 ### 5. Inspector at End
 Inspector reviews after implementation is complete.
@@ -534,7 +534,7 @@ Agents should update PROJECT_STATUS.md when completing work that affects:
 ### Who Updates
 
 - **Documentarian**: Most updates (owns planning docs)
-- **Builder**: When completing major features/phases
+- **Engineer**: When completing major features/phases
 - **Architect**: When completing architectural milestones
 - **Tester**: When test counts or coverage changes significantly
 - **Inspector**: When resolving critical issues/blockers

@@ -45,7 +45,7 @@ def test_check_detects_missing_session_files(initialized_project: Path):
 
     session_id = manager.start_session(
         name="test-agent",
-        role="Builder",
+        role="Engineer",
         task_summary="test-task",
     )
 
@@ -76,7 +76,7 @@ def test_check_verbose_shows_details(initialized_project: Path):
 
     session_id = manager.start_session(
         name="test-agent",
-        role="Builder",
+        role="Engineer",
         task_summary="test-task",
     )
 

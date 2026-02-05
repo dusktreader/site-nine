@@ -1,3 +1,7 @@
+---
+description: End the current session and perform cleanup tasks
+---
+
 Load and follow the session-end skill.
 
 Dismissal message: $*

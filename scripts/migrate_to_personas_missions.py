@@ -219,7 +219,7 @@ def migrate_database(conn: sqlite3.Connection, dry_run: bool = True) -> Dict:
             CREATE TABLE personas (
                 name TEXT PRIMARY KEY,
                 role TEXT NOT NULL
-                    CHECK(role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+                    CHECK(role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
                 mythology TEXT NOT NULL,
                 description TEXT NOT NULL,
                 mission_count INTEGER NOT NULL DEFAULT 0,
@@ -266,7 +266,7 @@ def migrate_database(conn: sqlite3.Connection, dry_run: bool = True) -> Dict:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 persona_name TEXT NOT NULL,
                 role TEXT NOT NULL
-                    CHECK(role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+                    CHECK(role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
                 codename TEXT NOT NULL,
                 mission_file TEXT NOT NULL,
                 start_date TEXT NOT NULL,
@@ -374,7 +374,7 @@ def migrate_database(conn: sqlite3.Connection, dry_run: bool = True) -> Dict:
                 priority TEXT NOT NULL
                     CHECK(priority IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')),
                 role TEXT NOT NULL
-                    CHECK(role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+                    CHECK(role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
                 category TEXT
                     CHECK(category IN ('feature', 'bug-fix', 'refactor', 'documentation', 'testing', 'infrastructure', 'security', 'performance', 'architecture', 'maintenance') OR category IS NULL),
                 current_mission_id INTEGER,

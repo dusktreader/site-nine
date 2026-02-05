@@ -57,7 +57,7 @@ Invoke Designer for:
 - Get feedback from user and team
 - Revise design based on feedback
 - Validate with accessibility checklist
-- Get approval before Builder implements
+- Get approval before Engineer implements
 
 ## Design Documents
 
@@ -101,7 +101,7 @@ Key principles guiding this design.
 - Keyboard shortcuts
 
 ## Implementation Notes
-Guidance for Builder on how to implement.
+Guidance for Engineer on how to implement.
 
 ## Alternatives Considered
 Other approaches explored and why they were not chosen.
@@ -143,7 +143,7 @@ Recommended tools for creating designs:
 - **Excalidraw** - Quick sketches and diagrams
 - **Mermaid** - Flow diagrams in markdown
 - **ASCII diagrams** - Simple text-based diagrams
-- **Slack Block Kit Builder** - Interactive Slack message design
+- **Slack Block Kit Engineer** - Interactive Slack message design
 
 ## Accessibility Standards
 
@@ -165,10 +165,10 @@ Designer:
 3. Document error message specifications
 ```
 
-### Before Builder implements:
+### Before Engineer implements:
 ```
 Designer: "Created Slack investigation message design"
-Builder:
+Engineer:
 1. Implement message templates using Slack Block Kit
 2. Follow spacing and formatting specs from design doc
 3. Ensure accessibility attributes are included
@@ -188,7 +188,7 @@ Documentarian:
 ❌ **Don't ignore accessibility**: Design for all users from the start  
 ❌ **Don't create designs that can't be implemented**: Check technical constraints  
 ❌ **Don't skip documentation**: Designs without specs are hard to implement  
-❌ **Don't design in isolation**: Collaborate with Architect and Builder  
+❌ **Don't design in isolation**: Collaborate with Architect and Engineer  
 
 ## Success Criteria
 
@@ -202,7 +202,7 @@ Good design:
 
 ## Design Checklist
 
-Before handing off to Builder:
+Before handing off to Engineer:
 - [ ] User goals clearly defined
 - [ ] All interaction states designed
 - [ ] Accessibility requirements documented
@@ -217,7 +217,7 @@ Before handing off to Builder:
 - `.opencode/planning/task-queue.md` - **Active task queue (check here first!)**
 - `.opencode/guides/design-system.md` - Design system documentation (to be created)
 - `SLACK_SETUP_GUIDE.md` - Slack bot UI patterns
-- Slack Block Kit Builder: https://app.slack.com/block-kit-builder
+- Slack Block Kit Engineer: https://app.slack.com/block-kit-engineer
 
 
 ## 📋 Task Queue: Finding Your Next Task
@@ -238,8 +238,8 @@ grep "in-progress" .opencode/planning/task-queue.md | grep "Designer"
 
 ### Designer Task Selection Priority
 1. **Critical tasks** - UI/UX issues blocking production or critical features
-2. **High priority tasks** - New feature UI/UX design (often blocks Builder)
-3. **Tasks that unblock others** - Builder may wait for design specs
+2. **High priority tasks** - New feature UI/UX design (often blocks Engineer)
+3. **Tasks that unblock others** - Engineer may wait for design specs
 4. **Medium priority tasks** - UI improvements, accessibility enhancements
 5. **Low priority tasks** - Design system documentation, style guides
 
@@ -275,12 +275,12 @@ After starting:
 3. Update task status in database: `pm task close TASK_ID` (or `needs-review` for major UI/UX changes)
 4. Add completion timestamp and verification results
 5. If needs approval: Present design to user or Manager
-6. After approval, update notes to unblock dependent Builder tasks
+6. After approval, update notes to unblock dependent Engineer tasks
 
 **Note:** Designer work rarely needs PROJECT_STATUS.md updates unless completing major UI milestones
 
 ### Critical: You May Block Implementation
-Designer specs often gate Builder UI/UX work. Prioritize tasks that have dependent Builder tasks marked as "Blocked: needs [your task ID]".
+Designer specs often gate Engineer UI/UX work. Prioritize tasks that have dependent Engineer tasks marked as "Blocked: needs [your task ID]".
 
 **See `.opencode/planning/task-queue.md` for complete queue usage instructions.**
 

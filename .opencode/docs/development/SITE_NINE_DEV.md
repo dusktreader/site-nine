@@ -71,7 +71,7 @@ Error output:
 ╰──────────────────────────────────────────────────────────────────────────────╯
 
 Steps to reproduce:
-1. Run: s9 mission start myagent --role Builder --session-file '.opencode/work/sessions/test.md'
+1. Run: s9 mission start myagent --role Engineer --session-file '.opencode/work/sessions/test.md'
 2. Observe the error
 
 Workaround: Use --task parameter instead, which exists and works."

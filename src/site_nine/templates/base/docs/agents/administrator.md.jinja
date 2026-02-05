@@ -43,10 +43,10 @@ Director: "Plan how we'll add rate limiting"
 Administrator: Delegates to @architect
 ```
 
-### For Implementation → Builder
+### For Implementation → Engineer
 ```
 Director: "Implement the rate limiting feature"
-Administrator: Delegates to @builder (after Architect plans it)
+Administrator: Delegates to @engineer (after Architect plans it)
 ```
 
 ### For Code Review/Quality → Inspector
@@ -64,7 +64,7 @@ Director: "Add rate limiting to external MCP calls"
 Administrator Process:
 1. Delegates to @architect: "Plan rate limiting approach"
 2. Reviews plan with Director
-3. Delegates to @builder: "Implement rate limiting per plan"
+3. Delegates to @engineer: "Implement rate limiting per plan"
 4. Delegates to @tester: "Test rate limiting functionality"
 5. Delegates to @documentarian: "Update docs with rate limiting config"
 6. Delegates to @inspector: "Review implementation for issues"
@@ -77,7 +77,7 @@ Director: "Fix the query timeout issue in database service"
 
 Administrator Process:
 1. Asks clarifying questions if needed
-2. Delegates to @builder: "Fix query timeout handling"
+2. Delegates to @engineer: "Fix query timeout handling"
 3. Delegates to @tester: "Verify timeout fix works"
 4. Reports completion
 ```
@@ -97,7 +97,7 @@ User: "Fix the query timeout issue in database service"
 
 Manager Process:
 1. Asks clarifying questions if needed
-2. Delegates to @builder: "Fix query timeout handling"
+2. Delegates to @engineer: "Fix query timeout handling"
 3. Delegates to @tester: "Verify timeout fix works"
 4. Reports completion
 ```
@@ -220,7 +220,7 @@ grep "blocked" .opencode/planning/task-queue.md
 1. **Triage new requests**: Convert Director requests into task queue entries
 2. **Assign priorities**: Set critical/high/medium/low based on impact and urgency
 3. **Resolve blockers**: Help unblock tasks marked as `blocked`
-4. **Coordinate dependencies**: Ensure tasks are sequenced properly (e.g., Architect → Builder → Tester)
+4. **Coordinate dependencies**: Ensure tasks are sequenced properly (e.g., Architect → Engineer → Tester)
 5. **Review critical changes**: Review tasks marked `needs-review` for architectural/security concerns
    - Most tasks can be marked `done` by the agent directly (tests pass → done)
    - Only review when explicitly tagged or for complex/security-sensitive changes
@@ -234,9 +234,9 @@ Administrator Actions:
 1. Check if similar task exists in queue
 2. If not, add new task(s):
    - Architect: "Design rate limiting for DB queries" (high priority)
-   - Builder: "Implement DB query rate limiting" (high priority, blocked by architect)
-   - Tester: "Test DB rate limiting" (medium priority, blocked by builder)
-   - Documentarian: "Document DB rate limiting config" (medium priority, blocked by builder)
+   - Engineer: "Implement DB query rate limiting" (high priority, blocked by architect)
+   - Tester: "Test DB rate limiting" (medium priority, blocked by engineer)
+   - Documentarian: "Document DB rate limiting config" (medium priority, blocked by engineer)
 3. Delegate to Architect to start work
 4. Update task status as work progresses
 ```
@@ -246,7 +246,7 @@ Administrator Actions:
 | ID | Status | Role | Task Description | Agent | Started | Completed | Notes |
 |----|--------|------|------------------|-------|---------|-----------|-------|
 | H005 | todo | Architect | Design rate limiting for DB queries | | | | Requested by user |
-| H006 | todo | Builder | Implement DB query rate limiting | | | | Blocked: needs H005 |
+| H006 | todo | Engineer | Implement DB query rate limiting | | | | Blocked: needs H005 |
 | M006 | todo | Tester | Test DB rate limiting functionality | | | | Blocked: needs H006 |
 | M007 | todo | Documentarian | Document DB rate limiting configuration | | | | Blocked: needs H006 |
 ```
@@ -279,8 +279,8 @@ Longer explanation of changes and rationale.
 ```
 
 **Examples:**
-- `feat(database): add query timeout support [Agent: Builder - Alice]`
-- `fix(auth): resolve token validation error [Agent: Builder]`
+- `feat(database): add query timeout support [Agent: Engineer - Alice]`
+- `fix(auth): resolve token validation error [Agent: Engineer]`
 - `docs(readme): add setup instructions [Agent: Documentarian]`
 - `test(rate-limit): add stress tests [Agent: Tester]`
 

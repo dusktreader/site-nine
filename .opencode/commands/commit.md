@@ -1,3 +1,7 @@
+---
+description: Review changes and create a commit following project guidelines
+---
+
 Follow the commit workflow:
 
 1. Run quality checks: `make qa`

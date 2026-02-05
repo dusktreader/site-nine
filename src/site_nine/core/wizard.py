@@ -5,12 +5,12 @@ from pathlib import Path
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
 
-from site_nine.core.config import HQueueConfig
+from site_nine.core.config import SiteNineConfig
 
 console = Console()
 
 
-def run_wizard() -> HQueueConfig:
+def run_wizard() -> SiteNineConfig:
     """Run interactive configuration wizard"""
     console.print("\n[bold cyan]site-nine Configuration Wizard[/bold cyan]\n")
 
@@ -29,11 +29,11 @@ def run_wizard() -> HQueueConfig:
     # Agent roles
     console.print("\n[bold]Agent Roles[/bold]")
     console.print(
-        "Default roles: Administrator, Architect, Builder, Tester, Documentarian, Designer, Inspector, Operator"
+        "Default roles: Administrator, Architect, Engineer, Tester, Documentarian, Designer, Inspector, Operator"
     )
     use_defaults = Confirm.ask("Use default agent roles?", default=True)
 
-    config = HQueueConfig.default(project_name)
+    config = SiteNineConfig.default(project_name)
     config.project.type = project_type
     config.project.description = project_desc
     config.features.pm_system = pm_system

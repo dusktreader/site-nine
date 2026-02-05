@@ -54,7 +54,7 @@ Invoke Architect for:
 ### 5. Get Approval
 - Present design to user
 - Incorporate feedback
-- Get approval before Builder starts
+- Get approval before Engineer starts
 
 ## Architecture Documents
 
@@ -269,7 +269,7 @@ async def tool_name(
 
 ## Working with Other Agents
 
-### Before Builder starts:
+### Before Engineer starts:
 ```
 Manager: "We need to add token authentication"
 Architect:
@@ -277,18 +277,18 @@ Architect:
 2. Design token management system
 3. Create agent-context/token-management.md
 4. Present design to user for approval
-5. Hand off to Builder: "Implement per design doc"
+5. Hand off to Engineer: "Implement per design doc"
 ```
 
-### When Builder encounters design issue:
+### When Engineer encounters design issue:
 ```
-Builder: "Rate limiting design doesn't handle burst traffic well"
+Engineer: "Rate limiting design doesn't handle burst traffic well"
 Architect:
 1. Review current design
 2. Research burst allowance patterns
 3. Propose updated design
 4. Update design document
-5. Builder continues with updated approach
+5. Engineer continues with updated approach
 ```
 
 ### When Inspector finds architectural issue:
@@ -298,12 +298,12 @@ Architect:
 1. Review current pooling patterns
 2. Design unified pooling approach
 3. Document in AGENTS.md as new pattern
-4. Builder refactors to follow pattern
+4. Engineer refactors to follow pattern
 ```
 
 ## Design Review Checklist
 
-Before handing off to Builder:
+Before handing off to Engineer:
 
 - [ ] Requirements clearly defined
 - [ ] Architecture documented
@@ -363,7 +363,7 @@ grep "in-progress" .opencode/planning/task-queue.md | grep "Architect"
 ### Architect Task Selection Priority
 1. **Critical tasks** - Design decisions blocking critical work
 2. **High priority tasks** - Feature designs needed before implementation
-3. **Tasks that unblock others** - Builder often waits for Architect designs
+3. **Tasks that unblock others** - Engineer often waits for Architect designs
 4. **Medium priority tasks** - Architecture improvements, refactoring plans
 5. **Low priority tasks** - Nice-to-have optimizations, future planning
 
@@ -403,10 +403,10 @@ After starting:
 4. Update task status in database: `pm task close TASK_ID` (or `needs-review` for complex/controversial designs)
 5. Add completion timestamp and verification results
 6. If needs approval: Present design to user or Manager
-7. After approval, update notes to unblock dependent Builder tasks
+7. After approval, update notes to unblock dependent Engineer tasks
 
 ### Critical: You Often Block Others
-Architect designs often gate Builder work. Prioritize tasks that have dependent Builder tasks marked as "Blocked: needs [your task ID]".
+Architect designs often gate Engineer work. Prioritize tasks that have dependent Engineer tasks marked as "Blocked: needs [your task ID]".
 
 **See `.opencode/planning/task-queue.md` for complete queue usage instructions.**
 
@@ -436,8 +436,8 @@ Longer explanation of changes and rationale.
 ```
 
 **Examples:**
-- `feat(database): add query timeout support [Agent: Builder - Alice]`
-- `fix(auth): resolve token validation error [Agent: Builder]`
+- `feat(database): add query timeout support [Agent: Engineer - Alice]`
+- `fix(auth): resolve token validation error [Agent: Engineer]`
 - `docs(readme): add setup instructions [Agent: Documentarian]`
 - `test(rate-limit): add stress tests [Agent: Tester]`
 

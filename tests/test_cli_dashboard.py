@@ -44,7 +44,7 @@ def test_dashboard_shows_active_agents(initialized_project: Path):
 
     manager.start_session(
         name="test-daemon",
-        role="Builder",
+        role="Engineer",
         task_summary="Building something",
     )
 
@@ -56,7 +56,7 @@ def test_dashboard_shows_active_agents(initialized_project: Path):
     assert result.exit_code == 0, f"Command failed: {result.stdout}"
     assert "Active agents: 1" in result.stdout
     assert "test-daemon" in result.stdout
-    assert "Builder" in result.stdout
+    assert "Engineer" in result.stdout
 
 
 def test_dashboard_shows_multiple_active_agents(initialized_project: Path):
@@ -66,7 +66,7 @@ def test_dashboard_shows_multiple_active_agents(initialized_project: Path):
     manager = AgentSessionManager(db)
 
     # Start multiple sessions
-    manager.start_session(name="agent1", role="Builder", task_summary="Task 1")
+    manager.start_session(name="agent1", role="Engineer", task_summary="Task 1")
     manager.start_session(name="agent2", role="Designer", task_summary="Task 2")
     manager.start_session(name="agent3", role="Tester", task_summary="Task 3")
 
@@ -91,7 +91,7 @@ def test_dashboard_excludes_ended_sessions(initialized_project: Path):
     # Start and end a session
     session_id = manager.start_session(
         name="ended-agent",
-        role="Builder",
+        role="Engineer",
         task_summary="Finished task",
     )
     manager.end_session(session_id, status="completed")
@@ -146,7 +146,7 @@ def test_dashboard_handles_agent_without_task_summary(initialized_project: Path)
 
     manager.start_session(
         name="no-task-agent",
-        role="Builder",
+        role="Engineer",
         task_summary="",  # Empty task summary
     )
 
@@ -157,7 +157,7 @@ def test_dashboard_handles_agent_without_task_summary(initialized_project: Path)
 
     assert result.exit_code == 0, f"Command failed: {result.stdout}"
     assert "no-task-agent" in result.stdout
-    assert "Builder" in result.stdout
+    assert "Engineer" in result.stdout
 
 
 def test_dashboard_shows_project_name(initialized_project: Path):

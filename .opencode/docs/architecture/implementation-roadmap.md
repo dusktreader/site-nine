@@ -584,21 +584,21 @@ db_path = adapter.get_database_path()
 
 ---
 
-## Handoff to Builder
+## Handoff to Engineer
 
-**This roadmap is ready for Builder implementation.**
+**This roadmap is ready for Engineer implementation.**
 
 **Next Steps:**
-1. Builder reviews this roadmap
-2. Builder creates detailed implementation tasks for Phase 1
-3. Builder begins implementation starting with Task 1.1
+1. Engineer reviews this roadmap
+2. Engineer creates detailed implementation tasks for Phase 1
+3. Engineer begins implementation starting with Task 1.1
 4. Architect available for questions and clarifications
 
-**Builder Tasks File:**
+**Engineer Tasks File:**
 Create tasks in database:
 ```bash
-s9 task create "BLD-H-XXXX" --title "Implement ToolAdapter protocol" --role Builder --priority HIGH
-s9 task create "BLD-H-XXXY" --title "Implement OpenCodeAdapter" --role Builder --priority HIGH
+s9 task create "ENG-H-XXXX" --title "Implement ToolAdapter protocol" --role Engineer --priority HIGH
+s9 task create "ENG-H-XXXY" --title "Implement OpenCodeAdapter" --role Engineer --priority HIGH
 # ... etc.
 ```
 

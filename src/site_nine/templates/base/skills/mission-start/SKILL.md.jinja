@@ -42,9 +42,9 @@ Then present a **concise table** to help the user choose the right role:
 
 | Priority | Role | Count | Top Tasks |
 |----------|------|-------|-----------|
-| CRITICAL | Builder | [N] | H058: MCP Server fix |
+| CRITICAL | Engineer | [N] | H058: MCP Server fix |
 | CRITICAL | Operator | [N] | O002: Directory reorganization |
-| HIGH | Builder | [N] | [list 1-2 task IDs] |
+| HIGH | Engineer | [N] | [list 1-2 task IDs] |
 | HIGH | Tester | [N] | [list 1-2 task IDs] |
 | HIGH | Documentarian | [N] | [list 1-2 task IDs] |
 | MEDIUM | [Role] | [N] | [list 1-2 task IDs] |
@@ -83,7 +83,7 @@ If the user invoked `/summon <role>` (e.g., `/summon operator`), the role will b
 **Available Roles:**
 - **Manager** - Coordination, task prioritization, delegation
 - **Architect** - System design, ADRs, technical direction
-- **Builder** - Implementation, coding, integration
+- **Engineer** - Implementation, coding, integration
 - **Tester** - Test writing, validation, QA
 - **Documentarian** - Documentation, guides, examples
 - **Designer** - UI/UX, visual design, user experience
@@ -95,7 +95,7 @@ If the user invoked `/summon <role>` (e.g., `/summon operator`), the role will b
 Which role should I assume for this session?
 - Manager (coordination & delegation)
 - Architect (design & planning)
-- Builder (implementation)
+- Engineer (implementation)
 - Tester (validation & QA)
 - Documentarian (docs & guides)
 - Designer (UI/UX)
@@ -395,9 +395,9 @@ cd .opencode/scripts && ./pm agent rename-tui brigid Manager
 ls .opencode/sessions/handoffs/*to-[your-role].pending.md 2>/dev/null
 ```
 
-**Example for Builder role:**
+**Example for Engineer role:**
 ```bash
-ls .opencode/sessions/handoffs/*builder.pending.md 2>/dev/null
+ls .opencode/sessions/handoffs/*engineer.pending.md 2>/dev/null
 ```
 
 **If pending handoffs exist:**
@@ -408,11 +408,11 @@ ls .opencode/sessions/handoffs/*builder.pending.md 2>/dev/null
    
    1. From Manager (Ishtar) - Created 2026-01-29 16:30:00
       Task: H040 - Implement database query caching
-      Document: .opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.pending.md
+      Document: .opencode/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md
    
    2. From Inspector (Argus) - Created 2026-01-29 14:20:00
       Task: H038 - Fix security issues
-      Document: .opencode/sessions/handoffs/2026-01-29.14:20:00.inspector-argus.builder.pending.md
+      Document: .opencode/sessions/handoffs/2026-01-29.14:20:00.inspector-argus.engineer.pending.md
    
    Would you like me to read one of these handoffs?
    ```

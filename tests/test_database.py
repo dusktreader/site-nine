@@ -59,7 +59,7 @@ def test_execute_update(test_db: Database):
     test_db.execute_update(
         """
         INSERT INTO daemon_names (name, role, mythology, description, usage_count)
-        VALUES ('update-test', 'Builder', 'test', 'Test', 0)
+        VALUES ('update-test', 'Engineer', 'test', 'Test', 0)
         """
     )
 

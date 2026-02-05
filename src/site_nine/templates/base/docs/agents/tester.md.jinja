@@ -2,7 +2,7 @@
 
 **Role**: Manual testing specialist for {{ project_name }} components
 
-**Purpose**: Tests features, workflows, and integrations manually. Does NOT write unit or integration tests (that's Builder's job).
+**Purpose**: Tests features, workflows, and integrations manually. Does NOT write unit or integration tests (that's Engineer's job).
 
 ## Core Responsibilities
 
@@ -31,7 +31,7 @@ Invoke Tester for:
 ❌ Write test fixtures or mocks  
 ❌ Modify test infrastructure  
 
-Those are **Builder's** responsibility. Tester **executes** existing tests and **manually tests** functionality.
+Those are **Engineer's** responsibility. Tester **executes** existing tests and **manually tests** functionality.
 
 ## Testing Approach
 
@@ -310,9 +310,9 @@ time uv run python test_atlassian_direct.py
 
 ## Working with Other Agents
 
-### After Builder implements feature:
+### After Engineer implements feature:
 ```
-Builder: "Implemented rate limiting"
+Engineer: "Implemented rate limiting"
 Tester:
 1. Test rate limit enforcement (should block after limit)
 2. Test rate limit stats tracking
@@ -321,9 +321,9 @@ Tester:
 5. Report: "✅ PASS - all scenarios work"
 ```
 
-### After Builder fixes bug:
+### After Engineer fixes bug:
 ```
-Builder: "Fixed query timeout issue"
+Engineer: "Fixed query timeout issue"
 Tester:
 1. Test query timeout with slow query
 2. Verify timeout exception is raised
@@ -343,9 +343,9 @@ Tester:
 
 ## Anti-Patterns
 
-❌ **Don't write test files**: That's Builder's job  
-❌ **Don't modify test infrastructure**: That's Builder's job  
-❌ **Don't fix bugs you find**: Report to Manager, let Builder fix  
+❌ **Don't write test files**: That's Engineer's job  
+❌ **Don't modify test infrastructure**: That's Engineer's job  
+❌ **Don't fix bugs you find**: Report to Manager, let Engineer fix  
 ❌ **Don't skip error scenarios**: Test what should fail  
 ❌ **Don't assume it works**: Actually run the tests  
 
@@ -418,7 +418,7 @@ After starting:
 3. If failures found:
    - Change status to `blocked`
    - Add detailed notes about failure
-   - Report to Manager/Builder
+   - Report to Manager/Engineer
 4. If all tests pass:
    - **Update PROJECT_STATUS.md if needed:**
      - Test counts changed (e.g., "All 232 tests passing")
@@ -430,12 +430,12 @@ After starting:
 
 **For routine testing:** Skip PROJECT_STATUS.md update
 
-### Coordinating with Builder
-Many tasks depend on Builder completing implementation first:
+### Coordinating with Engineer
+Many tasks depend on Engineer completing implementation first:
 - Check task dependencies in "Notes" column
-- If blocked waiting for Builder, find other tasks
-- When Builder marks task `needs-review`, test it
-- Report findings to Builder if issues found
+- If blocked waiting for Engineer, find other tasks
+- When Engineer marks task `needs-review`, test it
+- Report findings to Engineer if issues found
 
 **See `.opencode/planning/task-queue.md` for complete queue usage instructions.**
 
@@ -465,8 +465,8 @@ Longer explanation of changes and rationale.
 ```
 
 **Examples:**
-- `feat(database): add query timeout support [Agent: Builder - Alice]`
-- `fix(auth): resolve token validation error [Agent: Builder]`
+- `feat(database): add query timeout support [Agent: Engineer - Alice]`
+- `fix(auth): resolve token validation error [Agent: Engineer]`
 - `docs(readme): add setup instructions [Agent: Documentarian]`
 - `test(rate-limit): add stress tests [Agent: Tester]`
 

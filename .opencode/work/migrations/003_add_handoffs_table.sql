@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS handoffs (
     task_id TEXT NOT NULL,                    -- Associated task being handed off
     from_mission_id INTEGER NOT NULL,         -- Mission handing off the work
     to_role TEXT NOT NULL                     -- Role receiving the handoff
-        CHECK(to_role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+        CHECK(to_role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
     to_mission_id INTEGER,                    -- Mission that accepted the handoff (NULL if pending)
     status TEXT NOT NULL DEFAULT 'pending'    -- Handoff status
         CHECK(status IN ('pending', 'accepted', 'completed', 'cancelled')),

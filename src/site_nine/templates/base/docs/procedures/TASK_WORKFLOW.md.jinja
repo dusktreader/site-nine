@@ -103,7 +103,7 @@ Every task artifact starts with metadata:
 
 **Status:** TODO | UNDERWAY | PAUSED | COMPLETE | CANCELLED | BLOCKED
 **Priority:** CRITICAL | HIGH | MEDIUM | LOW
-**Role:** Builder | Tester | Architect | etc.
+**Role:** Engineer | Tester | Architect | etc.
 **Category:** feature | bug | refactor | docs | infrastructure | test | chore
 **Agent:** [agent-name] (who is working/worked on this)
 **Claimed:** [ISO timestamp]
@@ -390,11 +390,11 @@ make qa/test-all
 ```markdown
 ## Git Commits
 
-1. `a3f4d2e` - feat(rate-limit): add rate limiter service [Agent: Builder - Azazel]
-2. `b7e9c1a` - feat(rate-limit): integrate with database service [Agent: Builder - Azazel]
+1. `a3f4d2e` - feat(rate-limit): add rate limiter service [Agent: Engineer - Azazel]
+2. `b7e9c1a` - feat(rate-limit): integrate with database service [Agent: Engineer - Azazel]
 3. `c2d8f4b` - test(rate-limit): add unit and integration tests [Agent: Tester - Sekhmet]
 4. `d9a3e7c` - docs(rate-limit): add architecture and API docs [Agent: Documentarian - Thoth-iii]
-5. `e4b2f8d` - chore(deps): add redis dependency [Agent: Builder - Azazel]
+5. `e4b2f8d` - chore(deps): add redis dependency [Agent: Engineer - Azazel]
 
 [Task: H027]
 ```
@@ -609,7 +609,7 @@ vim .opencode/data/tasks/H027.md
 git add src/{{ project_name_underscore }}/rate_limiter.py tests/
 
 # Commit with task reference
-git commit -m "feat(rate-limit): add rate limiter service [Agent: Builder - Azazel]" -m "" -m "Implemented token bucket rate limiter with Redis backend." -m "" -m "[Task: H027]"
+git commit -m "feat(rate-limit): add rate limiter service [Agent: Engineer - Azazel]" -m "" -m "Implemented token bucket rate limiter with Redis backend." -m "" -m "[Task: H027]"
 ```
 
 **Important:** Always include `[Task: ID]` in commit message to link commits to tasks.
@@ -664,7 +664,7 @@ When all acceptance criteria are met:
 ```bash
 # Commit the completed task artifact
 git add .opencode/data/tasks/H027.md
-git commit -m "docs(task): complete task H027 artifact [Agent: Builder - Azazel]" -m "" -m "[Task: H027]"
+git commit -m "docs(task): complete task H027 artifact [Agent: Engineer - Azazel]" -m "" -m "[Task: H027]"
 ```
 
 
@@ -692,7 +692,7 @@ cd .opencode/scripts
 This will prompt you for:
 - **Title:** Brief description (e.g., "Implement Rate Limiting for Database Queries")
 - **Priority:** CRITICAL | HIGH | MEDIUM | LOW
-- **Role:** Builder, Tester, Architect, Documentarian, etc.
+- **Role:** Engineer, Tester, Architect, Documentarian, etc.
 - **Category:** feature, bug, refactor, docs, infrastructure, test, chore
 
 The task will be created with:
@@ -721,7 +721,7 @@ $ ./pm task create
 
 Title: Add query cost estimation before execution
 Priority: HIGH
-Role: Builder
+Role: Engineer
 Category: feature
 
 Created task H042: Add query cost estimation before execution

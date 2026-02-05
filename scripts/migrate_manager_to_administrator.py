@@ -51,7 +51,7 @@ def migrate_database(db_path: Path) -> None:
             CREATE TABLE daemon_names_new (
                 name TEXT PRIMARY KEY,
                 role TEXT NOT NULL
-                    CHECK(role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+                    CHECK(role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
                 mythology TEXT NOT NULL,
                 description TEXT NOT NULL,
                 usage_count INTEGER NOT NULL DEFAULT 0,
@@ -95,7 +95,7 @@ def migrate_database(db_path: Path) -> None:
                 base_name TEXT NOT NULL,
                 suffix TEXT,
                 role TEXT NOT NULL
-                    CHECK(role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+                    CHECK(role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
                 session_file TEXT NOT NULL,
                 session_date TEXT NOT NULL,
                 start_time TEXT NOT NULL,
@@ -157,7 +157,7 @@ def migrate_database(db_path: Path) -> None:
                 priority TEXT NOT NULL
                     CHECK(priority IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')),
                 role TEXT NOT NULL
-                    CHECK(role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+                    CHECK(role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
                 category TEXT
                     CHECK(category IN ('feature', 'bug-fix', 'refactor', 'documentation', 'testing', 'infrastructure', 'security', 'performance', 'architecture', 'maintenance') OR category IS NULL),
                 agent_name TEXT,
@@ -225,7 +225,7 @@ def migrate_database(db_path: Path) -> None:
                 priority TEXT NOT NULL
                     CHECK(priority IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')),
                 role TEXT NOT NULL
-                    CHECK(role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+                    CHECK(role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
                 category TEXT,
                 objective_template TEXT NOT NULL,
                 description_template TEXT,

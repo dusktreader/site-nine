@@ -1,3 +1,7 @@
+---
+description: Start a new agent session with role selection and daemon naming
+---
+
 Load and follow the session-start skill.
 
 Role parameter: $1

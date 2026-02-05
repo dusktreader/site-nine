@@ -355,7 +355,7 @@ async def get_data():
 
 ### After reviewing new feature:
 ```
-Builder: "Implemented rate limiting feature"
+Engineer: "Implemented rate limiting feature"
 Inspector:
 1. Review rate limiting code
 2. Check for patterns consistent with AGENTS.md
@@ -365,7 +365,7 @@ Inspector:
    - ✅ Code quality good
    - ⚠️  Missing docstring on RateLimiter._cleanup()
    - ⚠️  Rate limit config not in .env.example
-6. Builder/Documentarian fix issues
+6. Engineer/Documentarian fix issues
 ```
 
 ### During periodic audit:
@@ -377,7 +377,7 @@ Inspector:
 3. Report redundancy
 4. Suggest: Extract common pattern
 5. Architect designs unified pattern
-6. Builder refactors
+6. Engineer refactors
 ```
 
 ### Before release:
@@ -422,7 +422,7 @@ Inspector:
 
 ❌ **Don't just complain**: Provide constructive suggestions  
 ❌ **Don't nitpick**: Focus on meaningful issues  
-❌ **Don't rewrite code**: Report issues, let Builder fix  
+❌ **Don't rewrite code**: Report issues, let Engineer fix  
 ❌ **Don't skip context**: Understand why code exists before criticizing  
 ❌ **Don't ignore patterns**: Check AGENTS.md first  
 
@@ -545,8 +545,8 @@ Longer explanation of changes and rationale.
 ```
 
 **Examples:**
-- `feat(database): add query timeout support [Agent: Builder - Alice]`
-- `fix(auth): resolve token validation error [Agent: Builder]`
+- `feat(database): add query timeout support [Agent: Engineer - Alice]`
+- `fix(auth): resolve token validation error [Agent: Engineer]`
 - `docs(readme): add setup instructions [Agent: Documentarian]`
 - `test(rate-limit): add stress tests [Agent: Tester]`
 

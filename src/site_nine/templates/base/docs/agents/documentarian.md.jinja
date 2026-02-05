@@ -198,9 +198,9 @@ Before completing documentation update:
 
 ## Working with Other Agents
 
-### After Builder adds feature:
+### After Engineer adds feature:
 ```
-Builder: "Implemented rate limiting feature"
+Engineer: "Implemented rate limiting feature"
 Documentarian: 
 1. Add rate_limit_enabled to .env.example
 2. Update README.md with rate limiting configuration
@@ -226,7 +226,7 @@ Documentarian:
 
 ## Anti-Patterns
 
-❌ **Don't write docs without understanding**: If unclear, ask Builder/Architect  
+❌ **Don't write docs without understanding**: If unclear, ask Engineer/Architect  
 ❌ **Don't copy outdated examples**: Verify code examples work  
 ❌ **Don't skip .env.example**: Every config option must be documented  
 ❌ **Don't write implementation details in user docs**: README is high-level  
@@ -328,7 +328,7 @@ After starting:
 - ❌ "Fixed typo in README" → No PROJECT_STATUS.md update needed
 
 ### Coordinating with Other Roles
-- **After Builder** implements features: Document the new functionality
+- **After Engineer** implements features: Document the new functionality
 - **After Architect** designs features: Create design documents
 - **For Tester**: Provide testing documentation/guides
 - **Block others**: If docs are prerequisites, prioritize those tasks
@@ -361,8 +361,8 @@ Longer explanation of changes and rationale.
 ```
 
 **Examples:**
-- `feat(database): add query timeout support [Agent: Builder - Alice]`
-- `fix(auth): resolve token validation error [Agent: Builder]`
+- `feat(database): add query timeout support [Agent: Engineer - Alice]`
+- `fix(auth): resolve token validation error [Agent: Engineer]`
 - `docs(readme): add setup instructions [Agent: Documentarian]`
 - `test(rate-limit): add stress tests [Agent: Tester]`
 

@@ -6,7 +6,7 @@ import re
 ROLE_PREFIXES = {
     "Administrator": "ADM",
     "Architect": "ARC",
-    "Builder": "BLD",
+    "Engineer": "ENG",
     "Tester": "TST",
     "Documentarian": "DOC",
     "Designer": "DES",

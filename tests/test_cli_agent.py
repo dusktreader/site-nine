@@ -23,7 +23,7 @@ def test_agent_start_creates_session(initialized_project: Path):
     """Test starting an agent session"""
     result = runner.invoke(
         app,
-        ["agent", "start", "azazel", "--role", "Builder", "--task", "test-task"],
+        ["agent", "start", "azazel", "--role", "Engineer", "--task", "test-task"],
     )
 
     assert result.exit_code == 0, f"Command failed: {result.stdout}"
@@ -53,7 +53,7 @@ def test_agent_list_active_only(initialized_project: Path):
     # Start two sessions
     runner.invoke(
         app,
-        ["agent", "start", "session1", "--role", "Builder", "--task", "task1"],
+        ["agent", "start", "session1", "--role", "Engineer", "--task", "task1"],
     )
 
     runner.invoke(
@@ -83,7 +83,7 @@ def test_agent_list_filter_by_role(initialized_project: Path):
     # Start sessions with different roles
     runner.invoke(
         app,
-        ["agent", "start", "builder-daemon", "--role", "Builder", "--task", "build"],
+        ["agent", "start", "engineer-daemon", "--role", "Engineer", "--task", "build"],
     )
 
     runner.invoke(
@@ -91,14 +91,14 @@ def test_agent_list_filter_by_role(initialized_project: Path):
         ["agent", "start", "tester-daemon", "--role", "Tester", "--task", "test"],
     )
 
-    # Filter by Builder role
+    # Filter by Engineer role
     result = runner.invoke(
         app,
-        ["agent", "list", "--role", "Builder"],
+        ["agent", "list", "--role", "Engineer"],
     )
 
     assert result.exit_code == 0, f"Command failed: {result.stdout}"
-    assert "builder-daemon" in result.stdout or "Builder" in result.stdout
+    assert "engineer-daemon" in result.stdout or "Engineer" in result.stdout
 
 
 def test_agent_end_closes_session(initialized_project: Path):
@@ -106,7 +106,7 @@ def test_agent_end_closes_session(initialized_project: Path):
     # Start a session
     result = runner.invoke(
         app,
-        ["agent", "start", "end-test", "--role", "Builder", "--task", "test"],
+        ["agent", "start", "end-test", "--role", "Engineer", "--task", "test"],
     )
 
     # Extract session ID
@@ -155,13 +155,13 @@ def test_agent_start_with_suffix(initialized_project: Path):
     # Start first session
     runner.invoke(
         app,
-        ["agent", "start", "lucifer", "--role", "Builder", "--task", "first"],
+        ["agent", "start", "lucifer", "--role", "Engineer", "--task", "first"],
     )
 
     # Start second session with same base name
     result = runner.invoke(
         app,
-        ["agent", "start", "lucifer-ii", "--role", "Builder", "--task", "second"],
+        ["agent", "start", "lucifer-ii", "--role", "Engineer", "--task", "second"],
     )
 
     assert result.exit_code == 0, f"Command failed: {result.stdout}"
@@ -173,7 +173,7 @@ def test_agent_show_displays_session_details(initialized_project: Path):
     # Start a session
     result = runner.invoke(
         app,
-        ["agent", "start", "show-test", "--role", "Builder", "--task", "test-task"],
+        ["agent", "start", "show-test", "--role", "Engineer", "--task", "test-task"],
     )
 
     # Extract session ID
@@ -193,7 +193,7 @@ def test_agent_show_displays_session_details(initialized_project: Path):
 
     assert result.exit_code == 0, f"Command failed: {result.stdout}"
     assert "show-test" in result.stdout
-    assert "Builder" in result.stdout
+    assert "Engineer" in result.stdout
 
 
 def test_agent_show_invalid_session_id(initialized_project: Path):

@@ -28,8 +28,8 @@ The `pm` script provides unified management of tasks, agent sessions, and daemon
 cd .opencode/scripts
 
 # Task commands
-./pm task create TASK_ID --title "..." --priority HIGH --role Builder --objective "..."
-./pm task list --role Builder --active-only
+./pm task create TASK_ID --title "..." --priority HIGH --role Engineer --objective "..."
+./pm task list --role Engineer --active-only
 ./pm task claim TASK_ID --agent-name "YourName" --agent-id YOUR_ID
 ./pm task update TASK_ID --notes "..." --actual-hours X.X
 ./pm task close TASK_ID --status COMPLETE --notes "..."
@@ -73,7 +73,7 @@ cd .opencode/scripts
 ./pm task create TASK_ID \
   --title "Brief task title" \
   --priority {CRITICAL|HIGH|MEDIUM|LOW} \
-  --role {Manager|Architect|Builder|Tester|Documentarian|Designer|Inspector|Operator} \
+  --role {Manager|Architect|Engineer|Tester|Documentarian|Designer|Inspector|Operator} \
   --objective "What this task accomplishes" \
   --category "Category name" \
   [--depends-on OTHER_TASK_ID] \
@@ -138,7 +138,7 @@ Assign to the role that will do most of the work:
 
 - **Manager** - Planning, coordination, prioritization
 - **Architect** - System design, ADRs, technical direction
-- **Builder** - Implementation, coding, integration
+- **Engineer** - Implementation, coding, integration
 - **Tester** - Test writing, validation, QA
 - **Documentarian** - Documentation, guides, examples
 - **Designer** - UI/UX, visual design
@@ -191,7 +191,7 @@ cd .opencode/scripts
 ./pm task create H037 \
   --title "Implement Rate Limiting Middleware" \
   --priority HIGH \
-  --role Builder \
+  --role Engineer \
   --objective "Add rate limiting to protect API endpoints from abuse" \
   --category "Security" \
   --depends-on H035 \
@@ -235,7 +235,7 @@ Verify task was created:
 
 **By role:**
 ```bash
-./pm task list --role Builder --status TODO
+./pm task list --role Engineer --status TODO
 ./pm task list --role Manager --status TODO
 ```
 
@@ -285,7 +285,7 @@ Shows:
 ./pm task report --format json
 
 # Filter by role
-./pm task report --role Builder --format markdown
+./pm task report --role Engineer --format markdown
 ```
 
 ---
@@ -313,7 +313,7 @@ cd .opencode/scripts
 
 Use your daemon name from the session:
 - ✅ "Goibniu", "Ishtar", "Thoth-iii"
-- ❌ Not "Builder" or "Manager" (that's your role, not name)
+- ❌ Not "Engineer" or "Manager" (that's your role, not name)
 
 ### Example: Claiming a Task
 
@@ -321,10 +321,10 @@ Use your daemon name from the session:
 cd .opencode/scripts
 
 # Find available tasks for your role
-./pm task list --role Builder --status TODO
+./pm task list --role Engineer --status TODO
 
 # Output shows H037 is available
-# H037 | Implement Rate Limiting Middleware | TODO | HIGH | Builder
+# H037 | Implement Rate Limiting Middleware | TODO | HIGH | Engineer
 
 # Claim it
 ./pm task claim H037 --agent-name "Goibniu"
@@ -588,7 +588,7 @@ TODO (created)
 cd .opencode/scripts
 
 # 1. Find work
-./pm task list --role Builder --status TODO
+./pm task list --role Engineer --status TODO
 
 # 2. Claim task
 ./pm task claim H037 --agent-name "Goibniu"
@@ -639,7 +639,7 @@ cd .opencode/scripts
 ./pm task create H037 --title "Design Gateway" --priority HIGH --role Architect --objective "Design gateway architecture"
 
 # Create dependent tasks
-./pm task create H038 --title "Implement Gateway" --priority HIGH --role Builder --objective "Implement gateway" --depends-on H037
+./pm task create H038 --title "Implement Gateway" --priority HIGH --role Engineer --objective "Implement gateway" --depends-on H037
 
 ./pm task create H039 --title "Test Gateway" --priority HIGH --role Tester --objective "Test gateway" --depends-on H038
 ```
@@ -739,7 +739,7 @@ cd .opencode/scripts
 ### Role Values
 - `Manager` - Planning, coordination
 - `Architect` - Design, ADRs
-- `Builder` - Implementation
+- `Engineer` - Implementation
 - `Tester` - Testing, QA
 - `Documentarian` - Documentation
 - `Designer` - UI/UX design

@@ -5,7 +5,7 @@
 This directory contains the complete architecture design for making site-nine compatible with multiple AI coding tools (OpenCode, Cursor, Aider, etc.).
 
 **Status**: Architecture design COMPLETE (Task ARC-H-0030)  
-**Next Phase**: Ready for Builder implementation (Phase 1: Adapter Foundation)
+**Next Phase**: Ready for Engineer implementation (Phase 1: Adapter Foundation)
 
 ## Architecture Documents
 
@@ -84,7 +84,7 @@ Located in `.opencode/docs/adrs/`:
   - Each phase has detailed tasks, deliverables, acceptance criteria
   - Risk management and success metrics
 
-## Quick Start for Builders
+## Quick Start for Engineers
 
 ### Reading Order
 
@@ -179,7 +179,7 @@ SkillRenderer (Presentation)
 - ✅ 2-part technical design document (50+ pages)
 - ✅ Cursor MCP PoC specification ready for implementation
 - ✅ 6-8 week implementation roadmap with task breakdown
-- ✅ Builder can start Phase 1 without architectural blockers
+- ✅ Engineer can start Phase 1 without architectural blockers
 
 ### Implementation Phase (Next)
 
@@ -208,7 +208,7 @@ See [Implementation Roadmap](./implementation-roadmap.md) for complete acceptanc
 
 - **ADM-H-0029**: Research findings (80% of codebase already tool-agnostic) - COMPLETE
 - **ARC-H-0030**: Architecture design (this work) - COMPLETE ✅
-- **Next**: Phase 1 implementation tasks (to be created by Builder)
+- **Next**: Phase 1 implementation tasks (to be created by Engineer)
 
 ## Contact & Questions
 
@@ -265,7 +265,7 @@ If you have questions about this architecture:
 ---
 
 **Architecture Status**: COMPLETE ✅  
-**Ready for**: Builder implementation (Phase 1)  
+**Ready for**: Engineer implementation (Phase 1)  
 **Task**: ARC-H-0030 (COMPLETE)  
 **Architect**: Ptah  
 **Date**: 2026-02-03

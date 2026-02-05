@@ -63,14 +63,14 @@ def test_end_session(test_db: Database):
     test_db.execute_update(
         """
         INSERT INTO daemon_names (name, role, mythology, description, usage_count)
-        VALUES ('mephisto', 'Builder', 'german', 'Devil', 0)
+        VALUES ('mephisto', 'Engineer', 'german', 'Devil', 0)
         """
     )
 
     manager = AgentSessionManager(test_db)
     session_id = manager.start_session(
         name="mephisto",
-        role="Builder",
+        role="Engineer",
         task_summary="Build feature",
     )
 
@@ -90,13 +90,13 @@ def test_list_sessions(test_db: Database):
         """
         INSERT INTO daemon_names (name, role, mythology, description, usage_count)
         VALUES 
-            ('daemon1', 'Builder', 'test', 'Test 1', 0),
+            ('daemon1', 'Engineer', 'test', 'Test 1', 0),
             ('daemon2', 'Administrator', 'test', 'Test 2', 0)
         """
     )
 
     manager = AgentSessionManager(test_db)
-    id1 = manager.start_session("daemon1", "Builder", "Task 1")
+    id1 = manager.start_session("daemon1", "Engineer", "Task 1")
     _id2 = manager.start_session("daemon2", "Administrator", "Task 2")
 
     # End first session
@@ -112,9 +112,9 @@ def test_list_sessions(test_db: Database):
     assert active_sessions[0].name == "daemon2"
 
     # Filter by role
-    builder_sessions = manager.list_sessions(role="Builder")
-    assert len(builder_sessions) == 1
-    assert builder_sessions[0].name == "daemon1"
+    engineer_sessions = manager.list_sessions(role="Engineer")
+    assert len(engineer_sessions) == 1
+    assert engineer_sessions[0].name == "daemon1"
 
 
 def test_daemon_name_usage_tracking(test_db: Database):
@@ -123,15 +123,15 @@ def test_daemon_name_usage_tracking(test_db: Database):
     test_db.execute_update(
         """
         INSERT INTO daemon_names (name, role, mythology, description, usage_count)
-        VALUES ('tracked', 'Builder', 'test', 'Tracked daemon', 0)
+        VALUES ('tracked', 'Engineer', 'test', 'Tracked daemon', 0)
         """
     )
 
     manager = AgentSessionManager(test_db)
 
     # Start multiple sessions with same daemon
-    manager.start_session("tracked", "Builder", "Task 1")
-    manager.start_session("tracked-ii", "Builder", "Task 2")
+    manager.start_session("tracked", "Engineer", "Task 1")
+    manager.start_session("tracked-ii", "Engineer", "Task 2")
 
     # Check usage count
     result = test_db.execute_query("SELECT usage_count FROM daemon_names WHERE name = 'tracked'")
