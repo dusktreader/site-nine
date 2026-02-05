@@ -1,12 +1,17 @@
 # Architecture Decision Records (ADRs) Workflow
 
-This guide explains how to work with Architecture Decision Records (ADRs) in site-nine using the database-backed ADR tracking system.
+This guide explains how to work with Architecture Decision Records (ADRs) in site-nine using the database-backed ADR
+tracking system.
+
 
 ## Overview
 
-ADRs are documents that capture important architectural decisions made during development. Site-nine provides a database-backed system for managing ADRs and linking them to epics and tasks, ensuring traceability between decisions and implementation work.
+ADRs are documents that capture important architectural decisions made during development. Site-nine provides a
+database-backed system for managing ADRs and linking them to epics and tasks, ensuring traceability between decisions
+and implementation work.
 
-### Key Features
+
+### Key features
 
 - **Database-backed**: ADRs are stored in the project database with markdown files as the presentation layer
 - **Bidirectional linking**: Link ADRs to epics and tasks to show which decisions informed which work
@@ -14,7 +19,8 @@ ADRs are documents that capture important architectural decisions made during de
 - **Automatic sync**: ADR information automatically appears in epic and task markdown files
 - **CLI management**: Full CLI support for creating, listing, updating, and linking ADRs
 
-## ADR Lifecycle
+
+## ADR lifecycle
 
 ADRs can have the following statuses:
 
@@ -24,7 +30,8 @@ ADRs can have the following statuses:
 - **SUPERSEDED**: Decision was accepted but has been replaced by a newer ADR
 - **DEPRECATED**: Decision is no longer recommended but not formally superseded
 
-## Basic Commands
+
+## Basic commands
 
 ### Create a new ADR
 
@@ -36,6 +43,7 @@ This creates:
 - A new database entry with auto-incremented ID (ADR-001, ADR-002, etc.)
 - A markdown file in `.opencode/docs/adrs/` with a template structure
 
+
 ### List all ADRs
 
 ```bash
@@ -45,6 +53,7 @@ s9 adr list
 # Filter by status
 s9 adr list --status ACCEPTED
 ```
+
 
 ### Show ADR details
 
@@ -56,6 +65,7 @@ This displays:
 - ADR metadata (title, status, file path, timestamps)
 - Linked epics
 - Linked tasks
+
 
 ### Update ADR metadata
 
@@ -69,6 +79,7 @@ s9 adr update ADR-001 --status ACCEPTED
 # Update both
 s9 adr update ADR-001 --title "New Title" --status ACCEPTED
 ```
+
 
 ### Sync ADRs from filesystem
 
@@ -84,9 +95,10 @@ This command:
 - Updates existing ADRs if title or status changed
 - Reports import/update/skip counts
 
-## Linking ADRs to Epics and Tasks
 
-### Link ADR to Epic
+## Linking ADRs to epics and tasks
+
+### Link ADR to epic
 
 ```bash
 s9 epic link-adr EPC-H-0001 ADR-001
@@ -104,13 +116,15 @@ The epic file will include a "Related Architecture" section with a table showing
 - Status
 - File path
 
-### Unlink ADR from Epic
+
+### Unlink ADR from epic
 
 ```bash
 s9 epic unlink-adr EPC-H-0001 ADR-001
 ```
 
-### Link ADR to Task
+
+### Link ADR to task
 
 ```bash
 s9 task link-adr OPR-H-0063 ADR-006
@@ -124,13 +138,15 @@ s9 task sync --task OPR-H-0063
 
 The task file will include a "Related Architecture" section showing linked ADRs with markdown links.
 
-### Unlink ADR from Task
+
+### Unlink ADR from task
 
 ```bash
 s9 task unlink-adr OPR-H-0063 ADR-006
 ```
 
-## Workflow Examples
+
+## Workflow examples
 
 ### Creating a new ADR for a design decision
 
@@ -153,6 +169,7 @@ s9 epic sync --epic EPC-H-0004
 s9 adr update ADR-007 --status ACCEPTED
 ```
 
+
 ### Linking existing ADRs to tasks during implementation
 
 ```bash
@@ -164,6 +181,7 @@ s9 task sync --task OPR-H-0065
 
 # Now the task file shows which ADR informed this work
 ```
+
 
 ### Finding all work related to an ADR
 
@@ -183,6 +201,7 @@ s9 adr show ADR-001
 #   Linked Tasks: OPR-H-0065, OPR-H-0066, OPR-H-0067
 ```
 
+
 ### Superseding an ADR
 
 ```bash
@@ -195,7 +214,8 @@ s9 adr update ADR-001 --status SUPERSEDED
 # In the new ADR markdown, reference the old one in the context section
 ```
 
-## ADR Markdown Template
+
+## ADR markdown template
 
 When you create an ADR, a template is generated with these sections:
 
@@ -230,9 +250,9 @@ When you create an ADR, a template is generated with these sections:
 - ⚠️ [Trade-off 1]
 
 ### Risks & Mitigation
-| Risk | Mitigation |
-|------|-----------|
-| [Risk 1] | [Mitigation 1] |
+| Risk        | Mitigation     |
+|-------------|----------------|
+| [Risk 1]    | [Mitigation 1] |
 
 ## References
 - [Related documents, tasks, or external resources]
@@ -241,7 +261,8 @@ When you create an ADR, a template is generated with these sections:
 [Additional notes or context]
 ```
 
-## Database Schema
+
+## Database schema
 
 ADRs are stored in three tables:
 
@@ -249,9 +270,11 @@ ADRs are stored in three tables:
 2. **epic_architecture_docs**: Links between epics and ADRs (epic_id, adr_id)
 3. **task_architecture_docs**: Links between tasks and ADRs (task_id, adr_id)
 
-The database is the source of truth. Markdown files are synchronized from the database during epic/task sync operations.
+The database is the source of truth. Markdown files are synchronized from the database during epic/task sync
+operations.
 
-## Best Practices
+
+## Best practices
 
 1. **Create ADRs early**: Document decisions as they're being made, not after
 2. **Link liberally**: Connect ADRs to all relevant epics and tasks for traceability
@@ -260,44 +283,60 @@ The database is the source of truth. Markdown files are synchronized from the da
 5. **Reference in code**: Add comments in code referencing relevant ADR IDs
 6. **Review periodically**: Use `s9 adr list --status PROPOSED` to review pending decisions
 
-## Integration with Workflows
 
-### Epic Planning
+## Integration with workflows
+
+### Epic planning
+
 When creating a new epic that requires architectural decisions:
+
 1. Create ADRs for key decisions
 2. Link ADRs to the epic using `s9 epic link-adr`
 3. Sync epic to show architecture in the epic file
 4. Create tasks that implement the ADRs
 5. Link ADRs to implementation tasks
 
-### Task Implementation
+
+### Task implementation
+
 When working on a task that implements an ADR:
+
 1. Link the ADR to the task using `s9 task link-adr`
 2. Sync task to show the ADR in the task header
 3. Reference ADR decisions in code comments and commit messages
 4. Update ADR status to ACCEPTED once implemented
 
-### Code Reviews
+
+### Code reviews
+
 When reviewing code:
+
 1. Check if task has linked ADRs using `s9 task show TASK-ID`
 2. Verify implementation matches ADR decisions
 3. Suggest ADR links if architectural decisions aren't documented
 
+
 ## Troubleshooting
 
 ### ADR not showing in epic/task file
+
 - Make sure you've linked the ADR: `s9 epic link-adr` or `s9 task link-adr`
 - Run sync command: `s9 epic sync` or `s9 task sync`
 
+
 ### ADR missing from database
+
 - Run `s9 adr sync` to import ADRs from filesystem
 
+
 ### Can't find an ADR
+
 - Use `s9 adr list` to see all ADRs
 - Filter by status: `s9 adr list --status ACCEPTED`
 - Search markdown files directly: `grep -r "search term" .opencode/docs/adrs/`
 
-## Related Commands
+
+## Related commands
 
 ```bash
 # ADR commands
@@ -318,7 +357,8 @@ s9 task unlink-adr  # Unlink ADR from task
 s9 task sync        # Sync task file (includes ADRs)
 ```
 
-## Further Reading
+
+## Further reading
 
 - [ADR Template Format](../adrs/ADR-001-adapter-pattern-abstraction.md) - Example ADR structure
 - [Architecture Guide](./architecture.md) - Overall architecture documentation
