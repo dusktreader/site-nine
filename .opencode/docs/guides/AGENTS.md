@@ -560,7 +560,7 @@ make qa/test-integration
 
 **Database connection error?** → Check `.env` configuration
 
-**See**: `.opencode/docs/procedures/TROUBLESHOOTING.md` for comprehensive troubleshooting guide.
+**See**: `.opencode/docs/guides/troubleshooting.md` for comprehensive troubleshooting guide.
 
 ---
 
@@ -632,7 +632,7 @@ site-nine/
 - **Task workflow**: See `.opencode/docs/procedures/TASK_WORKFLOW.md`
 - **Change history**: Run `s9 changelog`
 - **Workflows**: See `.opencode/docs/procedures/WORKFLOWS.md`
-- **Troubleshooting**: See `.opencode/docs/procedures/TROUBLESHOOTING.md`
+- **Troubleshooting**: See `.opencode/docs/guides/troubleshooting.md`
 
 ---
 

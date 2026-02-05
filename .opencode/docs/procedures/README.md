@@ -5,68 +5,9 @@ Quick command references for common development tasks.
 > **Note:** For commit message guidelines, see `.opencode/docs/guides/commit-guidelines.md`  
 > **Note:** For testing guidelines and patterns, see `.opencode/docs/guides/testing.md`  
 > **Note:** For code review checklist and best practices, see `.opencode/docs/guides/code-review.md`  
+> **Note:** For troubleshooting common issues, see `.opencode/docs/guides/troubleshooting.md`  
 > **Note:** For task management workflow, use the `task-management` skill  
 > **Note:** For mission/session workflows, use the `session-start` and `session-end` skills
-
----
-
-## Troubleshooting
-
-### Tests Failing
-
-```bash
-# Run with verbose output
-uv run pytest -vv
-
-# Run specific failing test
-uv run pytest tests/cli/test_task.py::test_create_task -vv
-
-# Check if it's a formatting issue
-make qa/format
-
-# Check if it's a linting issue
-make qa/lint
-```
-
-### Database Issues
-
-```bash
-# Check database exists
-ls -la .opencode/data/project.db
-
-# Verify schema
-sqlite3 .opencode/data/project.db ".schema"
-
-# Query data
-sqlite3 .opencode/data/project.db "SELECT * FROM tasks;"
-```
-
-### CLI Not Working
-
-```bash
-# Reinstall dependencies
-uv sync
-
-# Verify installation
-which s9
-s9 --version
-
-# Run from source
-uv run s9 --help
-```
-
-### Import Errors
-
-```bash
-# Check Python path
-uv run python -c "import sys; print(sys.path)"
-
-# Verify package structure
-ls -la src/s9/
-
-# Reinstall in development mode
-uv sync
-```
 
 ---
 
