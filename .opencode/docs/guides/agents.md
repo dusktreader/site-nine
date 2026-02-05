@@ -64,16 +64,6 @@ s9 mission end <mission-id>                                    # End mission
 
 ---
 
-## About This Project
-
-**Project:** site-nine (s9) - Generic orchestration framework for AI agent workflows in software development
-
-**Purpose:** This .opencode configuration is for working on projects that USE site-nine, not for developing site-nine itself.
-
-**Current Status:** See `.opencode/work/planning/PROJECT_STATUS.md` for current status and roadmap.
-
----
-
 ## Task Management
 
 ### Task Database
@@ -184,85 +174,21 @@ s9 changelog --since 2026-01-29
 
 ## Development Commands
 
+These are examples of common project commands. Your project may have different commands - check your project's README or Makefile.
+
 ```bash
-# Development
-make demo                    # Start docker services + open web demo
+# site-nine CLI (available in all projects using site-nine)
+s9 dashboard                 # Show project status
+s9 task list                 # List available tasks
+s9 mission start <persona>   # Start a mission
+s9 changelog                 # Generate changelog
 
-# Quality checks
-make qa                      # Run all checks (test + lint + types)
-make qa/test                 # Run unit tests
-make qa/test-integration     # Run integration tests (needs docker)
-make qa/format               # Format code
-make qa/lint                 # Lint code
-
-# Docker (advanced)
-docker compose up -d         # Start services
-docker compose down          # Stop services
-docker compose logs -f       # View logs
-
-# Help
-make help                    # Show all available commands
+# Project-specific commands (examples - check your project)
+make test                    # Run tests
+make lint                    # Lint code
+make format                  # Format code
+make help                    # Show available commands
 ```
-
----
-
-## Key Principles
-
-When working on site-nine:
-
-1. **Safety First**: Database access is read-only only
-2. **Human in the Loop**: Propose solutions, get approval
-3. **Guided Access**: Provide context (schema docs, query templates)
-4. **Testing Required**: All features need tests
-5. **Security**: Query validation, no hardcoded credentials
-
----
-
-## Technology Stack
-
-- **Python 3.12+** with uv for package management
-- **FastMCP** - Python framework
-- **SQLAlchemy** - Database access (PostgreSQL, MySQL, SQLite)
-- **DuckDB** - Knowledge base (embedded analytics)
-- **pytest/pytest-bdd** - Testing
-- **ruff** - Formatting and linting
-- **basedpyright** - Type checking
-
----
-
-## Architecture Overview
-
-**Hybrid MCP Pattern**: site-nine acts as both:
-- **MCP Server**: Exposes tools to AI agents
-- **MCP Client**: Delegates to external MCPs (JIRA, GitHub, Confluence)
-
-**Benefits**: Single configuration point for users, unified tool interface
-
----
-
-## Current Project Status
-
-**Completed** ✅:
-- Phase 1: Foundation (MCP skeleton)
-- Phase 2: External MCP Delegation (JIRA, GitHub, Confluence)
-- Phase 3: Database Integration (guided access, query validation)
-- Phase 4: Knowledge Base (DuckDB + S3 hybrid storage)
-- Phase 5: Investigation Locks (prevent duplicate work)
-- Phase 6: Write Queue (DuckDB concurrency)
-- Phase 7: Rate Limiting (protect external APIs)
-- Phase 8: Slack Bot (OpenCode HTTP integration)
-
-**Current Focus** 🔨:
-- Phase 9: Integration Testing & Validation
-
-**Future Work** 📋 (Not Currently Planned):
-- Production deployment and hardening
-- Production security audit
-- Production monitoring and alerting
-- Production CI/CD pipeline
-- Production launch activities
-
-See `.opencode/work/planning/PROJECT_STATUS.md` for current project status and phase completion.
 
 ---
 
@@ -544,38 +470,28 @@ make qa/test-integration
 
 ### For Development
 - **`.opencode/docs/guides/agents.md`** - Development patterns (READ THIS FIRST!)
-- **`.opencode/site-nine-dev/development/SITE_NINE_DEV.md`** - Site-nine specific patterns
 - **`.opencode/docs/guides/markdown-style.md`** - Markdown formatting standards (REQUIRED for all markdown files)
 - **`s9`** - Unified project management CLI (tasks, missions, personas)
 - **`.opencode/data/README.md`** - Complete s9 system reference
-- **`.opencode/work/missions/README.md`** - Mission tracking format and guidelines
-- **`.opencode/work/planning/build.md`** - Implementation phases
-- **`.opencode/work/planning/PROJECT_STATUS.md`** - Current project status and progress (use this!)
 - **`.opencode/docs/guides/commit-guidelines.md`** - Commit format reference
 - **`.opencode/docs/procedures/TASK_WORKFLOW.md`** - Task-first documentation workflow
-- **`Makefile`** - Development commands
-- **`.env.example`** - Configuration template
+- **`Makefile`** - Development commands (if your project uses make)
+- **`.env.example`** - Configuration template (if your project needs it)
 
 ### For Reference
-- **`.opencode/docs/guides/architecture.md`** - Architecture overview
-- **`.opencode/docs/guides/database.md`** - Database patterns
-- **`.opencode/docs/guides/design-philosophy.md`** - Design philosophy
+- **`.opencode/docs/roles/README.md`** - Agent role definitions
+- **`.opencode/docs/procedures/WORKFLOWS.md`** - Common development workflows
 - **`.opencode/docs/guides/design-system.md`** - Design system documentation (if created)
-- **`.opencode/design/*.md`** - Feature design documents
 
 ---
 
 ## Project Structure
 
 ```
-site-nine/
-├── src/
-│   └── site_nine/           # Main package
-│       ├── cli/             # CLI commands
-│       ├── core/            # Core framework
-│       └── templates/       # Project templates
-├── tests/                   # Unit tests
-├── .opencode/               # This directory
+your-project/
+├── src/                     # Your application source code
+├── tests/                   # Your application tests
+├── .opencode/               # site-nine configuration directory
 │   ├── docs/                # Static instructions
 │   │   ├── roles/           # Agent role definitions
 │   │   ├── commands/        # Slash command instructions
@@ -588,26 +504,25 @@ site-nine/
 │   │   └── planning/        # Strategic planning docs
 │   ├── data/                # Data storage
 │   │   └── project.db       # SQLite database
-│   ├── scripts/             # Utility scripts
-│   └── README.md            # Minimal pointer file
-├── .env.example             # Configuration template (if needed)
-├── Makefile                 # Development tasks
-└── pyproject.toml           # Project config
+│   └── scripts/             # Utility scripts (optional)
+├── .env.example             # Configuration template (if your project needs it)
+├── Makefile                 # Development tasks (if your project uses make)
+└── pyproject.toml           # Python project config (or package.json, etc.)
 ```
+
+**Note:** The `.opencode/` directory structure is created by `s9 init` and is the same for all projects using site-nine.
 
 ---
 
 ## Questions?
 
 - **Development patterns**: See `.opencode/docs/guides/agents.md` (this file)
-- **Architecture**: See `.opencode/docs/guides/architecture.md`
-- **Current status**: See `.opencode/work/planning/PROJECT_STATUS.md`
-- **Commands**: Run `make help`
+- **Commands**: Run `make help` (if your project uses make) or `s9 --help`
 - **Commit format**: See `.opencode/docs/guides/commit-guidelines.md`
 - **Task workflow**: See `.opencode/docs/procedures/TASK_WORKFLOW.md`
 - **Change history**: Run `s9 changelog`
 - **Workflows**: See `.opencode/docs/procedures/WORKFLOWS.md`
-- **Troubleshooting**: See `.opencode/docs/guides/troubleshooting.md`
+- **Troubleshooting**: See `.opencode/docs/guides/troubleshooting.md` (if exists)
 
 ---
 
