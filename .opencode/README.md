@@ -1,8 +1,8 @@
-# OpenCode Configuration for site-nine Development
+# OpenCode Configuration
 
-This directory contains OpenCode configuration for **developing** the site-nine Python project.
+This directory contains OpenCode configuration for AI-assisted development.
 
-> **Important:** This is configuration for developing site-nine itself, not for using site-nine in your projects.
+> **Note:** Site-nine specific development files are in the `site-nine-dev/` subdirectory.
 
 ## For OpenCode Agents
 
@@ -16,7 +16,7 @@ Use the `/summon` command to initialize a session. The session-start skill will 
 
 **Essential documentation will be read during session start:**
 - `.opencode/docs/guides/AGENTS.md` - Complete development guide
-- `.opencode/docs/development/SITE_NINE_DEV.md` - Site-nine specific patterns
+- `.opencode/site-nine-dev/development/SITE_NINE_DEV.md` - Site-nine specific patterns
 - `.opencode/docs/procedures/COMMIT_GUIDELINES.md` - Commit format
 
 ## Directory Structure
@@ -30,6 +30,7 @@ Use the `/summon` command to initialize a session. The session-start skill will 
 │   ├── roles/            # Role-specific documentation
 │   ├── procedures/       # How-tos and workflows
 │   └── adrs/            # Architecture decision records
+├── site-nine-dev/        # Site-nine specific development files
 ├── data/                 # SQLite database
 └── work/                 # Session logs, tasks, planning
 ```

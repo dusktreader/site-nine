@@ -15,7 +15,7 @@ This guide is for AI agents (like Claude, ChatGPT, Copilot, etc.) working on the
 You MUST read these files IN ORDER before responding:
 
 1. This file (`.opencode/docs/guides/AGENTS.md`) - Complete development guide (CRITICAL)
-2. `.opencode/docs/development/SITE_NINE_DEV.md` - Site-nine specific patterns
+2. `.opencode/site-nine-dev/development/SITE_NINE_DEV.md` - Site-nine specific patterns
 3. `.opencode/docs/procedures/COMMIT_GUIDELINES.md` - Commit format
 
 Use the Read tool to read ALL files. Do NOT skip this step.
@@ -568,7 +568,7 @@ make qa/test-integration
 
 ### For Development
 - **`.opencode/docs/guides/AGENTS.md`** - Development patterns (READ THIS FIRST!)
-- **`.opencode/docs/development/SITE_NINE_DEV.md`** - Site-nine specific patterns
+- **`.opencode/site-nine-dev/development/SITE_NINE_DEV.md`** - Site-nine specific patterns
 - **`.opencode/docs/MARKDOWN_STYLE_GUIDE.md`** - Markdown formatting standards (REQUIRED for all markdown files)
 - **`s9`** - Unified project management CLI (tasks, missions, personas)
 - **`.opencode/data/README.md`** - Complete s9 system reference
