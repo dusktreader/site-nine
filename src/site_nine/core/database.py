@@ -31,7 +31,7 @@ class Database:
 
     def initialize_schema(self) -> None:
         """Initialize database schema from SQL file"""
-        schema_path = Path(__file__).parent.parent / "templates" / "schema.sql"
+        schema_path = Path(__file__).parent.parent / "data" / "schema.sql"
 
         with open(schema_path) as f:
             schema_sql = f.read()
@@ -44,6 +44,23 @@ class Database:
             # Enable foreign key constraints
             conn.execute("PRAGMA foreign_keys = ON")
             conn.executescript(schema_sql)
+            conn.commit()
+        finally:
+            conn.close()
+
+    def seed_data(self) -> None:
+        """Populate database with seed data"""
+        seed_path = Path(__file__).parent.parent / "data" / "seed.sql"
+
+        with open(seed_path) as f:
+            seed_sql = f.read()
+
+        # Use raw connection for executescript
+        import sqlite3
+
+        conn = sqlite3.connect(self.db_path)
+        try:
+            conn.executescript(seed_sql)
             conn.commit()
         finally:
             conn.close()

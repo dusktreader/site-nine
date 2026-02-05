@@ -7,7 +7,6 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from site_nine.core.config import SiteNineConfig
-from site_nine.core.personas import load_personas
 from site_nine.core.database import Database
 from site_nine.core.templates import TemplateRenderer
 from site_nine.core.wizard import run_wizard
@@ -49,12 +48,12 @@ def init_command(
         db_path.parent.mkdir(parents=True, exist_ok=True)
         db = Database(db_path)
         db.initialize_schema()
-        progress.update(task, description="✓ Database initialized")
+        progress.update(task, description="✓ Database schema initialized")
 
-        # Populate personas
-        task2 = progress.add_task("Populating personas...", total=None)
-        populate_personas(db)
-        progress.update(task2, description="✓ Personas populated")
+        # Seed database
+        task2 = progress.add_task("Seeding database...", total=None)
+        db.seed_data()
+        progress.update(task2, description="✓ Database seeded (256 personas)")
 
         # Render templates
         task3 = progress.add_task("Rendering templates...", total=None)
@@ -68,20 +67,6 @@ def init_command(
     console.print("  1. Review .opencode/README.md")
     console.print("  2. Start a session with: opencode")
     console.print("  4. Run: s9 dashboard")
-
-
-def populate_personas(db: Database) -> None:
-    """Populate personas from built-in list"""
-    personas = load_personas()
-
-    for persona_data in personas:
-        db.execute_update(
-            """
-            INSERT INTO personas (name, role, mythology, description, mission_count, created_at)
-            VALUES (:name, :role, :mythology, :description, 0, datetime('now'))
-            """,
-            persona_data,
-        )
 
 
 def render_all_templates(renderer: TemplateRenderer, output_dir: Path, context: dict) -> int:
