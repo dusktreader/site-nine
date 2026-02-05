@@ -20,9 +20,12 @@ Use ATX-style headings with hash marks (`#`). Do not use Setext-style underlines
 
 ```markdown
 # Heading 1
+
 ## Heading 2
+
 ### Heading 3
 ```
+
 
 ### Capitalization
 
@@ -38,6 +41,7 @@ Use ATX-style headings with hash marks (`#`). Do not use Setext-style underlines
 
 ### Format conventions
 ```
+
 
 ### Spacing
 
@@ -60,6 +64,7 @@ More content here.
 
 ```markdown
 ## Section one
+
 ### Subsection
 
 No blank lines needed between stacked headings.
@@ -131,6 +136,7 @@ Place a blank line before and after lists when separating from other block eleme
 **User-facing documentation:** Avoid overusing bullet lists. Use prose paragraphs when appropriate to improve
 readability and flow. Reserve lists for cases where enumeration adds clarity.
 
+
 ### Ordered lists
 
 Use sequential numbering (`1.`, `2.`, `3.`).
@@ -170,6 +176,7 @@ You may use auto-numbering (all items as `1.`) if preferred, but be consistent w
 
 **Why this matters:** Unaligned tables are difficult to read and edit in source files. Since markdown is read both as source and rendered output, source readability is just as important as rendered appearance.
 
+
 ### Syntax
 
 - Use leading and trailing pipes on every row
@@ -187,13 +194,15 @@ Use double asterisks for bold text.
 **bold text**
 ```
 
+
 ### Italic
 
-Use single asterisks for italic text.
+Use single underscores for italic text.
 
 ```markdown
-*italic text*
+_italic text_
 ```
+
 
 ### Bold in lists
 
@@ -202,6 +211,97 @@ Use bold for emphasis on key terms in list items.
 ```markdown
 - **Project name** - The name of your project
 - **Project type** - Select from python, typescript, go, rust, or other
+```
+
+
+## Admonitions
+
+Admonitions are special callout boxes used to highlight important information. Use them sparingly to draw attention
+to critical notes, warnings, or tips.
+
+**When to use admonitions:**
+- Critical warnings about destructive operations
+- Important prerequisites or requirements
+- Security considerations
+- Common pitfalls or gotchas
+- Key concepts that deserve emphasis
+
+**When NOT to use admonitions:**
+- General information (use regular prose)
+- Every other paragraph (overuse reduces impact)
+- Styling regular content (not for visual variety)
+
+**Golden rule:** If everything is important, nothing is important. Reserve admonitions for content that truly deserves
+special attention.
+
+
+### For MkDocs documentation (`docs/source/`)
+
+Use MkDocs-style admonitions with `!!!` or `???` syntax:
+
+```markdown
+!!! note
+    This is a note admonition.
+
+!!! warning
+    This is a warning about potential issues.
+
+!!! danger
+    This is a critical warning about dangerous operations.
+
+!!! tip
+    This is a helpful tip for users.
+
+!!! info
+    This is informational content.
+```
+
+**Collapsible admonitions:**
+
+```markdown
+??? note "Click to expand"
+    This content is collapsed by default.
+
+???+ warning "Expanded by default"
+    This content is expanded by default but can be collapsed.
+```
+
+**Available types:** `note`, `abstract`, `info`, `tip`, `success`, `question`, `warning`, `failure`, `danger`, `bug`,
+`example`, `quote`
+
+
+### For all other markdown files
+
+Use GitHub-style admonitions with blockquote syntax:
+
+```markdown
+> [!NOTE]
+> This is a note admonition.
+
+> [!WARNING]
+> This is a warning about potential issues.
+
+> [!IMPORTANT]
+> This highlights critical information.
+
+> [!TIP]
+> This provides a helpful tip.
+
+> [!CAUTION]
+> This warns about potential problems.
+```
+
+**Available types:** `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`
+
+**Example usage:**
+
+```markdown
+Before running this command, ensure your database is backed up.
+
+> [!WARNING]
+> This operation will delete all data in the database. This action cannot be undone.
+
+To proceed with the deletion:
 ```
 
 
@@ -217,10 +317,10 @@ Use inline reference style for links.
 
 ## Horizontal rules
 
-Use three hyphens for horizontal rules.
+Use 8 hyphens for horizontal rules.
 
 ```markdown
----
+--------
 ```
 
 
