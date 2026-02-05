@@ -20,23 +20,22 @@ I provide comprehensive instructions for managing tasks in the {{ project_name }
 
 ## Task Management Systems
 
-**Unified PM System (Use This)**
+**Unified s9 System (Use This)**
 
-The `pm` script provides unified management of tasks, agent sessions, and daemon names:
+The `s9` CLI provides unified management of tasks, agent sessions, and daemon names:
 
 ```bash
-cd .opencode/scripts
 
 # Task commands
-./pm task create TASK_ID --title "..." --priority HIGH --role Engineer --objective "..."
-./pm task list --role Engineer --active-only
-./pm task claim TASK_ID --agent-name "YourName" --agent-id YOUR_ID
-./pm task update TASK_ID --notes "..." --actual-hours X.X
-./pm task close TASK_ID --status COMPLETE --notes "..."
+s9 task create --title "..." --objective "..." --role Engineer --priority HIGH  # Task ID auto-generated
+s9 task list --role Engineer --active-only
+s9 task claim TASK_ID --agent-name "YourName"
+s9 task update TASK_ID --notes "..." --actual-hours X.X
+s9 task close TASK_ID --status COMPLETE --notes "..."
 
-# See also: agent and name commands
-./pm agent start <name> --role <Role> --session-file "..." --task-summary "..."
-./pm name suggest <Role>
+# See also: mission and persona commands
+s9 mission start <name> --role <Role> --session-file "..." --task-summary "..."
+s9 persona suggest <Role>
 ```
 
 **Documentation:**
@@ -46,17 +45,16 @@ cd .opencode/scripts
 
 **Legacy System (Preserved for Reference)**
 
-The original task system has been migrated to the new PM system:
+The original task system has been migrated to the new s9 system:
 
 ```bash
-cd .opencode/scripts
-./pm task <command> [options]
+s9 task <command> [options]
 ```
 
 **Database:** `.opencode/tasks/tasks.db` (SQLite, data migrated to project.db)  
 **Artifacts:** `.opencode/tasks/artifacts/*.md` (Markdown files)
 
-> **Note:** All 72 tasks have been migrated to the new PM system. Use `pm` commands for all task operations going forward. The instructions below have been updated to use the new PM system.
+> **Note:** All 72 tasks have been migrated to the new s9 system. Use `s9` commands for all task operations going forward. The instructions below have been updated to use the new s9 system.
 
 ---
 
@@ -69,8 +67,7 @@ cd .opencode/scripts
 
 **Command:**
 ```bash
-cd .opencode/scripts
-./pm task create TASK_ID \
+s9 task create TASK_ID \
   --title "Brief task title" \
   --priority {CRITICAL|HIGH|MEDIUM|LOW} \
   --role {Manager|Architect|Engineer|Tester|Documentarian|Designer|Inspector|Operator} \
@@ -100,8 +97,7 @@ Numbers increment sequentially within each priority level.
 
 ```bash
 # Get highest ID for a priority level
-cd .opencode/scripts
-./pm task list --status TODO,UNDERWAY,BLOCKED,PAUSED,COMPLETE,ABORTED | grep "^H" | tail -1
+s9 task list --status TODO,UNDERWAY,BLOCKED,PAUSED,COMPLETE,ABORTED | grep "^H" | tail -1
 
 # If last HIGH is H036, next is H037
 ```
@@ -164,7 +160,7 @@ Use `--depends-on` when a task cannot start until another completes:
 
 ```bash
 # H038 depends on H037
-./pm task create H038 \
+s9 task create H038 \
   --title "Configure Gateway" \
   --priority HIGH \
   --role Operator \
@@ -181,14 +177,12 @@ Use `--depends-on` when a task cannot start until another completes:
 ### Example: Creating a Task
 
 ```bash
-cd .opencode/scripts
-
 # Check for next available ID
-./pm task list | grep "^H" | tail -1
+s9 task list | grep "^H" | tail -1
 # Output: H036 | Some task title
 
 # Create H037
-./pm task create H037 \
+s9 task create H037 \
   --title "Implement Rate Limiting Middleware" \
   --priority HIGH \
   --role Engineer \
@@ -217,7 +211,7 @@ The CLI validates:
 
 Verify task was created:
 ```bash
-./pm task show H037
+s9 task show H037
 ```
 
 ---
@@ -228,39 +222,39 @@ Verify task was created:
 
 **By status:**
 ```bash
-./pm task list --status TODO
-./pm task list --status UNDERWAY
-./pm task list --status TODO,UNDERWAY
+s9 task list --status TODO
+s9 task list --status UNDERWAY
+s9 task list --status TODO,UNDERWAY
 ```
 
 **By role:**
 ```bash
-./pm task list --role Engineer --status TODO
-./pm task list --role Manager --status TODO
+s9 task list --role Engineer --status TODO
+s9 task list --role Manager --status TODO
 ```
 
 **By priority:**
 ```bash
-./pm task list --priority CRITICAL,HIGH --status TODO
-./pm task list --priority HIGH
+s9 task list --priority CRITICAL,HIGH --status TODO
+s9 task list --priority HIGH
 ```
 
 **Active tasks only:**
 ```bash
-./pm task list --active-only
+s9 task list --active-only
 # Shows TODO and UNDERWAY tasks
 ```
 
 **By agent:**
 ```bash
-./pm task list --agent "Goibniu"
-./pm task list --agent "Ishtar" --status UNDERWAY
+s9 task list --agent "Goibniu"
+s9 task list --agent "Ishtar" --status UNDERWAY
 ```
 
 ### View Task Details
 
 ```bash
-./pm task show H037
+s9 task show H037
 ```
 
 Shows:
@@ -276,16 +270,16 @@ Shows:
 
 ```bash
 # Markdown report
-./pm task report --format markdown
+s9 task report --format markdown
 
 # Table format
-./pm task report --format table
+s9 task report --format table
 
 # JSON for scripts
-./pm task report --format json
+s9 task report --format json
 
 # Filter by role
-./pm task report --role Engineer --format markdown
+s9 task report --role Engineer --format markdown
 ```
 
 ---
@@ -298,8 +292,7 @@ Shows:
 
 **Command:**
 ```bash
-cd .opencode/scripts
-./pm task claim TASK_ID --agent-name "YourName"
+s9 task claim TASK_ID --agent-name "YourName"
 ```
 
 ### What Happens When You Claim
@@ -318,19 +311,18 @@ Use your daemon name from the session:
 ### Example: Claiming a Task
 
 ```bash
-cd .opencode/scripts
 
 # Find available tasks for your role
-./pm task list --role Engineer --status TODO
+s9 task list --role Engineer --status TODO
 
 # Output shows H037 is available
 # H037 | Implement Rate Limiting Middleware | TODO | HIGH | Engineer
 
 # Claim it
-./pm task claim H037 --agent-name "Goibniu"
+s9 task claim H037 --agent-name "Goibniu"
 
 # Verify
-./pm task show H037
+s9 task show H037
 # Status: UNDERWAY
 # Agent: Goibniu
 # Claimed: 2026-01-29T22:00:00+00:00
@@ -347,21 +339,21 @@ The database prevents race conditions:
 
 If task is already claimed:
 ```bash
-./pm task claim H037 --agent-name "Ishtar"
+s9 task claim H037 --agent-name "Ishtar"
 # Error: Task H037 is already claimed by Goibniu
 ```
 
 Check who claimed it:
 ```bash
-./pm task show H037
+s9 task show H037
 ```
 
 ### Claiming Multiple Tasks
 
 Claim one at a time:
 ```bash
-./pm task claim H037 --agent-name "Goibniu"
-./pm task claim H038 --agent-name "Goibniu"
+s9 task claim H037 --agent-name "Goibniu"
+s9 task claim H038 --agent-name "Goibniu"
 ```
 
 **Best practice:** Focus on one task at a time. Only claim multiple if they're small and related.
@@ -379,8 +371,7 @@ Claim one at a time:
 
 **Command:**
 ```bash
-cd .opencode/scripts
-./pm task update TASK_ID \
+s9 task update TASK_ID \
   [--status STATUS] \
   [--notes "Progress notes"] \
   [--actual-hours X.X] \
@@ -392,11 +383,11 @@ cd .opencode/scripts
 Use `--notes` to document progress:
 
 ```bash
-./pm task update H037 --notes "Implemented basic rate limiter, writing tests"
+s9 task update H037 --notes "Implemented basic rate limiter, writing tests"
 
-./pm task update H037 --notes "All tests passing, need to add Redis backend"
+s9 task update H037 --notes "All tests passing, need to add Redis backend"
 
-./pm task update H037 --notes "Blocked on Redis configuration decision"
+s9 task update H037 --notes "Blocked on Redis configuration decision"
 ```
 
 **Notes are appended** to the task's notes field, not replaced.
@@ -406,10 +397,10 @@ Use `--notes` to document progress:
 Track actual hours spent:
 
 ```bash
-./pm task update H037 --actual-hours 2.5
+s9 task update H037 --actual-hours 2.5
 
 # Add more time later
-./pm task update H037 --actual-hours 4.0  # Total is now 4.0, not 2.5+4.0
+s9 task update H037 --actual-hours 4.0  # Total is now 4.0, not 2.5+4.0
 ```
 
 **Note:** `--actual-hours` sets the total, not incremental.
@@ -420,29 +411,28 @@ Usually status changes via claim/close, but you can update manually:
 
 ```bash
 # Mark as blocked (but keep it UNDERWAY)
-./pm task update H037 --status BLOCKED --notes "Waiting for design decision"
+s9 task update H037 --status BLOCKED --notes "Waiting for design decision"
 
 # Return to regular progress
-./pm task update H037 --status UNDERWAY --notes "Design decision made, resuming"
+s9 task update H037 --status UNDERWAY --notes "Design decision made, resuming"
 ```
 
 ### Example: Updating Progress
 
 ```bash
-cd .opencode/scripts
 
 # After 2 hours of work
-./pm task update H037 \
+s9 task update H037 \
   --notes "Implemented token bucket algorithm, added configuration" \
   --actual-hours 2.0
 
 # After 2 more hours
-./pm task update H037 \
+s9 task update H037 \
   --notes "Added tests, all passing" \
   --actual-hours 4.0
 
 # Check progress
-./pm task show H037
+s9 task show H037
 ```
 
 ### Update Frequency
@@ -469,8 +459,7 @@ cd .opencode/scripts
 
 **Command:**
 ```bash
-cd .opencode/scripts
-./pm task close TASK_ID \
+s9 task close TASK_ID \
   --status {COMPLETE|PAUSED|BLOCKED|ABORTED} \
   --notes "Final summary"
 ```
@@ -511,14 +500,13 @@ When you close a task:
 ### Example: Closing Complete Task
 
 ```bash
-cd .opencode/scripts
 
-./pm task close H037 \
+s9 task close H037 \
   --status COMPLETE \
   --notes "Rate limiting implemented and tested. All tests passing. Documentation updated."
 
 # Verify
-./pm task show H037
+s9 task show H037
 # Status: COMPLETE
 # Closed: 2026-01-29T23:30:00+00:00
 ```
@@ -526,7 +514,7 @@ cd .opencode/scripts
 ### Example: Closing Blocked Task
 
 ```bash
-./pm task close H038 \
+s9 task close H038 \
   --status BLOCKED \
   --notes "Blocked by H037. Can't deploy gateway until rate limiting is complete."
 ```
@@ -534,7 +522,7 @@ cd .opencode/scripts
 ### Example: Pausing Task
 
 ```bash
-./pm task close M019 \
+s9 task close M019 \
   --status PAUSED \
   --notes "Pausing to work on critical security issue C003. Will resume after."
 ```
@@ -542,7 +530,7 @@ cd .opencode/scripts
 ### Example: Aborting Task
 
 ```bash
-./pm task close L012 \
+s9 task close L012 \
   --status ABORTED \
   --notes "Task obsolete after architecture change in H029. No longer needed."
 ```
@@ -553,12 +541,12 @@ To resume a paused or blocked task:
 
 1. **Claim it again** (if not already yours):
    ```bash
-   ./pm task claim H038 --agent-name "YourName"
+   s9 task claim H038 --agent-name "YourName"
    ```
 
 2. **Update status** back to UNDERWAY:
    ```bash
-   ./pm task update H038 --status UNDERWAY --notes "Blocker resolved, resuming work"
+   s9 task update H038 --status UNDERWAY --notes "Blocker resolved, resuming work"
    ```
 
 ---
@@ -585,63 +573,62 @@ TODO (created)
 ### Workflow 1: Complete a Task End-to-End
 
 ```bash
-cd .opencode/scripts
 
 # 1. Find work
-./pm task list --role Engineer --status TODO
+s9 task list --role Engineer --status TODO
 
 # 2. Claim task
-./pm task claim H037 --agent-name "Goibniu"
+s9 task claim H037 --agent-name "Goibniu"
 
 # 3. Work on it (update periodically)
-./pm task update H037 --notes "Made progress on X" --actual-hours 2.0
+s9 task update H037 --notes "Made progress on X" --actual-hours 2.0
 
 # 4. Close when done
-./pm task close H037 --status COMPLETE --notes "All tests passing, code reviewed"
+s9 task close H037 --status COMPLETE --notes "All tests passing, code reviewed"
 ```
 
 ### Workflow 2: Pause for Higher Priority
 
 ```bash
 # Working on M019
-./pm task update M019 --notes "50% complete"
+s9 task update M019 --notes "50% complete"
 
 # Critical issue appears
-./pm task close M019 --status PAUSED --notes "Pausing for C003"
+s9 task close M019 --status PAUSED --notes "Pausing for C003"
 
 # Work on C003
-./pm task claim C003 --agent-name "Goibniu"
-./pm task close C003 --status COMPLETE --notes "Security issue fixed"
+s9 task claim C003 --agent-name "Goibniu"
+s9 task close C003 --status COMPLETE --notes "Security issue fixed"
 
 # Resume M019
-./pm task update M019 --status UNDERWAY --notes "Resuming after C003"
+s9 task update M019 --status UNDERWAY --notes "Resuming after C003"
 ```
 
 ### Workflow 3: Hit a Blocker
 
 ```bash
 # Working on H038
-./pm task update H038 --notes "Need H037 to be complete first"
+s9 task update H038 --notes "Need H037 to be complete first"
 
 # Mark as blocked
-./pm task close H038 --status BLOCKED --notes "Blocked by H037"
+s9 task close H038 --status BLOCKED --notes "Blocked by H037"
 
 # Work on something else
 
 # When H037 is complete
-./pm task update H038 --status UNDERWAY --notes "H037 complete, resuming"
+s9 task update H038 --status UNDERWAY --notes "H037 complete, resuming"
 ```
 
 ### Workflow 4: Create Dependent Tasks
 
 ```bash
 # Create parent task
-./pm task create H037 --title "Design Gateway" --priority HIGH --role Architect --objective "Design gateway architecture"
+s9 task create H037 --title "Design Gateway" --priority HIGH --role Architect --objective "Design gateway architecture"
 
 # Create dependent tasks
-./pm task create H038 --title "Implement Gateway" --priority HIGH --role Engineer --objective "Implement gateway" --depends-on H037
+s9 task create H038 --title "Implement Gateway" --priority HIGH --role Engineer --objective "Implement gateway" --depends-on H037
 
-./pm task create H039 --title "Test Gateway" --priority HIGH --role Tester --objective "Test gateway" --depends-on H038
+s9 task create H039 --title "Test Gateway" --priority HIGH --role Tester --objective "Test gateway" --depends-on H038
 ```
 
 ---
@@ -690,11 +677,11 @@ cd .opencode/scripts
 
 ### "Task not found"
 - Check task ID spelling and case
-- Verify task exists: `./pm task list | grep TASK_ID`
+- Verify task exists: `s9 task list | grep TASK_ID`
 
 ### "Task already claimed"
 - Someone else is working on it
-- Check: `./pm task show TASK_ID`
+- Check: `s9 task show TASK_ID`
 - Choose a different task or coordinate
 
 ### "Database is locked"
@@ -709,7 +696,7 @@ cd .opencode/scripts
 
 ### "Dependency not found"
 - Task ID in `--depends-on` doesn't exist
-- Check task IDs: `./pm task list`
+- Check task IDs: `s9 task list`
 - Fix the dependency task ID
 
 ### Can't find tasks.py
@@ -750,9 +737,9 @@ cd .opencode/scripts
 
 ## See Also
 
-**New PM System:**
-- `.opencode/scripts/README.md` - Quick start guide for unified PM system
-- `.opencode/data/README.md` - Complete PM system reference
+**New s9 System:**
+- `.opencode/scripts/README.md` - Quick start guide for unified s9 system
+- `.opencode/data/README.md` - Complete s9 system reference
 
 **Legacy Task System:**
 - `.opencode/tasks/README.md` - Overview of original task system (technical details)

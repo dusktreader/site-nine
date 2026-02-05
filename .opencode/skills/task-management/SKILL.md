@@ -28,9 +28,9 @@ I provide comprehensive instructions for managing tasks in the s9 task database.
 
 ## Task Management Systems
 
-**Unified PM System (Use This)**
+**Unified s9 System (Use This)**
 
-The `pm` script provides unified management of tasks, agent sessions, and daemon names:
+The `s9` CLI provides unified management of tasks, agent sessions, and daemon names:
 
 ```bash
 
@@ -53,7 +53,7 @@ s9 persona suggest <Role>
 
 **Legacy System (Preserved for Reference)**
 
-The original task system has been migrated to the new PM system:
+The original task system has been migrated to the new s9 system:
 
 ```bash
 s9 task <command> [options]
@@ -62,7 +62,7 @@ s9 task <command> [options]
 **Database:** `.opencode/tasks/tasks.db` (SQLite, data migrated to project.db)  
 **Artifacts:** `.opencode/tasks/artifacts/*.md` (Markdown files)
 
-> **Note:** All 72 tasks have been migrated to the new PM system. Use `pm` commands for all task operations going forward. The instructions below have been updated to use the new PM system.
+> **Note:** All 72 tasks have been migrated to the new s9 system. Use `s9` commands for all task operations going forward. The instructions below have been updated to use the new s9 system.
 
 ---
 
@@ -745,9 +745,9 @@ s9 task create --title "Test Gateway" --objective "Test gateway" --role Tester -
 
 ## See Also
 
-**New PM System:**
-- `.opencode/scripts/README.md` - Quick start guide for unified PM system
-- `.opencode/data/README.md` - Complete PM system reference
+**New s9 System:**
+- `.opencode/scripts/README.md` - Quick start guide for unified s9 system
+- `.opencode/data/README.md` - Complete s9 system reference
 
 **Legacy Task System:**
 - `.opencode/tasks/README.md` - Overview of original task system (technical details)
