@@ -11,6 +11,6 @@ These files are NOT part of the generic OpenCode infrastructure and would NOT be
 ## For OpenCode Agents
 
 If you're developing site-nine, make sure to read:
-1. `.opencode/docs/guides/AGENTS.md` - General development guide
+1. `.opencode/docs/guides/agents.md` - General development guide
 2. `.opencode/site-nine-dev/development/SITE_NINE_DEV.md` - Site-nine specific patterns
 3. `.opencode/docs/procedures/COMMIT_GUIDELINES.md` - Commit format

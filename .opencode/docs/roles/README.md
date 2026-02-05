@@ -50,6 +50,6 @@ Meta-development specialist. Maintains `.opencode/` infrastructure.
 
 This directory contains role-specific documentation. For general development workflow, patterns, and procedures, see:
 
-- **`.opencode/docs/guides/AGENTS.md`** - Complete development guide with workflow, patterns, and code examples
+- **`.opencode/docs/guides/agents.md`** - Complete development guide with workflow, patterns, and code examples
 - **`.opencode/docs/guides/commit-guidelines.md`** - Commit format and guidelines
 - **`.opencode/README.md`** - Quick overview and getting started

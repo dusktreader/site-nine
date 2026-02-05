@@ -102,7 +102,7 @@ def render_all_templates(renderer: TemplateRenderer, output_dir: Path, context: 
         "base/docs/agents/inspector.md.jinja": "docs/agents/inspector.md",
         "base/docs/agents/operator.md.jinja": "docs/agents/operator.md",
         # Guides
-        "base/docs/guides/AGENTS.md.jinja": "docs/guides/AGENTS.md",
+        "base/docs/guides/agents.md.jinja": "docs/guides/agents.md",
         "base/docs/guides/architecture.md.jinja": "docs/guides/architecture.md",
         "base/docs/guides/design-philosophy.md.jinja": "docs/guides/design-philosophy.md",
         "base/docs/guides/README.md.jinja": "docs/guides/README.md",

@@ -38,25 +38,25 @@ def _open_editor(file_path: Path) -> None:
 
 
 @app.command(name="agents")
-@handle_errors("Failed to edit AGENTS.md")
+@handle_errors("Failed to edit agents.md")
 def edit_agents() -> None:
-    """Edit the AGENTS.md file with development patterns and guidelines (typically used by: humans)"""
+    """Edit the agents.md file with development patterns and guidelines (typically used by: humans)"""
     try:
         opencode_dir = get_opencode_dir()
     except FileNotFoundError:
         console.print("[red]Error: .opencode directory not found. Run 's9 init' first.[/red]")
         raise typer.Exit(1)
 
-    agents_file = opencode_dir / "docs" / "guides" / "AGENTS.md"
+    agents_file = opencode_dir / "docs" / "guides" / "agents.md"
 
     if not agents_file.exists():
-        console.print(f"[red]Error: AGENTS.md not found at {agents_file}[/red]")
+        console.print(f"[red]Error: agents.md not found at {agents_file}[/red]")
         console.print("[cyan]💡 This file should be created during 's9 init'[/cyan]")
         raise typer.Exit(1)
 
-    console.print(f"[cyan]Opening AGENTS.md in {_get_editor()}...[/cyan]")
+    console.print(f"[cyan]Opening agents.md in {_get_editor()}...[/cyan]")
     _open_editor(agents_file)
-    console.print("[green]✓[/green] Done editing AGENTS.md")
+    console.print("[green]✓[/green] Done editing agents.md")
 
 
 @app.command(name="commits")

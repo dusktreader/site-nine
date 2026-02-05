@@ -336,4 +336,4 @@ make qa
 
 - **Commit Guidelines:** `.opencode/docs/guides/commit-guidelines.md` - Includes "run tests before commit"
 - **Troubleshooting Guide:** `.opencode/docs/guides/troubleshooting.md` - Debugging test failures
-- **Agent Guide:** `.opencode/docs/guides/AGENTS.md` - Testing workflow for agents
+- **Agent Guide:** `.opencode/docs/guides/agents.md` - Testing workflow for agents

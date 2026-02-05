@@ -82,4 +82,4 @@ This ensures code quality and prevents CI failures.
 ## Related
 
 - **Testing Guide:** `.opencode/docs/guides/testing.md` - Testing patterns and best practices
-- **Agent Guide:** `.opencode/docs/guides/AGENTS.md` - Agent workflows and responsibilities
+- **Agent Guide:** `.opencode/docs/guides/agents.md` - Agent workflows and responsibilities

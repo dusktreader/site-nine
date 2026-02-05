@@ -14,7 +14,7 @@ This guide is for AI agents (like Claude, ChatGPT, Copilot, etc.) working on the
 
 You MUST read these files IN ORDER before responding:
 
-1. This file (`.opencode/docs/guides/AGENTS.md`) - Complete development guide (CRITICAL)
+1. This file (`.opencode/docs/guides/agents.md`) - Complete development guide (CRITICAL)
 2. `.opencode/site-nine-dev/development/SITE_NINE_DEV.md` - Site-nine specific patterns
 3. `.opencode/docs/guides/commit-guidelines.md` - Commit format
 
@@ -151,7 +151,7 @@ s9 mission end <mission-id>
 2. Follow SESSION START PROTOCOL (choose role, pick name, create session file)
 3. Find work: `s9 task list --status TODO --role [YourRole]`
 4. Claim task: `s9 task claim TASK_ID --agent [YourName]`
-5. Review `.opencode/docs/guides/AGENTS.md` patterns before implementing
+5. Review `.opencode/docs/guides/agents.md` patterns before implementing
 6. Do the work assigned to your role
 7. Update task: `s9 task update TASK_ID --status UNDERWAY --notes 'Progress update'`
 8. Update session file with progress in Work Log section
@@ -391,9 +391,9 @@ If you're starting a new task and aren't sure which role is best, choose Adminis
 ✅ Good: "Add rate limiting to database queries with 50/minute limit"  
 ❌ Less good: "Make it faster"
 
-### 4. Agents Read AGENTS.md
+### 4. Agents Read agents.md
 
-The agents are configured to read `.opencode/docs/guides/AGENTS.md` for patterns. Keep it updated with lessons learned.
+The agents are configured to read `.opencode/docs/guides/agents.md` for patterns. Keep it updated with lessons learned.
 
 ### 5. Engineer Writes Tests, Tester Runs Them
 
@@ -567,7 +567,7 @@ make qa/test-integration
 ## Important Files
 
 ### For Development
-- **`.opencode/docs/guides/AGENTS.md`** - Development patterns (READ THIS FIRST!)
+- **`.opencode/docs/guides/agents.md`** - Development patterns (READ THIS FIRST!)
 - **`.opencode/site-nine-dev/development/SITE_NINE_DEV.md`** - Site-nine specific patterns
 - **`.opencode/docs/MARKDOWN_STYLE_GUIDE.md`** - Markdown formatting standards (REQUIRED for all markdown files)
 - **`s9`** - Unified project management CLI (tasks, missions, personas)
@@ -623,7 +623,7 @@ site-nine/
 
 ## Questions?
 
-- **Development patterns**: See `.opencode/docs/guides/AGENTS.md` (this file)
+- **Development patterns**: See `.opencode/docs/guides/agents.md` (this file)
 - **Architecture**: See `.opencode/docs/guides/architecture.md`
 - **Current status**: See `.opencode/work/planning/PROJECT_STATUS.md`
 - **Session tracking**: See `.opencode/work/sessions/README.md`

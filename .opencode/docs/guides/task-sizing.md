@@ -133,7 +133,7 @@ If you have many XS/S tasks, consider grouping them:
 **Instead of:**
 ```markdown
 - Fix typo in README (XS)
-- Fix typo in AGENTS.md (XS)
+- Fix typo in agents.md (XS)
 - Fix typo in architecture.md (XS)
 ```
 

@@ -2,7 +2,7 @@
 
 ## For OpenCode Agents
 
-See `.opencode/docs/guides/AGENTS.md` for complete development guide.
+See `.opencode/docs/guides/agents.md` for complete development guide.
 
 ## For Humans
 

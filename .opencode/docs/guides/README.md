@@ -4,7 +4,7 @@ Essential guides for developing site-nine.
 
 ## Core Guides
 
-### AGENTS.md ⭐ **START HERE**
+### agents.md ⭐ **START HERE**
 **Development patterns and best practices for working on site-nine**
 
 This is THE most important document for agents. Contains:
@@ -48,20 +48,20 @@ Why we made the choices we made:
 ## How to Use These Guides
 
 ### For New Contributors
-1. **Start with AGENTS.md** - Learn patterns and workflow
+1. **Start with agents.md** - Learn patterns and workflow
 2. **Read architecture.md** - Understand the system
 3. **Skim design-philosophy.md** - Understand design values
 
 ### For Specific Tasks
-- **Adding features:** AGENTS.md → architecture.md → design-philosophy.md
-- **Fixing bugs:** AGENTS.md → architecture.md
+- **Adding features:** agents.md → architecture.md → design-philosophy.md
+- **Fixing bugs:** agents.md → architecture.md
 - **Architecture changes:** architecture.md → design-philosophy.md
 - **Understanding "why":** design-philosophy.md
 
 ### For Understanding Context
 - **"Why was it done this way?"** → design-philosophy.md
 - **"How does X work?"** → architecture.md
-- **"What patterns should I follow?"** → AGENTS.md
+- **"What patterns should I follow?"** → agents.md
 
 ---
 
@@ -69,10 +69,10 @@ Why we made the choices we made:
 
 | Task | Primary Guide | Supporting Guides |
 |------|---------------|-------------------|
-| Adding CLI features | AGENTS.md | architecture.md |
-| Database changes | AGENTS.md | architecture.md |
+| Adding CLI features | agents.md | architecture.md |
+| Database changes | agents.md | architecture.md |
 | Architecture decisions | architecture.md | design-philosophy.md |
-| Bug fixes | AGENTS.md | architecture.md |
+| Bug fixes | agents.md | architecture.md |
 | Design decisions | design-philosophy.md | architecture.md |
 
 ---

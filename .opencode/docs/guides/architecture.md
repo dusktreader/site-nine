@@ -201,7 +201,7 @@ context = {
 │   ├── builder.md
 │   └── ...
 ├── guides/
-│   ├── AGENTS.md                # From templates/guides/AGENTS.md.j2
+│   ├── agents.md                # From templates/guides/agents.md.j2
 │   ├── commit-guidelines.md
 │   └── ...
 └── procedures/
