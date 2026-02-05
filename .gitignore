@@ -152,3 +152,9 @@ QUICK_REF.md
 SESSION_NOTES.md
 .s9-config.yaml
 *~
+
+# Node.js artifacts in .opencode (not needed)
+.opencode/node_modules/
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock
