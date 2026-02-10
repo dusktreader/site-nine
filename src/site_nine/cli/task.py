@@ -233,7 +233,8 @@ def show(
 @handle_errors("Failed to claim task")
 def claim(
     task_id: str = typer.Argument(..., help="Task ID"),
-    mission: int | None = typer.Option(None, "--mission", "-m", help="Mission ID (current mission if not specified)"),
+    mission: int = typer.Option(..., "--mission", "-m", help="Mission ID claiming the task"),
+    role: str = typer.Option(..., "--role", "-r", help="Role of the mission claiming the task"),
 ) -> None:
     """Claim a task (typically used by: agents)"""
     manager = _get_manager()
@@ -244,30 +245,46 @@ def claim(
         console.print(f"[red]Error: Task '{task_id}' not found.[/red]")
         raise typer.Exit(1)
 
-    # Check if task is blocked by a pending review
-    if task.blocks_on_review_id:
-        from site_nine.reviews import ReviewManager
+    # Check if task role matches claiming role
+    if task.role != role:
+        console.print(f"[yellow]Warning: Task role '{task.role}' does not match claiming role '{role}'[/yellow]")
+        console.print(f"Task requires role: {task.role}")
+        raise typer.Exit(1)
 
-        opencode_dir = get_opencode_dir()
-        db_path = opencode_dir / "data" / "project.db"
-        db = Database(db_path)
-        review_manager = ReviewManager(db)
+    # Check for blocks
+    from site_nine.blocks import BlockManager
+    from site_nine.dependencies import DependencyManager
 
-        blocking_review = review_manager.check_task_blocked(task_id)
-        if blocking_review:
-            console.print(f"[red]✗ Task {task_id} is blocked by pending review #{blocking_review.id}[/red]")
-            console.print(f"  Review: {blocking_review.title}")
-            console.print(f"  Type: {blocking_review.type}")
-            console.print()
-            console.print(f"This task cannot be claimed until the review is approved.")
-            console.print(f"Use [cyan]s9 review show {blocking_review.id}[/cyan] for details")
-            console.print(f"Use [cyan]s9 review approve {blocking_review.id}[/cyan] to unblock this task")
-            raise typer.Exit(1)
+    opencode_dir = get_opencode_dir()
+    db_path = opencode_dir / "data" / "project.db"
+    db = Database(db_path)
 
-    manager.claim_task(task_id, mission)
-    mission_text = f" for mission {mission}" if mission else ""
-    console.print(f"[green]✓[/green] Task {task_id} claimed{mission_text}")
-    logger.info(f"Task {task_id} claimed{mission_text}")
+    block_manager = BlockManager(db)
+    dep_manager = DependencyManager(db)
+
+    # Check for unresolved blocks
+    unresolved_blocks = block_manager.get_unresolved_blocks(task_id)
+    if unresolved_blocks:
+        console.print(f"[red]✗ Task {task_id} is blocked by {len(unresolved_blocks)} external blocker(s)[/red]")
+        for block in unresolved_blocks:
+            console.print(f"  • {block.block_type}: {block.description}")
+        console.print()
+        console.print("Use [cyan]s9 block resolve <block-id>[/cyan] to unblock this task")
+        raise typer.Exit(1)
+
+    # Check for incomplete dependencies
+    incomplete_deps = dep_manager.check_task_blocked_by_dependencies(task_id)
+    if incomplete_deps:
+        console.print(f"[red]✗ Task {task_id} is blocked by {len(incomplete_deps)} incomplete dependency(ies)[/red]")
+        for dep_id in incomplete_deps:
+            console.print(f"  • {dep_id}")
+        console.print()
+        console.print("These tasks must be completed first")
+        raise typer.Exit(1)
+
+    manager.claim_task(task_id, mission, role)
+    console.print(f"[green]✓[/green] Task {task_id} claimed for mission {mission}")
+    logger.info(f"Task {task_id} claimed by mission {mission} (role: {role})")
 
 
 @app.command()
@@ -795,46 +812,21 @@ def next(
 
     todo_tasks = db.execute_query(query, params)
 
-    # Get blocked/paused tasks
-    blocked_conditions = ["status IN ('BLOCKED', 'PAUSED')"]
-    blocked_params = {}
-
-    if role_param:
-        blocked_conditions.append("role = :role")
-        blocked_params["role"] = role_param
-
-    blocked_query = f"""
-        SELECT id, title, priority, role, status
-        FROM tasks
-        WHERE {" AND ".join(blocked_conditions)}
-        ORDER BY
-            CASE priority
-                WHEN 'CRITICAL' THEN 1
-                WHEN 'HIGH' THEN 2
-                WHEN 'MEDIUM' THEN 3
-                WHEN 'LOW' THEN 4
-            END
-        LIMIT 2
-    """
-
-    blocked_tasks = db.execute_query(blocked_query, blocked_params)
-
-    if not todo_tasks and not blocked_tasks:
+    if not todo_tasks:
         if json_output:
-            output_json(format_json_response({"todo_tasks": [], "blocked_tasks": []}))
-            logger.debug("Suggested 0 TODO tasks and 0 blocked tasks (JSON)")
+            output_json(format_json_response({"todo_tasks": []}))
+            logger.debug("Suggested 0 TODO tasks (JSON)")
             return
         if role:
-            console.print(f"[yellow]No TODO or BLOCKED/PAUSED tasks for role '{role}'[/yellow]")
+            console.print(f"[yellow]No TODO tasks for role '{role}'[/yellow]")
         else:
-            console.print("[yellow]No TODO or BLOCKED/PAUSED tasks found[/yellow]")
+            console.print("[yellow]No TODO tasks found[/yellow]")
         return
 
     if json_output:
         # Build JSON data
         data = {
             "todo_tasks": [],
-            "blocked_tasks": [],
         }
 
         for task in todo_tasks:
@@ -847,18 +839,8 @@ def next(
             }
             data["todo_tasks"].append(task_dict)
 
-        for task in blocked_tasks:
-            task_dict = {
-                "id": task["id"],
-                "title": task["title"],
-                "priority": task["priority"],
-                "role": task["role"],
-                "status": task["status"],
-            }
-            data["blocked_tasks"].append(task_dict)
-
         output_json(format_json_response(data))
-        logger.debug(f"Suggested {len(todo_tasks)} TODO tasks and {len(blocked_tasks)} blocked tasks (JSON)")
+        logger.debug(f"Suggested {len(todo_tasks)} TODO tasks (JSON)")
         return
 
     # Show TODO tasks
@@ -875,22 +857,10 @@ def next(
             )
             console.print()
 
-    # Show blocked tasks
-    if blocked_tasks:
-        console.print("[bold yellow]⚠️  Tasks Needing Attention:[/bold yellow]\n")
-
-        for task in blocked_tasks:
-            status_color = "red" if task["status"] == "BLOCKED" else "yellow"
-            console.print(f"[bold][{status_color}]{task['id']}[/{status_color}][/bold] - {task['title']}")
-            console.print(
-                f"   Status: [{status_color}]{task['status']}[/{status_color}] | Priority: {task['priority']} | Role: [cyan]{task['role']}[/cyan]"
-            )
-            console.print()
-
     # Show command hints
     console.print("[dim]💡 To claim a task: [bold]s9 task claim <TASK_ID> --agent <name>[/bold][/dim]")
     console.print("[dim]💡 To see details: [bold]s9 task show <TASK_ID>[/bold][/dim]")
-    logger.debug(f"Suggested {len(todo_tasks)} TODO tasks and {len(blocked_tasks)} blocked tasks")
+    logger.debug(f"Suggested {len(todo_tasks)} TODO tasks")
 
 
 @app.command(name="add-dependency")
@@ -1010,7 +980,6 @@ def _sync_task_file(task, opencode_dir: Path) -> None:
     claimed_at = task.claimed_at or ""
     actual_hours = f"~{task.actual_hours} hours" if task.actual_hours else ""
     closed_at = task.closed_at or ""
-    paused_at = task.paused_at or ""
 
     # Get linked ADRs
     from site_nine.adrs import ADRManager
@@ -1038,8 +1007,7 @@ def _sync_task_file(task, opencode_dir: Path) -> None:
 **Mission:** {mission_id}
 **Claimed:** {claimed_at}
 **Actual Time:** {actual_hours}
-**Closed:** {closed_at}
-**Paused:** {paused_at}{adr_section}"""
+**Closed:** {closed_at}{adr_section}"""
 
     # Create default body if none exists
     if not body:
@@ -1205,4 +1173,96 @@ def unlink_adr(
         logger.info(f"Unlinked ADR {adr_id} from task {task_id}")
     except ValueError as e:
         console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command(name="modify")
+@handle_errors("Failed to modify task")
+def modify(
+    task_id: str = typer.Argument(..., help="Task ID"),
+    title: str | None = typer.Option(None, "--title", "-t", help="New title"),
+    description: str | None = typer.Option(None, "--description", "-d", help="New description"),
+    priority: Priority | None = typer.Option(None, "--priority", "-p", help="New priority"),
+    category: str | None = typer.Option(None, "--category", "-c", help="New category"),
+) -> None:
+    """Modify task metadata (title, description, priority, category)"""
+    manager = _get_manager()
+
+    # Verify task exists
+    task = manager.get_task(task_id)
+    if not task:
+        console.print(f"[red]Error: Task {task_id} not found[/red]")
+        raise typer.Exit(1)
+
+    # Collect updates
+    updates = {}
+    if title is not None:
+        updates["title"] = title
+    if description is not None:
+        updates["description"] = description
+    if priority is not None:
+        updates["priority"] = priority.value
+    if category is not None:
+        updates["category"] = category
+
+    if not updates:
+        console.print("[yellow]No changes specified. Use --title, --description, --priority, or --category[/yellow]")
+        raise typer.Exit(1)
+
+    # Update in database
+    manager.update_task(task_id, **updates)
+
+    # Sync to file
+    opencode_dir = get_opencode_dir()
+    updated_task = manager.get_task(task_id)
+    if updated_task:
+        _sync_task_file(updated_task, opencode_dir)
+
+    console.print(f"[green]✓[/green] Updated task {task_id}")
+    logger.info(f"Modified task {task_id}: {', '.join(updates.keys())}")
+
+
+@app.command(name="edit")
+@handle_errors("Failed to edit task")
+def edit(
+    task_id: str = typer.Argument(..., help="Task ID"),
+) -> None:
+    """Open task file in $EDITOR for manual editing"""
+    import os
+    import subprocess
+
+    manager = _get_manager()
+
+    # Verify task exists
+    task = manager.get_task(task_id)
+    if not task:
+        console.print(f"[red]Error: Task {task_id} not found[/red]")
+        raise typer.Exit(1)
+
+    # Get task file path
+    opencode_dir = get_opencode_dir()
+    task_file = Path(task.file_path)
+    if not task_file.is_absolute():
+        task_file = opencode_dir / task_file
+
+    if not task_file.exists():
+        console.print(f"[red]Error: Task file not found: {task_file}[/red]")
+        raise typer.Exit(1)
+
+    # Get editor from environment
+    editor = os.environ.get("EDITOR", os.environ.get("VISUAL", "vi"))
+
+    console.print(f"Opening {task_file} in {editor}...")
+
+    try:
+        # Open editor
+        subprocess.run([editor, str(task_file)], check=True)
+
+        console.print(f"[green]✓[/green] Task file edited. Run 's9 task sync {task_id}' to update database.")
+        logger.info(f"Edited task file: {task_id}")
+    except subprocess.CalledProcessError as e:
+        console.print(f"[red]Error: Editor exited with code {e.returncode}[/red]")
+        raise typer.Exit(1)
+    except FileNotFoundError:
+        console.print(f"[red]Error: Editor '{editor}' not found. Set $EDITOR environment variable.[/red]")
         raise typer.Exit(1)
