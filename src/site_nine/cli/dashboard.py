@@ -275,8 +275,11 @@ def dashboard_command(
             for task in all_tasks:
                 task_counts[task.status] = task_counts.get(task.status, 0) + 1
 
-            # Count tasks blocked by reviews
-            blocked_by_review_count = sum(1 for task in all_tasks if task.blocks_on_review_id is not None)
+            # Count tasks actively blocked by reviews (only TODO/PAUSED tasks with pending reviews)
+            # Note: Completed tasks may still have blocks_on_review_id set, but they're not "blocked" anymore
+            blocked_by_review_count = sum(
+                1 for task in all_tasks if task.blocks_on_review_id is not None and task.status in ("TODO", "PAUSED")
+            )
 
             # Find idle missions (active missions with no UNDERWAY tasks)
             missions_with_underway = {
