@@ -1,137 +1,93 @@
-"""Epic management commands"""
-
 from __future__ import annotations
 
-from enum import Enum
-from pathlib import Path
+from typing import Annotated
 
 import typer
-from loguru import logger
-from rich.console import Console
 from rich.table import Table
 from rich.text import Text
-from typerdrive import handle_errors
+from snick import conjoin
+from typerdrive import handle_errors, terminal_message
 
-from site_nine.core.database import Database
-from site_nine.core.paths import get_opencode_dir, validate_path_within_project
-from site_nine.epics import Epic, EpicManager
+from site_nine.adrs import ADRManager
 from site_nine.cli.json_utils import format_json_response, output_json
+from site_nine.cli.utils import CLIError, require_db_path
+from site_nine.core.database import Database
+from site_nine.core.paths import get_opencode_dir
+from site_nine.core.types import Priority
+from site_nine.epics import Epic, EpicManager, EpicStatus
+from site_nine.exceptions import SiteNineError
 
 app = typer.Typer(help="Manage epics")
-console = Console()
-
-
-class Priority(str, Enum):
-    """Epic priority levels"""
-
-    CRITICAL = "CRITICAL"
-    HIGH = "HIGH"
-    MEDIUM = "MEDIUM"
-    LOW = "LOW"
-
-    @classmethod
-    def from_string(cls, value: str) -> "Priority":
-        """Convert string to Priority enum (case-insensitive)"""
-        value_upper = value.upper()
-        for member in cls:
-            if member.value.upper() == value_upper:
-                return member
-        raise ValueError(f"Invalid priority: {value}. Valid values: {', '.join(m.value for m in cls)}")
-
-
-class Status(str, Enum):
-    """Epic status values"""
-
-    TODO = "TODO"
-    UNDERWAY = "UNDERWAY"
-    COMPLETE = "COMPLETE"
-    ABORTED = "ABORTED"
-
-
-def _get_manager() -> EpicManager:
-    """Get epic manager"""
-    try:
-        opencode_dir = get_opencode_dir()
-    except FileNotFoundError:
-        console.print("[red]Error: .opencode directory not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
-
-    db_path = opencode_dir / "data" / "project.db"
-    if not db_path.exists():
-        console.print("[red]Error: project.db not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
-
-    db = Database(db_path)
-    return EpicManager(db)
 
 
 @app.command()
-@handle_errors("Failed to create epic")
+@handle_errors("Failed to create epic", handle_exc_class=SiteNineError)
 def create(
-    title: str = typer.Option(..., "--title", "-t", help="Epic title"),
-    priority: str = typer.Option(..., "--priority", "-p", help="Priority (CRITICAL, HIGH, MEDIUM, LOW)"),
-    description: str | None = typer.Option(None, "--description", "-d", help="Epic description"),
+    title: Annotated[str, typer.Option("--title", "-t", help="Epic title")],
+    priority: Annotated[str, typer.Option("--priority", "-p", help="Priority (CRITICAL, HIGH, MEDIUM, LOW)")],
+    description: Annotated[str | None, typer.Option("--description", "-d", help="Epic description")] = None,
 ) -> None:
     """Create a new epic (typically used by: humans)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Validate priority
-    try:
+    with CLIError.handle_errors("Invalid priority", handle_exc_class=ValueError):
         priority_enum = Priority.from_string(priority)
-    except ValueError as e:
-        console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
 
-    # Create epic
-    epic = manager.create_epic(title=title, priority=priority_enum.value, description=description)
+    with Database(db_path) as db:
+        manager = EpicManager(db)
+        epic = manager.create_epic(title=title, priority=priority_enum.value, description=description)
 
-    # Generate markdown file
-    try:
-        opencode_dir = get_opencode_dir()
-        _sync_epic_file(epic, manager, opencode_dir)
-    except Exception as e:
-        console.print(f"[yellow]Warning: Failed to create markdown file: {e}[/yellow]")
+        try:
+            opencode_dir = get_opencode_dir()
+            manager.sync_epic_file(epic, opencode_dir)
+        except Exception as e:
+            terminal_message(
+                f"Failed to create markdown file: {e}",
+                subject="Warning",
+                subject_color="yellow",
+            )
 
-    console.print(f"[green]✓[/green] Created epic {epic.id}")
-    console.print(f"  Title: {title}")
-    console.print(f"  Priority: {priority_enum.value}")
-    console.print(f"  Status: {epic.status}")
-    console.print(f"  File: {epic.file_path}")
-
-    logger.info(f"Created epic {epic.id}: {title}")
+    terminal_message(
+        conjoin(
+            f"Created epic {epic.id}",
+            f"Title: {title}",
+            f"Priority: {priority_enum.value}",
+            f"Status: {epic.status}",
+            f"File: {epic.file_path}",
+        ),
+        subject="Success",
+        subject_color="green",
+    )
 
 
 @app.command()
-@handle_errors("Failed to list epics")
+@handle_errors("Failed to list epics", handle_exc_class=SiteNineError)
 def list(
-    status: str | None = typer.Option(
-        None, "--status", "-s", help="Filter by status (TODO, UNDERWAY, COMPLETE, ABORTED)"
-    ),
-    priority: str | None = typer.Option(None, "--priority", "-p", help="Filter by priority"),
-    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
+    status: Annotated[
+        str | None, typer.Option("--status", "-s", help="Filter by status (TODO, UNDERWAY, COMPLETE, ABORTED)")
+    ] = None,
+    priority: Annotated[str | None, typer.Option("--priority", "-p", help="Filter by priority")] = None,
+    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
     """List epics (typically used by: both)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Normalize filters
     status_value = status.upper() if status else None
     priority_value = priority.upper() if priority else None
 
-    # Validate status
-    if status_value and status_value not in [s.value for s in Status]:
-        console.print(
-            f"[red]Error: Invalid status '{status}'. Valid values: {', '.join(s.value for s in Status)}[/red]"
-        )
-        raise typer.Exit(1)
+    CLIError.require_condition(
+        not status_value or status_value in [s.value for s in EpicStatus],
+        f"Invalid status '{status}'. Valid values: {', '.join(s.value for s in EpicStatus)}",
+    )
 
-    # Validate priority
-    if priority_value and priority_value not in [p.value for p in Priority]:
-        console.print(
-            f"[red]Error: Invalid priority '{priority}'. Valid values: {', '.join(p.value for p in Priority)}[/red]"
-        )
-        raise typer.Exit(1)
+    CLIError.require_condition(
+        not priority_value or priority_value in [p.value for p in Priority],
+        f"Invalid priority '{priority}'. Valid values: {', '.join(p.value for p in Priority)}",
+    )
 
-    epics = manager.list_epics(status=status_value, priority=priority_value)
+    with Database(db_path) as db:
+        manager = EpicManager(db)
+        epics = manager.list_epics(status=status_value, priority=priority_value)
 
     if not epics:
         if json_output:
@@ -145,11 +101,10 @@ def list(
                 if priority:
                     filters.append(f"priority={priority_value}")
                 filter_msg = f" matching {', '.join(filters)}"
-            console.print(f"No epics found{filter_msg}")
+            terminal_message(f"No epics found{filter_msg}", subject="Empty", subject_color="yellow")
         return
 
     if json_output:
-        # Output JSON format
         epics_data = [
             {
                 "id": epic.id,
@@ -161,16 +116,13 @@ def list(
                 "completed_count": epic.completed_count,
                 "subtask_count": epic.subtask_count,
                 "created_at": epic.created_at,
-                "completed_at": epic.completed_at,
-                "aborted_at": epic.aborted_at,
+                "status_details": epic.status_details,
                 "file_path": epic.file_path,
             }
             for epic in epics
         ]
         output_json(format_json_response(epics_data))
-        logger.debug(f"Listed {len(epics)} epics (JSON)")
     else:
-        # Create table
         table = Table(title="Epics")
         table.add_column("ID", style="cyan", no_wrap=True)
         table.add_column("Title", style="white")
@@ -180,24 +132,21 @@ def list(
         table.add_column("Created", style="dim")
 
         for epic in epics:
-            # Format status with color
             status_color = {
                 "TODO": "yellow",
                 "UNDERWAY": "cyan",
                 "COMPLETE": "green",
                 "ABORTED": "red",
-            }.get(epic.status, "white")
+            }.get(epic.status or "TODO", "white")
 
-            status_text = Text(epic.status, style=status_color)
+            status_text = Text(epic.status or "UNKNOWN", style=status_color)
 
-            # Format progress
             if epic.subtask_count and epic.subtask_count > 0:
                 progress = f"{epic.completed_count}/{epic.subtask_count} ({epic.progress_percent}%)"
             else:
                 progress = "No tasks"
 
-            # Format created date
-            created_date = epic.created_at.split("T")[0] if "T" in epic.created_at else epic.created_at[:10]
+            created_date = epic.created_at.format("YYYY-MM-DD")
 
             table.add_row(
                 epic.id,
@@ -208,29 +157,25 @@ def list(
                 created_date,
             )
 
-        console.print(table)
-        logger.debug(f"Listed {len(epics)} epics")
+        terminal_message(table, indent=False)
 
 
 @app.command()
-@handle_errors("Failed to show epic")
+@handle_errors("Failed to show epic", handle_exc_class=SiteNineError)
 def show(
-    epic_id: str = typer.Argument(..., help="Epic ID"),
-    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
+    epic_id: Annotated[str, typer.Argument(help="Epic ID")],
+    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
     """Show epic details (typically used by: both)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    epic = manager.get_epic(epic_id)
-    if not epic:
-        console.print(f"[red]Error: Epic {epic_id} not found[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = EpicManager(db)
+        epic = CLIError.enforce_defined(manager.get_epic(epic_id), f"Epic {epic_id} not found")
 
-    # Get subtasks
-    subtasks = manager.get_subtasks(epic_id)
+        subtasks = manager.get_subtasks(epic_id)
 
     if json_output:
-        # Output JSON format
         epic_data = {
             "id": epic.id,
             "title": epic.title,
@@ -242,9 +187,7 @@ def show(
             "subtask_count": epic.subtask_count,
             "created_at": epic.created_at,
             "updated_at": epic.updated_at,
-            "completed_at": epic.completed_at,
-            "aborted_at": epic.aborted_at,
-            "aborted_reason": epic.aborted_reason,
+            "status_details": epic.status_details,
             "file_path": epic.file_path,
             "subtasks": [
                 {
@@ -258,56 +201,40 @@ def show(
             ],
         }
         output_json(format_json_response(epic_data))
-        logger.debug(f"Displayed details for epic {epic_id} (JSON)")
         return
 
-    # Visual output
-    # Print epic details
-    console.print(f"\n[bold cyan]Epic {epic.id}[/bold cyan]")
-    console.print()
-    console.print(f"[bold]Title:[/bold]       {epic.title}")
-
-    # Status with color
     status_color = {
         "TODO": "yellow",
         "UNDERWAY": "cyan",
         "COMPLETE": "green",
         "ABORTED": "red",
-    }.get(epic.status, "white")
-    console.print(f"[bold]Status:[/bold]      [{status_color}]{epic.status}[/{status_color}]")
+    }.get(epic.status or "TODO", "white")
 
-    console.print(f"[bold]Priority:[/bold]    {epic.priority}")
-
-    # Progress
     if epic.subtask_count and epic.subtask_count > 0:
         progress = f"{epic.completed_count}/{epic.subtask_count} tasks ({epic.progress_percent}%)"
     else:
         progress = "No tasks"
-    console.print(f"[bold]Progress:[/bold]    {progress}")
 
-    console.print()
-    console.print(f"[bold]Created:[/bold]     {epic.created_at}")
-    console.print(f"[bold]Updated:[/bold]     {epic.updated_at}")
+    body_parts = [
+        f"Title:        {epic.title}",
+        f"Status:       [{status_color}]{epic.status or 'UNKNOWN'}[/{status_color}]",
+        f"Priority:     {epic.priority}",
+        f"Progress:     {progress}",
+        "",
+        f"Created:      {epic.created_at}",
+        f"Updated:      {epic.updated_at}",
+    ]
 
-    if epic.completed_at:
-        console.print(f"[bold]Completed:[/bold]   {epic.completed_at}")
-
-    if epic.aborted_at:
-        console.print(f"[bold]Aborted:[/bold]     {epic.aborted_at}")
-        if epic.aborted_reason:
-            console.print(f"[bold]Reason:[/bold]      {epic.aborted_reason}")
+    if epic.status_details:
+        body_parts.append(f"Status Notes: {epic.status_details}")
 
     if epic.description:
-        console.print()
-        console.print("[bold]Description:[/bold]")
-        console.print(epic.description)
+        body_parts.extend(["", "Description:", epic.description])
 
-    # Show subtasks (already fetched above)
+    terminal_message(conjoin(*body_parts), subject=f"Epic {epic.id}")
+
     if subtasks:
-        console.print()
-        console.print("[bold]Subtasks:[/bold]")
-
-        task_table = Table(show_header=True, box=None, padding=(0, 1))
+        task_table = Table(title="Subtasks", show_header=True, box=None, padding=(0, 1))
         task_table.add_column("Task ID", style="cyan")
         task_table.add_column("Title", style="white")
         task_table.add_column("Status", style="yellow")
@@ -317,9 +244,6 @@ def show(
             task_status_color = {
                 "TODO": "yellow",
                 "UNDERWAY": "cyan",
-                "BLOCKED": "red",
-                "PAUSED": "dim",
-                "REVIEW": "magenta",
                 "COMPLETE": "green",
                 "ABORTED": "red",
             }.get(task.status, "white")
@@ -331,376 +255,197 @@ def show(
                 task.role,
             )
 
-        console.print(task_table)
+        terminal_message(task_table, indent=False)
 
-    console.print()
-    console.print(f"[dim]File: {epic.file_path}[/dim]")
-
-    logger.debug(f"Displayed details for epic {epic_id}")
+    terminal_message(f"File: {epic.file_path}", subject="Path", subject_color="dim")
 
 
 @app.command()
-@handle_errors("Failed to update epic")
+@handle_errors("Failed to update epic", handle_exc_class=SiteNineError)
 def update(
-    epic_id: str = typer.Argument(..., help="Epic ID"),
-    title: str | None = typer.Option(None, "--title", "-t", help="New title"),
-    description: str | None = typer.Option(None, "--description", "-d", help="New description"),
-    priority: str | None = typer.Option(None, "--priority", "-p", help="New priority"),
+    epic_id: Annotated[str, typer.Argument(help="Epic ID")],
+    title: Annotated[str | None, typer.Option("--title", "-t", help="New title")] = None,
+    description: Annotated[str | None, typer.Option("--description", "-d", help="New description")] = None,
+    priority: Annotated[str | None, typer.Option("--priority", "-p", help="New priority")] = None,
 ) -> None:
     """Update epic fields (typically used by: humans)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Verify epic exists
-    epic = manager.get_epic(epic_id)
-    if not epic:
-        console.print(f"[red]Error: Epic {epic_id} not found[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = EpicManager(db)
+        CLIError.enforce_defined(manager.get_epic(epic_id), f"Epic {epic_id} not found")
 
-    # Build updates
-    updates = {}
-    if title:
-        updates["title"] = title
-    if description is not None:  # Allow empty string to clear description
-        updates["description"] = description
-    if priority:
+        updates: dict[str, str] = {}
+        if title:
+            updates["title"] = title
+        if description is not None:  # Allow empty string to clear description
+            updates["description"] = description
+        if priority:
+            with CLIError.handle_errors("Invalid priority", handle_exc_class=ValueError):
+                priority_enum = Priority.from_string(priority)
+                updates["priority"] = priority_enum.value
+
+        if not updates:
+            terminal_message("No updates provided", subject="Warning", subject_color="yellow")
+            return
+
+        updated_epic = manager.update_epic(epic_id, **updates)
+
         try:
-            priority_enum = Priority.from_string(priority)
-            updates["priority"] = priority_enum.value
-        except ValueError as e:
-            console.print(f"[red]Error: {e}[/red]")
-            raise typer.Exit(1)
+            opencode_dir = get_opencode_dir()
+            manager.sync_epic_file(updated_epic, opencode_dir)
+        except Exception as e:
+            terminal_message(
+                f"Failed to update markdown file: {e}",
+                subject="Warning",
+                subject_color="yellow",
+            )
 
-    if not updates:
-        console.print("[yellow]No updates provided[/yellow]")
-        return
-
-    # Update epic
-    updated_epic = manager.update_epic(epic_id, **updates)
-
-    # Sync markdown file
-    try:
-        opencode_dir = get_opencode_dir()
-        _sync_epic_file(updated_epic, manager, opencode_dir)
-    except Exception as e:
-        console.print(f"[yellow]Warning: Failed to update markdown file: {e}[/yellow]")
-
-    console.print(f"[green]✓[/green] Updated epic {epic_id}")
+    body_parts = [f"Updated epic {epic_id}"]
     for field, value in updates.items():
-        console.print(f"  {field.title()}: {value}")
+        body_parts.append(f"{field.title()}: {value}")
 
-    logger.info(f"Updated epic {epic_id}: {updates}")
+    terminal_message(conjoin(*body_parts), subject="Success", subject_color="green")
 
 
-@app.command()
-@handle_errors("Failed to abort epic")
-def abort(
-    epic_id: str = typer.Argument(..., help="Epic ID"),
-    reason: str = typer.Option(..., "--reason", "-r", help="Reason for aborting"),
-    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
+@app.command(name="abort")
+@handle_errors("Failed to abort epic", handle_exc_class=SiteNineError)
+def abort_epic(
+    epic_id: Annotated[str, typer.Argument(help="Epic ID")],
+    reason: Annotated[str, typer.Option("--reason", "-r", help="Reason for aborting")],
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation prompt")] = False,
 ) -> None:
     """Abort an epic and all its subtasks (typically used by: humans)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Verify epic exists
-    epic = manager.get_epic(epic_id)
-    if not epic:
-        console.print(f"[red]Error: Epic {epic_id} not found[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = EpicManager(db)
+        epic = CLIError.enforce_defined(manager.get_epic(epic_id), f"Epic {epic_id} not found")
 
-    # Check if already aborted
-    if epic.status == "ABORTED":
-        console.print(f"[yellow]Epic {epic_id} is already aborted[/yellow]")
-        return
+        if epic.status == "ABORTED":
+            terminal_message(
+                f"Epic {epic_id} is already aborted",
+                subject="Warning",
+                subject_color="yellow",
+            )
+            return
 
-    # Get subtasks
-    subtasks = manager.get_subtasks(epic_id)
+        subtasks = manager.get_subtasks(epic_id)
 
-    # Confirmation prompt
-    if not yes:
-        console.print(f"\n[bold yellow]⚠ Warning: This will abort epic {epic_id} and all its subtasks[/bold yellow]")
-        console.print(f"\n[bold]Epic:[/bold] {epic.title}")
-        console.print(f"[bold]Subtasks:[/bold] {len(subtasks)} task(s) will be aborted")
+        if not yes:
+            terminal_message(
+                conjoin(
+                    f"This will abort epic {epic_id} and all its subtasks",
+                    "",
+                    f"Epic: {epic.title}",
+                    f"Subtasks: {len(subtasks)} task(s) will be aborted",
+                ),
+                subject="Warning",
+                subject_color="yellow",
+            )
 
-        if subtasks:
-            console.print("\nTasks to be aborted:")
-            for task in subtasks[:5]:  # Show first 5
-                console.print(f"  • {task.id}: {task.title}")
-            if len(subtasks) > 5:
-                console.print(f"  ... and {len(subtasks) - 5} more")
+            if subtasks:
+                task_lines = ["Tasks to be aborted:"]
+                for task in subtasks[:5]:
+                    task_lines.append(f"  - {task.id}: {task.title}")
+                if len(subtasks) > 5:
+                    task_lines.append(f"  ... and {len(subtasks) - 5} more")
+                terminal_message(conjoin(*task_lines))
 
-        console.print(f"\n[bold]Reason:[/bold] {reason}")
-        console.print()
+            terminal_message(f"Reason: {reason}")
 
-        confirm = typer.confirm("Are you sure you want to abort this epic?")
-        if not confirm:
-            console.print("[yellow]Abort cancelled[/yellow]")
-            raise typer.Exit(0)
+            confirm = typer.confirm("Are you sure you want to abort this epic?")
+            if not confirm:
+                terminal_message("Abort cancelled", subject="Cancelled", subject_color="yellow")
+                raise typer.Exit(0)
 
-    # Abort epic
-    manager.abort_epic(epic_id, reason)
+        manager.abort_epic(epic_id, reason)
 
-    # Sync markdown file to reflect aborted status
-    try:
-        opencode_dir = get_opencode_dir()
-        aborted_epic = manager.get_epic(epic_id)
-        if aborted_epic:
-            _sync_epic_file(aborted_epic, manager, opencode_dir)
-    except Exception as e:
-        console.print(f"[yellow]Warning: Failed to update markdown file: {e}[/yellow]")
+        try:
+            opencode_dir = get_opencode_dir()
+            aborted_epic = manager.get_epic(epic_id)
+            if aborted_epic:
+                manager.sync_epic_file(aborted_epic, opencode_dir)
+        except Exception as e:
+            terminal_message(
+                f"Failed to update markdown file: {e}",
+                subject="Warning",
+                subject_color="yellow",
+            )
 
-    console.print(f"[green]✓[/green] Aborted epic {epic_id}")
-    console.print(f"  Reason: {reason}")
-    console.print(f"  Subtasks aborted: {len(subtasks)}")
-
-    logger.info(f"Aborted epic {epic_id}: {reason}")
+    terminal_message(
+        conjoin(
+            f"Aborted epic {epic_id}",
+            f"Reason: {reason}",
+            f"Subtasks aborted: {len(subtasks)}",
+        ),
+        subject="Aborted",
+        subject_color="red",
+    )
 
 
 @app.command()
-@handle_errors("Failed to sync epic files")
+@handle_errors("Failed to sync epic files", handle_exc_class=SiteNineError)
 def sync(
-    epic_id: str | None = typer.Option(None, "--epic", "-e", help="Sync specific epic (syncs all if not provided)"),
+    epic_id: Annotated[
+        str | None, typer.Option("--epic", "-e", help="Sync specific epic (syncs all if not provided)")
+    ] = None,
 ) -> None:
     """Synchronize epic markdown files with database (typically used by: both)"""
-    manager = _get_manager()
+    db_path = require_db_path()
     try:
         opencode_dir = get_opencode_dir()
     except FileNotFoundError:
-        console.print("[red]Error: .opencode directory not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
+        raise CLIError(".opencode directory not found. Run 's9 init' first.")
 
-    if epic_id:
-        # Sync specific epic
-        epic = manager.get_epic(epic_id)
-        if not epic:
-            console.print(f"[red]Error: Epic {epic_id} not found[/red]")
-            raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = EpicManager(db)
+        if epic_id:
+            epic = CLIError.enforce_defined(manager.get_epic(epic_id), f"Epic {epic_id} not found")
 
-        _sync_epic_file(epic, manager, opencode_dir)
-        console.print(f"[green]✓[/green] Synced epic {epic_id}")
-        logger.info(f"Synced epic file {epic_id}")
-    else:
-        # Sync all epics
-        epics = manager.list_epics()
-        for epic in epics:
-            _sync_epic_file(epic, manager, opencode_dir)
+            manager.sync_epic_file(epic, opencode_dir)
+            terminal_message(f"Synced epic {epic_id}", subject="Success", subject_color="green")
+        else:
+            epics = manager.list_epics()
+            for epic in epics:
+                manager.sync_epic_file(epic, opencode_dir)
 
-        console.print(f"[green]✓[/green] Synced {len(epics)} epic(s)")
-        logger.info(f"Synced {len(epics)} epic files")
-
-
-def _sync_epic_file(epic: Epic, manager: EpicManager, opencode_dir: Path) -> None:
-    """Helper to sync a single epic file"""
-
-    # Handle file_path which may include .opencode prefix
-    if epic.file_path.startswith(".opencode/"):
-        file_path = Path(epic.file_path)
-    else:
-        file_path = opencode_dir / epic.file_path
-
-    # Validate path to prevent directory traversal
-    file_path = validate_path_within_project(file_path)
-
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Read existing body if file exists
-    body = ""
-    if file_path.exists():
-        content = file_path.read_text()
-        lines = content.split("\n")
-        body_start_idx = 0
-        for i, line in enumerate(lines):
-            if line.startswith("## "):
-                body_start_idx = i
-                break
-        if body_start_idx > 0:
-            body = "\n".join(lines[body_start_idx:])
-
-    # Build header with epic metadata
-    status_emoji = {
-        "TODO": "📋",
-        "UNDERWAY": "🚧",
-        "COMPLETE": "✅",
-        "ABORTED": "❌",
-    }.get(epic.status, "📋")
-
-    header_parts = [
-        f"# Epic {epic.id}: {epic.title}",
-        "",
-        f"**Status:** {status_emoji} {epic.status}",
-        f"**Priority:** {epic.priority}",
-        f"**Created:** {epic.created_at}",
-        f"**Updated:** {epic.updated_at}",
-    ]
-
-    if epic.completed_at:
-        header_parts.append(f"**Completed:** {epic.completed_at}")
-
-    if epic.aborted_at:
-        header_parts.append(f"**Aborted:** {epic.aborted_at}")
-        if epic.aborted_reason:
-            header_parts.append(f"**Abort Reason:** {epic.aborted_reason}")
-
-    # Add progress information
-    if epic.subtask_count and epic.subtask_count > 0:
-        progress_bar = _generate_progress_bar(epic.progress_percent)
-        header_parts.extend(
-            [
-                "",
-                "## Progress",
-                "",
-                f"**Tasks:** {epic.completed_count}/{epic.subtask_count} complete ({epic.progress_percent}%)",
-                f"{progress_bar}",
-            ]
-        )
-
-    # Add subtasks table
-    subtasks = manager.get_subtasks(epic.id)
-    if subtasks:
-        header_parts.extend(["", "## Subtasks", ""])
-
-        # Create markdown table
-        table_lines = [
-            "| Task ID | Title | Status | Role | Priority |",
-            "|---------|-------|--------|------|----------|",
-        ]
-
-        for task in subtasks:
-            status_symbol = {
-                "TODO": "⬜",
-                "UNDERWAY": "🔵",
-                "BLOCKED": "🔴",
-                "PAUSED": "⏸️",
-                "REVIEW": "👀",
-                "COMPLETE": "✅",
-                "ABORTED": "❌",
-            }.get(task.status, "⬜")
-
-            table_lines.append(
-                f"| {task.id} | {task.title} | {status_symbol} {task.status} | {task.role} | {task.priority} |"
-            )
-
-        header_parts.extend(table_lines)
-
-    # Add related architecture section
-    from site_nine.adrs import ADRManager
-
-    db_path = opencode_dir / "data" / "project.db"
-    db = Database(db_path)
-    adr_manager = ADRManager(db)
-    linked_adrs = adr_manager.get_epic_adrs(epic.id)
-
-    if linked_adrs:
-        header_parts.extend(["", "## Related Architecture", ""])
-
-        # Create ADR table
-        adr_table_lines = [
-            "| ADR ID | Title | Status | Path |",
-            "|--------|-------|--------|------|",
-        ]
-
-        for adr in linked_adrs:
-            adr_table_lines.append(f"| {adr.id} | {adr.title} | {adr.status} | {adr.file_path} |")
-
-        header_parts.extend(adr_table_lines)
-
-    header = "\n".join(header_parts)
-
-    # Create default body if none exists
-    if not body:
-        description_text = epic.description or "[Describe the high-level goals and scope of this epic]"
-        body = f"""
-
-## Description
-
-{description_text}
-
-## Goals
-
-- [Key objective 1]
-- [Key objective 2]
-- [Key objective 3]
-
-## Success Criteria
-
-- [What needs to be achieved for this epic to be considered complete?]
-
-## Notes
-
-[Epic-level notes, decisions, blockers, and context]
-"""
-
-    # Write combined content
-    file_path.write_text(header + "\n" + body)
-
-
-def _generate_progress_bar(percent: int, width: int = 30) -> str:
-    """Generate a text-based progress bar"""
-    filled = int(width * percent / 100)
-    empty = width - filled
-    return f"[{'█' * filled}{'░' * empty}] {percent}%"
+            terminal_message(f"Synced {len(epics)} epic(s)", subject="Success", subject_color="green")
 
 
 @app.command(name="link-adr")
-@handle_errors("Failed to link ADR to epic")
+@handle_errors("Failed to link ADR to epic", handle_exc_class=SiteNineError)
 def link_adr(
-    epic_id: str = typer.Argument(..., help="Epic ID"),
-    adr_id: str = typer.Argument(..., help="ADR ID (e.g., ADR-001)"),
+    epic_id: Annotated[str, typer.Argument(help="Epic ID")],
+    adr_id: Annotated[str, typer.Argument(help="ADR ID (e.g., ADR-001)")],
 ) -> None:
     """Link an ADR to an epic (typically used by: both)"""
-    from site_nine.adrs import ADRManager
+    db_path = require_db_path()
 
-    manager = _get_manager()
+    with Database(db_path) as db:
+        manager = EpicManager(db)
+        CLIError.enforce_defined(manager.get_epic(epic_id), f"Epic {epic_id} not found")
 
-    # Verify epic exists
-    epic = manager.get_epic(epic_id)
-    if not epic:
-        console.print(f"[red]Error: Epic {epic_id} not found[/red]")
-        raise typer.Exit(1)
-
-    # Get ADR manager and link
-    try:
-        opencode_dir = get_opencode_dir()
-        db_path = opencode_dir / "data" / "project.db"
-        db = Database(db_path)
         adr_manager = ADRManager(db)
-
         adr_manager.link_to_epic(adr_id, epic_id)
 
-        console.print(f"[green]✓[/green] Linked ADR {adr_id} to epic {epic_id}")
-        logger.info(f"Linked ADR {adr_id} to epic {epic_id}")
-    except ValueError as e:
-        console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
+    terminal_message(f"Linked ADR {adr_id} to epic {epic_id}", subject="Success", subject_color="green")
 
 
 @app.command(name="unlink-adr")
-@handle_errors("Failed to unlink ADR from epic")
+@handle_errors("Failed to unlink ADR from epic", handle_exc_class=SiteNineError)
 def unlink_adr(
-    epic_id: str = typer.Argument(..., help="Epic ID"),
-    adr_id: str = typer.Argument(..., help="ADR ID (e.g., ADR-001)"),
+    epic_id: Annotated[str, typer.Argument(help="Epic ID")],
+    adr_id: Annotated[str, typer.Argument(help="ADR ID (e.g., ADR-001)")],
 ) -> None:
     """Unlink an ADR from an epic (typically used by: both)"""
-    from site_nine.adrs import ADRManager
+    db_path = require_db_path()
 
-    manager = _get_manager()
+    with Database(db_path) as db:
+        manager = EpicManager(db)
+        CLIError.enforce_defined(manager.get_epic(epic_id), f"Epic {epic_id} not found")
 
-    # Verify epic exists
-    epic = manager.get_epic(epic_id)
-    if not epic:
-        console.print(f"[red]Error: Epic {epic_id} not found[/red]")
-        raise typer.Exit(1)
-
-    # Get ADR manager and unlink
-    try:
-        opencode_dir = get_opencode_dir()
-        db_path = opencode_dir / "data" / "project.db"
-        db = Database(db_path)
         adr_manager = ADRManager(db)
-
         adr_manager.unlink_from_epic(adr_id, epic_id)
 
-        console.print(f"[green]✓[/green] Unlinked ADR {adr_id} from epic {epic_id}")
-        logger.info(f"Unlinked ADR {adr_id} from epic {epic_id}")
-    except ValueError as e:
-        console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
+    terminal_message(f"Unlinked ADR {adr_id} from epic {epic_id}", subject="Success", subject_color="green")

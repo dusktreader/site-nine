@@ -10,16 +10,17 @@ from snick import conjoin
 from typerdrive import handle_errors, terminal_message
 
 from site_nine.cli.json_utils import format_json_response, output_json
-from site_nine.cli.utils import abort, abort_unless, require_db_path
+from site_nine.cli.utils import CLIError, require_db_path
 from site_nine.core.database import Database
 from site_nine.core.roles import Role
+from site_nine.exceptions import SiteNineError
 from site_nine.handoffs import HandoffManager
 
 app = typer.Typer(help="Manage work handoffs between missions")
 
 
 @app.command()
-@handle_errors("Failed to create handoff")
+@handle_errors("Failed to create handoff", handle_exc_class=SiteNineError)
 def create(
     task_id: Annotated[str, typer.Option("--task", "-t", help="Task ID being handed off")],
     from_mission: Annotated[int, typer.Option("--from-mission", "-f", help="Mission ID creating the handoff")],
@@ -34,11 +35,11 @@ def create(
     """Create a work handoff to another role (typically used by: agents)"""
     db_path = require_db_path()
 
-    try:
+    valid_roles_str = ", ".join(Role.all_values())
+    with CLIError.handle_errors(
+        f"Invalid role '{to_role}'. Valid roles: {valid_roles_str}", handle_exc_class=ValueError
+    ):
         Role.from_string(to_role)
-    except ValueError:
-        valid_roles_str = ", ".join(Role.all_values())
-        abort(f"Invalid role '{to_role}'. Valid roles: {valid_roles_str}")
     to_role = to_role.title()
 
     with Database(db_path) as db:
@@ -66,7 +67,7 @@ def create(
 
 
 @app.command()
-@handle_errors("Failed to list handoffs")
+@handle_errors("Failed to list handoffs", handle_exc_class=SiteNineError)
 def list(
     role: Annotated[str | None, typer.Option("--role", "-r", help="Filter by target role")] = None,
     from_mission: Annotated[int | None, typer.Option("--from-mission", help="Filter by source mission")] = None,
@@ -159,7 +160,7 @@ def list(
 
 
 @app.command()
-@handle_errors("Failed to show handoff")
+@handle_errors("Failed to show handoff", handle_exc_class=SiteNineError)
 def show(
     handoff_id: Annotated[int, typer.Argument(help="Handoff ID")],
     json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
@@ -171,7 +172,7 @@ def show(
         manager = HandoffManager(db)
         handoff = manager.get_handoff(handoff_id)
 
-    abort_unless(handoff, f"Handoff #{handoff_id} not found.")
+    handoff = CLIError.enforce_defined(handoff, f"Handoff #{handoff_id} not found.")
 
     if json_output:
         handoff_dict = {
@@ -226,7 +227,7 @@ def show(
 
 
 @app.command()
-@handle_errors("Failed to delete handoff")
+@handle_errors("Failed to delete handoff", handle_exc_class=SiteNineError)
 def delete(
     handoff_id: Annotated[int, typer.Argument(help="Handoff ID")],
 ) -> None:
@@ -242,8 +243,7 @@ def delete(
 
     with Database(db_path) as db:
         manager = HandoffManager(db)
-        handoff = manager.get_handoff(handoff_id)
-        abort_unless(handoff, f"Handoff #{handoff_id} not found.")
+        handoff = CLIError.enforce_defined(manager.get_handoff(handoff_id), f"Handoff #{handoff_id} not found.")
 
         if handoff.deleted_at:
             terminal_message(

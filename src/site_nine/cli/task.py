@@ -1,135 +1,56 @@
-"""Task management commands"""
-
 from __future__ import annotations
 
-from enum import Enum
 from pathlib import Path
+from typing import Annotated
 
 import typer
-from loguru import logger
-from rich.console import Console
 from rich.table import Table
-from typerdrive import handle_errors
+from snick import conjoin
+from typerdrive import handle_errors, terminal_message
 
-from site_nine.core.database import Database
-from site_nine.core.paths import get_opencode_dir, validate_path_within_project
-from site_nine.tasks import TaskManager
+from site_nine.adrs import ADRManager
+from site_nine.blocks import BlockManager
 from site_nine.cli.json_utils import format_json_response, output_json
+from site_nine.cli.utils import CLIError, require_db_path, require_opencode_dir, open_in_editor
+from site_nine.core.database import Database
+from site_nine.core.roles import Role
+from site_nine.core.types import Priority
+from site_nine.dependencies import DependencyManager
+from site_nine.epics import EpicManager
+from site_nine.exceptions import SiteNineError
+from site_nine.tasks import TaskManager
 
 app = typer.Typer(help="Manage tasks")
-console = Console()
-
-
-class Priority(str, Enum):
-    """Task priority levels"""
-
-    CRITICAL = "CRITICAL"
-    HIGH = "HIGH"
-    MEDIUM = "MEDIUM"
-    LOW = "LOW"
-
-    @classmethod
-    def from_string(cls, value: str) -> "Priority":
-        """Convert string to Priority enum (case-insensitive)"""
-        value_upper = value.upper()
-        for member in cls:
-            if member.value.upper() == value_upper:
-                return member
-        raise ValueError(f"Invalid priority: {value}. Valid values: {', '.join(m.value for m in cls)}")
-
-
-class Role(str, Enum):
-    """Agent roles"""
-
-    ADMINISTRATOR = "Administrator"
-    ARCHITECT = "Architect"
-    ENGINEER = "Engineer"
-    TESTER = "Tester"
-    DOCUMENTARIAN = "Documentarian"
-    DESIGNER = "Designer"
-    INSPECTOR = "Inspector"
-    OPERATOR = "Operator"
-    HISTORIAN = "Historian"
-
-    @classmethod
-    def from_string(cls, value: str) -> "Role":
-        """Convert string to Role enum (case-insensitive)"""
-        _value_title = value.title()
-        for member in cls:
-            if member.value.lower() == value.lower():
-                return member
-        raise ValueError(f"Invalid role: {value}. Valid values: {', '.join(m.value for m in cls)}")
-
-
-class Category(str, Enum):
-    """Task categories"""
-
-    FEATURE = "feature"
-    BUG_FIX = "bug-fix"
-    REFACTOR = "refactor"
-    DOCUMENTATION = "documentation"
-    TESTING = "testing"
-    INFRASTRUCTURE = "infrastructure"
-    SECURITY = "security"
-    PERFORMANCE = "performance"
-    ARCHITECTURE = "architecture"
-    MAINTENANCE = "maintenance"
-
-    @classmethod
-    def from_string(cls, value: str) -> "Category":
-        """Convert string to Category enum (case-insensitive)"""
-        value_lower = value.lower()
-        for member in cls:
-            if member.value.lower() == value_lower:
-                return member
-        raise ValueError(f"Invalid category: {value}. Valid values: {', '.join(m.value for m in cls)}")
-
-
-def _get_manager() -> TaskManager:
-    """Get task manager"""
-    try:
-        opencode_dir = get_opencode_dir()
-    except FileNotFoundError:
-        console.print("[red]Error: .opencode directory not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
-
-    db_path = opencode_dir / "data" / "project.db"
-    if not db_path.exists():
-        console.print("[red]Error: project.db not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
-
-    db = Database(db_path)
-    return TaskManager(db)
 
 
 @app.command()
-@handle_errors("Failed to list tasks")
+@handle_errors("Failed to list tasks", handle_exc_class=SiteNineError)
 def list(
-    role: str | None = typer.Option(None, "--role", "-r", help="Filter by role"),
-    status: str | None = typer.Option(None, "--status", "-s", help="Filter by status"),
-    mission: int | None = typer.Option(None, "--mission", "-m", help="Filter by mission ID"),
-    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
+    role: Annotated[str | None, typer.Option("--role", "-r", help="Filter by role")] = None,
+    status: Annotated[str | None, typer.Option("--status", "-s", help="Filter by status")] = None,
+    mission: Annotated[int | None, typer.Option("--mission", "-m", help="Filter by mission ID")] = None,
+    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
     """List tasks"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Normalize role and status for case-insensitive filtering
     if role:
         role = role.title()
     if status:
         status = status.upper()
 
-    tasks = manager.list_tasks(status=status, role=role, mission_id=mission)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        tasks = manager.list_tasks(status=status, role=role, mission_id=mission)
 
     if not tasks:
         if json_output:
             output_json(format_json_response([], count=0))
         else:
-            console.print("[yellow]No tasks found.[/yellow]")
+            terminal_message("No tasks found.", subject="Warning", subject_color="yellow")
         return
 
     if json_output:
-        # Output JSON format
         tasks_data = [
             {
                 "id": task.id,
@@ -147,9 +68,7 @@ def list(
             for task in tasks
         ]
         output_json(format_json_response(tasks_data))
-        logger.debug(f"Listed {len(tasks)} tasks (JSON)")
     else:
-        # Output table format
         table = Table(title="Tasks")
         table.add_column("ID", style="cyan", justify="left")
         table.add_column("Title", style="magenta")
@@ -168,26 +87,23 @@ def list(
                 str(task.current_mission_id) if task.current_mission_id else "",
             )
 
-        console.print(table)
-        logger.debug(f"Listed {len(tasks)} tasks")
+        terminal_message(table, indent=False)
 
 
 @app.command()
-@handle_errors("Failed to show task")
+@handle_errors("Failed to show task", handle_exc_class=SiteNineError)
 def show(
-    task_id: str = typer.Argument(..., help="Task ID"),
-    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
+    task_id: Annotated[str, typer.Argument(help="Task ID")],
+    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
     """Show task details"""
-    manager = _get_manager()
-    task = manager.get_task(task_id)
+    db_path = require_db_path()
 
-    if not task:
-        console.print(f"[red]Error: Task '{task_id}' not found.[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        task = CLIError.enforce_defined(manager.get_task(task_id), f"Task '{task_id}' not found.")
 
     if json_output:
-        # Output JSON format
         task_data = {
             "id": task.id,
             "title": task.title,
@@ -205,244 +121,259 @@ def show(
             "epic_id": task.epic_id,
         }
         output_json(format_json_response(task_data))
-        logger.debug(f"Displayed details for task {task_id} (JSON)")
     else:
-        # Output human-readable format
-        console.print(f"[bold]Task {task.id}[/bold]")
-        console.print(f"  Title: {task.title}")
-        console.print(f"  Status: {task.status}")
-        console.print(f"  Priority: {task.priority}")
-        console.print(f"  Role: {task.role}")
+        lines = [
+            f"Title: {task.title}",
+            f"Status: {task.status}",
+            f"Priority: {task.priority}",
+            f"Role: {task.role}",
+        ]
         if task.category:
-            console.print(f"  Category: {task.category}")
+            lines.append(f"Category: {task.category}")
         if task.current_mission_id:
-            console.print(f"  Mission: {task.current_mission_id}")
+            lines.append(f"Mission: {task.current_mission_id}")
         if task.claimed_at:
-            console.print(f"  Claimed: {task.claimed_at}")
+            lines.append(f"Claimed: {task.claimed_at}")
         if task.closed_at:
-            console.print(f"  Closed: {task.closed_at}")
+            lines.append(f"Closed: {task.closed_at}")
         if task.description:
-            console.print(f"  Description: {task.description}")
+            lines.append(f"Description: {task.description}")
         if task.notes:
-            console.print(f"  Notes: {task.notes}")
-        console.print(f"  File: {task.file_path}")
-        logger.debug(f"Displayed details for task {task_id}")
+            lines.append(f"Notes: {task.notes}")
+        lines.append(f"File: {task.file_path}")
+        terminal_message(conjoin(*lines), subject=f"Task {task.id}")
 
 
 @app.command()
-@handle_errors("Failed to claim task")
+@handle_errors("Failed to claim task", handle_exc_class=SiteNineError)
 def claim(
-    task_id: str = typer.Argument(..., help="Task ID"),
-    mission: int = typer.Option(..., "--mission", "-m", help="Mission ID claiming the task"),
-    role: str = typer.Option(..., "--role", "-r", help="Role of the mission claiming the task"),
+    task_id: Annotated[str, typer.Argument(help="Task ID")],
+    mission: Annotated[int, typer.Option("--mission", "-m", help="Mission ID claiming the task")],
+    role: Annotated[str, typer.Option("--role", "-r", help="Role of the mission claiming the task")],
 ) -> None:
     """Claim a task (typically used by: agents)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Verify task exists
-    task = manager.get_task(task_id)
-    if not task:
-        console.print(f"[red]Error: Task '{task_id}' not found.[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        task = CLIError.enforce_defined(manager.get_task(task_id), f"Task '{task_id}' not found.")
 
-    # Check if task role matches claiming role
-    if task.role != role:
-        console.print(f"[yellow]Warning: Task role '{task.role}' does not match claiming role '{role}'[/yellow]")
-        console.print(f"Task requires role: {task.role}")
-        raise typer.Exit(1)
+        if task.role != role:
+            raise CLIError(
+                conjoin(
+                    f"Task role '{task.role}' does not match claiming role '{role}'.",
+                    f"Task requires role: {task.role}",
+                ),
+            )
 
-    # Check for blocks
-    from site_nine.blocks import BlockManager
-    from site_nine.dependencies import DependencyManager
+        block_manager = BlockManager(db)
+        dep_manager = DependencyManager(db)
 
-    opencode_dir = get_opencode_dir()
-    db_path = opencode_dir / "data" / "project.db"
-    db = Database(db_path)
+        unresolved_blocks = block_manager.get_unresolved_blocks(task_id)
+        if unresolved_blocks:
+            block_lines = [f"Task {task_id} is blocked by {len(unresolved_blocks)} external blocker(s):"]
+            for block in unresolved_blocks:
+                block_lines.append(f"  - {block.block_type}: {block.description}")
+            block_lines.append("")
+            block_lines.append("Use 's9 block resolve <block-id>' to unblock this task.")
+            raise CLIError(conjoin(*block_lines))
 
-    block_manager = BlockManager(db)
-    dep_manager = DependencyManager(db)
+        incomplete_deps = dep_manager.check_task_blocked_by_dependencies(task_id)
+        if incomplete_deps:
+            dep_lines = [f"Task {task_id} is blocked by {len(incomplete_deps)} incomplete dependency(ies):"]
+            for dep_id in incomplete_deps:
+                dep_lines.append(f"  - {dep_id}")
+            dep_lines.append("")
+            dep_lines.append("These tasks must be completed first.")
+            raise CLIError(conjoin(*dep_lines))
 
-    # Check for unresolved blocks
-    unresolved_blocks = block_manager.get_unresolved_blocks(task_id)
-    if unresolved_blocks:
-        console.print(f"[red]✗ Task {task_id} is blocked by {len(unresolved_blocks)} external blocker(s)[/red]")
-        for block in unresolved_blocks:
-            console.print(f"  • {block.block_type}: {block.description}")
-        console.print()
-        console.print("Use [cyan]s9 block resolve <block-id>[/cyan] to unblock this task")
-        raise typer.Exit(1)
+        manager.claim_task(task_id, mission, role)
 
-    # Check for incomplete dependencies
-    incomplete_deps = dep_manager.check_task_blocked_by_dependencies(task_id)
-    if incomplete_deps:
-        console.print(f"[red]✗ Task {task_id} is blocked by {len(incomplete_deps)} incomplete dependency(ies)[/red]")
-        for dep_id in incomplete_deps:
-            console.print(f"  • {dep_id}")
-        console.print()
-        console.print("These tasks must be completed first")
-        raise typer.Exit(1)
-
-    manager.claim_task(task_id, mission, role)
-    console.print(f"[green]✓[/green] Task {task_id} claimed for mission {mission}")
-    logger.info(f"Task {task_id} claimed by mission {mission} (role: {role})")
+    terminal_message(
+        f"Task {task_id} claimed for mission {mission}",
+        subject="Done",
+        subject_color="green",
+    )
 
 
 @app.command()
-@handle_errors("Failed to update task")
+@handle_errors("Failed to update task", handle_exc_class=SiteNineError)
 def update(
-    task_id: str = typer.Argument(..., help="Task ID"),
-    status: str = typer.Option(..., "--status", "-s", help="New status"),
-    notes: str | None = typer.Option(None, "--notes", "-n", help="Progress notes"),
+    task_id: Annotated[str, typer.Argument(help="Task ID")],
+    status: Annotated[str, typer.Option("--status", "-s", help="New status")],
+    notes: Annotated[str | None, typer.Option("--notes", "-n", help="Progress notes")] = None,
 ) -> None:
     """Update task status (typically used by: agents)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Verify task exists
-    task = manager.get_task(task_id)
-    if not task:
-        console.print(f"[red]Error: Task '{task_id}' not found.[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        CLIError.enforce_defined(manager.get_task(task_id), f"Task '{task_id}' not found.")
 
-    # Normalize status to uppercase for case-insensitive handling
-    status_upper = status.upper()
+        status_upper = status.upper()
+        manager.update_status(task_id, status_upper, notes)
 
-    manager.update_status(task_id, status_upper, notes)
-    console.print(f"[green]✓[/green] Task {task_id} updated to {status_upper}")
-    logger.info(f"Task {task_id} updated to {status_upper}")
+    terminal_message(
+        f"Task {task_id} updated to {status_upper}",
+        subject="Done",
+        subject_color="green",
+    )
 
 
 @app.command()
-@handle_errors("Failed to close task")
+@handle_errors("Failed to close task", handle_exc_class=SiteNineError)
 def close(
-    task_id: str = typer.Argument(..., help="Task ID"),
-    status: str = typer.Option("COMPLETE", "--status", "-s", help="Completion status"),
-    notes: str | None = typer.Option(None, "--notes", "-n", help="Closing notes"),
+    task_id: Annotated[str, typer.Argument(help="Task ID")],
+    status: Annotated[str, typer.Option("--status", "-s", help="Completion status")] = "COMPLETE",
+    notes: Annotated[str | None, typer.Option("--notes", "-n", help="Closing notes")] = None,
 ) -> None:
     """Close a task (typically used by: agents)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Verify task exists
-    task = manager.get_task(task_id)
-    if not task:
-        console.print(f"[red]Error: Task '{task_id}' not found.[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        CLIError.enforce_defined(manager.get_task(task_id), f"Task '{task_id}' not found.")
 
-    # Normalize status to uppercase for case-insensitive comparison
-    status_upper = status.upper()
-    if status_upper not in ("COMPLETE", "ABORTED"):
-        console.print(f"[red]Error: Invalid close status '{status}'. Use COMPLETE or ABORTED.[/red]")
-        raise typer.Exit(1)
+        status_upper = status.upper()
+        CLIError.require_condition(
+            status_upper in ("COMPLETE", "ABORTED"),
+            f"Invalid close status '{status}'. Use COMPLETE or ABORTED.",
+        )
 
-    manager.update_status(task_id, status_upper, notes)
-    console.print(f"[green]✓[/green] Task {task_id} closed with status: {status_upper}")
-    logger.info(f"Task {task_id} closed with status: {status_upper}")
+        manager.update_status(task_id, status_upper, notes)
+
+    terminal_message(
+        f"Task {task_id} closed with status: {status_upper}",
+        subject="Done",
+        subject_color="green",
+    )
 
 
 @app.command()
-@handle_errors("Failed to create task")
+@handle_errors("Failed to create task", handle_exc_class=SiteNineError)
 def create(
-    title: str = typer.Option(
-        ...,
-        "--title",
-        "-t",
-        help="Brief task description (e.g., 'Add rate limiting to API endpoints')",
-    ),
-    role: str = typer.Option(
-        ...,
-        "--role",
-        "-r",
-        help="Agent role responsible for this task",
-    ),
-    priority: str = typer.Option(
-        "MEDIUM",
-        "--priority",
-        "-p",
-        help="Task priority (affects when it should be worked on)",
-    ),
-    category: str | None = typer.Option(
-        None,
-        "--category",
-        "-c",
-        help="Task category (what type of work is this?)",
-    ),
-    description: str | None = typer.Option(
-        None,
-        "--description",
-        "-d",
-        help="Detailed description of what needs to be done and why",
-    ),
-    epic: str | None = typer.Option(
-        None,
-        "--epic",
-        "-e",
-        help="Epic ID to link this task to (e.g., EPC-H-0001)",
-    ),
+    title: Annotated[
+        str,
+        typer.Option(
+            "--title",
+            "-t",
+            help="Brief task description (e.g., 'Add rate limiting to API endpoints')",
+        ),
+    ],
+    role: Annotated[
+        str,
+        typer.Option(
+            "--role",
+            "-r",
+            help="Agent role responsible for this task",
+        ),
+    ],
+    priority: Annotated[
+        str,
+        typer.Option(
+            "--priority",
+            "-p",
+            help="Task priority (affects when it should be worked on)",
+        ),
+    ] = "MEDIUM",
+    category: Annotated[
+        str | None,
+        typer.Option(
+            "--category",
+            "-c",
+            help="Task category (what type of work is this?)",
+        ),
+    ] = None,
+    description: Annotated[
+        str | None,
+        typer.Option(
+            "--description",
+            "-d",
+            help="Detailed description of what needs to be done and why",
+        ),
+    ] = None,
+    epic: Annotated[
+        str | None,
+        typer.Option(
+            "--epic",
+            "-e",
+            help="Epic ID to link this task to (e.g., EPC-H-0001)",
+        ),
+    ] = None,
 ) -> None:
     """Create a new task (task ID auto-generated based on role and priority)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Convert strings to enums (case-insensitive)
-    try:
+    with CLIError.handle_errors("Invalid role or priority", handle_exc_class=ValueError):
         role_enum = Role.from_string(role)
         priority_enum = Priority.from_string(priority)
-        category_enum = Category.from_string(category) if category else None
-    except ValueError as e:
-        console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
 
-    # Auto-generate task ID based on role and priority
-    task_id = manager.generate_task_id(role_enum.value, priority_enum.value)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        task_id = manager.generate_task_id(role_enum.title_case, priority_enum.value)
 
-    try:
-        manager.create_task(
-            task_id=task_id,
-            title=title,
-            role=role_enum.value,
-            priority=priority_enum.value,
-            category=category_enum.value if category_enum else None,
-            description=description,
-        )
-        console.print(f"[green]✓[/green] Created task [cyan]{task_id}[/cyan]: {title}")
+        try:
+            manager.create_task(
+                task_id=task_id,
+                title=title,
+                role=role_enum.title_case,
+                priority=priority_enum.value,
+                category=category,
+                description=description,
+            )
+            terminal_message(
+                f"Created task {task_id}: {title}",
+                subject="Done",
+                subject_color="green",
+            )
 
-        # Link to epic if provided
-        if epic:
-            from site_nine.epics import EpicManager
+            if epic:
+                epic_manager = EpicManager(db)
+                try:
+                    epic_manager.link_task(task_id, epic)
+                    terminal_message(
+                        f"Linked to epic: {epic}",
+                        subject="Info",
+                        subject_color="cyan",
+                    )
+                except ValueError as e:
+                    terminal_message(
+                        str(e),
+                        subject="Warning",
+                        subject_color="yellow",
+                    )
 
-            epic_manager = EpicManager(manager.db)
-            try:
-                epic_manager.link_task(task_id, epic)
-                console.print(f"  Linked to epic: {epic}")
-            except ValueError as e:
-                console.print(f"[yellow]Warning: {e}[/yellow]")
-
-        logger.info(f"Created task {task_id}")
-    except Exception as e:
-        if "UNIQUE constraint failed" in str(e):
-            console.print(f"[red]Task '{task_id}' already exists[/red]")
-            raise typer.Exit(1)
-        raise
+        except Exception as e:
+            if "UNIQUE constraint failed" in str(e):
+                raise CLIError(f"Task '{task_id}' already exists.")
+            raise
 
 
 @app.command()
-@handle_errors("Failed to list mission tasks")
+@handle_errors("Failed to list mission tasks", handle_exc_class=SiteNineError)
 def mine(
-    mission: int = typer.Option(..., "--mission", "-m", help="Mission ID"),
-    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
+    mission: Annotated[int, typer.Option("--mission", "-m", help="Mission ID")],
+    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
     """Show tasks claimed by a mission"""
-    manager = _get_manager()
-    tasks = manager.list_tasks(mission_id=mission)
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        tasks = manager.list_tasks(mission_id=mission)
 
     if not tasks:
         if json_output:
             output_json(format_json_response([]))
-            logger.debug(f"Listed 0 tasks for mission {mission} (JSON)")
             return
-        console.print(f"[yellow]No tasks found for mission {mission}[/yellow]")
+        terminal_message(
+            f"No tasks found for mission {mission}",
+            subject="Warning",
+            subject_color="yellow",
+        )
         return
 
     if json_output:
-        # Build JSON data
         data = []
         for task in tasks:
             task_dict = {
@@ -459,7 +390,6 @@ def mine(
             data.append(task_dict)
 
         output_json(format_json_response(data))
-        logger.debug(f"Listed {len(tasks)} tasks for mission {mission} (JSON)")
         return
 
     table = Table(title=f"Tasks for Mission {mission}")
@@ -470,7 +400,6 @@ def mine(
     table.add_column("Role", style="green")
 
     for task in tasks:
-        # Truncate long titles
         title = task.title
         if len(title) > 40:
             title = title[:37] + "..."
@@ -483,113 +412,53 @@ def mine(
             task.role,
         )
 
-    console.print(table)
-    console.print(f"\nTotal: {len(tasks)} task(s)")
-    logger.debug(f"Listed {len(tasks)} tasks for mission {mission}")
+    terminal_message(table, indent=False)
+    terminal_message(f"Total: {len(tasks)} task(s)", subject="Info", subject_color="cyan")
 
 
 @app.command()
-@handle_errors("Failed to generate task report")
+@handle_errors("Failed to generate task report", handle_exc_class=SiteNineError)
 def report(
-    active_only: bool = typer.Option(
-        False, "--active-only", help="Show only active tasks (excludes COMPLETE, ABORTED)"
-    ),
-    role: str | None = typer.Option(None, "--role", "-r", help="Filter by role"),
-    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
+    active_only: Annotated[
+        bool, typer.Option("--active-only", help="Show only active tasks (excludes COMPLETE, ABORTED)")
+    ] = False,
+    role: Annotated[str | None, typer.Option("--role", "-r", help="Filter by role")] = None,
+    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
     """Generate task summary report"""
-    try:
-        opencode_dir = get_opencode_dir()
-    except FileNotFoundError:
-        console.print("[red]Error: .opencode directory not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
+    db_path = require_db_path()
 
-    db_path = opencode_dir / "data" / "project.db"
-    if not db_path.exists():
-        console.print("[red]Error: project.db not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
-
-    from site_nine.core.database import Database
-
-    db = Database(db_path)
-
-    # Build query conditions
-    conditions = []
-    params = {}
-
-    if active_only:
-        conditions.append("status NOT IN ('COMPLETE', 'ABORTED')")
-
-    if role:
-        # Validate and convert role to title case
-        valid_roles = [
-            "administrator",
-            "architect",
-            "engineer",
-            "tester",
-            "documentarian",
-            "designer",
-            "inspector",
-            "operator",
-        ]
-        role_lower = role.lower()
-        if role_lower not in valid_roles:
-            console.print(f"[red]Invalid role: {role}. Valid values: {', '.join(valid_roles)}[/red]")
-            raise typer.Exit(1)
-        conditions.append("role = :role")
-        params["role"] = role.title()
-
-    where_clause = " AND ".join(conditions) if conditions else "1=1"
-
-    query = f"""
-        SELECT id, title, status, priority, role, category, current_mission_id,
-               claimed_at, closed_at, actual_hours, created_at
-        FROM tasks
-        WHERE {where_clause}
-        ORDER BY
-            CASE priority
-                WHEN 'CRITICAL' THEN 1
-                WHEN 'HIGH' THEN 2
-                WHEN 'MEDIUM' THEN 3
-                WHEN 'LOW' THEN 4
-            END,
-            created_at ASC
-    """
-
-    tasks = db.execute_query(query, params)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        tasks = manager.generate_report(active_only=active_only, role=role)
 
     if not tasks:
         if json_output:
             output_json(format_json_response([]))
-            logger.debug("Generated report for 0 tasks (JSON)")
             return
-        console.print("[yellow]No tasks found matching criteria[/yellow]")
+        terminal_message("No tasks found matching criteria.", subject="Warning", subject_color="yellow")
         return
 
     if json_output:
-        # Build JSON data
-        data = []
-        for task in tasks:
-            task_dict = {
-                "id": task["id"],
-                "title": task["title"],
-                "status": task["status"],
-                "priority": task["priority"],
-                "role": task["role"],
-                "category": task["category"],
-                "current_mission_id": task["current_mission_id"],
-                "claimed_at": task["claimed_at"],
-                "closed_at": task["closed_at"],
-                "actual_hours": task["actual_hours"],
-                "created_at": task["created_at"],
+        data = [
+            {
+                "id": task.id,
+                "title": task.title,
+                "status": task.status,
+                "priority": task.priority,
+                "role": task.role,
+                "category": task.category,
+                "current_mission_id": task.current_mission_id,
+                "claimed_at": task.claimed_at,
+                "closed_at": task.closed_at,
+                "actual_hours": task.actual_hours,
+                "created_at": task.created_at,
             }
-            data.append(task_dict)
-
+            for task in tasks
+        ]
         output_json(format_json_response(data))
-        logger.debug(f"Generated report for {len(tasks)} tasks (JSON)")
         return
 
-    # Display table format
     table = Table(title="Task Report")
     table.add_column("ID", style="cyan")
     table.add_column("Title", style="white")
@@ -599,121 +468,61 @@ def report(
     table.add_column("Mission", style="blue")
 
     for task in tasks:
-        # Truncate long titles
-        title = task["title"]
+        title = task.title
         if len(title) > 40:
             title = title[:37] + "..."
 
-        mission = str(task["current_mission_id"]) if task["current_mission_id"] else "-"
+        mission_str = str(task.current_mission_id) if task.current_mission_id else "-"
 
         table.add_row(
-            task["id"],
+            task.id,
             title,
-            task["status"],
-            task["priority"],
-            task["role"],
-            mission,
+            task.status,
+            task.priority,
+            task.role,
+            mission_str,
         )
 
-    console.print(table)
-    console.print(f"\nTotal: {len(tasks)} task(s)")
-    logger.debug(f"Generated report for {len(tasks)} tasks")
+    terminal_message(table, indent=False)
+    terminal_message(f"Total: {len(tasks)} task(s)", subject="Info", subject_color="cyan")
 
 
 @app.command()
-@handle_errors("Failed to search tasks")
+@handle_errors("Failed to search tasks", handle_exc_class=SiteNineError)
 def search(
-    keyword: str = typer.Argument(..., help="Keyword to search for"),
-    active_only: bool = typer.Option(False, "--active-only", help="Show only active tasks"),
-    role: str | None = typer.Option(None, "--role", "-r", help="Filter by role"),
-    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
+    keyword: Annotated[str, typer.Argument(help="Keyword to search for")],
+    active_only: Annotated[bool, typer.Option("--active-only", help="Show only active tasks")] = False,
+    role: Annotated[str | None, typer.Option("--role", "-r", help="Filter by role")] = None,
+    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
     """Search tasks by keyword"""
-    try:
-        opencode_dir = get_opencode_dir()
-    except FileNotFoundError:
-        console.print("[red]Error: .opencode directory not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
+    db_path = require_db_path()
 
-    db_path = opencode_dir / "data" / "project.db"
-    if not db_path.exists():
-        console.print("[red]Error: project.db not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
-
-    from site_nine.core.database import Database
-
-    db = Database(db_path)
-
-    # Build query conditions
-    search_term = f"%{keyword}%"
-    conditions = ["(title LIKE :search OR description LIKE :search OR notes LIKE :search)"]
-    params = {"search": search_term}
-
-    if active_only:
-        conditions.append("status NOT IN ('COMPLETE', 'ABORTED')")
-
-    if role:
-        # Validate role if provided
-        valid_roles = [
-            "administrator",
-            "architect",
-            "engineer",
-            "tester",
-            "documentarian",
-            "designer",
-            "inspector",
-            "operator",
-        ]
-        role_lower = role.lower()
-        if role_lower not in valid_roles:
-            console.print(f"[red]Invalid role: {role}. Valid values: {', '.join(valid_roles)}[/red]")
-            raise typer.Exit(1)
-        conditions.append("role = :role")
-        params["role"] = role.title()
-
-    where_clause = " AND ".join(conditions)
-
-    query = f"""
-        SELECT id, title, status, priority, role, current_mission_id, created_at
-        FROM tasks
-        WHERE {where_clause}
-        ORDER BY
-            CASE priority
-                WHEN 'CRITICAL' THEN 1
-                WHEN 'HIGH' THEN 2
-                WHEN 'MEDIUM' THEN 3
-                WHEN 'LOW' THEN 4
-            END,
-            created_at DESC
-    """
-
-    tasks = db.execute_query(query, params)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        tasks = manager.search_tasks(keyword=keyword, active_only=active_only, role=role)
 
     if not tasks:
         if json_output:
             output_json(format_json_response([]))
-            logger.debug(f"Search found 0 tasks matching '{keyword}' (JSON)")
             return
-        console.print(f"[yellow]No tasks found matching '{keyword}'[/yellow]")
+        terminal_message(f"No tasks found matching '{keyword}'.", subject="Warning", subject_color="yellow")
         return
 
     if json_output:
-        # Build JSON data
-        data = []
-        for task in tasks:
-            task_dict = {
-                "id": task["id"],
-                "title": task["title"],
-                "status": task["status"],
-                "priority": task["priority"],
-                "role": task["role"],
-                "current_mission_id": task["current_mission_id"],
-                "created_at": task["created_at"],
+        data = [
+            {
+                "id": task.id,
+                "title": task.title,
+                "status": task.status,
+                "priority": task.priority,
+                "role": task.role,
+                "current_mission_id": task.current_mission_id,
+                "created_at": task.created_at,
             }
-            data.append(task_dict)
-
+            for task in tasks
+        ]
         output_json(format_json_response(data))
-        logger.debug(f"Search found {len(tasks)} tasks matching '{keyword}' (JSON)")
         return
 
     table = Table(title=f"Search Results: '{keyword}'")
@@ -724,545 +533,307 @@ def search(
     table.add_column("Role", style="green")
 
     for task in tasks:
-        # Truncate long titles
-        title = task["title"]
+        title = task.title
         if len(title) > 50:
             title = title[:47] + "..."
 
         table.add_row(
-            task["id"],
+            task.id,
             title,
-            task["status"],
-            task["priority"],
-            task["role"],
+            task.status,
+            task.priority,
+            task.role,
         )
 
-    console.print(table)
-    console.print(f"\nTotal: {len(tasks)} task(s)")
-    logger.debug(f"Search found {len(tasks)} tasks matching '{keyword}'")
+    terminal_message(table, indent=False)
+    terminal_message(f"Total: {len(tasks)} task(s)", subject="Info", subject_color="cyan")
 
 
 @app.command()
-@handle_errors("Failed to suggest next tasks")
+@handle_errors("Failed to suggest next tasks", handle_exc_class=SiteNineError)
 def next(
-    role: str | None = typer.Option(None, "--role", "-r", help="Filter by role"),
-    count: int = typer.Option(3, "--count", "-c", help="Number of suggestions"),
-    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
+    role: Annotated[str | None, typer.Option("--role", "-r", help="Filter by role")] = None,
+    count: Annotated[int, typer.Option("--count", "-c", help="Number of suggestions")] = 3,
+    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
     """Suggest next tasks to work on"""
-    try:
-        opencode_dir = get_opencode_dir()
-    except FileNotFoundError:
-        console.print("[red]Error: .opencode directory not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
+    db_path = require_db_path()
 
-    db_path = opencode_dir / "data" / "project.db"
-    if not db_path.exists():
-        console.print("[red]Error: project.db not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
-
-    from site_nine.core.database import Database
-
-    db = Database(db_path)
-
-    # Validate role if provided
-    role_param = None
-    if role:
-        valid_roles = [
-            "administrator",
-            "architect",
-            "engineer",
-            "tester",
-            "documentarian",
-            "designer",
-            "inspector",
-            "operator",
-        ]
-        role_lower = role.lower()
-        if role_lower not in valid_roles:
-            console.print(f"[red]Invalid role: {role}. Valid values: {', '.join(valid_roles)}[/red]")
-            raise typer.Exit(1)
-        role_param = role.title()
-
-    # Build query for TODO tasks with dependency check
-    conditions = ["status = 'TODO'"]
-    params = {"count": count}
-
-    if role_param:
-        conditions.append("role = :role")
-        params["role"] = role_param
-
-    where_clause = " AND ".join(conditions)
-
-    # Get TODO tasks (simplified - not checking dependencies for now)
-    query = f"""
-        SELECT id, title, priority, role, created_at
-        FROM tasks
-        WHERE {where_clause}
-        ORDER BY
-            CASE priority
-                WHEN 'CRITICAL' THEN 1
-                WHEN 'HIGH' THEN 2
-                WHEN 'MEDIUM' THEN 3
-                WHEN 'LOW' THEN 4
-            END,
-            created_at ASC
-        LIMIT :count
-    """
-
-    todo_tasks = db.execute_query(query, params)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        todo_tasks = manager.suggest_next_tasks(role=role, count=count)
 
     if not todo_tasks:
         if json_output:
             output_json(format_json_response({"todo_tasks": []}))
-            logger.debug("Suggested 0 TODO tasks (JSON)")
             return
         if role:
-            console.print(f"[yellow]No TODO tasks for role '{role}'[/yellow]")
+            terminal_message(
+                f"No TODO tasks for role '{role}'.",
+                subject="Warning",
+                subject_color="yellow",
+            )
         else:
-            console.print("[yellow]No TODO tasks found[/yellow]")
+            terminal_message("No TODO tasks found.", subject="Warning", subject_color="yellow")
         return
 
     if json_output:
-        # Build JSON data
         data = {
-            "todo_tasks": [],
+            "todo_tasks": [
+                {
+                    "id": task.id,
+                    "title": task.title,
+                    "priority": task.priority,
+                    "role": task.role,
+                    "created_at": task.created_at,
+                }
+                for task in todo_tasks
+            ],
         }
-
-        for task in todo_tasks:
-            task_dict = {
-                "id": task["id"],
-                "title": task["title"],
-                "priority": task["priority"],
-                "role": task["role"],
-                "created_at": task["created_at"],
-            }
-            data["todo_tasks"].append(task_dict)
-
         output_json(format_json_response(data))
-        logger.debug(f"Suggested {len(todo_tasks)} TODO tasks (JSON)")
         return
 
-    # Show TODO tasks
-    if todo_tasks:
-        console.print("[bold green]📋 Suggested Tasks to Start:[/bold green]\n")
+    lines = ["Suggested Tasks to Start:"]
+    for i, task in enumerate(todo_tasks, 1):
+        lines.append(f"{i}. {task.id} - {task.title}")
+        lines.append(f"   Priority: {task.priority} | Role: {task.role}")
+    terminal_message(conjoin(*lines), subject="Next", subject_color="green")
 
-        for i, task in enumerate(todo_tasks, 1):
-            priority_colors = {"CRITICAL": "red", "HIGH": "yellow", "MEDIUM": "blue", "LOW": "green"}
-            priority_color = priority_colors.get(task["priority"], "white")
-
-            console.print(f"[bold]{i}. [{priority_color}]{task['id']}[/{priority_color}][/bold] - {task['title']}")
-            console.print(
-                f"   Priority: [{priority_color}]{task['priority']}[/{priority_color}] | Role: [cyan]{task['role']}[/cyan]"
-            )
-            console.print()
-
-    # Show command hints
-    console.print("[dim]💡 To claim a task: [bold]s9 task claim <TASK_ID> --agent <name>[/bold][/dim]")
-    console.print("[dim]💡 To see details: [bold]s9 task show <TASK_ID>[/bold][/dim]")
-    logger.debug(f"Suggested {len(todo_tasks)} TODO tasks")
+    terminal_message(
+        conjoin(
+            "To claim a task: s9 task claim <TASK_ID> --mission <id> --role <role>",
+            "To see details: s9 task show <TASK_ID>",
+        ),
+        subject="Tip",
+        subject_color="cyan",
+    )
 
 
 @app.command(name="add-dependency")
-@handle_errors("Failed to add task dependency")
+@handle_errors("Failed to add task dependency", handle_exc_class=SiteNineError)
 def add_dependency(
-    task_id: str = typer.Argument(..., help="Task ID"),
-    depends_on: str = typer.Argument(..., help="Task ID this depends on"),
+    task_id: Annotated[str, typer.Argument(help="Task ID")],
+    depends_on: Annotated[str, typer.Argument(help="Task ID this depends on")],
 ) -> None:
     """Add a task dependency"""
-    try:
-        opencode_dir = get_opencode_dir()
-    except FileNotFoundError:
-        console.print("[red]Error: .opencode directory not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
+    db_path = require_db_path()
 
-    db_path = opencode_dir / "data" / "project.db"
-    if not db_path.exists():
-        console.print("[red]Error: project.db not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        for tid in [task_id, depends_on]:
+            CLIError.require_condition(manager.get_task(tid) is not None, f"Task {tid} does not exist.")
 
-    db_path = opencode_dir / "data" / "project.db"
-    if not db_path.exists():
-        console.print("[red]Error: project.db not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
+        dep_manager = DependencyManager(db)
+        dep_manager.add_dependency(task_id, depends_on)
 
-    from site_nine.core.database import Database
-
-    db = Database(db_path)
-
-    # Validate both tasks exist
-    for tid in [task_id, depends_on]:
-        task = db.execute_query("SELECT id FROM tasks WHERE id = :id", {"id": tid})
-        if not task:
-            console.print(f"[red]Task {tid} does not exist[/red]")
-            raise typer.Exit(1)
-
-    try:
-        db.execute_update(
-            """
-            INSERT INTO task_dependencies (task_id, depends_on_task_id)
-            VALUES (:task_id, :depends_on)
-            """,
-            {"task_id": task_id, "depends_on": depends_on},
-        )
-        console.print(f"[green]✓[/green] Added dependency: {task_id} depends on {depends_on}")
-        logger.info(f"Added dependency: {task_id} -> {depends_on}")
-    except Exception as e:
-        if "UNIQUE constraint failed" in str(e):
-            console.print("[yellow]Dependency already exists[/yellow]")
-        else:
-            raise
+    terminal_message(
+        f"Added dependency: {task_id} depends on {depends_on}",
+        subject="Done",
+        subject_color="green",
+    )
 
 
 @app.command()
-@handle_errors("Failed to sync task files")
+@handle_errors("Failed to sync task files", handle_exc_class=SiteNineError)
 def sync(
-    task_id: str | None = typer.Option(None, "--task", "-t", help="Sync specific task (syncs all if not provided)"),
+    task_id: Annotated[
+        str | None, typer.Option("--task", "-t", help="Sync specific task (syncs all if not provided)")
+    ] = None,
 ) -> None:
     """Synchronize task markdown files with database"""
-    manager = _get_manager()
-    try:
-        opencode_dir = get_opencode_dir()
-    except FileNotFoundError:
-        console.print("[red]Error: .opencode directory not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
+    db_path = require_db_path()
+    opencode_dir = require_opencode_dir()
 
-    if task_id:
-        # Sync specific task
-        task = manager.get_task(task_id)
-        if not task:
-            console.print(f"[red]Error: Task {task_id} not found[/red]")
-            raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        if task_id:
+            task = CLIError.enforce_defined(manager.get_task(task_id), f"Task {task_id} not found.")
 
-        _sync_task_file(task, opencode_dir)
-        console.print(f"[green]✓[/green] Synced task {task_id}")
-        logger.info(f"Synced task file {task_id}")
-    else:
-        # Sync all tasks
-        tasks = manager.list_tasks()
-        for task in tasks:
-            _sync_task_file(task, opencode_dir)
+            manager.sync_task_file(task, opencode_dir)
+            terminal_message(
+                f"Synced task {task_id}",
+                subject="Done",
+                subject_color="green",
+            )
+        else:
+            tasks = manager.list_tasks()
+            for task in tasks:
+                manager.sync_task_file(task, opencode_dir)
 
-        console.print(f"[green]✓[/green] Synced {len(tasks)} task(s)")
-        logger.info(f"Synced {len(tasks)} task files")
-
-
-def _sync_task_file(task, opencode_dir: Path) -> None:
-    """Helper to sync a single task file"""
-
-    # Handle file_path which may include .opencode prefix
-    if task.file_path.startswith(".opencode/"):
-        file_path = Path(task.file_path)
-    else:
-        file_path = opencode_dir / task.file_path
-
-    # Validate path to prevent directory traversal
-    file_path = validate_path_within_project(file_path)
-
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Read existing body if file exists
-    body = ""
-    if file_path.exists():
-        content = file_path.read_text()
-        lines = content.split("\n")
-        body_start_idx = 0
-        for i, line in enumerate(lines):
-            if line.startswith("## "):
-                body_start_idx = i
-                break
-        if body_start_idx > 0:
-            body = "\n".join(lines[body_start_idx:])
-
-    # Build header
-    category = task.category or ""
-    mission_id = str(task.current_mission_id) if task.current_mission_id else ""
-    claimed_at = task.claimed_at or ""
-    actual_hours = f"~{task.actual_hours} hours" if task.actual_hours else ""
-    closed_at = task.closed_at or ""
-
-    # Get linked ADRs
-    from site_nine.adrs import ADRManager
-    from site_nine.core.database import Database
-
-    db_path = opencode_dir / "data" / "project.db"
-    db = Database(db_path)
-    adr_manager = ADRManager(db)
-    linked_adrs = adr_manager.get_task_adrs(task.id)
-
-    # Build header with ADR section if linked ADRs exist
-    adr_section = ""
-    if linked_adrs:
-        adr_lines = ["\n**Related Architecture:**"]
-        for adr in linked_adrs:
-            adr_lines.append(f"- [{adr.id}]({adr.file_path}): {adr.title} ({adr.status})")
-        adr_section = "\n".join(adr_lines)
-
-    header = f"""# Task {task.id}: {task.title}
-
-**Status:** {task.status}
-**Priority:** {task.priority}
-**Role:** {task.role}
-**Category:** {category}
-**Mission:** {mission_id}
-**Claimed:** {claimed_at}
-**Actual Time:** {actual_hours}
-**Closed:** {closed_at}{adr_section}"""
-
-    # Create default body if none exists
-    if not body:
-        notes_text = task.notes or "[Progress notes, questions, blockers]"
-        description_text = task.description or "[Describe what this task aims to achieve]"
-        body = f"""
-
-## Objective
-
-{description_text}
-
-## Problem Statement
-
-[Describe the problem or need - explain current state, why it's problematic, impact]
-
-## Implementation Steps
-
-[Chronological log of work done - update as you go, document decisions]
-
-## Files Changed
-
-### Created
-- [file path] - [description]
-
-### Modified
-- [file path] - [description]
-
-## Testing Performed
-
-[Document test commands, results, verification]
-
-## Notes
-
-{notes_text}"""
-
-    # Write combined content
-    file_path.write_text(header + "\n" + body)
+            terminal_message(
+                f"Synced {len(tasks)} task(s)",
+                subject="Done",
+                subject_color="green",
+            )
 
 
 @app.command()
-@handle_errors("Failed to link task to epic")
+@handle_errors("Failed to link task to epic", handle_exc_class=SiteNineError)
 def link(
-    task_id: str = typer.Argument(..., help="Task ID to link"),
-    epic_id: str = typer.Argument(..., help="Epic ID to link to (e.g., EPC-H-0001)"),
+    task_id: Annotated[str, typer.Argument(help="Task ID to link")],
+    epic_id: Annotated[str, typer.Argument(help="Epic ID to link to (e.g., EPC-H-0001)")],
 ) -> None:
     """Link a task to an epic"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Verify task exists
-    task = manager.get_task(task_id)
-    if not task:
-        console.print(f"[red]Error: Task {task_id} not found[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        CLIError.enforce_defined(manager.get_task(task_id), f"Task {task_id} not found.")
 
-    # Link task to epic using EpicManager
-    from site_nine.epics import EpicManager
+        epic_manager = EpicManager(db)
+        with CLIError.handle_errors("Failed to link task to epic", handle_exc_class=ValueError):
+            epic_manager.link_task(task_id, epic_id)
 
-    epic_manager = EpicManager(manager.db)
-
-    try:
-        epic_manager.link_task(task_id, epic_id)
-        console.print(f"[green]✓[/green] Linked task {task_id} to epic {epic_id}")
-        logger.info(f"Linked task {task_id} to epic {epic_id}")
-    except ValueError as e:
-        console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
+    terminal_message(
+        f"Linked task {task_id} to epic {epic_id}",
+        subject="Done",
+        subject_color="green",
+    )
 
 
 @app.command()
-@handle_errors("Failed to unlink task from epic")
+@handle_errors("Failed to unlink task from epic", handle_exc_class=SiteNineError)
 def unlink(
-    task_id: str = typer.Argument(..., help="Task ID to unlink from its epic"),
+    task_id: Annotated[str, typer.Argument(help="Task ID to unlink from its epic")],
 ) -> None:
     """Remove a task from its epic"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Verify task exists
-    task = manager.get_task(task_id)
-    if not task:
-        console.print(f"[red]Error: Task {task_id} not found[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        task = CLIError.enforce_defined(manager.get_task(task_id), f"Task {task_id} not found.")
 
-    # Check if task is linked to an epic
-    if not task.epic_id:
-        console.print(f"[yellow]Task {task_id} is not linked to any epic[/yellow]")
-        return
+        if not task.epic_id:
+            terminal_message(
+                f"Task {task_id} is not linked to any epic.",
+                subject="Warning",
+                subject_color="yellow",
+            )
+            return
 
-    # Unlink task from epic using EpicManager
-    from site_nine.epics import EpicManager
+        epic_manager = EpicManager(db)
+        epic_id = task.epic_id
+        epic_manager.unlink_task(task_id)
 
-    epic_manager = EpicManager(manager.db)
-    epic_id = task.epic_id
-
-    epic_manager.unlink_task(task_id)
-    console.print(f"[green]✓[/green] Unlinked task {task_id} from epic {epic_id}")
-    logger.info(f"Unlinked task {task_id} from epic {epic_id}")
+    terminal_message(
+        f"Unlinked task {task_id} from epic {epic_id}",
+        subject="Done",
+        subject_color="green",
+    )
 
 
 @app.command(name="link-adr")
-@handle_errors("Failed to link ADR to task")
+@handle_errors("Failed to link ADR to task", handle_exc_class=SiteNineError)
 def link_adr(
-    task_id: str = typer.Argument(..., help="Task ID"),
-    adr_id: str = typer.Argument(..., help="ADR ID (e.g., ADR-001)"),
+    task_id: Annotated[str, typer.Argument(help="Task ID")],
+    adr_id: Annotated[str, typer.Argument(help="ADR ID (e.g., ADR-001)")],
 ) -> None:
     """Link an ADR to a task"""
-    from site_nine.adrs import ADRManager
+    db_path = require_db_path()
 
-    manager = _get_manager()
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        CLIError.enforce_defined(manager.get_task(task_id), f"Task {task_id} not found.")
 
-    # Verify task exists
-    task = manager.get_task(task_id)
-    if not task:
-        console.print(f"[red]Error: Task {task_id} not found[/red]")
-        raise typer.Exit(1)
+        with CLIError.handle_errors("Failed to link ADR to task", handle_exc_class=ValueError):
+            adr_manager = ADRManager(db)
+            adr_manager.link_to_task(adr_id, task_id)
 
-    # Get ADR manager and link
-    try:
-        opencode_dir = get_opencode_dir()
-        db_path = opencode_dir / "data" / "project.db"
-        from site_nine.core.database import Database
-
-        db = Database(db_path)
-        adr_manager = ADRManager(db)
-
-        adr_manager.link_to_task(adr_id, task_id)
-
-        console.print(f"[green]✓[/green] Linked ADR {adr_id} to task {task_id}")
-        logger.info(f"Linked ADR {adr_id} to task {task_id}")
-    except ValueError as e:
-        console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
+    terminal_message(
+        f"Linked ADR {adr_id} to task {task_id}",
+        subject="Done",
+        subject_color="green",
+    )
 
 
 @app.command(name="unlink-adr")
-@handle_errors("Failed to unlink ADR from task")
+@handle_errors("Failed to unlink ADR from task", handle_exc_class=SiteNineError)
 def unlink_adr(
-    task_id: str = typer.Argument(..., help="Task ID"),
-    adr_id: str = typer.Argument(..., help="ADR ID (e.g., ADR-001)"),
+    task_id: Annotated[str, typer.Argument(help="Task ID")],
+    adr_id: Annotated[str, typer.Argument(help="ADR ID (e.g., ADR-001)")],
 ) -> None:
     """Unlink an ADR from a task"""
-    from site_nine.adrs import ADRManager
+    db_path = require_db_path()
 
-    manager = _get_manager()
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        CLIError.enforce_defined(manager.get_task(task_id), f"Task {task_id} not found.")
 
-    # Verify task exists
-    task = manager.get_task(task_id)
-    if not task:
-        console.print(f"[red]Error: Task {task_id} not found[/red]")
-        raise typer.Exit(1)
+        with CLIError.handle_errors("Failed to unlink ADR from task", handle_exc_class=ValueError):
+            adr_manager = ADRManager(db)
+            adr_manager.unlink_from_task(adr_id, task_id)
 
-    # Get ADR manager and unlink
-    try:
-        opencode_dir = get_opencode_dir()
-        db_path = opencode_dir / "data" / "project.db"
-        from site_nine.core.database import Database
-
-        db = Database(db_path)
-        adr_manager = ADRManager(db)
-
-        adr_manager.unlink_from_task(adr_id, task_id)
-
-        console.print(f"[green]✓[/green] Unlinked ADR {adr_id} from task {task_id}")
-        logger.info(f"Unlinked ADR {adr_id} from task {task_id}")
-    except ValueError as e:
-        console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
+    terminal_message(
+        f"Unlinked ADR {adr_id} from task {task_id}",
+        subject="Done",
+        subject_color="green",
+    )
 
 
 @app.command(name="modify")
-@handle_errors("Failed to modify task")
+@handle_errors("Failed to modify task", handle_exc_class=SiteNineError)
 def modify(
-    task_id: str = typer.Argument(..., help="Task ID"),
-    title: str | None = typer.Option(None, "--title", "-t", help="New title"),
-    description: str | None = typer.Option(None, "--description", "-d", help="New description"),
-    priority: Priority | None = typer.Option(None, "--priority", "-p", help="New priority"),
-    category: str | None = typer.Option(None, "--category", "-c", help="New category"),
+    task_id: Annotated[str, typer.Argument(help="Task ID")],
+    title: Annotated[str | None, typer.Option("--title", "-t", help="New title")] = None,
+    description: Annotated[str | None, typer.Option("--description", "-d", help="New description")] = None,
+    priority: Annotated[Priority | None, typer.Option("--priority", "-p", help="New priority")] = None,
+    category: Annotated[str | None, typer.Option("--category", "-c", help="New category")] = None,
 ) -> None:
     """Modify task metadata (title, description, priority, category)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Verify task exists
-    task = manager.get_task(task_id)
-    if not task:
-        console.print(f"[red]Error: Task {task_id} not found[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        CLIError.enforce_defined(manager.get_task(task_id), f"Task {task_id} not found.")
 
-    # Collect updates
-    updates = {}
-    if title is not None:
-        updates["title"] = title
-    if description is not None:
-        updates["description"] = description
-    if priority is not None:
-        updates["priority"] = priority.value
-    if category is not None:
-        updates["category"] = category
+        updates = {}
+        if title is not None:
+            updates["title"] = title
+        if description is not None:
+            updates["description"] = description
+        if priority is not None:
+            updates["priority"] = priority.value
+        if category is not None:
+            updates["category"] = category
 
-    if not updates:
-        console.print("[yellow]No changes specified. Use --title, --description, --priority, or --category[/yellow]")
-        raise typer.Exit(1)
+        CLIError.require_condition(
+            bool(updates), "No changes specified. Use --title, --description, --priority, or --category."
+        )
 
-    # Update in database
-    manager.update_task(task_id, **updates)
+        manager.update_task(task_id, **updates)
 
-    # Sync to file
-    opencode_dir = get_opencode_dir()
-    updated_task = manager.get_task(task_id)
-    if updated_task:
-        _sync_task_file(updated_task, opencode_dir)
+        opencode_dir = require_opencode_dir()
+        updated_task = manager.get_task(task_id)
+        if updated_task:
+            manager.sync_task_file(updated_task, opencode_dir)
 
-    console.print(f"[green]✓[/green] Updated task {task_id}")
-    logger.info(f"Modified task {task_id}: {', '.join(updates.keys())}")
+    terminal_message(
+        f"Updated task {task_id}",
+        subject="Done",
+        subject_color="green",
+    )
 
 
 @app.command(name="edit")
-@handle_errors("Failed to edit task")
+@handle_errors("Failed to edit task", handle_exc_class=SiteNineError)
 def edit(
-    task_id: str = typer.Argument(..., help="Task ID"),
+    task_id: Annotated[str, typer.Argument(help="Task ID")],
 ) -> None:
     """Open task file in $EDITOR for manual editing"""
-    import os
-    import subprocess
+    db_path = require_db_path()
 
-    manager = _get_manager()
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        task = CLIError.enforce_defined(manager.get_task(task_id), f"Task {task_id} not found.")
 
-    # Verify task exists
-    task = manager.get_task(task_id)
-    if not task:
-        console.print(f"[red]Error: Task {task_id} not found[/red]")
-        raise typer.Exit(1)
-
-    # Get task file path
-    opencode_dir = get_opencode_dir()
+    opencode_dir = require_opencode_dir()
     task_file = Path(task.file_path)
     if not task_file.is_absolute():
         task_file = opencode_dir / task_file
 
-    if not task_file.exists():
-        console.print(f"[red]Error: Task file not found: {task_file}[/red]")
-        raise typer.Exit(1)
-
-    # Get editor from environment
-    editor = os.environ.get("EDITOR", os.environ.get("VISUAL", "vi"))
-
-    console.print(f"Opening {task_file} in {editor}...")
-
-    try:
-        # Open editor
-        subprocess.run([editor, str(task_file)], check=True)
-
-        console.print(f"[green]✓[/green] Task file edited. Run 's9 task sync {task_id}' to update database.")
-        logger.info(f"Edited task file: {task_id}")
-    except subprocess.CalledProcessError as e:
-        console.print(f"[red]Error: Editor exited with code {e.returncode}[/red]")
-        raise typer.Exit(1)
-    except FileNotFoundError:
-        console.print(f"[red]Error: Editor '{editor}' not found. Set $EDITOR environment variable.[/red]")
-        raise typer.Exit(1)
+    open_in_editor(f"Task {task_id}", task_file)
+    terminal_message(
+        f"Run 's9 task sync {task_id}' to update database.",
+        subject="Tip",
+        subject_color="cyan",
+    )
