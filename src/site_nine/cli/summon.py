@@ -1,21 +1,30 @@
 """Summon command to launch OpenCode with /summon slash command"""
 
 import subprocess
+from typing import Annotated
+
 import typer
-from rich.console import Console
+from snick import conjoin
+from typerdrive import attach_settings, terminal_message
 
-from site_nine.core.settings import get_default_model
+from site_nine.cli.utils import abort, abort_unless
+from site_nine.core.settings import SiteNineSettings
 
-console = Console()
 
-
+@attach_settings(SiteNineSettings)
 def summon_command(
-    role: str = typer.Argument(..., help="Agent role to summon (e.g., operator, architect)"),
-    persona: str | None = typer.Option(None, "--persona", "-p", help="Specific persona name to use"),
-    auto_assign: bool = typer.Option(False, "--auto-assign", "-a", help="Auto-assign top priority task for role"),
-    task: str | None = typer.Option(None, "--task", "-t", help="Specific task ID to claim and start"),
-    model: str | None = typer.Option(None, "--model", "-m", help="Model to use (provider/model format)"),
-    dry_run: bool = typer.Option(False, "--dry-run", "-d", help="Show command that would be run without executing"),
+    ctx: typer.Context,
+    settings: SiteNineSettings,
+    role: Annotated[str, typer.Argument(help="Agent role to summon (e.g., operator, architect)")],
+    persona: Annotated[str | None, typer.Option("--persona", "-p", help="Specific persona name to use")] = None,
+    auto_assign: Annotated[
+        bool, typer.Option("--auto-assign", "-a", help="Auto-assign top priority task for role")
+    ] = False,
+    task: Annotated[str | None, typer.Option("--task", "-t", help="Specific task ID to claim and start")] = None,
+    model: Annotated[str | None, typer.Option("--model", "-m", help="Model to use (provider/model format)")] = None,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", "-d", help="Show command that would be run without executing")
+    ] = False,
 ) -> None:
     """Launch OpenCode and automatically run /summon with specified role and flags (typically used by: humans)
 
@@ -26,17 +35,21 @@ def summon_command(
         s9 summon operator --task OPR-H-0065
         s9 summon operator --model github-copilot/gpt-5
     """
-    # Validate flag conflicts
-    if auto_assign and task:
-        console.print("[red]❌ Error: Cannot use both --auto-assign and --task flags together.[/red]")
-        console.print("\n- Use --auto-assign to claim the top priority task for the role")
-        console.print("- Use --task TASK-ID to claim a specific task")
-        console.print("\nPlease use one or the other.")
-        raise typer.Exit(1)
+    abort_unless(
+        not (auto_assign and task),
+        conjoin(
+            "Cannot use both --auto-assign and --task flags together.",
+            "",
+            "- Use --auto-assign to claim the top priority task for the role",
+            "- Use --task TASK-ID to claim a specific task",
+            "",
+            "Please use one or the other.",
+        ),
+    )
 
     # Get model from config if not specified
     if model is None:
-        model = get_default_model()
+        model = settings.default_model
 
     # Build the /summon command
     summon_cmd = f"/summon {role}"
@@ -51,18 +64,20 @@ def summon_command(
         summon_cmd += f" --task {task}"
 
     # Show what would be executed
-    console.print(f"[cyan]🚀 Launching OpenCode TUI with:[/cyan] {summon_cmd}")
+    terminal_message(f"Launching OpenCode TUI with: {summon_cmd}", subject="Summon")
 
     if dry_run:
-        console.print(f'[yellow]Dry run - would execute:[/yellow] opencode --model {model} --prompt "{summon_cmd}"')
+        terminal_message(
+            f'Dry run - would execute: opencode --model {model} --prompt "{summon_cmd}"',
+            subject="Dry Run",
+            subject_color="yellow",
+        )
         return
 
     # Launch OpenCode TUI with the /summon command
     try:
         subprocess.run(["opencode", "--model", model, "--prompt", summon_cmd], check=True)
     except subprocess.CalledProcessError as e:
-        console.print(f"[red]Error launching OpenCode: {e}[/red]")
-        raise typer.Exit(1)
+        abort(f"Error launching OpenCode: {e}")
     except FileNotFoundError:
-        console.print("[red]Error: 'opencode' command not found. Is OpenCode installed?[/red]")
-        raise typer.Exit(1)
+        abort("'opencode' command not found. Is OpenCode installed?")
