@@ -16,6 +16,40 @@ metadata:
 
 All commands in this skill use the `s9` executable via bash. You should NOT attempt to import an `s9` module in Python code.
 
+## ⚠️ BEFORE YOU PROCEED - VERIFY DISMISSAL ⚠️
+
+**STOP! Read this carefully before executing this skill:**
+
+**You should ONLY execute this skill if:**
+1. ✅ The Director explicitly used the `/dismiss` command, OR
+2. ✅ The Director explicitly said you're dismissed/done/released, OR
+3. ✅ The Director clearly indicated the session is ending
+
+**DO NOT execute this skill if:**
+- ❌ You're just finished with one task (claim another task instead)
+- ❌ The conversation has paused or slowed down
+- ❌ You're waiting for the Director to respond
+- ❌ You think maybe you should wrap up
+- ❌ The Director just said "thanks" or "good work" (that's not dismissal)
+
+**If you're unsure, ASK:**
+```
+Director, are you dismissing me? Should I end my mission and close this session?
+```
+
+**Why this matters:**
+- Ending your mission prematurely creates "zombie" IDLE missions in the database
+- Tasks get left in inconsistent states
+- The system accumulates abandoned work
+- `s9 doctor` will report issues
+- You waste the Director's time
+
+**If you proceed incorrectly, the Director will be frustrated with you.**
+
+---
+
+**Assuming you have been properly dismissed, proceed with the following steps:**
+
 ## What I Do
 
 I help you properly end a mission on the s9 project by:
@@ -23,6 +57,7 @@ I help you properly end a mission on the s9 project by:
 - Updating it with completion metadata
 - Documenting work accomplished
 - Closing any open tasks
+- **CRITICALLY: Running `s9 mission end` to close the mission in the database**
 - Running final checks
 - Saying a proper goodbye
 
@@ -184,15 +219,83 @@ git add .opencode/work/missions/<your-mission-file>.md
 git commit -m "docs(mission): complete <persona> <role> mission <codename> [Persona: <Persona> - <Role>]"
 ```
 
-## Step 8: End Mission
+## Step 7.5: Clean Up Temporary Files
 
-Close your mission officially:
+**⚠️ IMPORTANT:** Remove any temporary files you created during this mission.
+
+**Check for temporary scripts:**
+```bash
+ls .opencode/work/scripts/
+```
+
+**Remove scripts you created:**
+```bash
+# Delete scripts for tasks you completed
+rm .opencode/work/scripts/TASK-ID-*.{py,sh,sql}
+
+# Example:
+rm .opencode/work/scripts/DOC-H-0122-*.py
+```
+
+**Remove temporary planning documents (if any):**
+```bash
+# Check planning directory
+ls .opencode/work/planning/
+
+# Remove your temporary planning docs
+rm .opencode/work/planning/my-planning-doc.md  # If you created any
+```
+
+**What to keep:**
+- Mission file (permanent record)
+- Task files (managed by system)
+- Any files that moved to permanent locations
+
+**What to remove:**
+- Scripts in `.opencode/work/scripts/` for tasks you completed
+- Temporary planning documents
+- Any scratch files you created
+
+**Verify project root is clean:**
+```bash
+git status
+```
+
+If you see any uncommitted files in the project root that you created (e.g., `temp.py`, `notes.md`), either:
+1. Delete them if temporary
+2. Move them to appropriate location in `.opencode/work/`
+3. Commit them if they're meant to be permanent
+
+**See:** `.opencode/docs/guides/file-organization.md` for cleanup guidelines.
+
+## Step 8: End Mission ⚠️ MANDATORY - DO NOT SKIP ⚠️
+
+**THIS IS THE MOST CRITICAL STEP** - If you skip this, your mission will remain in the database as an IDLE "zombie" mission forever.
+
+Close your mission officially in the database:
 
 ```bash
 s9 mission end <your-mission-id>
 ```
 
-This updates the database and mission file frontmatter (end_time).
+**What this command does:**
+- Sets the `end_time` in the missions table
+- Marks the mission as officially closed
+- Updates the mission file frontmatter
+- Prevents the mission from showing up as IDLE in the dashboard
+
+**IF YOU DO NOT RUN THIS COMMAND:**
+- ❌ Your mission will remain "active" in the database indefinitely
+- ❌ It will show as IDLE in `s9 dashboard`
+- ❌ `s9 doctor` will report it as abandoned work
+- ❌ The Director will have to manually clean up after you
+
+**Verify it worked:**
+```bash
+s9 mission show <your-mission-id>
+```
+
+You should see an `end_time` in the output. If you see `end_time: None`, **THE COMMAND FAILED** - run it again.
 
 ## Step 9: Rename TUI Session to Indicate Dismissal
 
@@ -300,4 +403,7 @@ Research your persona's mythology for inspiration! Make it memorable.
 - Don't forget to close tasks
 - Don't leave uncommitted changes
 - If work is incomplete, use status PAUSED and document what remains
+- **Clean up temporary files in `.opencode/work/scripts/` and `.opencode/work/planning/`**
+- **Verify project root has no temporary files you created**
+- **See `.opencode/docs/guides/file-organization.md` for file cleanup guidelines**
 

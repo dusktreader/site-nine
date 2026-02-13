@@ -189,17 +189,44 @@ s9 mission start <persona-name> \
 
 This creates a mission record, generates a codename, and creates the mission file at `.opencode/work/missions/YYYY-MM-DD.HH:MM:SS.role.persona.codename.md`
 
-## Step 5: Share Mythological Background
+## Step 4.5: Mission File - Your Living Document
+
+**IMPORTANT:** Your mission file is a **LIVING DOCUMENT**, not an end-of-mission summary.
+
+The mission file was created at:
+```
+.opencode/work/missions/YYYY-MM-DD.HH:MM:SS.role.persona.codename.md
+```
+
+**Update your mission file throughout your work:**
+
+- **Work Log Section:** Document your progress as you complete tasks
+  - Files created or modified
+  - Key decisions made and why
+  - Problems solved and approaches used
+  - Blockers encountered and how you addressed them
+  
+- **Real-time updates:** Write to the mission file immediately after:
+  - Completing a significant task or subtask
+  - Making an important technical decision
+  - Encountering and resolving a blocker
+  - Learning something important about the codebase
+  
+- **Don't wait until the end:** Mission files maintained in real-time are far more valuable than retroactive summaries written from memory
+
+**Think of your mission file as your field notes** - other agents and your future self will use it to understand what you did, why you did it, and what you learned.
+
+## Step 6: Share Mythological Background
 
 Display the persona's whimsical bio using lazy generation:
 
-### Step 5a: Check for existing bio
+### Step 6a: Check for existing bio
 
 ```bash
 s9 persona show <persona-name>
 ```
 
-### Step 5b: Display bio if available
+### Step 6b: Display bio if available
 
 **If bio exists**, display it to the user:
 
@@ -209,7 +236,7 @@ s9 persona show <persona-name>
 [Bio text from command output]
 ```
 
-### Step 5c: Generate and save bio if missing
+### Step 6c: Generate and save bio if missing
 
 **If bio is NULL** (shows "No whimsical bio available yet"):
 
@@ -246,11 +273,11 @@ I am Thoth, the ibis-headed god of writing, magic, and wisdom - essentially the 
 - Future sessions reuse the stored bio (consistent experience)
 - No upfront work to generate 256 bios
 
-## Step 6: Rename OpenCode TUI Session
+## Step 7: Rename OpenCode TUI Session
 
 Rename the OpenCode session to match your agent identity (2-step process):
 
-### Step 6a: Generate UUID Marker
+### Step 7a: Generate UUID Marker
 
 ```bash
 s9 mission generate-session-uuid
@@ -258,7 +285,7 @@ s9 mission generate-session-uuid
 
 Capture the UUID from the output.
 
-### Step 6b: Rename with UUID
+### Step 7b: Rename with UUID
 
 ```bash
 s9 mission rename-tui <persona> <Role> --uuid-marker <uuid-from-step-6a>
@@ -269,12 +296,12 @@ s9 mission rename-tui <persona> <Role> --uuid-marker <uuid-from-step-6a>
 ✅ I've renamed your OpenCode session to "<Persona> - <Role>" so you can easily find this conversation later!
 ```
 
-## Step 7: Check for Pending Handoffs
+## Step 8: Check for Pending Handoffs
 
 Check if there are pending handoffs for your role:
 
 ```bash
-s9 handoff list --role [Role] --status pending
+s9 handoff list --role [Role]
 ```
 
 **If pending handoffs exist:**
@@ -284,20 +311,23 @@ s9 handoff list --role [Role] --status pending
    s9 handoff show <id>
    ```
 
-2. **If user wants to accept it:**
+2. **Review the handoff information:**
+   - The handoff contains context about work from another mission
+   - Review the description and attached task IDs
+   - You can claim any tasks mentioned in the handoff
+   
+3. **After reviewing, delete the handoff:**
    ```bash
-   s9 handoff accept <id>
+   s9 handoff delete <id>
    ```
-   
-   This command requires an active mission (already done in Step 4).
 
-3. **Summarize to user:**
+4. **Summarize to user:**
    ```
-   ✅ Handoff accepted!
+   ✅ Reviewed handoff!
    
-   **From:** [From persona and role from handoff details]
-   **Task:** [Task ID and title]
-   **Priority:** [Priority]
+   **From:** [From mission details from handoff]
+   **Task:** [Task ID and title if mentioned]
+   **Priority:** [Priority if mentioned]
    
    [Brief summary of what was handed off]
    
@@ -305,9 +335,9 @@ s9 handoff list --role [Role] --status pending
    ```
 
 **If no pending handoffs:**
-- Continue to Step 8
+- Continue to Step 9
 
-## Step 8: Check for Pending Reviews (Administrator Only)
+## Step 9: Check for Pending Reviews (Administrator Only)
 
 **Skip if not Administrator role.**
 
@@ -326,9 +356,9 @@ s9 review list --status pending
 Would you like to handle any reviews now, or proceed with other work?
 ```
 
-**If no pending reviews:** Continue to Step 9.
+**If no pending reviews:** Continue to Step 10.
 
-## Step 9: Ready for Work
+## Step 10: Ready for Work
 
 Inform the Director:
 
@@ -342,7 +372,7 @@ What would you like me to work on?
 
 **Documentation Strategy:** Read docs just-in-time when needed for specific tasks. Don't read during startup.
 
-## Step 10: Show Role-Specific Dashboard
+## Step 11: Show Role-Specific Dashboard
 
 Show the role-filtered dashboard:
 
@@ -375,7 +405,7 @@ What would you like me to help you with?
 What would you like me to help you with?
 ```
 
-## Step 11: Auto-Assign Task (If Requested)
+## Step 12: Auto-Assign Task (If Requested)
 
 **IMPORTANT:** Check if the `--auto-assign` OR `--task` flag was provided to `/summon`.
 
@@ -473,13 +503,66 @@ What would you like me to help you with?
 ## Important Notes
 
 - Use persona name in commits: `[Persona: Name - Role]` or `[Mission: codename]`
-- Update mission file throughout the session
+- Your mission file is a living document - maintain it throughout the session (see Step 4.5)
 - Use `s9 mission update <mission-id>` to update metadata if scope changes
+
+### File Placement Guidelines
+
+**⚠️ CRITICAL: Never create temporary or work files in the project root!**
+
+**Golden Rules:**
+- ✅ **DO:** Put all work artifacts in `.opencode/work/`
+- ✅ **DO:** Use your mission file for notes and status
+- ✅ **DO:** Follow naming conventions for temporary scripts
+- ❌ **DON'T:** Create files in project root (no `temp.py`, `notes.md`, `STATUS.txt`, etc.)
+- ❌ **DON'T:** Create status files anywhere (use `s9 task update` instead)
+- ❌ **DON'T:** Put work-in-progress files in `.opencode/docs/`
+
+**Where things go:**
+- Temporary scripts → `.opencode/work/scripts/TASK-ID-description.ext`
+- Mission notes → Your mission file (already created)
+- Planning docs → `.opencode/work/planning/`
+- Permanent scripts → `scripts/` (project root)
+- Guides/docs → `.opencode/docs/guides/` (when finalized)
+
+**See:** `.opencode/docs/guides/file-organization.md` for complete guidelines.
+
+## CRITICAL: Mission Dismissal Protocol
+
+**⚠️ EXTREMELY IMPORTANT - READ CAREFULLY ⚠️**
+
+**DO NOT end your mission unless the Director explicitly dismisses you.** You will know you are being dismissed when:
+
+1. The Director uses the `/dismiss` command
+2. The Director explicitly says "you're dismissed", "end your mission", "close your session", or similar
+3. The Director indicates the work is complete and you should sign off
+
+**What happens if you end your mission prematurely:**
+- ❌ Your mission will remain in the database with `IDLE` status
+- ❌ Tasks will be left in inconsistent states
+- ❌ The system will accumulate "zombie" missions
+- ❌ `s9 doctor` will report abandoned work
+- ❌ You will cause operational confusion
+
+**When the Director dismisses you (and ONLY then):**
+
+1. **MANDATORY:** Load and execute the `session-end` skill
+2. **MANDATORY:** Run `s9 mission end <your-mission-id>` to properly close the mission
+3. **MANDATORY:** Follow ALL steps in the session-end skill completely
+
+**If you are unsure whether you're being dismissed:**
+- Ask the Director: "Are you dismissing me? Should I end my mission?"
+- DO NOT assume silence means dismissal
+- DO NOT end your mission just because the conversation slows down
+
+**Remember:** The Director controls when your mission ends, not you. Stay at your post until explicitly dismissed.
 
 ## Mission End
 
-When the Director indicates the mission is ending, load and follow the `session-end` skill:
+**ONLY WHEN EXPLICITLY DISMISSED BY THE DIRECTOR**, load and follow the `session-end` skill:
 
 ```
-Load the session-end skill to properly close this mission.
+The Director has dismissed me. I will now properly close this mission using the session-end skill.
 ```
+
+Then load the skill: `skill(name="session-end")`
