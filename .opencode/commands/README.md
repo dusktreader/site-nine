@@ -227,7 +227,7 @@ Tasks closed:
 **Next steps:**
 - None - work complete
 
-Mission file updated: .opencode/work/missions/2026-01-29.14:30:00.builder.goibniu.rate-limiting.md
+Mission file updated: .opencode/work/missions/2026-01-29.14:30:00.engineer.goibniu.rate-limiting.md
 
 Thank you for working with me! I'm Goibniu, signing off.
 
@@ -244,6 +244,67 @@ I return to my forge in the halls of the Tuatha Dé Danann, my craft complete.
 - ❌ Taking a short break
 - ❌ Waiting for user response
 - ❌ In the middle of work
+
+---
+
+### Project Overview
+
+#### `/dashboard` - Display Project Status
+
+**Purpose:** Show a comprehensive overview of the project's current state including active epics, available tasks, open missions, and quick statistics.
+
+**Usage:**
+```
+/dashboard
+/dashboard <role>
+/dashboard <epic-id>
+```
+
+**Examples:**
+- `/dashboard` - Show full project dashboard
+- `/dashboard Administrator` - Show only Administrator-related tasks
+- `/dashboard EPC-H-0004` - Show only tasks for epic EPC-H-0004
+
+**What it displays:**
+1. **Active Epics with Subtasks** - Shows epics and their completion status
+2. **Available Individual Tasks** - Tasks not linked to any epic
+3. **Open Missions** - Currently active agent sessions
+4. **Quick Stats** - Summary metrics (active missions, total tasks, completion status)
+
+**Example output:**
+```
+User: /dashboard operator
+
+Agent: [Displays dashboard filtered for Operator role]
+
+╭──────────────────────────────────────────────────────────╮
+│ Active Epics with Subtasks                               │
+│ ├── EPC-H-0004 HIGH UNDERWAY Multi-Tool Adapter [3/10]   │
+│ │   ├── OPR-H-0065 HIGH Operator Todo Create adapters... │
+│ │   ├── OPR-H-0066 HIGH Operator Todo Implement...       │
+│ │   └── ...                                              │
+│                                                          │
+│ Available Individual Tasks                               │
+│ ┌────────┬──────────┬──────────┬────────┬─────────────┐ │
+│ │ ID     │ Priority │ Role     │ Status │ Title       │ │
+│ ├────────┼──────────┼──────────┼────────┼─────────────┤ │
+│ │ OPR... │ MEDIUM   │ Operator │ Todo   │ Audit...    │ │
+│ └────────┴──────────┴──────────┴────────┴─────────────┘ │
+╰──────────────────────────────────────────────────────────╯
+
+You have 7 tasks available for the Operator role.
+```
+
+**When to use:**
+- ✅ At the start of a new session to see what's available
+- ✅ After completing work to see what's next
+- ✅ When planning which tasks to work on
+- ✅ To get a quick project status overview
+
+**Related commands:**
+- `/tasks` - More detailed task list with filtering and search
+- `/summon <role> --auto-assign` - Auto-claim top priority task
+- `/claim-task` - Interactively claim a specific task
 
 ---
 
@@ -699,7 +760,7 @@ Agent: Creating handoff document...
 **Created:** 2026-01-29 16:30:00
 
 **Handoff Document:**
-.opencode/work/missions/handoffs/2026-01-29.16:30:00.manager-ishtar.builder.pending.md
+.opencode/work/missions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md
 
 **Summary:**
 - Task: H040 - Implement database query caching
@@ -818,7 +879,7 @@ Load the <skill-name> skill and follow its instructions to <accomplish goal>.
 ```markdown
 ---
 description: Commit changes following project standards
-agent: builder
+agent: engineer
 ---
 
 Load the commit-workflow skill and follow its instructions to commit the current changes.
