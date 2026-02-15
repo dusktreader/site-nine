@@ -13,6 +13,8 @@ from site_nine.core.database import Database
 from site_nine.core.roles import Role
 from site_nine.exceptions import SiteNineError
 from site_nine.missions import MissionManager
+from site_nine.missions.models import Mission
+from site_nine.missions.types import MissionStatus
 from site_nine.opencode import OpenCodeSessionManager
 
 app = typer.Typer(help="Manage missions")
@@ -24,9 +26,27 @@ def start(
     name: Annotated[str, typer.Argument(help="Daemon name")],
     role: Annotated[str, typer.Option("--role", "-r", help="Agent role")],
     task: Annotated[str, typer.Option("--task", "-t", help="Task summary")] = "",
+    epic: Annotated[str | None, typer.Option("--epic", "-e", help="Epic ID for epic-scoped mission")] = None,
 ) -> None:
-    """Start a new mission (typically used by: agents)"""
+    """Start a new mission (typically used by: agents)
+
+    Missions can be scoped in three ways:
+    - Task-scoped: --task flag (existing behavior)
+    - Epic-scoped: --epic flag (work through multiple tasks in an epic)
+    - General: no flags (flexible coordination work)
+
+    Note: --task and --epic are mutually exclusive.
+    """
     db_path = require_db_path()
+
+    # Validate mutual exclusivity of --task and --epic
+    CLIError.require_condition(
+        not (task and epic),
+        "Cannot specify both --task and --epic. Choose one scoping mode:\n"
+        "  - Task-scoped: --task (work on specific task)\n"
+        "  - Epic-scoped: --epic (work through multiple tasks in epic)\n"
+        "  - General: neither flag (flexible coordination work)",
+    )
 
     valid_roles_str = ", ".join(Role.all_values())
     with CLIError.handle_errors(f"Invalid role: {role}. Valid values: {valid_roles_str}", handle_exc_class=ValueError):
@@ -35,13 +55,23 @@ def start(
 
     with Database(db_path) as db:
         manager = MissionManager(db)
-        mission_id = manager.start_mission(persona_name=name, role=role, objective=task)
+
+        # Validate epic exists if provided
+        if epic:
+            epic_result = db.execute_query("SELECT id FROM epics WHERE id = :epic_id", {"epic_id": epic})
+            CLIError.require_condition(
+                bool(epic_result), f"Epic {epic} not found. Use 's9 epic list' to see available epics."
+            )
+
+        mission_id = manager.start_mission(persona_name=name, role=role, objective=task, epic_id=epic)
 
     lines = [
         f"Started mission #{mission_id}",
         f"  Persona: {name}",
         f"  Role: {role}",
     ]
+    if epic:
+        lines.append(f"  Epic: {epic}")
     if task:
         lines.append(f"  Objective: {task}")
     terminal_message(conjoin(*lines), subject="Done", subject_color="green")
@@ -52,6 +82,7 @@ def start(
 def list(
     active_only: Annotated[bool, typer.Option("--active-only", help="Show only active missions")] = False,
     role: Annotated[str | None, typer.Option("--role", "-r", help="Filter by role")] = None,
+    epic: Annotated[str | None, typer.Option("--epic", "-e", help="Filter by epic ID")] = None,
     json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
     """List missions (typically used by: humans)"""
@@ -62,7 +93,38 @@ def list(
 
     with Database(db_path) as db:
         manager = MissionManager(db)
-        missions = manager.list_missions(active_only=active_only, role=role)
+        missions = manager.list_missions(active_only=active_only, role=role, epic_id=epic)
+
+        # Build mapping of mission_id -> current_task_id for active missions
+        mission_task_map: dict[int, str | None] = {}
+        active_mission_ids = [m.id for m in missions if m.end_time is None and m.id is not None]
+        if active_mission_ids:
+            placeholders = ", ".join(f":m{i}" for i in range(len(active_mission_ids)))
+            params = {f"m{i}": mid for i, mid in enumerate(active_mission_ids)}
+            task_rows = db.execute_query(
+                f"SELECT id, current_mission_id FROM tasks WHERE current_mission_id IN ({placeholders}) AND status = 'UNDERWAY'",
+                params,
+            )
+            for row in task_rows:
+                mission_task_map[row["current_mission_id"]] = row["id"]
+
+    def _get_availability(mission: Mission) -> str:
+        """Compute availability status per ADR-009."""
+        if mission.status == MissionStatus.ENDED:
+            return "Ended"
+        if mission.desk_mode_active:
+            if mission.epic_id:
+                return f"Desk ({mission.epic_id})"
+            return "Desk (All)"
+        mid = mission.id or 0
+        current_task_id = mission_task_map.get(mid)
+        if mission.epic_id:
+            return f"Working ({mission.epic_id})"
+        if current_task_id:
+            return f"Working ({current_task_id})"
+        if mission.status == MissionStatus.IDLE:
+            return "Idle"
+        return "Working"
 
     if not missions:
         if json_output:
@@ -78,6 +140,11 @@ def list(
                 "persona_name": mission.persona_name,
                 "role": mission.role,
                 "codename": mission.codename,
+                "status": mission.status.value,
+                "epic_id": mission.epic_id,
+                "desk_mode_active": mission.desk_mode_active,
+                "current_task_id": mission_task_map.get(mission.id or 0),
+                "availability": _get_availability(mission),
                 "start_time": mission.start_time,
                 "end_time": mission.end_time,
                 "start_date": mission.start_date,
@@ -93,6 +160,7 @@ def list(
         table.add_column("Persona", style="magenta")
         table.add_column("Role", style="green")
         table.add_column("Codename", style="yellow")
+        table.add_column("Availability", style="bright_green")
         table.add_column("Start Time", style="blue")
         table.add_column("End Time", style="blue")
 
@@ -102,6 +170,7 @@ def list(
                 mission.persona_name,
                 mission.role,
                 mission.codename,
+                _get_availability(mission),
                 mission.start_time or "",
                 mission.end_time or "",
             )
@@ -134,7 +203,22 @@ def show(
             raise typer.Exit(code=1)
         raise CLIError(f"Mission #{mission_id} not found.")
 
-    status = "Active" if mission.end_time is None else "Complete"
+    status = str(mission.status)
+
+    # Determine mission scope (ADR-009)
+    scope_info = None
+    if mission.epic_id:
+        scope_info = f"Epic-scoped ({mission.epic_id})"
+    else:
+        # Check if this mission has a claimed task (task-scoped)
+        task_rows = db.execute_query(
+            "SELECT id FROM tasks WHERE current_mission_id = :mission_id LIMIT 1",
+            {"mission_id": mission.id},
+        )
+        if task_rows:
+            scope_info = f"Task-scoped ({task_rows[0]['id']})"
+        else:
+            scope_info = "General"
 
     if json_output:
         mission_data = {
@@ -148,6 +232,8 @@ def show(
             "end_time": mission.end_time,
             "mission_file": mission.mission_file,
             "objective": mission.objective,
+            "epic_id": mission.epic_id,
+            "scope": scope_info,
         }
         output_json(format_json_response(mission_data))
     else:
@@ -156,6 +242,7 @@ def show(
             f"Codename: {mission.codename}",
             f"Role: {mission.role}",
             f"Status: {status}",
+            f"Scope: {scope_info}",
             f"Start Date: {mission.start_date}",
             f"Start Time: {mission.start_time}",
         ]
@@ -330,6 +417,29 @@ def update(
     terminal_message(conjoin(*lines), subject="Done", subject_color="green")
 
 
+@app.command()
+@handle_errors("Failed to send heartbeat", handle_exc_class=SiteNineError)
+def heartbeat(
+    mission_id: Annotated[int, typer.Argument(help="Mission ID")],
+) -> None:
+    """Update mission last_active_at timestamp (typically used by: agents)
+
+    Agents should call this periodically to indicate they are still active.
+    This also sets the mission status to ACTIVE if it was IDLE.
+    """
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        manager = MissionManager(db)
+        manager.heartbeat(mission_id)
+
+    terminal_message(
+        f"Heartbeat recorded for mission #{mission_id}",
+        subject="Done",
+        subject_color="green",
+    )
+
+
 @app.command("roles")
 def roles(
     json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
@@ -386,7 +496,6 @@ def list_opencode_sessions() -> None:
     """List OpenCode TUI missions for the current project (typically used by: humans)
 
     Shows session IDs and titles to help identify which session to rename.
-    Use the session ID with: s9 mission rename-tui <name> <role> --session-id <id>
     """
     opencode_dir = require_opencode_dir()
     project_root = opencode_dir.parent
@@ -409,7 +518,7 @@ def list_opencode_sessions() -> None:
         lines.append("")
 
     lines.append("To rename a session, use:")
-    lines.append("  s9 mission rename-tui <name> <role> --session-id <session-id>")
+    lines.append("  s9 mission rename-tui <name> <role>")
     terminal_message(conjoin(*lines), subject="Sessions", subject_color="cyan")
 
 
@@ -418,9 +527,6 @@ def list_opencode_sessions() -> None:
 def rename_tui(
     name: Annotated[str, typer.Argument(help="Persona name")],
     role: Annotated[str, typer.Argument(help="Agent role")],
-    mission_id: Annotated[
-        str | None, typer.Option("--session-id", "-s", help="OpenCode session ID (e.g., ses_xxx)")
-    ] = None,
     uuid_marker: Annotated[
         str | None,
         typer.Option("--uuid-marker", "-u", help="Session UUID marker from generate-session-uuid"),
@@ -432,9 +538,8 @@ def rename_tui(
 ) -> None:
     """Rename the current OpenCode TUI session to match agent identity (typically used by: agents)
 
-    If --session-id is provided, renames that specific mission.
-    If --uuid-marker is provided, searches session diffs for that marker (most reliable).
-    Otherwise, attempts to auto-detect using content correlation and timestamps.
+    If --uuid-marker is provided, searches for that marker in session data (most reliable).
+    Otherwise, attempts to auto-detect using DB recency and filesystem heuristics.
     If --suffix is provided, appends it to the session title (useful for indicating mission status).
     """
     opencode_dir = require_opencode_dir()
@@ -442,32 +547,48 @@ def rename_tui(
 
     session_mgr = OpenCodeSessionManager(project_root)
 
-    _, session_storage, _ = session_mgr.find_storage()
-
-    detection = session_mgr.detect_session(session_id=mission_id, uuid_marker=uuid_marker)
+    detection = session_mgr.detect_session(uuid_marker=uuid_marker)
 
     if detection.warning:
         terminal_message(detection.warning, subject="Warning", subject_color="yellow")
 
     session_id_value = CLIError.enforce_defined(detection.session_id, "Failed to determine session ID.")
 
-    session_file = session_mgr.locate_session_file(session_id_value, session_storage)
-
-    # Get mission codename from database
+    # Get mission codename and current task from database
     db_path = opencode_dir / "data" / "project.db"
     with Database(db_path) as db:
         manager = MissionManager(db)
         codename = manager.get_active_codename(name)
 
+        # Get current mission ID and task
+        mission_result = db.execute_query(
+            "SELECT id FROM missions WHERE persona_name = :persona_name AND end_time IS NULL ORDER BY created_at DESC LIMIT 1",
+            {"persona_name": name.lower()},
+        )
+
+        current_task = None
+        if mission_result:
+            mission_id = mission_result[0]["id"]
+            task_result = db.execute_query(
+                "SELECT id, title FROM tasks WHERE current_mission_id = :mission_id AND status = 'UNDERWAY' LIMIT 1",
+                {"mission_id": mission_id},
+            )
+            if task_result:
+                current_task = task_result[0]
+
+    # Build title with task info if available
     if codename:
         new_title = f"Operation {codename}: {name.capitalize()} - {role}"
     else:
         new_title = f"{name.capitalize()} - {role}"
 
+    if current_task:
+        new_title = f"{new_title} | {current_task['id']}"
+
     if suffix:
         new_title = f"{new_title} {suffix}"
 
-    result = session_mgr.update_session_title(session_file, new_title)
+    result = session_mgr.update_session_title(session_id_value, new_title)
 
     if result.warning:
         terminal_message(result.warning, subject="Warning", subject_color="yellow")
@@ -487,7 +608,7 @@ def rename_tui(
                 "Multiple active sessions detected.",
                 "If the wrong session was renamed, run:",
                 "  s9 mission list-opencode-sessions",
-                f"  s9 mission rename-tui {name} {role} --session-id <correct-session-id>",
+                "to verify which session was updated.",
             ),
             subject="Warning",
             subject_color="yellow",
