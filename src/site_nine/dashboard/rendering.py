@@ -6,6 +6,7 @@ dashboard model objects. They contain no data-fetching logic.
 
 from collections.abc import Callable
 
+import pendulum
 from rich.table import Table
 from rich.tree import Tree
 
@@ -14,10 +15,11 @@ from site_nine.dashboard.models import (
     DashboardStats,
     EpicDashboardData,
     FullDashboardData,
-    MissionStatus,
+    MissionEntry,
     RoleDashboardData,
 )
 from site_nine.epics.models import Epic
+from site_nine.missions.types import MissionStatus
 from site_nine.tasks.models import Task
 
 
@@ -108,19 +110,22 @@ def render_epic_subtasks_table(subtasks: list[Task]) -> Table:
     return table
 
 
-def render_epic_tree(active_epics: list[Epic], get_subtasks: Callable[[str], list[Task]]) -> Tree | None:
+def render_epic_tables(
+    active_epics: list[Epic],
+    get_subtasks: Callable[[str], list[Task]],
+) -> list[Table | str]:
     """
-    Render a tree view of active epics with their subtasks.
+    Render each active epic as a separate table with subtasks.
 
     Args:
         active_epics: List of active epics (already filtered to TODO/UNDERWAY).
         get_subtasks: Callable that takes an epic_id and returns list[Task].
 
     Returns:
-        A Rich Tree, or None if there are no active epics.
+        A list of Rich Tables (one per epic), or an empty list if there are no active epics.
     """
     if not active_epics:
-        return None
+        return []
 
     # Sort by priority
     sorted_epics = sorted(
@@ -128,66 +133,71 @@ def render_epic_tree(active_epics: list[Epic], get_subtasks: Callable[[str], lis
         key=lambda e: (PRIORITY_ORDER.get(e.priority, 99), e.id),
     )
 
-    tree = Tree("[bold yellow]Active Epics with Subtasks[/bold yellow]")
+    tables: list[Table | str] = []
 
     for epic_obj in sorted_epics[:5]:
         status_color = STATUS_COLORS.get(epic_obj.status or "", "white")
         priority_color = PRIORITY_COLORS.get(epic_obj.priority, "white")
 
         if epic_obj.subtask_count and epic_obj.subtask_count > 0:
-            progress_text = f"[{epic_obj.completed_count}/{epic_obj.subtask_count}]"
+            progress_text = f"{epic_obj.completed_count}/{epic_obj.subtask_count}"
         else:
-            progress_text = "[0/0]"
+            progress_text = "0/0"
 
-        epic_label = (
+        epic_title = (
             f"[cyan]{epic_obj.id}[/cyan] "
-            f"[{priority_color}]{epic_obj.priority}[/{priority_color}] "
+            f"[white]{epic_obj.title}[/white]  "
             f"[{status_color}]{epic_obj.status}[/{status_color}] "
-            f"[white]{epic_obj.title}[/white] "
-            f"[dim]{progress_text}[/dim]"
+            f"[{priority_color}]{epic_obj.priority}[/{priority_color}] "
+            f"[dim]\\[{progress_text}][/dim]"
         )
 
-        epic_branch = tree.add(epic_label)
-
-        subtasks = get_subtasks(epic_obj.id)
+        subtasks = [t for t in get_subtasks(epic_obj.id) if t.status.value in ("TODO", "UNDERWAY")]
 
         if not subtasks:
-            epic_branch.add("[dim italic]No subtasks linked[/dim italic]")
-        else:
-            status_priority = {
-                "UNDERWAY": 0,
-                "TODO": 1,
-                "COMPLETE": 2,
-                "ABORTED": 3,
-            }
-            subtasks.sort(
-                key=lambda t: (
-                    status_priority.get(str(t.status), 99),
-                    PRIORITY_ORDER.get(t.priority, 99),
-                    t.id,
-                ),
+            continue
+
+        status_priority = {
+            "UNDERWAY": 0,
+            "TODO": 1,
+        }
+        subtasks.sort(
+            key=lambda t: (
+                status_priority.get(t.status.value, 99),
+                PRIORITY_ORDER.get(t.priority, 99),
+                t.id,
+            ),
+        )
+
+        table = Table(
+            title=epic_title,
+            show_header=True,
+            title_style="bold",
+            title_justify="left",
+        )
+        table.add_column("ID", style="cyan", width=12, no_wrap=True)
+        table.add_column("Role", style="green", width=14, no_wrap=True)
+        table.add_column("Status", width=10, no_wrap=True)
+        table.add_column("Title", style="white", ratio=1)
+        table.add_column("Mission", style="blue", width=8, no_wrap=True)
+
+        for task in subtasks[:10]:
+            task_status_color = TASK_STATUS_COLORS.get(task.status.value, "white")
+
+            table.add_row(
+                task.id,
+                task.role or "",
+                f"[{task_status_color}]{task.status}[/{task_status_color}]",
+                task.title[:60],
+                f"@{task.current_mission_id}" if task.current_mission_id else "",
             )
 
-            for task in subtasks[:10]:
-                task_status_color = TASK_STATUS_COLORS.get(str(task.status), "white")
-                task_priority_color = PRIORITY_COLORS.get(task.priority, "white")
-                mission_text = f"[blue]@{task.current_mission_id}[/blue]" if task.current_mission_id else ""
+        if len(subtasks) > 10:
+            table.add_row("", "", "", f"[dim italic]... and {len(subtasks) - 10} more tasks[/dim italic]", "")
 
-                task_label = (
-                    f"[cyan]{task.id}[/cyan] "
-                    f"[{task_priority_color}]{task.priority}[/{task_priority_color}] "
-                    f"[green]{task.role or ''}[/green] "
-                    f"[{task_status_color}]{task.status}[/{task_status_color}] "
-                    f"[white]{task.title[:60]}[/white] "
-                    f"{mission_text}"
-                )
+        tables.append(table)
 
-                epic_branch.add(task_label)
-
-            if len(subtasks) > 10:
-                epic_branch.add(f"[dim italic]... and {len(subtasks) - 10} more tasks[/dim italic]")
-
-    return tree
+    return tables
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +236,41 @@ def render_available_tasks_table(tasks: list[Task], *, max_rows: int = 10) -> Ta
     return table
 
 
-def render_open_missions_table(mission_statuses: list[MissionStatus]) -> Table:
+MISSION_STATUS_COLORS: dict[str, str] = {
+    "ACTIVE": "green",
+    "IDLE": "yellow",
+    "ENDED": "dim",
+}
+
+
+def _human_friendly_age(start_time: str | None, start_date: str | None) -> str:
+    """Convert mission start_date + start_time into a human-friendly age string."""
+    if not start_date or not start_time:
+        return "unknown"
+    try:
+        dt_str = f"{start_date}T{start_time}"
+        start_dt = pendulum.parse(dt_str, tz="UTC")
+        now = pendulum.now("UTC")
+        diff = now - start_dt  # type: ignore[operator]
+        total_seconds = int(diff.total_seconds())  # type: ignore[union-attr]
+
+        days = total_seconds // 86400
+        hours = (total_seconds % 86400) // 3600
+        minutes = (total_seconds % 3600) // 60
+
+        if days > 0:
+            return f"{days}d ago"
+        elif hours > 0:
+            return f"{hours}h ago"
+        elif minutes > 0:
+            return f"{minutes}m ago"
+        else:
+            return "just now"
+    except Exception:
+        return start_time or "unknown"
+
+
+def render_open_missions_table(mission_entries: list[MissionEntry]) -> Table:
     """Build the 'Open Missions' table."""
     table = Table(
         title="Open Missions",
@@ -237,20 +281,23 @@ def render_open_missions_table(mission_statuses: list[MissionStatus]) -> Table:
     table.add_column("Name", style="magenta")
     table.add_column("Role", style="green")
     table.add_column("Status", style="yellow")
-    table.add_column("Start Time", style="blue")
+    table.add_column("Age", style="blue")
     table.add_column("Objective", style="white")
 
-    if mission_statuses:
-        for ms in mission_statuses:
-            m = ms.mission
+    if mission_entries:
+        for me in mission_entries:
+            m = me.mission
             objective_display = (
                 m.objective[:50] + "..." if m.objective and len(m.objective) > 50 else (m.objective or "")
             )
+            status_color = MISSION_STATUS_COLORS.get(m.status.value, "white")
+            status_display = f"[{status_color}]{m.status.value}[/{status_color}]"
+            age_display = _human_friendly_age(m.start_time, m.start_date)
             table.add_row(
                 m.persona_name,
                 m.role,
-                ms.status,
-                m.start_time,
+                status_display,
+                age_display,
                 objective_display,
             )
     else:
@@ -280,6 +327,31 @@ def render_stats_table(stats: DashboardStats) -> Table:
         table.add_row("Blocked by reviews", f"[red]{stats.blocked_by_reviews}[/red]")
 
     return table
+
+
+def render_messaging_stats_table(stats: DashboardStats) -> list[str | Table]:
+    """Build the 'Agent Communication (last 24h)' table and hint line.
+
+    Returns a list containing the Rich Table and a hint string so the
+    caller can append both to the renderable list.
+    """
+    table = Table(
+        title="Agent Communication (last 24h)",
+        show_header=True,
+        title_style="bold magenta",
+        title_justify="left",
+    )
+    table.add_column("Metric", style="cyan")
+    table.add_column("Count", justify="right", style="bold")
+
+    table.add_row("Active conversations", str(stats.active_conversations))
+    table.add_row("Open discussions", str(stats.open_discussions))
+    table.add_row("Messages sent", str(stats.messages_sent_24h))
+    table.add_row("Unread messages (all agents)", str(stats.unread_messages))
+
+    items: list[str | Table] = [table]
+    items.append("[dim]💡 View details: s9 comms inbox[/dim]")
+    return items
 
 
 # ---------------------------------------------------------------------------
@@ -346,14 +418,14 @@ def full_dashboard_to_json(data: FullDashboardData) -> dict:
         ],
         "active_missions": [
             {
-                "id": ms.mission.id,
-                "persona_name": ms.mission.persona_name,
-                "role": ms.mission.role,
-                "status": ms.status,
-                "start_time": ms.mission.start_time,
-                "objective": ms.mission.objective,
+                "id": me.mission.id,
+                "persona_name": me.mission.persona_name,
+                "role": me.mission.role,
+                "status": me.mission.status.value,
+                "start_time": me.mission.start_time,
+                "objective": me.mission.objective,
             }
-            for ms in data.mission_statuses
+            for me in data.mission_entries
         ],
         "stats": {
             "active_missions": data.stats.active_missions,
@@ -363,6 +435,10 @@ def full_dashboard_to_json(data: FullDashboardData) -> dict:
             "in_progress": data.stats.in_progress,
             "completed": data.stats.completed,
             "blocked_by_reviews": data.stats.blocked_by_reviews,
+            "active_conversations": data.stats.active_conversations,
+            "open_discussions": data.stats.open_discussions,
+            "messages_sent_24h": data.stats.messages_sent_24h,
+            "unread_messages": data.stats.unread_messages,
         },
     }
 
@@ -471,16 +547,15 @@ def _render_full_dashboard(
 ) -> list[str | Table | Tree]:
     items: list[str | Table | Tree] = []
 
-    epic_tree = render_epic_tree(data.active_epics, get_subtasks)
-    if epic_tree is not None:
-        items.append(epic_tree)
+    items.extend(render_epic_tables(data.active_epics, get_subtasks))
 
     if data.available_tasks:
         items.append(render_available_tasks_table(data.available_tasks))
     else:
         items.append("[green]No available tasks - all work complete![/green]")
 
-    items.append(render_open_missions_table(data.mission_statuses))
+    items.append(render_open_missions_table(data.mission_entries))
     items.append(render_stats_table(data.stats))
+    items.extend(render_messaging_stats_table(data.stats))
 
     return items

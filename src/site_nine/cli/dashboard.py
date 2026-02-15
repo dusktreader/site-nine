@@ -3,6 +3,9 @@
 from typing import Annotated
 
 import typer
+from rich.console import Console
+from rich.table import Table
+from rich.tree import Tree
 from typerdrive import handle_errors, terminal_message
 
 from site_nine.cli.json_utils import format_json_response, output_json
@@ -30,5 +33,11 @@ def dashboard_command(
             output_json(format_json_response(dashboard_to_json(data)))
             return
 
+        console = Console()
         for item in render_dashboard(data, manager.epic_manager.get_subtasks):
-            terminal_message(item, indent=False)
+            if isinstance(item, (Table, Tree)):
+                console.print()
+                console.print(item)
+                console.print()
+            else:
+                terminal_message(item, indent=False)
