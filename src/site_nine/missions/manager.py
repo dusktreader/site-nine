@@ -1,14 +1,22 @@
-"""Mission management"""
+from __future__ import annotations
 
-import re
-from dataclasses import dataclass
-from datetime import datetime
+import subprocess
 from pathlib import Path
+
+import pendulum
+from buzz import enforce_defined, require_condition
+from loguru import logger
 
 from site_nine.core.database import Database
 from site_nine.core.paths import validate_path_within_project
+from site_nine.core.templates import TemplateRenderer
+from site_nine.core.utils import utc_now
+from site_nine.missions.exceptions import MissionError
+from site_nine.missions.models import FileChange, Mission, MissionSummary, TaskSummary
+from site_nine.missions.types import MissionStatus
 
-# Prime-length word lists for deterministic codename generation
+GIT_STATUS_MAP = {"M": "modified", "A": "added", "D": "deleted", "R": "renamed"}
+
 ADJECTIVES = [
     "swift",
     "silent",
@@ -98,83 +106,90 @@ def generate_mission_codename(mission_id: int) -> str:
     return f"{adjective}-{noun}"
 
 
-@dataclass
-class Mission:
-    """Mission data"""
-
-    id: int | None
-    persona_name: str
-    role: str
-    codename: str
-    mission_file: str
-    start_date: str
-    start_time: str
-    end_time: str | None
-    objective: str
-    created_at: str
-    updated_at: str
-
-
 class MissionManager:
     """Manages missions"""
 
     def __init__(self, db: Database) -> None:
         self.db = db
 
-    def start_mission(self, persona_name: str, role: str, objective: str, mission_file: str | None = None) -> int:
-        """Start a new mission"""
-        from site_nine.core.paths import get_opencode_dir
+    def start_mission(
+        self, persona_name: str, role: str, objective: str, mission_file: str | None = None, epic_id: str | None = None
+    ) -> int:
+        """Start a new mission
 
-        # Generate mission file name if not provided
+        Args:
+            persona_name: Name of the persona to use
+            role: Role for the mission
+            objective: Mission objective/task summary
+            mission_file: Optional custom mission file path
+            epic_id: Optional epic ID for epic-scoped missions
+
+        Returns:
+            Mission ID
+        """
         if not mission_file:
-            now = datetime.now()
-            date_str = now.strftime("%Y-%m-%d")
-            time_str = now.strftime("%H:%M:%S")
+            now = pendulum.now("UTC")
+            date_str = now.format("YYYY-MM-DD")
+            time_str = now.format("HH:mm:ss")
             mission_file = f".opencode/work/missions/{date_str}.{time_str}.{role.lower()}.{persona_name}.md"
 
-        # Insert into database (codename will be generated via trigger or after insert)
-        result = self.db.execute_query(
-            """
-            INSERT INTO missions (
-                persona_name, role, codename, mission_file,
-                start_date, start_time, objective,
-                created_at, updated_at
-            )
-            VALUES (
-                :persona_name, :role, '', :mission_file,
-                date('now'), time('now'), :objective,
-                datetime('now'), datetime('now')
-            )
-            RETURNING id
-            """,
-            {
-                "persona_name": persona_name,
-                "role": role,
-                "mission_file": mission_file,
-                "objective": objective,
-            },
+        now_str = utc_now()
+        result = enforce_defined(
+            self.db.execute_query(
+                """
+                INSERT INTO missions (
+                    persona_name, role, codename, mission_file,
+                    start_date, start_time, objective, epic_id,
+                    status, last_active_at,
+                    created_at, updated_at
+                )
+                VALUES (
+                    :persona_name, :role, '', :mission_file,
+                    :start_date, :start_time, :objective, :epic_id,
+                    :status, :now,
+                    :now, :now
+                )
+                RETURNING id
+                """,
+                {
+                    "persona_name": persona_name,
+                    "role": role,
+                    "mission_file": mission_file,
+                    "objective": objective,
+                    "epic_id": epic_id,
+                    "status": MissionStatus.ACTIVE.value,
+                    "start_date": pendulum.now("UTC").format("YYYY-MM-DD"),
+                    "start_time": pendulum.now("UTC").format("HH:mm:ss"),
+                    "now": now_str,
+                },
+            ),
+            "Failed to create mission",
+            raise_exc_class=MissionError,
         )
 
         mission_id = result[0]["id"]
 
-        # Generate and update codename
         codename = generate_mission_codename(mission_id)
-        self.db.execute_update(
-            "UPDATE missions SET codename = :codename WHERE id = :id", {"codename": codename, "id": mission_id}
+        enforce_defined(
+            self.db.execute_query(
+                "UPDATE missions SET codename = :codename WHERE id = :id RETURNING *",
+                {"codename": codename, "id": mission_id},
+            ),
+            f"Failed to update codename for mission {mission_id}",
+            raise_exc_class=MissionError,
         )
 
-        # Update persona usage
-        self.db.execute_update(
+        self.db.execute_query(
             """
             UPDATE personas
             SET mission_count = mission_count + 1,
-                last_mission_at = datetime('now')
+                last_mission_at = :now
             WHERE name = :persona_name
+            RETURNING *
             """,
-            {"persona_name": persona_name},
+            {"persona_name": persona_name, "now": now_str},
         )
 
-        # Create the mission file
         self._create_mission_file(
             mission_file=mission_file,
             persona_name=persona_name,
@@ -196,120 +211,83 @@ class MissionManager:
         """Create initial mission file with frontmatter and structure"""
         from site_nine.core.paths import get_opencode_dir
 
-        # Get absolute path
         opencode_dir = get_opencode_dir()
         project_root = opencode_dir.parent
         mission_path = project_root / mission_file
 
-        # Ensure parent directory exists
         mission_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Get current datetime for timestamps
-        now = datetime.now()
-        start_date = now.strftime("%Y-%m-%d")
-        start_time = now.strftime("%H:%M:%S")
+        now = pendulum.now("UTC")
+        start_date = now.format("YYYY-MM-DD")
+        start_time = now.format("HH:mm:ss")
 
-        # Get persona info from database for mythology/description
         persona_info = self.db.execute_query(
             "SELECT mythology, description FROM personas WHERE name = :name", {"name": persona_name}
         )
         mythology = persona_info[0]["mythology"] if persona_info else "Unknown"
         description = persona_info[0]["description"] if persona_info else ""
 
-        # Create mission file content
-        content = f"""# Mission: {codename}
-
-**Persona:** {persona_name} ({mythology} - {description})  
-**Role:** {role}  
-**Start:** {start_date} {start_time}  
-**End:** TBD  
-**Duration:** TBD  
-**Objective:** {objective}
-
-## Summary
-
-[To be filled in during mission]
-
-## Files Changed
-
-[To be filled in during mission]
-
-## Work Log
-
-### {start_time[:5]} - Mission Start
-- Summoned as {persona_name}, {role} persona
-- Mission codename: {codename}
-- Objective: {objective}
-
-## Outcomes
-
-[To be filled in during mission]
-
-## Next Steps
-
-[To be filled in during mission]
-
-## Technical Notes
-
-[To be filled in during mission]
-"""
-
-        # Write the file
-        mission_path.write_text(content)
+        renderer = TemplateRenderer()
+        renderer.render_to_file(
+            "internal/mission.md.jinja",
+            mission_path,
+            codename=codename,
+            persona_name=persona_name,
+            mythology=mythology,
+            description=description,
+            role=role,
+            start_date=start_date,
+            start_time=start_time,
+            objective=objective,
+        )
 
     def end_mission(self, mission_id: int) -> None:
         """End a mission and update both database and mission file"""
-        # Get mission info first
-        mission = self.get_mission(mission_id)
-        if not mission:
-            raise ValueError(f"Mission {mission_id} not found")
-
-        # Get current time for end_time
-        end_time = datetime.now().strftime("%H:%M:%S")
-
-        # Update database
-        self.db.execute_update(
-            """
-            UPDATE missions
-            SET end_time = :end_time,
-                updated_at = datetime('now')
-            WHERE id = :mission_id
-            """,
-            {"mission_id": mission_id, "end_time": end_time},
+        mission = enforce_defined(
+            self.get_mission(mission_id),
+            f"Mission {mission_id} not found",
+            raise_exc_class=MissionError,
         )
 
-        # Update mission file if it exists
-        if mission.mission_file:
-            # Validate path to prevent directory traversal
-            mission_path = validate_path_within_project(mission.mission_file)
-            if mission_path.exists():
-                self._update_mission_file_frontmatter(mission_path, end_time)
+        end_time = pendulum.now("UTC").format("HH:mm:ss")
 
-    def _update_mission_file_frontmatter(self, mission_path: Path, end_time: str) -> None:
-        """Update YAML frontmatter in mission file"""
-        content = mission_path.read_text()
+        now_str = utc_now()
+        enforce_defined(
+            self.db.execute_query(
+                """
+                UPDATE missions
+                SET end_time = :end_time,
+                    status = :status,
+                    desk_mode_active = 0,
+                    updated_at = :now
+                WHERE id = :mission_id
+                RETURNING *
+                """,
+                {"mission_id": mission_id, "end_time": end_time, "status": MissionStatus.ENDED.value, "now": now_str},
+            ),
+            f"Failed to end mission {mission_id}",
+            raise_exc_class=MissionError,
+        )
 
-        # Match YAML frontmatter block
-        frontmatter_pattern = r"^---\n(.*?)\n---\n"
-        match = re.match(frontmatter_pattern, content, re.DOTALL)
-
-        if not match:
-            # No frontmatter found, skip update
+        if not mission.mission_file:
             return
 
-        frontmatter_text = match.group(1)
+        mission_path = validate_path_within_project(mission.mission_file)
+        if mission_path.exists():
+            self._update_mission_file_end_time(mission_path, end_time)
 
-        # Update the frontmatter text directly with regex to avoid YAML parsing issues
-        # (YAML interprets HH:MM:SS as sexagesimal numbers)
-        frontmatter_text = re.sub(r"(end_time:\s*).*", f"end_time: {end_time}", frontmatter_text)
+    def _update_mission_file_end_time(self, mission_path: Path, end_time: str) -> None:
+        """Update end time in mission file markdown"""
+        content = mission_path.read_text()
 
-        # Reconstruct file with updated frontmatter
-        new_content = f"---\n{frontmatter_text}\n---\n" + content[match.end() :]
+        updated_content = content.replace("**End:** TBD", f"**End:** {end_time}")
+        updated_content = updated_content.replace("**Duration:** TBD", f"**Duration:** Complete")
 
-        # Write back to file
-        mission_path.write_text(new_content)
+        mission_path.write_text(updated_content)
 
-    def list_missions(self, active_only: bool = False, role: str | None = None) -> list[Mission]:
+    def list_missions(
+        self, active_only: bool = False, role: str | None = None, epic_id: str | None = None
+    ) -> list[Mission]:
         """List missions"""
         query = "SELECT * FROM missions WHERE 1=1"
         params = {}
@@ -321,20 +299,47 @@ class MissionManager:
             query += " AND role = :role"
             params["role"] = role
 
+        if epic_id:
+            query += " AND epic_id = :epic_id"
+            params["epic_id"] = epic_id
+
         query += " ORDER BY created_at DESC"
 
         rows = self.db.execute_query(query, params)
-        return [Mission(**row) for row in rows]
+        return [Mission.from_db_row(row) for row in rows]
 
     def get_mission(self, mission_id: int) -> Mission | None:
         """Get mission by ID"""
         rows = self.db.execute_query("SELECT * FROM missions WHERE id = :id", {"id": mission_id})
-        return Mission(**rows[0]) if rows else None
+        return Mission.from_db_row(rows[0]) if rows else None
+
+    def get_active_codename(self, persona_name: str) -> str | None:
+        """Get the codename for the most recent active mission for a persona.
+
+        Args:
+            persona_name: Persona name (case-insensitive, stored lowercase).
+
+        Returns:
+            Codename string or None if no active mission found.
+        """
+        rows = self.db.execute_query(
+            """
+            SELECT codename FROM missions
+            WHERE persona_name = :persona_name
+            AND end_time IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            {"persona_name": persona_name.lower()},
+        )
+        if rows and rows[0]["codename"]:
+            return rows[0]["codename"]
+        return None
 
     def update_mission(self, mission_id: int, objective: str | None = None, role: str | None = None) -> None:
         """Update mission metadata"""
-        update_fields = ["updated_at = datetime('now')"]
-        params: dict[str, int | str] = {"mission_id": mission_id}
+        update_fields = ["updated_at = :now"]
+        params: dict[str, int | str] = {"mission_id": mission_id, "now": utc_now()}
 
         if objective is not None:
             update_fields.append("objective = :objective")
@@ -344,5 +349,228 @@ class MissionManager:
             update_fields.append("role = :role")
             params["role"] = role
 
-        query = f"UPDATE missions SET {', '.join(update_fields)} WHERE id = :mission_id"
-        self.db.execute_update(query, params)
+        set_clause = ", ".join(update_fields)
+        query = f"UPDATE missions SET {set_clause} WHERE id = :mission_id RETURNING *"
+        enforce_defined(
+            self.db.execute_query(query, params),
+            f"Failed to update mission {mission_id}",
+            raise_exc_class=MissionError,
+        )
+
+    def set_desk_mode(self, mission_id: int, active: bool) -> None:
+        """Enable or disable desk mode for a mission.
+
+        Args:
+            mission_id: Mission ID.
+            active: True to enable desk mode, False to disable.
+
+        Raises:
+            MissionError: If mission not found or already ended.
+        """
+        mission = enforce_defined(
+            self.get_mission(mission_id),
+            f"Mission {mission_id} not found",
+            raise_exc_class=MissionError,
+        )
+        require_condition(
+            mission.end_time is None,
+            "Cannot change desk mode on an ended mission",
+            raise_exc_class=MissionError,
+        )
+
+        self.db.execute_update(
+            """
+            UPDATE missions
+            SET desk_mode_active = :active, updated_at = :now
+            WHERE id = :mission_id
+            """,
+            {"mission_id": mission_id, "active": 1 if active else 0, "now": utc_now()},
+        )
+
+    def heartbeat(self, mission_id: int) -> None:
+        """Update last_active_at timestamp for a mission (agent heartbeat).
+
+        Should be called periodically by agents to indicate they are still active.
+        Also sets status to ACTIVE if the mission was IDLE.
+
+        Args:
+            mission_id: Mission ID.
+
+        Raises:
+            MissionError: If mission not found or already ended.
+        """
+        mission = enforce_defined(
+            self.get_mission(mission_id),
+            f"Mission {mission_id} not found",
+            raise_exc_class=MissionError,
+        )
+        require_condition(
+            mission.status != MissionStatus.ENDED,
+            "Cannot heartbeat an ended mission",
+            raise_exc_class=MissionError,
+        )
+
+        now_str = utc_now()
+        self.db.execute_update(
+            """
+            UPDATE missions
+            SET last_active_at = :now,
+                status = :status,
+                updated_at = :now
+            WHERE id = :mission_id
+            """,
+            {"mission_id": mission_id, "status": MissionStatus.ACTIVE.value, "now": now_str},
+        )
+
+    def set_status(self, mission_id: int, status: MissionStatus) -> None:
+        """Set mission lifecycle status.
+
+        Args:
+            mission_id: Mission ID.
+            status: New status.
+
+        Raises:
+            MissionError: If mission not found.
+        """
+        enforce_defined(
+            self.get_mission(mission_id),
+            f"Mission {mission_id} not found",
+            raise_exc_class=MissionError,
+        )
+
+        self.db.execute_update(
+            """
+            UPDATE missions
+            SET status = :status, updated_at = :now
+            WHERE id = :mission_id
+            """,
+            {"mission_id": mission_id, "status": status.value, "now": utc_now()},
+        )
+
+    def generate_summary(self, mission_id: int) -> MissionSummary:
+        """Generate a summary of a mission's activity.
+
+        Collects git file changes, commits, and claimed tasks for the mission.
+
+        Args:
+            mission_id: Mission ID.
+
+        Returns:
+            MissionSummary with files changed, commits, and tasks.
+
+        Raises:
+            MissionError: If mission not found.
+        """
+        mission = self.get_mission(mission_id)
+        MissionError.require_condition(mission is not None, f"Mission #{mission_id} not found")
+
+        summary = MissionSummary(mission=mission)  # type: ignore[arg-type]
+
+        self._collect_tasks(summary, mission_id)
+        self._collect_file_changes(summary)
+        self._collect_commits(summary)
+
+        return summary
+
+    def _collect_tasks(self, summary: MissionSummary, mission_id: int) -> None:
+        """Collect tasks claimed for a mission."""
+        try:
+            from site_nine.tasks import TaskManager
+
+            task_manager = TaskManager(self.db)
+            task_list = task_manager.list_tasks(mission_id=mission_id)
+
+            if task_list:
+                for task in task_list:
+                    summary.tasks.append(TaskSummary(id=task.id, title=task.title, status=task.status))
+        except Exception as e:
+            summary.warnings.append(f"Could not retrieve tasks: {e}")
+
+    def _collect_file_changes(self, summary: MissionSummary) -> None:
+        """Collect file changes from git history since mission start."""
+        mission = summary.mission
+        try:
+            result = subprocess.run(
+                ["git", "diff", "--name-status", f"@{{'{mission.start_time}'}}", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                self._parse_file_changes(result.stdout, summary)
+            else:
+                result = subprocess.run(
+                    ["git", "log", "--name-status", "--pretty=format:", f"--since={mission.start_time}"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+
+                if result.returncode == 0 and result.stdout.strip():
+                    self._parse_file_changes_dedup(result.stdout, summary)
+
+        except Exception as e:
+            summary.warnings.append(f"Could not retrieve git history: {e}")
+
+    def _collect_commits(self, summary: MissionSummary) -> None:
+        """Collect commits from git history since mission start."""
+        mission = summary.mission
+        try:
+            result = subprocess.run(
+                [
+                    "git",
+                    "log",
+                    "--oneline",
+                    f"--since={mission.start_time}",
+                    f"--grep={mission.persona_name}",
+                    "--grep=Mission:",
+                    "--perl-regexp",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                for line in result.stdout.strip().split("\n"):
+                    summary.commits.append(line)
+            else:
+                result = subprocess.run(
+                    ["git", "log", "--oneline", f"--since={mission.start_time}", "-10"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    for line in result.stdout.strip().split("\n"):
+                        summary.commits.append(line)
+
+        except Exception as e:
+            summary.warnings.append(f"Could not retrieve commits: {e}")
+
+    @staticmethod
+    def _parse_file_changes(output: str, summary: MissionSummary) -> None:
+        """Parse git diff --name-status output into FileChange objects."""
+        for line in output.strip().split("\n"):
+            parts = line.split("\t", 1)
+            if len(parts) == 2:
+                status, filepath = parts
+                status_display = GIT_STATUS_MAP.get(status[0], status)
+                summary.files_changed.append(FileChange(status=status_display, file=filepath))
+
+    @staticmethod
+    def _parse_file_changes_dedup(output: str, summary: MissionSummary) -> None:
+        """Parse git log --name-status output, deduplicating files."""
+        files_seen: set[str] = set()
+        for line in output.strip().split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split("\t", 1)
+            if len(parts) == 2:
+                status, filepath = parts
+                if filepath not in files_seen:
+                    files_seen.add(filepath)
+                    status_display = GIT_STATUS_MAP.get(status[0], status)
+                    summary.files_changed.append(FileChange(status=status_display, file=filepath))

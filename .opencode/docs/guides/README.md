@@ -1,114 +1,80 @@
 # Development Guides
 
-Essential guides for developing site-nine.
+Reference guides for s9-powered projects.
 
-## Core Guides
 
-### agents.md ⭐ **START HERE FOR DEVELOPMENT**
-**Development patterns and best practices for working on site-nine**
+## Quick Start
 
-This is THE most important document for agents. Contains:
-- Development workflow
-- Code patterns and conventions
-- Technology stack details
-- Testing requirements
-- What worked, what didn't, and why
+**New to s9?** Start here:
 
-**Read this before starting any development work.**
+1. [tasks.md](./tasks.md) - Task system
+2. [markdown-style.md](./markdown-style.md) - Markdown standards (required)
+3. [commit-guidelines.md](./commit-guidelines.md) - Commit format
 
----
+## Task Management
 
-### architecture.md
-**System architecture and technical design**
+### [tasks.md](./tasks.md)
 
-Comprehensive technical overview:
-- Technology stack (Python, Typer, SQLAlchemy, Jinja2)
-- Component architecture (CLI, database, templates)
-- Design decisions and rationale
-- Project structure
-- Extension points
+Task management system: ID format, status values, priority levels, workflows.
 
-**Read when understanding system design or making architectural changes.**
 
----
+### [task-sizing.md](./task-sizing.md)
 
-### design-philosophy.md
-**Design principles and trade-offs**
+Task complexity estimation: sizing categories (XS-XL), estimation techniques.
 
-Why we made the choices we made:
-- Core principles (bootstrap not prescribe, agent-friendly, local-first)
-- Key design decisions
-- Trade-offs and rationale
-- What we value and why
 
-**Read when making design decisions or understanding project priorities.**
+## Development Workflow
 
----
+### [commit-guidelines.md](./commit-guidelines.md)
 
-### tasks.md
-**Task management system reference**
+Commit format: `type(scope): description [Agent: Role - Name]`
 
-Essential reference for the s9 task system:
-- Task ID format and structure
-- Valid status values (TODO, UNDERWAY, BLOCKED, etc.)
-- Priority levels (CRITICAL, HIGH, MEDIUM, LOW)
-- Task lifecycle overview
-- Role prefixes and values
 
-**Read when working with tasks or learning the task system.**
+### [testing.md](./testing.md)
 
----
+Testing patterns: AAA pattern, fixtures, mocking, coverage requirements.
 
-### markdown-style.md ⚠️ **REQUIRED FOR ALL MARKDOWN**
-**Markdown formatting standards and style conventions**
 
-Comprehensive markdown formatting guide:
-- Line wrapping (120 characters)
-- Heading styles (ATX format, title case)
-- Code block formatting
-- List and table formatting
-- Blank line spacing rules
-- Emphasis and link styles
+### [code-review.md](./code-review.md)
 
-**Read before writing any markdown files. Follow these standards strictly.**
+Code review checklist and feedback guidelines.
 
----
 
-## How to Use These Guides
+### [adr-workflow.md](./adr-workflow.md)
 
-### For New Contributors
-1. **Start with agents.md** - Learn patterns and workflow
-2. **Read architecture.md** - Understand the system
-3. **Skim design-philosophy.md** - Understand design values
+Architecture decision documentation: when to create, format, review process.
 
-### For Specific Tasks
-- **Adding features:** agents.md → architecture.md → design-philosophy.md
-- **Fixing bugs:** agents.md → architecture.md
-- **Architecture changes:** architecture.md → design-philosophy.md
-- **Understanding "why":** design-philosophy.md
 
-### For Understanding Context
-- **"Why was it done this way?"** → design-philosophy.md
-- **"How does X work?"** → architecture.md
-- **"What patterns should I follow?"** → agents.md
+### [troubleshooting.md](./troubleshooting.md)
 
----
+Common development issues: environment setup, test failures, database issues.
 
-## Quick Reference
 
-| Task | Primary Guide | Supporting Guides |
-|------|---------------|-------------------|
-| Adding CLI features | agents.md | architecture.md |
-| Database changes | agents.md | architecture.md |
-| Architecture decisions | architecture.md | design-philosophy.md |
-| Bug fixes | agents.md | architecture.md |
-| Design decisions | design-philosophy.md | architecture.md |
+## Documentation Standards
 
----
+### [markdown-style.md](./markdown-style.md) ⚠️ **REQUIRED**
+
+Markdown formatting rules: 120-char line wrap, ATX headings, title case, blank line spacing.
+
+**All agents must follow these standards when editing markdown files.**
+
+
+## Quick Reference by Task
+
+| What You're Doing                   | Read This                                                     |
+|-------------------------------------|---------------------------------------------------------------|
+| Working with tasks                  | tasks.md                                                      |
+| Estimating task size                | task-sizing.md                                                |
+| Making a commit                     | commit-guidelines.md                                          |
+| Writing tests                       | testing.md                                                    |
+| Reviewing code                      | code-review.md                                                |
+| Documenting a design choice         | adr-workflow.md                                               |
+| Editing any markdown file           | markdown-style.md                                             |
+| Fixing an issue                     | troubleshooting.md                                            |
+| Learning site-nine's code patterns  | [site-nine-dev/coding-patterns.md](../../site-nine-dev/coding-patterns.md) |
+
 
 ## Related Documentation
 
-- **Procedures:** `.opencode/docs/procedures/` - Step-by-step how-tos
-- **Agent Roles:** `.opencode/docs/roles/` - Role definitions
-- **Project Overview:** `.opencode/README.md` - Entry point
-- **User Docs:** `docs/source/` - User-facing documentation
+- **Agent Roles:** [`.opencode/docs/roles/`](../roles/) - Role definitions and responsibilities
+- **Project Overview:** [`.opencode/README.md`](../../README.md) - Entry point for agents on this project

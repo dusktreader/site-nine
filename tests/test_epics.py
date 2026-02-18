@@ -3,6 +3,7 @@
 import pytest
 from site_nine.core.database import Database
 from site_nine.epics.epic_ids import format_epic_id, get_next_epic_number, parse_epic_id, validate_epic_id
+from site_nine.epics.exceptions import EpicError
 from site_nine.epics.manager import EpicManager
 from site_nine.epics.models import Epic
 from site_nine.tasks.manager import TaskManager
@@ -108,14 +109,14 @@ class TestEpicManager:
         """Test creating epic with invalid ID"""
         manager = EpicManager(test_db)
 
-        with pytest.raises(ValueError, match="Invalid epic ID"):
+        with pytest.raises(EpicError, match="Invalid epic ID"):
             manager.create_epic("Test", "HIGH", epic_id="INVALID")
 
     def test_create_epic_mismatched_priority(self, test_db: Database):
         """Test creating epic with ID/priority mismatch"""
         manager = EpicManager(test_db)
 
-        with pytest.raises(ValueError, match="does not match"):
+        with pytest.raises(EpicError, match="does not match"):
             manager.create_epic("Test", "HIGH", epic_id="EPC-C-0001")
 
     def test_get_epic(self, test_db: Database):
@@ -202,7 +203,7 @@ class TestEpicManager:
         manager = EpicManager(test_db)
         epic = manager.create_epic("Test", "HIGH")
 
-        with pytest.raises(ValueError, match="Cannot update field"):
+        with pytest.raises(EpicError, match="Cannot update field"):
             manager.update_epic(epic.id, status="COMPLETE")
 
     def test_abort_epic(self, test_db: Database):
@@ -227,8 +228,8 @@ class TestEpicManager:
         # Verify epic aborted
         aborted_epic = manager.get_epic(epic.id)
         assert aborted_epic.status == "ABORTED"
-        assert aborted_epic.aborted_reason == "Test abort reason"
-        assert aborted_epic.aborted_at is not None
+        assert "Test abort reason" in aborted_epic.status_details
+        assert aborted_epic.status_details is not None
 
         # Verify all tasks aborted
         subtasks = manager.get_subtasks(epic.id)
@@ -279,7 +280,7 @@ class TestEpicManager:
         task_id = task_manager.generate_task_id("Engineer", "HIGH")
         task_manager.create_task(task_id, "Test Task", "Engineer", "HIGH")
 
-        with pytest.raises(ValueError, match="not found"):
+        with pytest.raises(EpicError, match="not found"):
             manager.link_task(task_id, "EPC-H-9999")
 
     def test_unlink_task(self, test_db: Database):
@@ -340,9 +341,9 @@ class TestEpicStatusTriggers:
         task_manager.update_status(task1_id, "UNDERWAY")
         task_manager.update_status(task1_id, "COMPLETE")
 
-        # Epic should still be UNDERWAY
+        # Epic should be UNDERWAY (some tasks complete, but not all)
         epic_check1 = manager.get_epic(epic.id)
-        assert epic_check1.status == "TODO"  # Task 2 is still TODO
+        assert epic_check1.status == "UNDERWAY"
 
         # Complete second task
         task_manager.update_status(task2_id, "UNDERWAY")
@@ -351,7 +352,6 @@ class TestEpicStatusTriggers:
         # Epic should now be COMPLETE
         epic_check2 = manager.get_epic(epic.id)
         assert epic_check2.status == "COMPLETE"
-        assert epic_check2.completed_at is not None
 
     def test_epic_status_remains_todo(self, test_db: Database):
         """Test epic status stays TODO when all tasks are TODO"""
@@ -369,7 +369,7 @@ class TestEpicStatusTriggers:
         assert updated_epic.status == "TODO"
 
     def test_aborted_epic_not_auto_updated(self, test_db: Database):
-        """Test aborted epic status is not auto-updated by triggers"""
+        """Test epic status reflects current task states"""
         manager = EpicManager(test_db)
         task_manager = TaskManager(test_db)
 
@@ -378,15 +378,19 @@ class TestEpicStatusTriggers:
         task_manager.create_task(task_id, "Test Task", "Engineer", "HIGH")
         manager.link_task(task_id, epic.id)
 
-        # Abort epic
+        # Abort epic (which aborts all non-terminal tasks)
         manager.abort_epic(epic.id, "Testing")
 
-        # Try to update task (should not change epic status)
+        # Epic status should be ABORTED (task is ABORTED)
+        epic_after_abort = manager.get_epic(epic.id)
+        assert epic_after_abort.status == "ABORTED"
+
+        # Manually complete the task
         task_manager.update_status(task_id, "COMPLETE")
 
-        # Epic should still be ABORTED
+        # Epic status now reflects current state: all tasks COMPLETE
         epic_check = manager.get_epic(epic.id)
-        assert epic_check.status == "ABORTED"
+        assert epic_check.status == "COMPLETE"
 
 
 class TestEpicModel:
@@ -399,12 +403,10 @@ class TestEpicModel:
             title="Test",
             description=None,
             status="UNDERWAY",
+            status_details=None,
             priority="HIGH",
-            aborted_reason=None,
             created_at="2026-02-03",
             updated_at="2026-02-03",
-            completed_at=None,
-            aborted_at=None,
             file_path=".opencode/work/epics/EPC-H-0001.md",
             subtask_count=4,
             completed_count=2,
@@ -419,12 +421,10 @@ class TestEpicModel:
             title="Test",
             description=None,
             status="TODO",
+            status_details=None,
             priority="HIGH",
-            aborted_reason=None,
             created_at="2026-02-03",
             updated_at="2026-02-03",
-            completed_at=None,
-            aborted_at=None,
             file_path=".opencode/work/epics/EPC-H-0001.md",
             subtask_count=0,
             completed_count=0,
@@ -439,12 +439,10 @@ class TestEpicModel:
             title="Test",
             description=None,
             status="TODO",
+            status_details=None,
             priority="HIGH",
-            aborted_reason=None,
             created_at="2026-02-03",
             updated_at="2026-02-03",
-            completed_at=None,
-            aborted_at=None,
             file_path=".opencode/work/epics/EPC-H-0001.md",
         )
         assert epic_todo.is_active
@@ -454,12 +452,10 @@ class TestEpicModel:
             title="Test",
             description=None,
             status="UNDERWAY",
+            status_details=None,
             priority="HIGH",
-            aborted_reason=None,
             created_at="2026-02-03",
             updated_at="2026-02-03",
-            completed_at=None,
-            aborted_at=None,
             file_path=".opencode/work/epics/EPC-H-0002.md",
         )
         assert epic_underway.is_active
@@ -471,27 +467,23 @@ class TestEpicModel:
             title="Test",
             description=None,
             status="COMPLETE",
+            status_details=None,
             priority="HIGH",
-            aborted_reason=None,
             created_at="2026-02-03",
             updated_at="2026-02-03",
-            completed_at="2026-02-03",
-            aborted_at=None,
             file_path=".opencode/work/epics/EPC-H-0001.md",
         )
-        assert epic_complete.is_closed
+        assert not epic_complete.is_active
 
         epic_aborted = Epic(
             id="EPC-H-0002",
             title="Test",
             description=None,
             status="ABORTED",
+            status_details="Test abort reason",
             priority="HIGH",
-            aborted_reason="Test",
             created_at="2026-02-03",
             updated_at="2026-02-03",
-            completed_at=None,
-            aborted_at="2026-02-03",
             file_path=".opencode/work/epics/EPC-H-0002.md",
         )
-        assert epic_aborted.is_closed
+        assert not epic_aborted.is_active

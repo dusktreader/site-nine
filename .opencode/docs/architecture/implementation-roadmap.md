@@ -3,7 +3,7 @@
 **Version:** 1.0  
 **Date:** 2026-02-03  
 **Author:** Ptah (Architect)  
-**Timeline:** 6-8 weeks  
+**Timeline:** XXL (Epic-level multi-phase implementation)  
 **Related Task:** ARC-H-0030
 
 ---
@@ -21,25 +21,25 @@ This roadmap details the phased implementation of multi-tool support for site-ni
 
 ### Timeline Summary
 
-| Phase | Duration | Focus | Outcome |
-|-------|----------|-------|---------|
-| Phase 1 | Weeks 1-2 | Adapter Foundation | OpenCodeAdapter working, zero regression |
-| Phase 2 | Weeks 3-4 | Cursor MCP Integration | CursorAdapter working, MCP server live |
-| Phase 3 | Week 5 | Configuration System | Unified ToolConfig, path resolution |
-| Phase 4 | Week 6 | Skills Refactoring | New skill.yaml format, legacy support |
-| Phase 5 | Weeks 7-8 | Testing & Polish | Comprehensive tests, documentation |
+| Phase | Size | Focus | Outcome |
+|-------|------|-------|---------|
+| Phase 1 | XL | Adapter Foundation | OpenCodeAdapter working, zero regression |
+| Phase 2 | XL | Cursor MCP Integration | CursorAdapter working, MCP server live |
+| Phase 3 | L | Configuration System | Unified ToolConfig, path resolution |
+| Phase 4 | L | Skills Refactoring | New skill.yaml format, legacy support |
+| Phase 5 | XL | Testing & Polish | Comprehensive tests, documentation |
 
 ---
 
-## Phase 1: Adapter Foundation (Weeks 1-2)
+## Phase 1: Adapter Foundation (XL)
 
 **Goal**: Introduce adapter pattern without changing any user-facing behavior.
 
-### Week 1: Core Abstractions
+### Core Abstractions
 
 #### Tasks
 
-**1.1 Create ToolAdapter Protocol** (2 days)
+**1.1 Create ToolAdapter Protocol (M)**
 - File: `src/site_nine/adapters/protocol.py`
 - Define ToolAdapter protocol with all required methods
 - Add comprehensive docstrings
@@ -57,7 +57,7 @@ This roadmap details the phased implementation of multi-tool support for site-ni
 
 ---
 
-**1.2 Implement OpenCodeAdapter** (3 days)
+**1.2 Implement OpenCodeAdapter (L)**
 - File: `src/site_nine/adapters/opencode.py`
 - Wrap existing OpenCode functionality
 - Delegate to existing code (no rewrites)
@@ -75,7 +75,7 @@ This roadmap details the phased implementation of multi-tool support for site-ni
 
 ---
 
-**1.3 Create ToolRegistry** (2 days)
+**1.3 Create ToolRegistry (M)**
 - File: `src/site_nine/adapters/registry.py`
 - Implement tool detection logic
 - Implement adapter selection
@@ -92,9 +92,9 @@ This roadmap details the phased implementation of multi-tool support for site-ni
 - `get_adapter()` returns OpenCodeAdapter by default
 - Detection works from any subdirectory
 
-### Week 2: Core Integration
+### Core Integration
 
-**1.4 Refactor Core to Use Adapters** (5 days)
+**1.4 Refactor Core to Use Adapters (XL)**
 - Files: `src/site_nine/cli/*.py`, `src/site_nine/tasks/*.py`, `src/site_nine/agents/*.py`
 - Replace direct `get_opencode_dir()` calls with `ToolRegistry.get_adapter()`
 - Update path resolution to use adapter methods
@@ -126,7 +126,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**1.5 Testing & Validation** (3 days)
+**1.5 Testing & Validation (L)**
 - Run full test suite
 - Manual testing of all CLI commands
 - Performance benchmarking
@@ -157,13 +157,13 @@ db_path = adapter.get_database_path()
 
 ---
 
-## Phase 2: Cursor MCP Integration (Weeks 3-4)
+## Phase 2: Cursor MCP Integration (XL)
 
 **Goal**: Implement CursorAdapter and MCP server, validate adapter pattern.
 
-### Week 3: CursorAdapter & MCP Server
+### CursorAdapter & MCP Server
 
-**2.1 Implement CursorAdapter** (3 days)
+**2.1 Implement CursorAdapter (L)**
 - File: `src/site_nine/adapters/cursor.py`
 - Implement ToolAdapter protocol for Cursor
 - Handle `.cursor/` directory structure
@@ -181,7 +181,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**2.2 Implement CursorConfigLoader** (2 days)
+**2.2 Implement CursorConfigLoader (M)**
 - File: `src/site_nine/adapters/config_loaders.py`
 - Parse `cursor.json` (MCP format)
 - Normalize to ToolConfig
@@ -200,7 +200,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**2.3 Create MCP Server** (3 days)
+**2.3 Create MCP Server (L)**
 - File: `src/site_nine/mcp/server.py`
 - Implement JSON-RPC 2.0 server
 - Handle MCP protocol messages
@@ -222,7 +222,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**2.4 Create cursor.json Template** (1 day)
+**2.4 Create cursor.json Template (S)**
 - File: `src/site_nine/templates/cursor/cursor.json.jinja`
 - Define Cursor MCP configuration
 - Include site-nine MCP server
@@ -238,9 +238,9 @@ db_path = adapter.get_database_path()
 - cursor.json includes site-nine MCP server
 - Cursor can connect to MCP server
 
-### Week 4: Integration & Testing
+### Integration & Testing
 
-**2.5 Implement CursorMCPRenderer** (2 days)
+**2.5 Implement CursorMCPRenderer (M)**
 - File: `src/site_nine/skills/renderers/cursor.py`
 - Implement SkillRenderer for Cursor
 - Handle MCP protocol output
@@ -258,7 +258,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**2.6 End-to-End Testing** (3 days)
+**2.6 End-to-End Testing (L)**
 - Test full workflow in Cursor
 - Test task management
 - Test agent sessions
@@ -277,7 +277,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**2.7 Register CursorAdapter** (1 day)
+**2.7 Register CursorAdapter (S)**
 - Update ToolRegistry to include Cursor
 - Update tool detection priority
 - Update documentation
@@ -305,11 +305,11 @@ db_path = adapter.get_database_path()
 
 ---
 
-## Phase 3: Unified Configuration (Week 5)
+## Phase 3: Unified Configuration (L)
 
 **Goal**: Implement unified configuration system across tools.
 
-**3.1 Create ToolConfig Model** (2 days)
+**3.1 Create ToolConfig Model (M)**
 - File: `src/site_nine/core/tool_config.py`
 - Define unified configuration dataclass
 - Add helper methods
@@ -322,7 +322,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**3.2 Implement Config Loaders** (2 days)
+**3.2 Implement Config Loaders (M)**
 - File: `src/site_nine/adapters/config_loaders.py`
 - OpenCodeConfigLoader (opencode.json → ToolConfig)
 - CursorConfigLoader (cursor.json → ToolConfig)
@@ -336,7 +336,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**3.3 Refactor PathResolver** (1 day)
+**3.3 Refactor PathResolver (S)**
 - File: `src/site_nine/core/paths.py`
 - Create PathResolver class
 - Add template-based path resolution
@@ -358,11 +358,11 @@ db_path = adapter.get_database_path()
 
 ---
 
-## Phase 4: Skills Refactoring (Week 6)
+## Phase 4: Skills Refactoring (L)
 
 **Goal**: Introduce new skill format with legacy support.
 
-**4.1 Create SkillDefinition Model** (1 day)
+**4.1 Create SkillDefinition Model (S)**
 - File: `src/site_nine/skills/definition.py`
 - Define skill.yaml schema
 - Parse YAML format
@@ -375,7 +375,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**4.2 Implement SkillExecutor** (3 days)
+**4.2 Implement SkillExecutor (L)**
 - File: `src/site_nine/skills/executor.py`
 - Execute skill workflows
 - Handle step types (command, output, question, conditional)
@@ -388,7 +388,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**4.3 Implement Legacy Converter** (2 days)
+**4.3 Implement Legacy Converter (M)**
 - File: `src/site_nine/skills/legacy.py`
 - Parse SKILL.md format
 - Convert to SkillDefinition
@@ -401,7 +401,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**4.4 Convert One Skill** (1 day)
+**4.4 Convert One Skill (S)**
 - Convert session-start to skill.yaml
 - Test in OpenCode
 - Test in Cursor
@@ -424,13 +424,13 @@ db_path = adapter.get_database_path()
 
 ---
 
-## Phase 5: Testing & Polish (Weeks 7-8)
+## Phase 5: Testing & Polish (XL)
 
 **Goal**: Comprehensive testing, documentation, and release preparation.
 
-### Week 7: Testing
+### Testing Phase
 
-**5.1 Unit Test Coverage** (2 days)
+**5.1 Unit Test Coverage (M)**
 - Achieve 90%+ coverage
 - Add missing tests
 - Fix flaky tests
@@ -442,7 +442,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**5.2 Integration Tests** (2 days)
+**5.2 Integration Tests (M)**
 - Test all CLI commands
 - Test OpenCode workflows
 - Test Cursor workflows
@@ -455,7 +455,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**5.3 Backward Compatibility Tests** (1 day)
+**5.3 Backward Compatibility Tests (S)**
 - Test existing .opencode/ projects
 - Compare outputs with v1.x.x
 - Validate zero regression
@@ -465,9 +465,9 @@ db_path = adapter.get_database_path()
 - [ ] Comparison report
 - [ ] Fixes if needed
 
-### Week 8: Documentation & Release
+### Documentation & Release
 
-**5.4 API Documentation** (1 day)
+**5.4 API Documentation (S)**
 - Generate API docs
 - Document ToolAdapter protocol
 - Document SkillDefinition format
@@ -479,7 +479,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**5.5 User Documentation** (2 days)
+**5.5 User Documentation (M)**
 - Migration guide (OpenCode → v2.0.0)
 - Cursor setup guide
 - Skill migration guide
@@ -493,7 +493,7 @@ db_path = adapter.get_database_path()
 
 ---
 
-**5.6 Release Preparation** (2 days)
+**5.6 Release Preparation (M)**
 - Version bump to v2.0.0
 - Release notes
 - GitHub release

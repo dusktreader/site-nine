@@ -434,6 +434,50 @@ Training/onboarding |
 structured data |
 | **Mission scope creep** | Clear validation errors; Documentation of scope semantics; Examples in skills |
 
+## Implementation Status
+
+### Phase 1: Mission Scoping ✅ (Mostly Complete)
+
+**Completed:**
+- ✅ **Schema migration** (OPR-H-0091): `missions.epic_id` field added with foreign key constraint
+- ✅ **Update mission start** (OPR-H-0092): `--epic` flag added, mutual exclusivity validation working
+- ✅ **Epic scoping validation** (OPR-H-0093): Task claims validate epic_id matching in `TaskManager.claim_task()`
+- ✅ **Update mission display**: Epic shown in `s9 mission show` and JSON output
+- ✅ **Testing**: 13 tests covering epic-scoped missions and task claiming validation
+
+**Remaining:**
+- ⏸️ **Implement `s9 task next`**: Auto-find and claim next task in mission epic (not yet started)
+
+### Phase 2: Mission Discovery ⏸️ (Not Started)
+
+**Pending:**
+- ⏸️ Add `--epic` filter to `s9 mission list`
+- ⏸️ Update mission list display with Availability column
+- ⏸️ Implement availability logic (desk_mode_active + epic_id + current_task_id)
+- ⏸️ Ensure JSON output includes availability data
+- ⏸️ Testing for discovery queries and filtering
+
+### Phase 3: Desk Mode ⏸️ (Schema Ready, Command Not Implemented)
+
+**Completed:**
+- ✅ **Schema migration**: `missions.desk_mode_active` field added
+
+**Pending:**
+- ⏸️ Implement `s9 comms desk` command with start/stop flags
+- ⏸️ Periodic status output (30s loop)
+- ⏸️ Inbox integration with message summaries
+- ⏸️ Auto-disable on mission end
+- ⏸️ Testing for desk mode lifecycle
+
+### Phase 4: Skills Updates ⏸️ (Not Started)
+
+**Pending:**
+- ⏸️ Update session-start skill
+- ⏸️ Add discovery patterns to skills
+- ⏸️ Document workflows
+- ⏸️ JSON usage examples
+- ⏸️ Testing coordination workflows
+
 ## Implementation Plan
 
 ### Phase 1: Mission Scoping

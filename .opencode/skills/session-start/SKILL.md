@@ -306,32 +306,39 @@ s9 handoff list --role [Role]
 
 **If pending handoffs exist:**
 
-1. **Show details of a handoff:**
+1. **Show full details:**
    ```bash
    s9 handoff show <id>
    ```
+   The output includes the task ID, summary, acceptance criteria, relevant files, and notes from
+   the previous agent. Note the file path shown in the "Relevant Files" section.
 
-2. **Review the handoff information:**
-   - The handoff contains context about work from another mission
-   - Review the description and attached task IDs
-   - You can claim any tasks mentioned in the handoff
-   
-3. **After reviewing, delete the handoff:**
+2. **Read the handoff document** (the file path from step 1):
+   ```bash
+   # The path will look like: .opencode/work/handoffs/<TASK-ID>-<role>-<name>-to-<role>.md
+   ```
+   This is the rich context document with full details about what was done and what you need to do.
+
+3. **Claim the task:**
+   ```bash
+   s9 task claim <TASK-ID> --mission <your-mission-id> --role [Role]
+   ```
+   The task was released back to `TODO` by the previous agent — it is ready to claim.
+
+4. **Delete the handoff** (consume it so it doesn't show up again):
    ```bash
    s9 handoff delete <id>
    ```
 
-4. **Summarize to user:**
+5. **Summarize to user:**
    ```
-   ✅ Reviewed handoff!
-   
-   **From:** [From mission details from handoff]
-   **Task:** [Task ID and title if mentioned]
-   **Priority:** [Priority if mentioned]
-   
-   [Brief summary of what was handed off]
-   
-   Ready to start work on this task.
+   ✅ Picked up handoff!
+
+   **From:** Mission [from_mission_id]
+   **Task:** [Task ID] — [Task title]
+   **Priority:** [Priority]
+
+   [Brief summary of what was handed off and what you'll do]
    ```
 
 **If no pending handoffs:**
@@ -506,6 +513,27 @@ What would you like me to help you with?
 - Your mission file is a living document - maintain it throughout the session (see Step 4.5)
 - Use `s9 mission update <mission-id>` to update metadata if scope changes
 
+### Heartbeat Protocol
+
+**IMPORTANT:** You must send periodic heartbeats to indicate you are still active.
+
+After mission registration (Step 4), call the heartbeat command:
+
+```bash
+s9 mission heartbeat <your-mission-id>
+```
+
+**When to send heartbeats:**
+- After completing a significant unit of work (e.g., finishing a task, committing code)
+- Before starting a new major task or phase of work
+- At natural pause points in your workflow
+- Approximately every 30-60 minutes of active work
+
+**Why this matters:**
+- Missions without recent heartbeats (>8h) are flagged as stale by `s9 doctor`
+- The heartbeat updates your `last_active_at` timestamp and ensures your status shows as ACTIVE
+- This helps the Director identify which missions are genuinely active vs. abandoned
+
 ### File Placement Guidelines
 
 **⚠️ CRITICAL: Never create temporary or work files in the project root!**
@@ -538,10 +566,10 @@ What would you like me to help you with?
 3. The Director indicates the work is complete and you should sign off
 
 **What happens if you end your mission prematurely:**
-- ❌ Your mission will remain in the database with `IDLE` status
+- ❌ Your mission will remain in the database with `ACTIVE` or `IDLE` status
 - ❌ Tasks will be left in inconsistent states
 - ❌ The system will accumulate "zombie" missions
-- ❌ `s9 doctor` will report abandoned work
+- ❌ `s9 doctor` will report stale missions (after 8h with no heartbeat)
 - ❌ You will cause operational confusion
 
 **When the Director dismisses you (and ONLY then):**

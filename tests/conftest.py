@@ -1,6 +1,7 @@
 """Pytest configuration and fixtures"""
 
 import os
+import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Generator
@@ -17,12 +18,49 @@ def temp_dir() -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def test_db(temp_dir: Path) -> Database:
+def test_db(temp_dir: Path) -> Generator[Database, None, None]:
     """Create a test database with schema initialized"""
     db_path = temp_dir / "test.db"
-    db = Database(db_path)
-    db.initialize_schema()
-    return db
+
+    with Database(db_path) as db:
+        db.initialize_schema()
+
+        # Add test personas (required for foreign keys)
+        db.execute_update("""
+            INSERT INTO personas (name, role, mythology, description)
+            VALUES 
+                ('test-persona', 'Engineer', 'Test', 'Test persona'),
+                ('persona1', 'Engineer', 'Test', 'Test persona 1'),
+                ('persona2', 'Tester', 'Test', 'Test persona 2'),
+                ('persona3', 'Engineer', 'Test', 'Test persona 3')
+        """)
+
+        yield db
+
+
+@pytest.fixture
+def test_db_with_data(test_db: Database) -> Generator[Database, None, None]:
+    """Create a test database with tasks and missions for handoff tests"""
+    # Add test tasks for handoff tests
+    test_db.execute_update("""
+        INSERT INTO tasks (id, title, description, status, priority, role, file_path, created_at)
+        VALUES 
+            ('ENG-M-0001', 'Test task 1', 'Description 1', 'TODO', 'MEDIUM', 'Engineer', '.opencode/work/tasks/ENG-M-0001.md', datetime('now')),
+            ('ENG-M-0002', 'Test task 2', 'Description 2', 'TODO', 'MEDIUM', 'Tester', '.opencode/work/tasks/ENG-M-0002.md', datetime('now')),
+            ('ENG-M-0003', 'Test task 3', 'Description 3', 'TODO', 'MEDIUM', 'Tester', '.opencode/work/tasks/ENG-M-0003.md', datetime('now'))
+    """)
+
+    # Add test missions for handoff tests
+    test_db.execute_update("""
+        INSERT INTO missions (id, persona_name, role, codename, mission_file, start_date, start_time, objective, created_at, updated_at)
+        VALUES 
+            (1, 'test-persona', 'Engineer', 'test-mission', '.opencode/work/missions/test.md', date('now'), time('now'), 'Test', datetime('now'), datetime('now')),
+            (2, 'persona1', 'Tester', 'test-mission-2', '.opencode/work/missions/test2.md', date('now'), time('now'), 'Test 2', datetime('now'), datetime('now'))
+    """)
+
+    yield test_db
+
+    # Cleanup is handled by test_db fixture
 
 
 @pytest.fixture
@@ -60,40 +98,60 @@ def project_dir(temp_dir: Path) -> Generator[Path, None, None]:
         os.chdir(original_cwd)
 
 
-@pytest.fixture
-def initialized_project(temp_dir: Path) -> Generator[Path, None, None]:
-    """Create an initialized project for testing CLI commands"""
-    from site_nine.cli.main import app
-    from typer.testing import CliRunner
+def _build_initialized_project(target_dir: Path) -> None:
+    """Build an initialized .opencode project structure directly via Python.
 
-    project = temp_dir / "test-project"
-    project.mkdir()
+    Bypasses the CLI layer (no Typer runner, no Rich progress bars) for speed.
+    Produces the same result as ``s9 init --name test-project --type python``.
+    """
+    from site_nine.core.models import ProjectConfig
+    from site_nine.core.templates import TemplateRenderer, copy_static_scaffold, render_scaffold_templates
+
+    opencode_dir = target_dir / ".opencode"
+    opencode_dir.mkdir()
+
+    db_path = opencode_dir / "data" / "project.db"
+    db_path.parent.mkdir(parents=True)
+    with Database(db_path) as db:
+        db.initialize_schema()
+        db.seed_data()
+
+    renderer = TemplateRenderer()
+    config = ProjectConfig(name="test-project", type="python")
+    context = config.template_context()
+    copy_static_scaffold(renderer.scaffold_static_dir(), opencode_dir)
+    render_scaffold_templates(renderer, opencode_dir, context)
+
+    for empty_dir in ["work/tasks", "work/epics", "work/missions"]:
+        (opencode_dir / empty_dir).mkdir(parents=True, exist_ok=True)
+
+
+@pytest.fixture(scope="session")
+def _golden_project(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Build a single initialized project once per test session.
+
+    This is an internal fixture — tests should use ``initialized_project``
+    which copies this golden directory to get a fresh, isolated copy.
+    """
+    golden = tmp_path_factory.mktemp("golden") / "test-project"
+    golden.mkdir()
+    _build_initialized_project(golden)
+    return golden
+
+
+@pytest.fixture
+def initialized_project(_golden_project: Path, tmp_path: Path) -> Generator[Path, None, None]:
+    """Create an initialized project for testing CLI commands.
+
+    Copies a pre-built golden project directory so each test gets a fresh,
+    isolated copy without paying the cost of DB init + scaffold rendering.
+    """
+    project = tmp_path / "test-project"
+    shutil.copytree(_golden_project, project)
     original_cwd = os.getcwd()
 
     try:
         os.chdir(str(project))
-
-        # Initialize the project
-        runner = CliRunner()
-        result = runner.invoke(
-            app,
-            ["init"],
-            input="\n".join(
-                [
-                    "test-project",
-                    "python",
-                    "",
-                    "y",  # PM system
-                    "y",  # session tracking
-                    "y",  # commit guidelines
-                    "y",  # default roles
-                ]
-            ),
-        )
-
-        if result.exit_code != 0:
-            raise RuntimeError(f"Failed to initialize project: {result.stdout}")
-
         yield project
     finally:
         os.chdir(original_cwd)

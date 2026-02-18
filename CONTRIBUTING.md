@@ -2,64 +2,63 @@
 
 ## Security Concerns
 
-Before any further discussion, a point about security needs to be addressed:
-
-> [!WARNING]
-> If you find a serious security vulnerability that could affect current users, please report it to maintainers via
-> email or some form of private communication. For other issue reports, see below.
-
+Before any further discussion, a point about security needs to be addressed.
+**If you find a serious security vulnerability that could affect current users,
+please report it to maintainers via email or some form of private
+communication**. For other issue reports, see below.
 
 ## Thanks!
 
-First, thank you for your interest in contributing to hyper-queue! Even though this is mostly a personal project,
-it takes a bit of work to keep it maintained. All contributions help and improve it.
-
+First, thank you for your interest in contributing to site-nine! Even
+though this is a small Python package project, it takes a bit of work to keep
+it maintained. All contributions help and improve the package.
 
 ## Contact Us
 
-The maintainers of hyper-queue can be reached most easily via email:
+The maintainers of site-nine can be reached most easily via email:
 
-* **Tucker Beck**: [tucker.beck@gmail.com](mailto:tucker.beck@gmail.com)
-
+* Tucker Beck <tucker.beck@gmail.com>
 
 ## Conduct
 
-Everyone's conduct should be respectful and friendly. For most folks, these things don't need to be spelled out.
-However, to establish a baseline of acceptable conduct, the hyper-queue project expects contributors to adhere to
-the [Code of Conduct](./CONDUCT.md) for this project. Any issues working with other contributors should be reported to
-the maintainers
-
+Everyone's conduct should be respectful and friendly. For most folks, these
+things don't need to be spelled out. However, to establish a baseline of
+acceptable conduct, the site-nine project expects contributors to adhere
+to the [Code of Conduct](CONDUCT.md).
+Any issues working with other contributors should be reported to the maintainers.
 
 ## Contribution Recommendations
 
 ### Github Issues
 
-The first and primary source of contributions is opening issues on github. Please feel free to open issues when you find
-problems or wish to request a feature. All issues will be treated seriously and taken under consideration. However, the
-maintainers may disregard/close issues at their discretion.
+The first and primary source of contributions is opening issues on github.
+Please feel free to open issues when you find problems or wish to request a
+feature. All issues will be treated seriously and taken under consideration.
+However, the maintainers may disregard/close issues at their discretion.
 
-Issues are most helpful when they contain specifics about the problem they address. Specific error messages, references
-to specific lines of code, environment contexts, and such are extremely helpful.
-
+Issues are most helpful when they contain specifics about the problem they
+address. Specific error messages, references to specific lines of code,
+environment contexts, and such are extremely helpful.
 
 ### Code Contributions
 
-Code contributions should be submitted via pull-requests on github. Project maintainers will review pull-requests and
-may test new features out. All merge requests should come with commit messages that describe the changes as well as a
-reference to the issue that the code addresses. Commit messages should also adhere to
-[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+Code contributions should be submitted via pull-requests on github. Project
+maintainers will review pull-requests and may test new features out. All
+merge requests should come with commit messages that describe the changes as
+well as a reference to the issue that the code addresses.
 
-Commit messages should look like this:
+**All commits should include the issue #**
+
+Commit messages should follow this format:
 
 ```
-fix: Fixed gizmo component that was parfolecting
+Issue #56: Fixed gizmo component that was parfolecting
 
-Addresses Issue #56
+The parfolection happening in the gizmo component was causing a vulnerability
+in the anti-parfolection checks during the enmurulation process.
 
-The parfolection happening in the gizmo component was causing a vulterability in the anti-parfolection checks during the
-enmurculation process.
-
-This was addressed by caching the restults of parfolection prior to enmurculation.
+This was addressed by caching the results of parfolection prior to
+enmurulation.
 
 Also:
 * Added and updated unit tests
@@ -67,16 +66,63 @@ Also:
 * Cleaned up some code
 ```
 
-> [!Note]
-> The maintainers of hyper-queue _hate_ the use of `!` to indicate breaking changes in the subject line. If you
-> introduce a breaking change, please note it in a _footer_ instead.
-
 Code contributions should follow best-practices where possible. Use the
-[Zen of Python](https://www.python.org/dev/peps/pep-0020/) as a guideline. All code must stick to pep8 style guidelines.
+[Zen of Python](https://www.python.org/dev/peps/pep-0020/) as a guideline.
+All code must stick to style guidelines enforced by ruff.
 
-Adding additional dependencies should be limited except where needed functionality can be easily added through pip
-packages. Please include dependencies that are only applicable to development and testing in the dev dependency list.
-Packages should only be added to the dependency lists if:
+### Docstring Style
+
+Docstrings should follow these conventions:
+
+- **Single-line docstrings**: Triple quotes on same line as text
+  ```python
+  def simple_function():
+      """Return the answer to everything."""
+      return 42
+  ```
+
+- **Multi-line docstrings**: Opening and closing triple quotes on their own lines (symmetric style)
+  ```python
+  class MyClass:
+      """
+      Short summary on first line after opening quotes.
+
+      More detailed explanation here, possibly spanning
+      multiple paragraphs or including attributes/parameters.
+      """
+      pass
+  ```
+
+### Comments
+
+Comments should be used sparingly and only to clarify confusing or non-obvious code. **Do not** use comments to restate what the code is already clearly doing.
+
+**Bad (redundant):**
+```python
+# Validate the user input
+validate_input(user_data)
+
+# Loop through all items
+for item in items:
+    process(item)
+```
+
+**Good (clarifies intent):**
+```python
+# Use binary search since list is pre-sorted by timestamp
+result = bisect_left(items, target_time)
+
+# Workaround for API bug #1234 - remove when fixed
+if response.status == 418:
+    response.status = 200
+```
+
+If code needs extensive comments to be understood, consider refactoring it to be more self-documenting through better naming, decomposition, or docstrings.
+
+Adding additional dependencies should be limited except where needed
+functionality can be easily added through pip packages. Please include
+dependencies that are only applicable to development and testing in the
+dev dependency list. Packages should only be added to the dependency lists if:
 
 * They are actively maintained
 * They are widely used
@@ -85,44 +131,31 @@ Packages should only be added to the dependency lists if:
 * They include tests in their repositories
 * They include a software license
 
-
 ### Documentation
 
-Help with documentation is *always* welcome.
+Help with documentation is **always** welcome.
 
-The hyper-queue project uses [mkdocs-material](https://squidfunk.github.io/mkdocs-material/) for document
-generation.
+The site-nine project uses [sphinx](http://www.sphinx-doc.org/en/master/) for document generation.
 
-Documentation lives in the `docs` subdirectory.
+Documentation lives in the `docs` subdirectory. Added pages should be
+referenced from the table of contents.
 
-Documentation should be clear, include examples where possible, and reference source material as much as possible.
+Documentation should be clear, include examples where possible, and reference
+source material as much as possible.
 
 Documentation through code comments should be kept to a minimum. Code should
 be as self-documenting as possible. If a section of code needs some explanation,
-the bulk of it should be be presented as docstrings that use
-[Google style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
-`docstrings <https://www.python.org/dev/peps/pep-0257/>`_ for methods, modules,
+the bulk of it should be presented as sphinx-compatible
+[docstrings](https://www.python.org/dev/peps/pep-0257/) for methods, modules,
 and classes.
-
-> [!Note]
-> The maintainers of hyper-queue don't like starting the docstring on the same line as the triple-quotes.
-> Instead, the > docstring should stat on a new line:
->
-> ```python
-> def gizmo():
->     """"
->     Parfolect the enmurculation process.
->     """
->     ...
-> ```
-
 
 ## Non-preferred Contributions
 
-There are some types of contribution that aren't as helpful and are not as welcome:
+There are some types of contribution that aren't as helpful and are not as
+welcome:
 
 * Complaints without suggestion
-* Criticism about the overall approach of the extension
+* Criticism about the overall approach of the package
 * Copied code without attribution
 * Promotion of personal packages/projects without due need
 * Sarcasm/ridicule of contributions or design choices

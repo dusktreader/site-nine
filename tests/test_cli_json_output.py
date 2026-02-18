@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from site_nine.cli.main import app
+from site_nine.__main__ import app
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -233,8 +233,8 @@ def test_review_show_json(initialized_project: Path):
 
 
 def test_name_list_json(initialized_project: Path):
-    """Test name list with JSON output"""
-    result = runner.invoke(app, ["name", "list", "--json"])
+    """Test persona list with JSON output"""
+    result = runner.invoke(app, ["persona", "list", "--json"])
 
     assert result.exit_code == 0, f"Command failed: {result.stdout}"
 
@@ -246,8 +246,8 @@ def test_name_list_json(initialized_project: Path):
 
 
 def test_name_suggest_json(initialized_project: Path):
-    """Test name suggest with JSON output"""
-    result = runner.invoke(app, ["name", "suggest", "Operator", "--json"])
+    """Test persona suggest with JSON output"""
+    result = runner.invoke(app, ["persona", "suggest", "Operator", "--json"])
 
     assert result.exit_code == 0, f"Command failed: {result.stdout}"
 
@@ -259,9 +259,9 @@ def test_name_suggest_json(initialized_project: Path):
 
 
 def test_name_show_json(initialized_project: Path):
-    """Test name show with JSON output"""
-    # First, list names to get one
-    list_result = runner.invoke(app, ["name", "list", "--json"])
+    """Test persona show with JSON output"""
+    # First, list personas to get one
+    list_result = runner.invoke(app, ["persona", "list", "--json"])
 
     if list_result.exit_code == 0:
         list_data = json.loads(list_result.stdout)
@@ -269,7 +269,7 @@ def test_name_show_json(initialized_project: Path):
         # If there are personas, test show command
         if list_data["count"] > 0:
             persona_name = list_data["data"][0]["name"]
-            result = runner.invoke(app, ["name", "show", persona_name, "--json"])
+            result = runner.invoke(app, ["persona", "show", persona_name, "--json"])
 
             assert result.exit_code == 0, f"Command failed: {result.stdout}"
 

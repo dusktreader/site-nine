@@ -634,52 +634,6 @@ s9 task unclaim DOC-M-0056
 
 ---
 
-### Changelog
-
-A generated report of completed tasks, organized by date and role, suitable for release notes or project updates.
-
-**Output formats:**
-
-- **Markdown** - Human-readable format for documentation
-- **JSON** - Machine-readable format for processing
-
-**Usage:**
-```bash
-# Generate full changelog
-s9 changelog
-
-# Only recent changes
-s9 changelog --since 2026-01-01
-
-# Write to file
-s9 changelog --output CHANGELOG.md
-
-# JSON format
-s9 changelog --format json --output changelog.json
-```
-
-**Example output:**
-```markdown
-# Changelog
-
-## 2026-02-04
-
-### Documentarian
-- DOC-M-0056: Create glossary page in docs/
-
-### Engineer
-- ENG-H-0002: Implement authentication API endpoints
-
-## 2026-02-03
-
-### Tester
-- TST-H-0003: Write authentication test suite
-```
-
-**See also:** [Task](#task), [Historian Role](agents/roles.md#historian)
-
----
-
 ### ADR (Architecture Decision Record)
 
 A document that captures an important architectural decision along with its context and consequences. ADRs are typically created by Architect personas.
@@ -711,7 +665,7 @@ The command-line interface for interacting with site-nine, providing commands fo
 **Command categories:**
 
 - **Initialization** - `s9 init`, `s9 doctor`
-- **Project overview** - `s9 dashboard`, `s9 changelog`
+- **Project overview** - `s9 dashboard`
 - **Task management** - `s9 task create|claim|show|close|list`
 - **Epic management** - `s9 epic create|show|list|abort|sync`
 - **Mission management** - `s9 mission start|end|list|update`

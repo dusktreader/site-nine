@@ -1,6 +1,7 @@
 # Commit Guidelines
 
-Guidelines for writing clear, consistent commit messages in site-nine.
+Commit message format and conventions.
+
 
 ## Format
 
@@ -13,73 +14,51 @@ Optional longer description explaining why (not just what).
 - Files affected
 ```
 
+
 ## Types
 
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `docs:` - Documentation
-- `test:` - Tests
-- `refactor:` - Code refactoring
-- `chore:` - Maintenance, dependencies
-- `perf:` - Performance improvements
-- `style:` - Code style/formatting
-- `ci:` - CI/CD changes
+- `feat:` New feature
+- `fix:` Bug fix
+- `docs:` Documentation
+- `test:` Tests
+- `refactor:` Code refactoring
+- `chore:` Maintenance, dependencies
+- `perf:` Performance improvements
+- `style:` Code style/formatting
+- `ci:` CI/CD changes
+
 
 ## Scopes (site-nine specific)
 
-- `cli` - CLI commands
-- `core` - Core business logic
-- `tasks` - Task management
-- `agents` - Agent sessions
-- `templates` - Template rendering
-- `database` - Database operations
-- `config` - Configuration
-- `docs` - Documentation
+`cli`, `core`, `tasks`, `agents`, `templates`, `database`, `config`, `docs`
 
 ## Examples
 
-**Good commits:**
+**Good:**
 ```bash
 feat(cli): add task dependency command [Agent: Engineer - Azazel]
 fix(database): handle missing daemon names [Agent: Engineer - Lucifer]
 docs(readme): update quickstart guide [Agent: Documentarian - Thoth]
-test(cli): add agent session tests [Agent: Engineer - Azazel]
-refactor(core): simplify template rendering [Agent: Engineer - Mephistopheles]
 ```
 
-**Bad commits:**
+**Bad:**
 ```bash
 Updated stuff
 Fix
 wip
-changes
 ```
 
 ## Workflow
 
 1. Make changes
-2. Run quality checks: `make qa`
+2. Run quality checks: `make qa` (format, lint, test)
 3. Stage changes: `git add <files>`
 4. Commit with proper format
 5. Push when ready
 
-### Before Every Commit
-
-Always run quality checks before committing:
-
-```bash
-# Run all quality checks
-make qa
-
-# Or run individually:
-make qa/format    # Format code with ruff
-make qa/lint      # Lint with ruff
-make qa/test      # Run pytest
-```
-
-This ensures code quality and prevents CI failures.
+Always run `make qa` before committing to prevent CI failures.
 
 ## Related
 
-- **Testing Guide:** `.opencode/docs/guides/testing.md` - Testing patterns and best practices
-- **Agent Guide:** `.opencode/docs/guides/agents.md` - Agent workflows and responsibilities
+- [testing.md](./testing.md) - Testing patterns
+- [README.md](./README.md) - Development guide overview

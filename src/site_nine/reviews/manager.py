@@ -1,8 +1,12 @@
 """Review management"""
 
+from buzz import enforce_defined
+
 from site_nine.core.database import Database
+from site_nine.core.utils import utc_now
+from site_nine.reviews.exceptions import ReviewError
 from site_nine.reviews.models import Review
-from site_nine.reviews.types import ReviewStatus, ReviewType
+from site_nine.reviews.types import ReviewOutcome, ReviewType
 
 
 class ReviewManager:
@@ -34,31 +38,35 @@ class ReviewManager:
         Returns:
             Review ID of created review
         """
-        # Convert enum to string if needed
         if isinstance(type, ReviewType):
             type = type.value
 
-        result = self.db.execute_insert(
-            """
-            INSERT INTO reviews (
-                type, title, description, task_id, 
-                requested_by, artifact_path
-            )
-            VALUES (
-                :type, :title, :description, :task_id,
-                :requested_by, :artifact_path
-            )
-            """,
-            {
-                "type": type,
-                "title": title,
-                "description": description,
-                "task_id": task_id,
-                "requested_by": requested_by,
-                "artifact_path": artifact_path,
-            },
+        result = enforce_defined(
+            self.db.execute_query(
+                """
+                INSERT INTO reviews (
+                    type, title, description, task_id, 
+                    requested_by, artifact_path
+                )
+                VALUES (
+                    :type, :title, :description, :task_id,
+                    :requested_by, :artifact_path
+                )
+                RETURNING id
+                """,
+                {
+                    "type": type,
+                    "title": title,
+                    "description": description,
+                    "task_id": task_id,
+                    "requested_by": requested_by,
+                    "artifact_path": artifact_path,
+                },
+            ),
+            "Failed to create review",
+            raise_exc_class=ReviewError,
         )
-        return result
+        return result[0]["id"]
 
     def get_review(self, review_id: int) -> Review | None:
         """Get review by ID"""
@@ -66,18 +74,18 @@ class ReviewManager:
             "SELECT * FROM reviews WHERE id = :id",
             {"id": review_id},
         )
-        return Review(**rows[0]) if rows else None
+        return Review.from_db_row(rows[0]) if rows else None
 
     def list_reviews(
         self,
-        status: ReviewStatus | str | None = None,
+        outcome: ReviewOutcome | str | None = None,
         type: ReviewType | str | None = None,
     ) -> list[Review]:
         """
         List reviews with optional filtering.
 
         Args:
-            status: Filter by status (pending, approved, rejected)
+            outcome: Filter by outcome (pending, approved, rejected)
             type: Filter by type (code, task_completion, design, general)
 
         Returns:
@@ -86,15 +94,13 @@ class ReviewManager:
         query = "SELECT * FROM reviews WHERE 1=1"
         params = {}
 
-        if status:
-            # Convert enum to string if needed
-            if isinstance(status, ReviewStatus):
-                status = status.value
-            query += " AND status = :status"
-            params["status"] = status
+        if outcome:
+            if isinstance(outcome, ReviewOutcome):
+                outcome = outcome.value
+            query += " AND outcome = :outcome"
+            params["outcome"] = outcome
 
         if type:
-            # Convert enum to string if needed
             if isinstance(type, ReviewType):
                 type = type.value
             query += " AND type = :type"
@@ -103,11 +109,11 @@ class ReviewManager:
         query += " ORDER BY requested_at DESC"
 
         rows = self.db.execute_query(query, params)
-        return [Review(**row) for row in rows]
+        return [Review.from_db_row(row) for row in rows]
 
     def get_pending_reviews(self) -> list[Review]:
         """Get all pending reviews (for Administrator startup display)"""
-        return self.list_reviews(status=ReviewStatus.PENDING)
+        return self.list_reviews(outcome=ReviewOutcome.PENDING)
 
     def approve_review(
         self,
@@ -123,25 +129,31 @@ class ReviewManager:
             reviewed_by: Who approved the review (default: Director)
             reason: Optional reason for approval
         """
-        self.db.execute_update(
-            """
-            UPDATE reviews
-            SET status = :status,
-                reviewed_by = :reviewed_by,
-                reviewed_at = datetime('now'),
-                outcome_reason = :reason
-            WHERE id = :review_id
-            """,
-            {
-                "review_id": review_id,
-                "status": ReviewStatus.APPROVED.value,
-                "reviewed_by": reviewed_by,
-                "reason": reason,
-            },
+        enforce_defined(
+            self.db.execute_query(
+                """
+                UPDATE reviews
+                SET outcome = :outcome,
+                    reviewed_by = :reviewed_by,
+                    reviewed_at = :now,
+                    outcome_reason = :reason
+                WHERE id = :review_id
+                RETURNING *
+                """,
+                {
+                    "review_id": review_id,
+                    "outcome": ReviewOutcome.APPROVED.value,
+                    "reviewed_by": reviewed_by,
+                    "reason": reason,
+                    "now": utc_now(),
+                },
+            ),
+            f"Failed to approve review {review_id}",
+            raise_exc_class=ReviewError,
         )
 
         # Note: Tasks blocked by this review will be automatically unblocked
-        # because the application logic checks review status when claiming
+        # because the application logic checks review outcome when claiming
 
     def reject_review(
         self,
@@ -157,104 +169,49 @@ class ReviewManager:
             reason: Reason for rejection (required)
             reviewed_by: Who rejected the review (default: Director)
         """
-        self.db.execute_update(
-            """
-            UPDATE reviews
-            SET status = :status,
-                reviewed_by = :reviewed_by,
-                reviewed_at = datetime('now'),
-                outcome_reason = :reason
-            WHERE id = :review_id
-            """,
-            {
-                "review_id": review_id,
-                "status": ReviewStatus.REJECTED.value,
-                "reviewed_by": reviewed_by,
-                "reason": reason,
-            },
+        enforce_defined(
+            self.db.execute_query(
+                """
+                UPDATE reviews
+                SET outcome = :outcome,
+                    reviewed_by = :reviewed_by,
+                    reviewed_at = :now,
+                    outcome_reason = :reason
+                WHERE id = :review_id
+                RETURNING *
+                """,
+                {
+                    "review_id": review_id,
+                    "outcome": ReviewOutcome.REJECTED.value,
+                    "reviewed_by": reviewed_by,
+                    "reason": reason,
+                    "now": utc_now(),
+                },
+            ),
+            f"Failed to reject review {review_id}",
+            raise_exc_class=ReviewError,
         )
 
-    def get_blocked_tasks(self) -> list[tuple[str, Review]]:
+    def get_tasks_blocked_by_review(self, review_id: int) -> list[str]:
         """
-        Get tasks blocked by pending reviews.
+        Get task IDs blocked by a specific review.
+
+        Args:
+            review_id: Review ID to check
 
         Returns:
-            List of tuples (task_id, blocking_review)
+            List of task IDs blocked by this review
         """
         rows = self.db.execute_query(
             """
-            SELECT t.id as blocked_task_id, r.*
+            SELECT t.id
             FROM tasks t
-            INNER JOIN reviews r ON t.blocks_on_review_id = r.id
-            WHERE r.status = :status
-            ORDER BY r.requested_at DESC
+            INNER JOIN blocks b ON t.id = b.task_id
+            WHERE b.block_type = 'review'
+            AND b.description LIKE :review_ref
+            AND b.resolved_at IS NULL
+            ORDER BY t.id
             """,
-            {"status": ReviewStatus.PENDING.value},
+            {"review_ref": f"%review_id={review_id}%"},
         )
-
-        result = []
-        for row in rows:
-            # Extract blocked_task_id and create Review object from remaining columns
-            blocked_task_id = row["blocked_task_id"]
-            review_data = {k: v for k, v in row.items() if k != "blocked_task_id"}
-            review = Review(**review_data)
-            result.append((blocked_task_id, review))
-
-        return result
-
-    def check_task_blocked(self, task_id: str) -> Review | None:
-        """
-        Check if a task is blocked by a pending review.
-
-        Args:
-            task_id: Task ID to check
-
-        Returns:
-            The blocking Review if task is blocked, None otherwise
-        """
-        rows = self.db.execute_query(
-            """
-            SELECT r.*
-            FROM tasks t
-            INNER JOIN reviews r ON t.blocks_on_review_id = r.id
-            WHERE t.id = :task_id AND r.status = :status
-            """,
-            {"task_id": task_id, "status": ReviewStatus.PENDING.value},
-        )
-
-        return Review(**rows[0]) if rows else None
-
-    def block_task_on_review(self, task_id: str, review_id: int) -> None:
-        """
-        Block a task until a review is approved.
-
-        Args:
-            task_id: Task ID to block
-            review_id: Review that must be approved first
-        """
-        self.db.execute_update(
-            """
-            UPDATE tasks
-            SET blocks_on_review_id = :review_id,
-                updated_at = datetime('now')
-            WHERE id = :task_id
-            """,
-            {"task_id": task_id, "review_id": review_id},
-        )
-
-    def unblock_task(self, task_id: str) -> None:
-        """
-        Remove review blocking from a task.
-
-        Args:
-            task_id: Task ID to unblock
-        """
-        self.db.execute_update(
-            """
-            UPDATE tasks
-            SET blocks_on_review_id = NULL,
-                updated_at = datetime('now')
-            WHERE id = :task_id
-            """,
-            {"task_id": task_id},
-        )
+        return [row["id"] for row in rows]

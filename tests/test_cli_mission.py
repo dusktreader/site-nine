@@ -715,7 +715,7 @@ def test_mission_list_json_with_data(initialized_project: Path):
 
 
 def test_mission_show_completed_mission(initialized_project: Path):
-    """Test showing a completed mission displays Complete status and End Time."""
+    """Test showing a completed mission displays Ended status and End Time."""
     runner.invoke(
         app,
         ["persona", "add", "comp-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
@@ -726,7 +726,7 @@ def test_mission_show_completed_mission(initialized_project: Path):
     result = runner.invoke(app, ["mission", "show", "1"])
     assert result.exit_code == 0
     out = " ".join(result.output.split())
-    assert "Complete" in out
+    assert "Ended" in out
     assert "End Time:" in out
 
 

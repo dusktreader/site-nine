@@ -1,0 +1,136 @@
+# Development Guides
+
+Reference guides for agents working on projects powered by site-nine (s9).
+
+
+## About These Guides
+
+These guides cover **general development practices** for any project using the s9 agent orchestration framework. This
+project ({{ project_name }}) uses these same practices.
+
+Some guides contain project-specific sections that you should adapt to your project's needs.
+
+
+## Quick Start
+
+**New to s9-powered projects?** Start here:
+
+1. [tasks.md](./tasks.md) - Learn the s9 task system
+2. [markdown-style.md](./markdown-style.md) - Follow markdown formatting standards
+3. [commit-guidelines.md](./commit-guidelines.md) - Write consistent commit messages
+
+
+## Task Management
+
+
+### [tasks.md](./tasks.md)
+
+How to use the s9 task management system.
+
+- Task ID format and structure
+- Status values (TODO, UNDERWAY, BLOCKED, COMPLETE, etc.)
+- Priority levels (CRITICAL, HIGH, MEDIUM, LOW)
+- Task lifecycle and workflows
+
+
+### [task-sizing.md](./task-sizing.md)
+
+How to estimate task complexity.
+
+- Sizing categories (XS, S, M, L, XL)
+- Estimation techniques
+- When to break down large tasks
+
+
+## Development Workflow
+
+
+### [commit-guidelines.md](./commit-guidelines.md)
+
+How to write clear, consistent commit messages.
+
+- Commit format: `type(scope): description [Agent: Role - Name]`
+- Commit types (feat, fix, docs, test, refactor, etc.)
+- Scope conventions
+
+
+### [testing.md](./testing.md)
+
+Testing patterns and best practices.
+
+- Running tests
+- Writing tests (AAA pattern, fixtures, mocking)
+- Test categories (unit, integration)
+- Coverage requirements
+
+
+### [code-review.md](./code-review.md)
+
+Code review checklist and guidelines.
+
+- What to check during reviews
+- Common issues to catch
+- How to provide constructive feedback
+
+
+### [adr-workflow.md](./adr-workflow.md)
+
+How to document architecture decisions.
+
+- When to create an ADR
+- ADR format and structure
+- Review and approval process
+
+
+### [troubleshooting.md](./troubleshooting.md)
+
+Solutions to common development issues.
+
+- Environment setup problems
+- Test failures
+- Database issues
+- Common errors
+
+
+## Documentation Standards
+
+
+### [markdown-style.md](./markdown-style.md) ⚠️ **REQUIRED**
+
+Markdown formatting rules for all `.md` files in s9 projects.
+
+- Line wrapping (120 characters)
+- Heading styles (ATX format, title case)
+- Code blocks, lists, tables
+- Blank line spacing (2 before H2/H3, 1 after headings)
+
+**All agents must follow these formatting standards when editing markdown files.**
+
+
+--------
+
+
+--------
+
+
+## Quick Reference by Task
+
+| What You're Doing                   | Read This                                                     |
+|-------------------------------------|---------------------------------------------------------------|
+| Working with tasks                  | tasks.md                                                      |
+| Estimating task size                | task-sizing.md                                                |
+| Making a commit                     | commit-guidelines.md                                          |
+| Writing tests                       | testing.md                                                    |
+| Reviewing code                      | code-review.md                                                |
+| Documenting a design choice         | adr-workflow.md                                               |
+| Editing any markdown file           | markdown-style.md                                             |
+| Fixing an issue                     | troubleshooting.md                                            |
+
+
+--------
+
+
+## Related Documentation
+
+- **Agent Roles:** [`.opencode/docs/roles/`](../roles/) - Role definitions and responsibilities
+- **Project Overview:** [`.opencode/README.md`](../../README.md) - Entry point for agents on this project

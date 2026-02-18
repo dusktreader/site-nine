@@ -5,7 +5,8 @@ from typing import Annotated
 import typer
 from typerdrive import handle_errors, terminal_message
 
-from site_nine.cli.utils import abort, abort_unless, open_in_editor, require_opencode_dir
+from site_nine.cli.utils import CLIError, open_in_editor, require_opencode_dir
+from site_nine.exceptions import SiteNineError
 
 app = typer.Typer(help="List and edit guide documents")
 
@@ -21,13 +22,13 @@ def _available_guides(guides_dir):
 
 
 @app.command(name="list")
-@handle_errors("Failed to list guides")
+@handle_errors("Failed to list guides", handle_exc_class=SiteNineError)
 def list_guides() -> None:
     """List available guide documents"""
     guides_dir = _guides_dir()
     available = _available_guides(guides_dir)
 
-    abort_unless(available, "No guides found. Run 's9 init' to create guide documents.")
+    CLIError.require_condition(bool(available), "No guides found. Run 's9 init' to create guide documents.")
 
     terminal_message(
         "\n".join(f"  {name}" for name in available),
@@ -36,7 +37,7 @@ def list_guides() -> None:
 
 
 @app.command(name="edit")
-@handle_errors("Failed to edit guide")
+@handle_errors("Failed to edit guide", handle_exc_class=SiteNineError)
 def edit_guide(
     name: Annotated[str, typer.Argument(help="Guide name (e.g. 'testing', 'code-review')")],
 ) -> None:
@@ -47,6 +48,6 @@ def edit_guide(
     if not guide_file.exists():
         available = _available_guides(guides_dir)
         hint = f"Available guides: {', '.join(available)}" if available else f"No guides found in {guides_dir}."
-        abort(f"Guide '{name}' not found.\n{hint}")
+        raise CLIError(f"Guide '{name}' not found.\n{hint}")
 
     open_in_editor(f"{name}.md", guide_file)

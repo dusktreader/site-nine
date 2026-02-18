@@ -33,12 +33,11 @@ I provide comprehensive instructions for creating new tasks in the s9 task datab
 ```bash
 s9 task create \
   --title "Brief task title" \
-  --objective "What this task accomplishes" \
   --role {Administrator|Architect|Engineer|Tester|Documentarian|Designer|Inspector|Operator|Historian} \
   --priority {CRITICAL|HIGH|MEDIUM|LOW} \
   [--category "Category name"] \
-  [--description "Detailed description"] \
-  [--depends-on OTHER_TASK_ID]
+  [--description "Detailed description of what needs to be done and why"] \
+  [--epic "Epic ID to link this task to"]
 ```
 
 **Note:** Task IDs are **auto-generated** based on role and priority. You do not need to provide a task ID.
@@ -47,15 +46,15 @@ s9 task create \
 
 **Task IDs are auto-generated** using the format: `PREFIX-PRIORITY-NUMBER`
 
-- **PREFIX**: 3-letter role code (e.g., OPR for Operator, BLD for Engineer)
+- **PREFIX**: 3-letter role code (e.g., OPR for Operator, ENG for Engineer)
 - **PRIORITY**: Single letter (C=Critical, H=High, M=Medium, L=Low)
 - **NUMBER**: 4-digit global sequential counter (0001-9999)
 
 ### Role Prefixes
 
-- `MAN` - Administrator
+- `ADM` - Administrator
 - `ARC` - Architect  
-- `BLD` - Engineer
+- `ENG` - Engineer
 - `TST` - Tester
 - `DOC` - Documentarian
 - `DES` - Designer
@@ -63,10 +62,11 @@ s9 task create \
 - `OPR` - Operator
 - `HIS` - Historian
 
+
 ### Examples
 
 - `OPR-H-0001` - First high-priority Operator task
-- `BLD-C-0005` - Critical Engineer task (fifth task overall)
+- `ENG-C-0005` - Critical Engineer task (fifth task overall)
 - `DOC-M-0042` - Medium-priority Documentarian task (42nd task overall)
 
 The number increments globally across all roles and priorities, ensuring each task has a unique ID.
@@ -124,46 +124,45 @@ Common categories:
 - `Refactoring` - Code improvement
 - `Infrastructure` - Deployment and tooling
 
-## Dependencies
+## Epic Linking
 
-Use `--depends-on` when a task cannot start until another completes:
+Use `--epic` to link a task to an epic:
 
 ```bash
-# Create task that depends on another
+# Create task linked to an epic
 s9 task create \
   --title "Configure Gateway" \
-  --objective "Deploy gateway to staging" \
+  --description "Deploy gateway to staging environment with proper configuration" \
   --role Operator \
   --priority HIGH \
-  --depends-on BLD-H-0037
+  --epic EPC-H-0001
 ```
 
-**When to use dependencies:**
-- Implementation depends on design approval
-- Integration depends on component completion
-- Deployment depends on code changes
-- Testing depends on feature implementation
+**When to link to epics:**
+- Task is part of a larger feature or initiative
+- Task contributes to epic's overall goal
+- Task needs to be tracked as part of epic progress
 
 ## Example: Creating a Task
 
 ```bash
-# Create a high-priority Engineer task (ID will be auto-generated)
+# Create a high-priority Engineer task
 s9 task create \
   --title "Implement Rate Limiting Middleware" \
-  --objective "Add rate limiting to protect API endpoints from abuse" \
+  --description "Add rate limiting to protect API endpoints from abuse. Implement token bucket rate limiting with configurable limits per endpoint" \
   --role Engineer \
   --priority HIGH \
-  --category "Security" \
-  --description "Implement token bucket rate limiting with configurable limits per endpoint"
+  --category "Security"
 
-# Output: ✓ Created task BLD-H-0007: Implement Rate Limiting Middleware
+# Output: ✓ Created task ENG-H-0007: Implement Rate Limiting Middleware
 ```
+
 
 ## What Happens When You Create
 
-1. ✅ Task ID auto-generated (e.g., BLD-H-0007)
+1. ✅ Task ID auto-generated (e.g., ENG-H-0007)
 2. ✅ Database entry created in `project.db`
-3. ✅ Markdown file created at `.opencode/work/tasks/BLD-H-0007.md` with template
+3. ✅ Markdown file created at `.opencode/work/tasks/ENG-H-0007.md` with template
 4. ✅ Status set to `TODO`
 
 ## Validation
@@ -180,23 +179,23 @@ The CLI validates:
 Verify task was created:
 ```bash
 # Use the auto-generated task ID from the create command output
-s9 task show BLD-H-0007
+s9 task show ENG-H-0007
 ```
 
 ## Tips and Best Practices
 
 ### Do
 - ✅ Use clear, action-oriented titles
-- ✅ Write specific objectives (not "fix stuff")
+- ✅ Write detailed descriptions explaining what and why
 - ✅ Assign appropriate priority
-- ✅ Set dependencies when they exist
+- ✅ Link to epics when task is part of larger initiative
 - ✅ Choose the most appropriate role
 - ✅ Add category for better organization
 
 ### Don't
 - ❌ Don't create tasks for trivial work (<1 hour)
 - ❌ Don't create duplicate tasks
-- ❌ Don't use vague titles or objectives
+- ❌ Don't use vague titles or descriptions
 - ❌ Don't over-prioritize (not everything is CRITICAL)
 
 ## Troubleshooting
@@ -209,10 +208,10 @@ s9 task show BLD-H-0007
 - Check spelling and capitalization
 - Use full role name (e.g., "Engineer" not "Eng")
 
-### "Dependency not found"
-- Task ID in `--depends-on` doesn't exist
-- Check task IDs: `s9 task list`
-- Fix the dependency task ID
+### "Epic not found"
+- Epic ID in `--epic` doesn't exist
+- Check epic IDs: `s9 task list --category epic`
+- Fix the epic ID or create the epic first
 
 ## See Also
 

@@ -113,7 +113,7 @@ s9 task list --role Tester --status COMPLETE
 Get full details for a specific task:
 
 ```bash
-s9 task show BLD-H-0037
+s9 task show ENG-H-0037
 ```
 
 **Shows:**
@@ -130,7 +130,7 @@ s9 task show BLD-H-0037
 ### Example Output
 
 ```
-Task: BLD-H-0037
+Task: ENG-H-0037
 Title: Implement Rate Limiting Middleware
 Status: UNDERWAY
 Priority: HIGH
@@ -153,7 +153,7 @@ Notes:
 - Implemented token bucket algorithm, added configuration (2.0 hours)
 - Added tests, all passing (4.0 hours)
 
-File: .opencode/work/tasks/BLD-H-0037.md
+File: .opencode/work/tasks/ENG-H-0037.md
 ```
 
 ## Generate Reports
@@ -231,11 +231,11 @@ s9 task list --agent "YourName" --status BLOCKED
 Before claiming a task, check if it has dependencies:
 
 ```bash
-s9 task show BLD-H-0038
-# Depends on: BLD-H-0037
+s9 task show ENG-H-0038
+# Depends on: ENG-H-0037
 
 # Check if dependency is complete
-s9 task show BLD-H-0037
+s9 task show ENG-H-0037
 # Status: COMPLETE ✅
 ```
 
@@ -266,6 +266,21 @@ s9 task list --role YourRole --priority HIGH --status TODO
 # 3. Look at medium priority if nothing urgent
 s9 task list --role YourRole --priority MEDIUM --status TODO
 ```
+
+#### When to Auto-Claim vs. Ask
+
+**Auto-claim after finding** when the user gives an imperative command:
+- "Find the next unclaimed task" → Find AND claim automatically
+- "Get the next task" → Find AND claim automatically
+- "Claim the next task" → Find AND claim automatically
+- "What should I work on next?" → Find AND claim automatically
+
+**Ask before claiming** when the user is inquiring:
+- "What tasks are available?" → Show list, then ask if they want to claim
+- "Show me unclaimed tasks" → Show list, then ask if they want to claim
+- "List tasks for [role]" → Show list, then ask if they want to claim
+
+The key distinction: imperative commands ("find", "get", "claim") indicate the user wants you to take action. Inquiry commands ("what", "show", "list") indicate the user wants information first.
 
 ### Progress Check
 
@@ -301,12 +316,16 @@ s9 task report --format markdown
 - ✅ Filter by role and priority to focus
 - ✅ Use `task show` to understand task fully before claiming
 - ✅ Generate reports for team status updates
+- ✅ Auto-claim when user gives imperative commands ("find next task", "get next task")
+- ✅ Distinguish between inquiry ("what tasks?") and action requests ("find next task")
 
 ### Don't
 - ❌ Don't list all tasks without filters (too much noise)
 - ❌ Don't ignore CRITICAL tasks
 - ❌ Don't claim tasks without checking dependencies
 - ❌ Don't forget to check who's working on what
+- ❌ Don't ask "Would you like me to claim this?" after imperative commands
+- ❌ Don't auto-claim when user is just browsing tasks
 
 ## Output Format
 
@@ -316,8 +335,8 @@ Task lists show key information in columns:
 
 ```
 TASK_ID | TITLE | STATUS | PRIORITY | ROLE | AGENT
-BLD-H-0037 | Implement Rate Limiting | UNDERWAY | HIGH | Engineer | Goibniu
-BLD-H-0038 | Configure Gateway | TODO | HIGH | Operator | -
+ENG-H-0037 | Implement Rate Limiting | UNDERWAY | HIGH | Engineer | Goibniu
+ENG-H-0038 | Configure Gateway | TODO | HIGH | Operator | -
 DOC-M-0019 | Update Documentation | PAUSED | MEDIUM | Documentarian | Ishtar
 ```
 
@@ -341,7 +360,7 @@ Full task details including:
 ### "Task not found"
 - Check task ID spelling and case
 - Use `s9 task list | grep TASK_ID` to find it
-- Make sure you're using the full task ID (e.g., BLD-H-0037)
+- Make sure you're using the full task ID (e.g., ENG-H-0037)
 
 ### "Invalid filter value"
 - Check spelling of status/priority/role

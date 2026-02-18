@@ -14,18 +14,19 @@ metadata:
 - **CLI executable:** `s9` (use in bash commands)
 - **Python module:** `site_nine` (use in Python imports: `from site_nine import ...`)
 
-All commands in this skill use the `s9` executable via bash. You should NOT attempt to import an `s9` module in Python code.
+All commands in this skill use the `s9` executable via bash. You should NOT attempt to import an
+`s9` module in Python code.
 
 ## What I Do
 
-I guide you through creating a comprehensive handoff document when transitioning work between agents:
+I guide you through handing off work to another agent:
 
-1. Identify current agent role and name
-2. Determine target agent role
-3. Gather current state (git status, active tasks, recent work)
-4. Create structured handoff document with full context
-5. Save handoff as `.pending.md` file
-6. Provide instructions for recipient agent
+1. Identify the task being handed off (or create one if needed)
+2. Determine the target agent role
+3. Write a handoff document in `.opencode/work/handoffs/`
+4. Register the handoff in the database via `s9 handoff create` (referencing the document)
+5. Release the task so the next agent can claim it
+6. Confirm to the Director
 
 This ensures smooth transitions between agents with no loss of context.
 
@@ -33,488 +34,264 @@ This ensures smooth transitions between agents with no loss of context.
 
 Use this skill when:
 - ✅ User types `/handoff [Role]`
-- ✅ Administrator delegates work to another agent
-- ✅ User says "hand off to Engineer/Tester/etc."
 - ✅ You're done with your part and someone else needs to continue
-- ✅ Context needs to be preserved for next agent
+- ✅ Context needs to be preserved for the next agent
 
 Don't use when:
-- ❌ You're ending the entire session (use `/dismiss` instead)
+- ❌ You're ending the entire session with no successor (use `/dismiss` instead)
 - ❌ Just taking a short break
-- ❌ No specific next agent needed
 
-## Prerequisites
+## About the Task Requirement
 
-Before starting, ensure:
-- You know your current role and daemon name
-- You know which role you're handing off to
-- You have context about what was done and what's next
-- Current session file exists
+**Every handoff must be tied to a task.** This is how the receiving agent discovers the handoff via
+`s9 handoff list`. The task model is:
+
+- **If you have a task you're currently working on:** Hand off that task. It's `UNDERWAY` and
+  not finished — the next agent picks it up and completes it.
+- **If you're handing off new work (not your current task):** Create the task first
+  (`s9 task create ...`), then hand it off.
+- **If there is genuinely no task:** Create one. Work without a task is invisible to the system.
 
 ## Step-by-Step Instructions
 
-### Step 1: Identify Current Agent
+### Step 1: Identify Your Mission and Task
 
-Determine your current role and name from the session file.
-
-**Find your session file:**
 ```bash
-# List recent session files
-ls -t .opencode/work/sessions/*.md | head -5
+# Find your mission ID
+s9 mission list --status active
 
-# Or find by your daemon name
-ls .opencode/work/sessions/*your-name*.md
+# Find tasks claimed by your mission
+s9 task mine --mission <MISSION_ID>
 ```
 
-**Extract role and name:**
-- From filename: `2026-01-29.16:00:00.manager.ishtar.task-name.md`
-- Role: `manager`
-- Name: `ishtar`
-
-**If you don't have a session file yet:**
-- Use `/summon` first to create a proper session
-- Or determine role from context (what role user asked you to be)
+If you don't have a task yet, create one:
+```bash
+s9 task create --title "..." --role [TargetRole] --priority HIGH
+```
 
 ### Step 2: Determine Target Agent Role
 
-Ask the Director if not specified:
-
-**If user said: `/handoff Engineer`**
+**If user said: `/handoff Engineer`** (role argument provided)
 - Target role: Engineer
-- Target name: Any Engineer agent (to be determined by `/summon`)
 
-**If user said: `/handoff`**
-- Ask: "Which agent role should I hand off to?"
-- Options: Administrator, Architect, Engineer, Tester, Documentarian, Designer, Inspector, Operator
+**If user said: `/handoff`** (no argument)
+- Default target role to your **current role**
+- Inform the Director and proceed — no need to ask:
+  ```
+  No target role specified — defaulting to [YourRole] (same role as current agent).
+  ```
+- If the Director then specifies a different role, use that instead.
 
 **Common handoff patterns:**
 - Administrator → Engineer (implement)
 - Administrator → Architect (design)
+- Architect → Engineer (implement design)
 - Engineer → Tester (validate)
 - Tester → Engineer (fix bugs)
 - Engineer → Inspector (review)
-- Inspector → Documentarian (document)
-- Architect → Engineer (implement design)
 
-### Step 3: Gather Current State
+### Step 3: Write the Handoff Document
 
-Collect information about current work state.
+Write a detailed handoff document so the receiving agent has full context. This is required — the
+DB record alone is not enough for a real handoff.
 
-#### A. Git Status
+**Location:** `.opencode/work/handoffs/`
 
-```bash
-# Check for uncommitted changes
-git status
+**Filename:** `<TASK-ID>-<your-role>-<your-name>-to-<target-role>.md`
 
-# Get current branch
-git branch --show-current
+**Example:** `.opencode/work/handoffs/ARC-H-0131-architect-atum-to-architect.md`
 
-# Recent commits (last 5)
-git log --oneline -5 --pretty=format:"%h - %s"
-```
-
-**Capture:**
-- Current branch name
-- Number of uncommitted files
-- List of modified files
-- Recent commit messages
-
-#### B. Active Tasks
-
-```bash
-# Check for tasks claimed by you
-s9 task mine --agent-name "YourName"
-
-# Show task details
-s9 task show TASK_ID
-```
-
-**Capture:**
-- Task IDs you're working on
-- Task status and progress
-- Remaining work
-
-#### C. Recent Work Summary
-
-From your session file, identify:
-- What you've accomplished today
-- Key files you modified
-- Decisions you made
-- Problems encountered
-
-Read your session file to extract this context.
-
-### Step 4: Determine Next Steps
-
-Based on the current state, identify what the next agent needs to do.
-
-**Questions to answer:**
-- What is the primary task for next agent?
-- Which task ID should they claim?
-- What files do they need to review?
-- What approach should they take?
-- Are there any constraints or gotchas?
-- What's the estimated effort?
-
-**If unclear:**
-- Ask the Director: "What should the [Role] agent focus on?"
-- Review task descriptions for guidance
-- Check project planning docs for next steps
-
-### Step 5: Create Handoff Document
-
-Generate handoff document using the template.
-
-**Filename format:**
-```
-.opencode/work/sessions/handoffs/YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.pending.md
-```
-
-**Example:**
-```
-.opencode/work/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md
-```
-
-**Use the template at:** `.opencode/templates/handoff-template.md`
-
-**Fill in all sections:**
-
-1. **Header:** From/To roles, date, status
-2. **Context:** What was done, current state, files to review
-3. **What You Need to Do:** Primary task, approach, constraints
-4. **Important Context:** Related work, gotchas, questions
-5. **Acceptance Criteria:** Checklist for completion
-6. **Next Steps:** Numbered list of actions
-7. **Contact:** Links to session files and task details
-
-**Write the file:**
-```bash
-# Create the handoff file
-# (Use Write tool to create the file with filled template)
-```
-
-### Step 6: Update Current Session File
-
-Add handoff information to your session file.
-
-**In the "Work Log" or "Outcomes" section, add:**
+**Required sections:**
 
 ```markdown
-## Handoff
+# Handoff: <Brief title>
 
-**Date:** 2026-01-29 16:30:00
-**To:** Engineer
-**Document:** `.opencode/work/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md`
+**From:** <Role> (<Name>) — Mission <codename> (#<id>)
+**To:** <Role> (any)
+**Task:** <TASK-ID> — <Task title>
+**Date:** YYYY-MM-DD
 
-**Summary:** Handed off task H040 (database query caching) to Engineer agent. All planning complete, ready for implementation.
+---
 
-**Next Agent Should:**
-1. Use `/summon` to start Engineer session
-2. Read handoff document
-3. Claim task H040
-4. Begin implementation
+## What Was Done
+
+[What you accomplished. Be specific.]
+
+---
+
+## What You Need to Do
+
+[Primary task. Clear, actionable steps.]
+
+---
+
+## Key Decisions / Context
+
+[Decisions already made that the next agent should know about. Things that are not up for debate.
+Gotchas, constraints, and things to watch out for.]
+
+---
+
+## Files to Read
+
+| File | Why |
+|------|-----|
+| path/to/file | reason |
+
+---
+
+## Acceptance Criteria
+
+- [ ] Criterion 1
+- [ ] Criterion 2
 ```
 
-### Step 7: Confirm Handoff Created
+### Step 4: Register the Handoff and Release the Task
 
-Tell the Director the handoff is ready:
+Two commands are required. Both matter.
 
-```
-✅ Handoff created successfully!
+**4a. Register the handoff in the database** — this is how the receiving agent discovers it.
+Pass the handoff document as a `--file` so it appears in `s9 handoff show`:
 
-**From:** Administrator (Ishtar)
-**To:** Engineer (any)
-**Created:** 2026-01-29 16:30:00
-
-**Handoff Document:**
-.opencode/work/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md
-
-**Summary:**
-- Task: H040 - Implement database query caching
-- Priority: HIGH
-- Estimated: 4-6 hours
-- Files to review: 4 files
-- Context: Full planning complete, ready for implementation
-
-**For Next Agent:**
-When the Engineer agent starts with `/summon`, they'll be notified of this pending handoff.
+```bash
+s9 handoff create \
+  --task <TASK-ID> \
+  --from-mission <MISSION-ID> \
+  --to-role <Role> \
+  --summary "<one or two sentence summary>" \
+  --file ".opencode/work/handoffs/<filename>.md" \
+  --criteria "<what defines completion>" \
+  --notes "Read .opencode/work/handoffs/<filename>.md for full context."
 ```
 
-Show them the key points from the handoff.
+**4b. Release the task** — sets it back to `TODO` and clears the mission assignment so the next
+agent can claim it:
 
-### Step 8: Add Mythological Signoff
+```bash
+s9 task release <TASK-ID>
+```
 
-**IMPORTANT:** After the handoff summary, add a mythologically appropriate farewell that matches your daemon name's mythology. This signoff is the Director's visual indicator that they can close the session.
+Without this step, the task remains `UNDERWAY` under your mission and the next agent cannot claim
+it.
 
-Use the same format as described in the session-end skill:
+**Verify both:**
+```bash
+s9 handoff list
+s9 task show <TASK-ID>   # should show status TODO, no mission assigned
+```
+
+### Step 5: Update Your Mission File
+
+Add a handoff note to your mission file's Work Log section:
 
 ```markdown
-Thank you for the session! I'm <Name>, handing off now.
+### HH:MM - Handoff
 
-[Mythologically appropriate farewell - 1-2 sentences in italics]
+- Registered handoff #<id> for task <TASK-ID> to <Role>
+- Handoff document: .opencode/work/handoffs/<filename>.md
 ```
 
-**Examples by mythology:**
+### Step 6: Confirm to the Director
 
-**Egyptian (Anubis, Thoth, Set):**
-- *My judgment rendered, I return to the halls of Ma'at where the scales of truth are weighed...*
-- *The scribe's papyrus is sealed. I fade into the eternal sands of time...*
-
-**Norse (Loki, Hel, Bragi):**
-- *The trickster's work is done. I slip back through the roots of Yggdrasil...*
-- *My saga complete, I return to the mead halls of Asgard where tales are sung...*
-
-**Greek/Roman (Athena, Hephaestus, Thanatos):**
-- *Wisdom's task fulfilled, I ascend back to Olympus where strategy is eternal...*
-- *The forge cools, my craft complete. I descend once more to the depths of Hephaestus...*
-
-**Make it personal to your specific daemon!**
-
-**Complete example:**
 ```
-✅ Handoff created successfully!
+✅ Handoff created!
 
-**From:** Administrator (Ishtar)
-**To:** Engineer (any)
-**Created:** 2026-01-29 16:30:00
+**Handoff ID:** #<id>
+**Task:** <TASK-ID> — <Task title>
+**To:** <Role>
+**Document:** .opencode/work/handoffs/<filename>.md
 
-**Handoff Document:**
-.opencode/work/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md
+**Summary:** <What was handed off>
 
-**Summary:**
-- Task: H040 - Implement database query caching
-- Priority: HIGH
-- Estimated: 4-6 hours
-
-Thank you for the session! I'm Ishtar, handing off now.
-
-*My battle plans drawn, I return to the celestial palace where love and war intertwine. Until the next campaign calls...*
+**Next Agent:** When the <Role> agent starts with `/summon`, they will see this handoff via
+`s9 handoff list --role <Role>`.
 ```
 
-**This mythological signoff serves as the Director's visual confirmation that the handoff is complete and they can safely close the session.**
+### Step 7: Close the Mission
 
-## Important Notes
+A handoff means your work on this mission is done. **You must now close your mission properly**
+using the full session-end protocol. Load and execute the `session-end` skill:
 
-### About Handoff Files
+```
+My work is handed off. I will now close this mission using the session-end skill.
+```
 
-- **File naming:** Must include timestamp, from-role-name, to-role, and `.pending.md` suffix
-- **Location:** Always in `.opencode/work/sessions/handoffs/` directory
-- **Status suffix:**
-  - `.pending.md` - Created, waiting for recipient
-  - `.accepted.md` - Recipient started and acknowledged
-  - `.completed.md` - Recipient finished the work
-- **Git tracking:** Handoff files are committed to git for history
+Then load the skill and follow all of its steps:
 
-### About Handoff Content
+```
+skill(name="session-end")
+```
 
-- **Be specific:** Include file paths, line numbers, task IDs
-- **Provide context:** Explain WHY not just WHAT
-- **Anticipate questions:** Address potential confusion upfront
-- **Set expectations:** Clear acceptance criteria and estimated effort
-- **Link resources:** Session files, tasks, ADRs, planning docs
+**Important notes for session-end after a handoff:**
 
-### About Target Agent
+- **Step 4 (Close Tasks):** Do NOT close the task you handed off — it was released back to TODO
+  for the next agent. Only close tasks that are genuinely complete.
+- **Step 5 (Mark Handoffs Complete):** Skip — you are the *sender*, not the receiver. The
+  `s9 handoff delete` step is for the receiving agent.
+- The mythological signoff from session-end's Step 11 replaces the standalone farewell that was
+  previously in this skill.
 
-- **Target can be any agent with that role** - Don't specify a specific daemon name
-- **Next agent chooses their own name** during `/summon`
-- **Role matters more than identity** - Focus on what needs to be done, not who does it
-
-### About Handoff Lifecycle
+## Handoff Lifecycle
 
 **Creation (this skill):**
-1. Current agent creates `.pending.md` handoff
-2. Updates their session file with handoff info
-3. Can continue working or use `/dismiss`
+1. Current agent writes handoff document to `.opencode/work/handoffs/`
+2. Current agent runs `s9 handoff create` — stored in database, document path in `--file`
+3. Current agent runs `s9 task release` — task reset to TODO
+4. Current agent updates mission file
+5. Current agent loads `session-end` skill and closes their mission
 
-**Acceptance (in `/summon` skill):**
-1. Next agent runs `/summon` and chooses role
-2. System checks for pending handoffs for that role
-3. Agent reads handoff and marks as `.accepted.md`
-4. Agent starts work
-
-**Completion (in `/dismiss` skill):**
-1. Agent finishes work from handoff
-2. Uses `/dismiss` to end session
-3. System marks handoff as `.completed.md`
-4. Completion recorded in session file
-
-### Common Scenarios
-
-**Administrator delegates implementation:**
-```
-Administrator completes planning → /handoff Engineer → Engineer implements
-```
-
-**Engineer needs validation:**
-```
-Engineer completes feature → /handoff Tester → Tester validates
-```
-
-**Tester finds bugs:**
-```
-Tester identifies issues → /handoff Engineer → Engineer fixes
-```
-
-**Engineer needs review:**
-```
-Engineer finishes code → /handoff Inspector → Inspector reviews
-```
-
-**Inspector identifies improvements:**
-```
-Inspector finds issues → /handoff Engineer → Engineer improves
-```
+**Discovery (in session-start skill, Step 8):**
+1. Next agent runs `s9 handoff list --role [Role]`
+2. Agent runs `s9 handoff show <id>` — sees document path in Relevant Files
+3. Agent reads the handoff document
+4. Agent claims the task: `s9 task claim <TASK-ID> --mission <id> --role <Role>`
+5. Agent runs `s9 handoff delete <id>` to consume it
 
 ## Troubleshooting
 
-### "I don't have a session file"
-- Run `/summon` first to create a session
-- Or manually determine your role from context
-- Session file is recommended but not strictly required
-
-### "I don't know what to hand off"
-- Check your active tasks: `s9 task mine --agent-name "YourName"`
-- Review your recent commits: `git log -5`
-- Read your session file for context
-- Ask the Director: "What should I hand off to [Role]?"
-
-### "Multiple pending handoffs exist"
-- This is normal - multiple agents can have work ready
-- `/summon` will show all pending handoffs for chosen role
-- Next agent picks which one to accept
-
-### "Target role unclear"
-- Ask the Director which role should receive the handoff
-- Consider the type of work: code → Engineer, tests → Tester, docs → Documentarian
-- Check WORKFLOWS.md for typical patterns
-
-### "Not sure what to include"
-- Use the template - it has all required sections
-- Include: task ID, files to review, approach, constraints, acceptance criteria
-- Better to over-document than under-document
-- Future agent will appreciate the context
-
-## Examples
-
-### Example 1: Administrator → Engineer (Feature Implementation)
-
-**Context:** Administrator planned query caching feature, ready for Engineer to implement.
+### "I don't have a task"
+Create one first. Every handoff needs a task.
 
 ```bash
-# Step 3: Gather state
-git branch --show-current
-# feature/query-caching
-
-git status
-# On branch feature/query-caching
-# nothing to commit
-
-s9 task list --status TODO --role Engineer
-# H040 - Implement database query caching (TODO)
-
-# Step 5: Create handoff
-# File: .opencode/work/sessions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md
-# (Full content using template, specifying task H040, approach, files, etc.)
-
-# Step 6: Update session file
-# Added handoff section to current session
-
-# Step 7: Confirm
-"✅ Handoff created for Engineer to implement H040"
+s9 task create --title "..." --role [TargetRole] --priority HIGH --description "..."
 ```
 
-### Example 2: Engineer → Tester (Feature Validation)
-
-**Context:** Engineer implemented feature, needs Tester validation.
-
-```bash
-# Step 3: Gather state
-git status
-# 3 files changed, 1 file staged for commit
-
-git log -1
-# feat(database): implement query caching [Agent: Engineer - Goibniu]
-
-s9 task show H040
-# Status: UNDERWAY, 90% complete
-
-# Step 5: Create handoff
-# File: .opencode/work/sessions/handoffs/2026-01-29.18:45:00.engineer-goibniu.tester.pending.md
-# Context: Feature implemented, all unit tests passing, needs integration testing
-
-# Step 6: Update session
-# Added handoff to session file
-
-# Step 7: Confirm
-"✅ Handoff created for Tester to validate query caching feature"
-```
-
-### Example 3: Tester → Engineer (Bug Fixes)
-
-**Context:** Tester found 2 bugs, needs Engineer to fix.
-
-```bash
-# Step 3: Gather state
-git status
-# On branch feature/query-caching
-# nothing to commit
-
-s9 task show H040
-# Status: REVIEW
-
-# Step 4: Identify issues
-# Bug 1: Cache not respecting investigation locks
-# Bug 2: TTL not configurable via environment
-
-# Step 5: Create handoff
-# File: .opencode/work/sessions/handoffs/2026-01-29.19:30:00.tester-eris.engineer.pending.md
-# Lists 2 specific bugs with file locations and reproduction steps
-
-# Step 7: Confirm
-"✅ Handoff created for Engineer to fix 2 bugs in query caching"
-```
+### "The task is already DONE"
+If you've fully completed your task and there's nothing to hand off, use `/dismiss` instead.
+Handoffs are for work-in-progress, not completed work.
 
 ## Quick Reference
 
-**Full workflow:**
 ```bash
-# 1. Check current state
-git status
-git branch --show-current
-s9 task mine --agent-name "YourName"
+# 1. Find your mission and task
+s9 mission list --status active
+s9 task mine --mission <ID>
 
-# 2. Determine target role
-# (User specifies or you ask)
+# 2. Write the handoff document
+# Location: .opencode/work/handoffs/<TASK-ID>-<role>-<name>-to-<target-role>.md
 
-# 3. Create handoff file
-# Use template: .opencode/templates/handoff-template.md
-# Filename: YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.pending.md
-# Location: .opencode/work/sessions/handoffs/
+# 3. Register the handoff (reference the document with --file)
+s9 handoff create \
+  --task <TASK-ID> \
+  --from-mission <MISSION-ID> \
+  --to-role <Role> \
+  --summary "<summary>" \
+  --file ".opencode/work/handoffs/<filename>.md" \
+  --criteria "<done when...>" \
+  --notes "Read .opencode/work/handoffs/<filename>.md for full context."
 
-# 4. Update session file
-# Add handoff section with date, target, summary
+# 4. Release the task (unassign from your mission)
+s9 task release <TASK-ID>
 
-# 5. Confirm to user
-# Show handoff location and summary
-```
+# 5. Verify
+s9 handoff list
+s9 task show <TASK-ID>   # should show TODO, no mission
 
-**Handoff filename format:**
-```
-YYYY-MM-DD.HH:MM:SS.from-role-name.to-role.pending.md
-```
-
-**Status transitions:**
-```
-.pending.md   → Created, waiting for recipient
-.accepted.md  → Recipient acknowledged
-.completed.md → Work finished
+# 6. Update mission file, confirm to Director
+# 7. Load session-end skill and close your mission
 ```
 
 ## See Also
 
-- `.opencode/commands/handoff.md` - Handoff command
-- `.opencode/skills/session-start/SKILL.md` - Receiving handoffs in `/summon`
-- `.opencode/skills/session-end/SKILL.md` - Completing handoffs in `/dismiss`
-- `.opencode/templates/handoff-template.md` - Handoff document template
-- `.opencode/docs/procedures/WORKFLOWS.md` - Common multi-agent patterns
-- `.opencode/work/sessions/README.md` - Session file format
+- `.opencode/skills/session-start/SKILL.md` — Step 8 shows how the receiving agent discovers handoffs
+- `.opencode/docs/procedures/WORKFLOWS.md` — Common multi-agent patterns

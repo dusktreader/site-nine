@@ -196,14 +196,6 @@ s9 adr show 3
 
 ## Release Management
 
-### Generate Changelog
-
-```bash
-s9 changelog
-```
-
-Generates a changelog from completed tasks since the last release.
-
 ## Utilities
 
 ### Health Checks
@@ -212,7 +204,7 @@ Generates a changelog from completed tasks since the last release.
 s9 doctor
 ```
 
-Runs health checks and validates data integrity.
+Runs infrastructure health checks and validates data integrity.
 
 ### Launch Agent
 

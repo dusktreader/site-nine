@@ -9,14 +9,15 @@ from typerdrive import handle_errors, terminal_message
 
 from site_nine.blocks import BlockManager
 from site_nine.cli.json_utils import format_json_response, output_json
-from site_nine.cli.utils import abort, abort_unless, require_db_path
+from site_nine.cli.utils import CLIError, require_db_path
 from site_nine.core.database import Database
+from site_nine.exceptions import SiteNineError
 
 app = typer.Typer(help="Manage external blockers for tasks")
 
 
 @app.command()
-@handle_errors("Failed to create block")
+@handle_errors("Failed to create block", handle_exc_class=SiteNineError)
 def create(
     task_id: Annotated[str, typer.Option("--task", "-t", help="Task ID to block")],
     block_type: Annotated[
@@ -47,7 +48,7 @@ def create(
 
 
 @app.command()
-@handle_errors("Failed to list blocks")
+@handle_errors("Failed to list blocks", handle_exc_class=SiteNineError)
 def list(
     task_id: Annotated[str | None, typer.Option("--task", "-t", help="Filter by task ID")] = None,
     resolved: Annotated[bool | None, typer.Option("--resolved", help="Show only resolved blocks")] = None,
@@ -116,7 +117,7 @@ def list(
 
 
 @app.command()
-@handle_errors("Failed to show block")
+@handle_errors("Failed to show block", handle_exc_class=SiteNineError)
 def show(
     block_id: Annotated[int, typer.Argument(help="Block ID")],
     json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
@@ -127,8 +128,7 @@ def show(
     with Database(db_path) as db:
         manager = BlockManager(db)
 
-        block = manager.get_block(block_id)
-        abort_unless(block, f"Block #{block_id} not found")
+        block = CLIError.enforce_defined(manager.get_block(block_id), f"Block #{block_id} not found")
 
         if json_output:
             block_dict = {
@@ -161,7 +161,7 @@ def show(
 
 
 @app.command()
-@handle_errors("Failed to resolve block")
+@handle_errors("Failed to resolve block", handle_exc_class=SiteNineError)
 def resolve(
     block_id: Annotated[int, typer.Argument(help="Block ID")],
 ) -> None:
@@ -171,8 +171,7 @@ def resolve(
     with Database(db_path) as db:
         manager = BlockManager(db)
 
-        block = manager.get_block(block_id)
-        abort_unless(block, f"Block #{block_id} not found")
+        block = CLIError.enforce_defined(manager.get_block(block_id), f"Block #{block_id} not found")
 
         if block.resolved_at:
             terminal_message(f"Block #{block_id} is already resolved.", subject="Warning", subject_color="yellow")
@@ -184,7 +183,7 @@ def resolve(
 
 
 @app.command()
-@handle_errors("Failed to delete block")
+@handle_errors("Failed to delete block", handle_exc_class=SiteNineError)
 def delete(
     block_id: Annotated[int, typer.Argument(help="Block ID")],
 ) -> None:
@@ -194,8 +193,7 @@ def delete(
     with Database(db_path) as db:
         manager = BlockManager(db)
 
-        block = manager.get_block(block_id)
-        abort_unless(block, f"Block #{block_id} not found")
+        block = CLIError.enforce_defined(manager.get_block(block_id), f"Block #{block_id} not found")
 
         manager.delete_block(block_id)
 

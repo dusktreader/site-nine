@@ -1,8 +1,8 @@
 """Tests for path utilities"""
 
 import pytest
+from site_nine.core.exceptions import PathTraversalError
 from site_nine.core.paths import (
-    PathTraversalError,
     find_opencode_dir,
     get_opencode_dir,
     get_project_root,
@@ -165,7 +165,7 @@ def test_validate_path_within_project_traversal_relative(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
     # Attempt to traverse outside project
-    with pytest.raises(PathTraversalError, match="Path traversal detected"):
+    with pytest.raises(PathTraversalError, match="Path is outside project directory"):
         validate_path_within_project("../../etc/passwd")
 
 
@@ -176,7 +176,7 @@ def test_validate_path_within_project_traversal_absolute(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
     # Absolute path outside project
-    with pytest.raises(PathTraversalError, match="Path traversal detected"):
+    with pytest.raises(PathTraversalError, match="Path is outside project directory"):
         validate_path_within_project("/etc/passwd")
 
 
@@ -193,7 +193,7 @@ def test_validate_path_within_project_symlink_escape(tmp_path, monkeypatch):
     symlink.symlink_to(external_dir)
 
     # Should detect that symlink resolves outside project
-    with pytest.raises(PathTraversalError, match="Path traversal detected"):
+    with pytest.raises(PathTraversalError, match="Path is outside project directory"):
         validate_path_within_project("evil_link")
 
 

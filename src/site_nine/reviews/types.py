@@ -1,29 +1,46 @@
 """Review types and constants"""
 
-from enum import Enum
+import inflection
+from auto_name_enum import AutoNameEnum, LowerCaseMixin, auto
 
 
-class ReviewType(str, Enum):
-    """Types of reviews that can be requested"""
+class ReviewType(AutoNameEnum, LowerCaseMixin):
+    """
+    Types of reviews that can be requested
 
-    CODE = "code"
-    TASK_COMPLETION = "task_completion"
-    DESIGN = "design"
-    GENERAL = "general"
+    Attributes:
+        CODE: Review of code implementation and quality
+        TASK_COMPLETION: Review to verify task completion criteria met
+        DESIGN: Review of design documents or architecture
+        GENERAL: General purpose review not fitting other categories
+    """
+
+    CODE = auto()
+    TASK_COMPLETION = auto()
+    DESIGN = auto()
+    GENERAL = auto()
+
+    def __str__(self) -> str:
+        return inflection.titleize(self.value)
 
 
-class ReviewStatus(str, Enum):
-    """Status of a review"""
+class ReviewOutcome(AutoNameEnum, LowerCaseMixin):
+    """
+    Outcome of a review
 
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
+    Attributes:
+        PENDING: Review requested, awaiting completion
+        APPROVED: Review completed and approved
+        REJECTED: Review completed but rejected
+    """
+
+    PENDING = auto()
+    APPROVED = auto()
+    REJECTED = auto()
+
+    def __str__(self) -> str:
+        return inflection.titleize(self.value)
 
 
-# Display names for review types
-REVIEW_TYPE_DISPLAY = {
-    ReviewType.CODE: "Code/PR Review",
-    ReviewType.TASK_COMPLETION: "Task Completion Review",
-    ReviewType.DESIGN: "Design/Architecture Review",
-    ReviewType.GENERAL: "General Artifact Review",
-}
+# Backward compatibility alias
+ReviewStatus = ReviewOutcome

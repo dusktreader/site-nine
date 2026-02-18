@@ -124,65 +124,9 @@ Quick Stats:
 
 ---
 
-### `s9 changelog`
-
-Generate changelog from completed tasks.
-
-```bash
-s9 changelog [OPTIONS]
-```
-
-**Options:**
-- `--since DATE` - Only include tasks closed since this date (YYYY-MM-DD)
-- `--format TEXT` - Output format: `markdown` or `json` (default: `markdown`)
-- `--output PATH, -o PATH` - Write to file instead of stdout
-
-**Examples:**
-
-Generate changelog for all completed tasks:
-```bash
-s9 changelog
-```
-
-Only recent tasks since a specific date:
-```bash
-s9 changelog --since 2026-01-01
-```
-
-Output to file:
-```bash
-s9 changelog --output CHANGELOG.md
-```
-
-JSON format for processing:
-```bash
-s9 changelog --format json --output changelog.json
-```
-
-**Output (markdown format):**
-```markdown
-# Changelog
-
-## 2026-01-30
-
-### Engineer
-- ENG-H-0003: Implement JWT authentication
-- ENG-M-0008: Add input validation to API endpoints
-
-### Tester
-- TST-H-0002: Write integration tests for auth flow
-
-## 2026-01-29
-
-### Operator
-- OPR-H-0005: Consolidate .opencode directory structure
-```
-
----
-
 ### `s9 doctor`
 
-Run health checks and validate data integrity.
+Run infrastructure health checks and validate data integrity.
 
 ```bash
 s9 doctor [OPTIONS]
@@ -193,12 +137,22 @@ s9 doctor [OPTIONS]
 - `--verbose, -v` - Show detailed output
 
 **What it checks:**
+
+Infrastructure:
+- Database file existence
+- Database integrity (SQLite PRAGMA integrity_check)
+- Gitignore pattern validation
+- Backup file detection
+- SQLite temporary file detection
+
+Data integrity:
 - Invalid foreign key references
 - Inconsistent task states
 - Mission data issues
 - Incorrect usage counters
 - Missing files referenced in database
 - Orphaned task dependencies
+- Abandoned work detection
 
 **Examples:**
 
@@ -215,22 +169,6 @@ s9 doctor --verbose
 Fix issues automatically:
 ```bash
 s9 doctor --fix
-```
-
-**Output:**
-```
-Running health checks...
-
-✓ Foreign key integrity: OK
-✓ Task state consistency: OK
-⚠ Found 2 issues with missions:
-  - Mission #5 has NULL end_time but status is 'completed'
-  - Mission #12 file not found: .opencode/missions/2026-01-28...
-✓ Persona name usage counters: OK
-
-Summary: 2 issues found (0 critical, 2 warnings)
-
-Run with --fix to automatically repair safe issues.
 ```
 
 ---
@@ -1459,54 +1397,6 @@ s9 task unlink ENG-H-0059
 ```
 
 **Note:** The task becomes standalone after unlinking (not deleted).
-
----
-
-### `s9 template list`
-
-List available templates.
-
-```bash
-s9 template list
-```
-
-**Note:** This command is a placeholder in the current version.
-
----
-
-### `s9 template show`
-
-Show template content.
-
-```bash
-s9 template show <name>
-```
-
-**Note:** This command is a placeholder in the current version.
-
----
-
-### `s9 config show`
-
-Show current configuration.
-
-```bash
-s9 config show
-```
-
-**Note:** This command is a placeholder in the current version.
-
----
-
-### `s9 config validate`
-
-Validate configuration file.
-
-```bash
-s9 config validate <file>
-```
-
-**Note:** This command is a placeholder in the current version.
 
 ---
 

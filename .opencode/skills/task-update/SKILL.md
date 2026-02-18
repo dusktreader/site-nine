@@ -34,24 +34,27 @@ I provide comprehensive instructions for updating task progress in the s9 task d
 
 ```bash
 s9 task update TASK_ID \
-  [--status STATUS] \
-  [--notes "Progress notes"] \
-  [--actual-hours X.X] \
-  [--category "New category"]
+  --status STATUS \
+  [--notes "Progress notes"]
 ```
 
-**All parameters are optional** - update only what changed.
+**Required:**
+- `TASK_ID` - The task to update
+- `--status` or `-s` - New status for the task
+
+**Optional:**
+- `--notes` or `-n` - Progress notes to append
 
 ## Progress Notes
 
 Use `--notes` to document progress:
 
 ```bash
-s9 task update BLD-H-0037 --notes "Implemented basic rate limiter, writing tests"
+s9 task update ENG-H-0037 --status UNDERWAY --notes "Implemented basic rate limiter, writing tests"
 
-s9 task update BLD-H-0037 --notes "All tests passing, need to add Redis backend"
+s9 task update ENG-H-0037 --status UNDERWAY --notes "All tests passing, need to add Redis backend"
 
-s9 task update BLD-H-0037 --notes "Blocked on Redis configuration decision"
+s9 task update ENG-H-0037 --status UNDERWAY --notes "Waiting on Redis configuration decision"
 ```
 
 **Important:** Notes are **appended** to the task's notes field, not replaced.
@@ -67,10 +70,10 @@ s9 task update BLD-H-0037 --notes "Blocked on Redis configuration decision"
 
 **Examples:**
 ```bash
---notes "Completed API endpoint implementation. Starting integration tests."
---notes "Refactored auth middleware for better testability. 85% test coverage achieved."
---notes "Discovered performance issue with large datasets. Investigating caching options."
---notes "Met with architect - decided to use Redis instead of in-memory cache."
+--status UNDERWAY --notes "Completed API endpoint implementation. Starting integration tests."
+--status UNDERWAY --notes "Refactored auth middleware for better testability. 85% test coverage achieved."
+--status UNDERWAY --notes "Discovered performance issue with large datasets. Investigating caching options."
+--status UNDERWAY --notes "Met with architect - decided to use Redis instead of in-memory cache."
 ```
 
 **Avoid:**
@@ -78,106 +81,68 @@ s9 task update BLD-H-0037 --notes "Blocked on Redis configuration decision"
 - Line-by-line code changes (use git commits for that)
 - Too generic ("made progress")
 
-## Time Tracking
-
-Track actual hours spent:
-
-```bash
-s9 task update BLD-H-0037 --actual-hours 2.5
-
-# Add more time later
-s9 task update BLD-H-0037 --actual-hours 4.0  # Total is now 4.0, not 2.5+4.0
-```
-
-**Important:** `--actual-hours` sets the **total time**, not incremental.
-
-### Time Tracking Best Practices
-
-**Do:**
-- Track time in reasonable increments (0.5 hour minimum)
-- Update total time at end of each work session
-- Be honest and accurate
-- Include research and debugging time
-
-**Don't:**
-- Track every 15 minutes
-- Forget to update before closing task
-- Round down significantly (gives false velocity metrics)
-
 ## Changing Status
 
 Usually status changes via claim/close commands, but you can update manually:
 
 ```bash
-# Mark as blocked
-s9 task update BLD-H-0037 --status BLOCKED --notes "Waiting for design decision"
+# Resume work after being away
+s9 task update ENG-H-0037 --status UNDERWAY --notes "Resuming work after meeting"
 
-# Return to progress
-s9 task update BLD-H-0037 --status UNDERWAY --notes "Design decision made, resuming"
+# Mark as complete (though usually you use s9 task close)
+s9 task update ENG-H-0037 --status COMPLETE --notes "Work finished"
 ```
 
 **Valid status values:**
 - `TODO` - Not started
 - `UNDERWAY` - In progress
-- `BLOCKED` - Can't proceed
-- `PAUSED` - Temporarily stopped
-- `REVIEW` - Awaiting review
 - `COMPLETE` - Finished
 - `ABORTED` - Cancelled
 
 **Note:** Usually you should use:
 - `s9 task claim` to set UNDERWAY
-- `s9 task close` to set COMPLETE/PAUSED/BLOCKED/ABORTED
-
-## Changing Category
-
-Update task category if needed:
-
-```bash
-s9 task update BLD-H-0037 --category "Performance"
-```
+- `s9 task close` to set COMPLETE or ABORTED
 
 ## Example: Updating Progress
 
 ```bash
-# After 2 hours of work
-s9 task update BLD-H-0037 \
-  --notes "Implemented token bucket algorithm, added configuration" \
-  --actual-hours 2.0
+# After making progress
+s9 task update ENG-H-0037 \
+  --status UNDERWAY \
+  --notes "Implemented token bucket algorithm, added configuration"
 
-# After 2 more hours
-s9 task update BLD-H-0037 \
-  --notes "Added tests, all passing. Ready for review." \
-  --actual-hours 4.0
+# After more progress
+s9 task update ENG-H-0037 \
+  --status UNDERWAY \
+  --notes "Added tests, all passing. Ready for review."
 
 # Check progress
-s9 task show BLD-H-0037
+s9 task show ENG-H-0037
 ```
 
-## Example: Documenting a Blocker
+## Example: Documenting a Note
 
 ```bash
-s9 task update BLD-H-0037 \
-  --status BLOCKED \
-  --notes "Blocked on Redis configuration decision. Need architect approval for caching strategy." \
-  --actual-hours 3.5
+s9 task update ENG-H-0037 \
+  --status UNDERWAY \
+  --notes "Waiting on Redis configuration decision. Need architect approval for caching strategy."
 ```
 
 ## Example: Multiple Updates in Session
 
 ```bash
 # Start of work session
-s9 task update BLD-H-0037 --notes "Starting implementation of rate limiting"
+s9 task update ENG-H-0037 --status UNDERWAY --notes "Starting implementation of rate limiting"
 
-# Mid-session (after 2 hours)
-s9 task update BLD-H-0037 \
-  --notes "Basic rate limiter working. Writing tests." \
-  --actual-hours 2.0
+# Mid-session
+s9 task update ENG-H-0037 \
+  --status UNDERWAY \
+  --notes "Basic rate limiter working. Writing tests."
 
-# End of session (after 4 hours total)
-s9 task update BLD-H-0037 \
-  --notes "All tests passing. Will add Redis backend tomorrow." \
-  --actual-hours 4.0
+# End of session
+s9 task update ENG-H-0037 \
+  --status UNDERWAY \
+  --notes "All tests passing. Will add Redis backend tomorrow."
 ```
 
 ## Update Frequency
@@ -202,22 +167,20 @@ When you run `s9 task update`:
 2. ✅ Markdown file updated in `.opencode/work/tasks/`
 3. ✅ Timestamp recorded for update
 4. ✅ Notes appended (not replaced)
-5. ✅ Time tracking cumulative total updated
 
 ## Tips and Best Practices
 
 ### Do
 - ✅ Update at least once per session
-- ✅ Track time accurately
 - ✅ Document blockers immediately
 - ✅ Note decisions made
 - ✅ Be concise but informative
+- ✅ Always provide status when updating
 
 ### Don't
 - ❌ Don't skip updates for days
 - ❌ Don't write novels (keep notes concise)
-- ❌ Don't forget to track time
-- ❌ Don't update status manually (use claim/close instead)
+- ❌ Don't update status manually (prefer claim/close commands)
 
 ## Troubleshooting
 
@@ -232,18 +195,17 @@ When you run `s9 task update`:
 
 ### "Task not claimed"
 - You can only update tasks you've claimed
-- Claim it first: `s9 task claim TASK_ID --agent-name "YourName"`
+- Claim it first: `s9 task claim TASK_ID --mission MISSION_ID --role ROLE`
 
-### "Invalid hours value"
-- Use decimal format: 2.5 (not "2 hours 30 minutes")
-- Must be positive number
-- Represents total time, not increment
+### "Status is required"
+- The `--status` parameter is required
+- Provide a valid status value (see valid statuses above)
 
 ## After Updating
 
 Verify your update:
 ```bash
-s9 task show BLD-H-0037
+s9 task show ENG-H-0037
 ```
 
 Check notes were appended and time updated correctly.

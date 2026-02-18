@@ -1,129 +1,105 @@
-"""Review management commands"""
-
 from __future__ import annotations
 
-from enum import Enum
 from pathlib import Path
+from typing import Annotated
 
+import pendulum
 import typer
-from loguru import logger
-from rich.console import Console
 from rich.table import Table
 from rich.text import Text
-from typerdrive import handle_errors
+from snick import conjoin
+from typerdrive import handle_errors, terminal_message
 
 from site_nine.cli.json_utils import format_json_response, output_json
+from site_nine.cli.utils import CLIError, require_db_path
 from site_nine.core.database import Database
-from site_nine.core.paths import get_opencode_dir
-from site_nine.reviews import ReviewManager, ReviewStatus, ReviewType
-from site_nine.reviews.types import REVIEW_TYPE_DISPLAY
+from site_nine.exceptions import SiteNineError
+from site_nine.reviews import ReviewManager, ReviewOutcome, ReviewType
 
 app = typer.Typer(help="Manage review requests")
-console = Console()
-
-
-def _get_manager() -> ReviewManager:
-    """Get review manager"""
-    try:
-        opencode_dir = get_opencode_dir()
-    except FileNotFoundError:
-        console.print("[red]Error: .opencode directory not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
-
-    db_path = opencode_dir / "data" / "project.db"
-    if not db_path.exists():
-        console.print("[red]Error: project.db not found. Run 's9 init' first.[/red]")
-        raise typer.Exit(1)
-
-    db = Database(db_path)
-    return ReviewManager(db)
 
 
 @app.command()
-@handle_errors("Failed to create review")
+@handle_errors("Failed to create review", handle_exc_class=SiteNineError)
 def create(
-    title: str = typer.Option(..., "--title", "-t", help="Review title"),
-    type: str = typer.Option(..., "--type", help="Review type (code, task_completion, design, general)"),
-    task_id: str | None = typer.Option(None, "--task", help="Associated task ID"),
-    description: str | None = typer.Option(None, "--description", "-d", help="Detailed description"),
-    artifact: str | None = typer.Option(None, "--artifact", "-a", help="Path to artifact being reviewed"),
-    requested_by: str | None = typer.Option(None, "--requested-by", help="Daemon name requesting review"),
+    title: Annotated[str, typer.Option("--title", "-t", help="Review title")],
+    type: Annotated[str, typer.Option("--type", help="Review type (code, task_completion, design, general)")],
+    task_id: Annotated[str | None, typer.Option("--task", help="Associated task ID")] = None,
+    description: Annotated[str | None, typer.Option("--description", "-d", help="Detailed description")] = None,
+    artifact: Annotated[str | None, typer.Option("--artifact", "-a", help="Path to artifact being reviewed")] = None,
+    requested_by: Annotated[str | None, typer.Option("--requested-by", help="Daemon name requesting review")] = None,
 ) -> None:
     """Create a review request (typically used by: agents)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Validate review type
     type_lower = type.lower()
-    if type_lower not in [rt.value for rt in ReviewType]:
-        console.print(
-            f"[red]Error: Invalid review type '{type}'. Valid types: {', '.join(rt.value for rt in ReviewType)}[/red]"
-        )
-        raise typer.Exit(1)
-
-    # Create review
-    review_id = manager.create_review(
-        type=type_lower,
-        title=title,
-        description=description,
-        task_id=task_id,
-        requested_by=requested_by,
-        artifact_path=artifact,
+    CLIError.require_condition(
+        type_lower in [rt.value for rt in ReviewType],
+        f"Invalid review type '{type}'. Valid types: {', '.join(rt.value for rt in ReviewType)}",
     )
 
-    console.print(f"[green]✓[/green] Created review #{review_id}")
+    with Database(db_path) as db:
+        manager = ReviewManager(db)
+        review_id = manager.create_review(
+            type=type_lower,
+            title=title,
+            description=description,
+            task_id=task_id,
+            requested_by=requested_by,
+            artifact_path=artifact,
+        )
 
+    body_parts = [f"Created review #{review_id}"]
     if task_id:
-        console.print(f"  Associated with task: {task_id}")
+        body_parts.append(f"Associated with task: {task_id}")
+    body_parts.append(f"Type: {ReviewType(type_lower)}")
+    body_parts.append(f"Title: {title}")
 
-    console.print(f"  Type: {REVIEW_TYPE_DISPLAY.get(ReviewType(type_lower), type)}")
-    console.print(f"  Title: {title}")
-
-    logger.info(f"Created review {review_id}: {title}")
+    terminal_message(conjoin(*body_parts), subject="Success", subject_color="green")
 
 
 @app.command()
-@handle_errors("Failed to list reviews")
+@handle_errors("Failed to list reviews", handle_exc_class=SiteNineError)
 def list(
-    status: str | None = typer.Option(None, "--status", "-s", help="Filter by status (pending, approved, rejected)"),
-    type: str | None = typer.Option(None, "--type", "-t", help="Filter by type"),
-    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
+    outcome: Annotated[
+        str | None, typer.Option("--status", "-s", help="Filter by outcome (pending, approved, rejected)")
+    ] = None,
+    type: Annotated[str | None, typer.Option("--type", "-t", help="Filter by type")] = None,
+    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
     """List reviews (typically used by: both)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Normalize status and type for filtering
-    status_value = status.lower() if status else None
+    outcome_value = outcome.lower() if outcome else None
     type_value = type.lower() if type else None
 
-    reviews = manager.list_reviews(status=status_value, type=type_value)
+    with Database(db_path) as db:
+        manager = ReviewManager(db)
+        reviews = manager.list_reviews(outcome=outcome_value, type=type_value)
 
     if not reviews:
         if json_output:
             output_json(format_json_response([]))
-            logger.debug("Listed 0 reviews (JSON)")
             return
 
         filter_msg = ""
-        if status or type:
+        if outcome or type:
             filter_parts = []
-            if status:
-                filter_parts.append(f"status={status}")
+            if outcome:
+                filter_parts.append(f"outcome={outcome}")
             if type:
                 filter_parts.append(f"type={type}")
             filter_msg = f" ({', '.join(filter_parts)})"
-        console.print(f"[yellow]No reviews found{filter_msg}.[/yellow]")
+        terminal_message(f"No reviews found{filter_msg}.", subject="Empty", subject_color="yellow")
         return
 
     if json_output:
-        # Build JSON data
-        from datetime import datetime
-
         data = []
         for review in reviews:
             review_dict = {
                 "id": review.id,
                 "type": review.type,
-                "status": review.status,
+                "status": review.outcome,
                 "title": review.title,
                 "description": review.description,
                 "task_id": review.task_id,
@@ -137,7 +113,6 @@ def list(
             data.append(review_dict)
 
         output_json(format_json_response(data))
-        logger.debug(f"Listed {len(reviews)} reviews (JSON)")
         return
 
     table = Table(title="Reviews")
@@ -150,43 +125,27 @@ def list(
     table.add_column("Requested", style="dim", width=10)
 
     for review in reviews:
-        # Color-code status
-        if review.status == ReviewStatus.APPROVED.value:
+        if review.outcome == ReviewOutcome.APPROVED.value:
             status_text = Text("approved", style="green")
-        elif review.status == ReviewStatus.REJECTED.value:
+        elif review.outcome == ReviewOutcome.REJECTED.value:
             status_text = Text("rejected", style="red")
         else:
             status_text = Text("pending", style="yellow")
 
-        # Format requested_at as relative time
-        from datetime import datetime
-
         try:
-            requested_dt = datetime.fromisoformat(review.requested_at.replace("Z", "+00:00"))
-            now = datetime.now(requested_dt.tzinfo) if requested_dt.tzinfo else datetime.now()
-            delta = now - requested_dt
+            requested_at = str(review.requested_at)
+            requested_dt = pendulum.parse(requested_at)
+            requested_str = requested_dt.diff_for_humans()  # type: ignore[union-attr]
+        except Exception:
+            requested_str = str(review.requested_at)[:16]
 
-            if delta.days > 0:
-                requested_str = f"{delta.days}d ago"
-            elif delta.seconds >= 3600:
-                requested_str = f"{delta.seconds // 3600}h ago"
-            elif delta.seconds >= 60:
-                requested_str = f"{delta.seconds // 60}m ago"
-            else:
-                requested_str = "just now"
-        except:
-            requested_str = review.requested_at[:16]  # Fallback to date string
-
-        # Format artifact path to show just the filename for brevity
         artifact_display = "-"
         if review.artifact_path:
-            from pathlib import Path
-
             artifact_display = Path(review.artifact_path).name
 
         table.add_row(
             str(review.id),
-            REVIEW_TYPE_DISPLAY.get(ReviewType(review.type), review.type),
+            str(ReviewType(review.type)),
             status_text,
             review.task_id or "-",
             review.title[:50] + "..." if len(review.title) > 50 else review.title,
@@ -194,30 +153,27 @@ def list(
             requested_str,
         )
 
-    console.print(table)
-    logger.debug(f"Listed {len(reviews)} reviews")
+    terminal_message(table, indent=False)
 
 
 @app.command()
-@handle_errors("Failed to show review")
+@handle_errors("Failed to show review", handle_exc_class=SiteNineError)
 def show(
-    review_id: int = typer.Argument(..., help="Review ID"),
-    json_output: bool = typer.Option(False, "--json", "-j", help="Output in JSON format"),
+    review_id: Annotated[int, typer.Argument(help="Review ID")],
+    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
     """Show review details (typically used by: both)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    review = manager.get_review(review_id)
-    if not review:
-        console.print(f"[red]Error: Review #{review_id} not found.[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = ReviewManager(db)
+        review = CLIError.enforce_defined(manager.get_review(review_id), f"Review #{review_id} not found.")
 
     if json_output:
-        # Build JSON data
         review_dict = {
             "id": review.id,
             "type": review.type,
-            "status": review.status,
+            "status": review.outcome,
             "title": review.title,
             "description": review.description,
             "task_id": review.task_id,
@@ -230,144 +186,169 @@ def show(
         }
 
         output_json(format_json_response(review_dict))
-        logger.debug(f"Displayed review {review_id} (JSON)")
         return
 
-    # Create details display
-    console.print()
-    console.print(f"[bold cyan]Review #{review.id}[/bold cyan]")
-    console.print()
-
-    # Status with color
-    if review.status == ReviewStatus.APPROVED.value:
-        status_display = "[green]✓ Approved[/green]"
-    elif review.status == ReviewStatus.REJECTED.value:
-        status_display = "[red]✗ Rejected[/red]"
+    if review.outcome == ReviewOutcome.APPROVED.value:
+        status_display = "Approved"
+    elif review.outcome == ReviewOutcome.REJECTED.value:
+        status_display = "Rejected"
     else:
-        status_display = "[yellow]⏳ Pending[/yellow]"
+        status_display = "Pending"
 
-    console.print(f"Status:      {status_display}")
-    console.print(f"Type:        {REVIEW_TYPE_DISPLAY.get(ReviewType(review.type), review.type)}")
-    console.print(f"Title:       {review.title}")
+    body_parts = [
+        f"Status:       {status_display}",
+        f"Type:         {ReviewType(review.type)}",
+        f"Title:        {review.title}",
+    ]
 
     if review.task_id:
-        console.print(f"Task:        {review.task_id}")
+        body_parts.append(f"Task:         {review.task_id}")
 
     if review.description:
-        console.print()
-        console.print("[bold]Description:[/bold]")
-        console.print(review.description)
+        body_parts.extend(["", "Description:", review.description])
 
-    console.print()
-    console.print(f"Requested by: {review.requested_by or 'Unknown'}")
-    console.print(f"Requested at: {review.requested_at}")
+    body_parts.extend(
+        [
+            "",
+            f"Requested by: {review.requested_by or 'Unknown'}",
+            f"Requested at: {review.requested_at}",
+        ]
+    )
 
     if review.reviewed_by:
-        console.print(f"Reviewed by:  {review.reviewed_by}")
-        console.print(f"Reviewed at:  {review.reviewed_at}")
+        body_parts.append(f"Reviewed by:  {review.reviewed_by}")
+        body_parts.append(f"Reviewed at:  {review.reviewed_at}")
 
     if review.outcome_reason:
-        console.print()
-        console.print(f"[bold]Outcome Reason:[/bold]")
-        console.print(review.outcome_reason)
+        body_parts.extend(["", "Outcome Reason:", review.outcome_reason])
 
     if review.artifact_path:
-        console.print()
-        console.print(f"Artifact: {review.artifact_path}")
+        body_parts.extend(["", f"Artifact: {review.artifact_path}"])
 
-    console.print()
-
-    logger.debug(f"Displayed details for review {review_id}")
+    terminal_message(conjoin(*body_parts), subject=f"Review #{review.id}")
 
 
 @app.command()
-@handle_errors("Failed to approve review")
+@handle_errors("Failed to approve review", handle_exc_class=SiteNineError)
 def approve(
-    review_id: int = typer.Argument(..., help="Review ID"),
-    reason: str | None = typer.Option(None, "--reason", "-r", help="Approval reason"),
-    reviewed_by: str = typer.Option("Director", "--reviewed-by", help="Who is approving"),
+    review_id: Annotated[int, typer.Argument(help="Review ID")],
+    reason: Annotated[str | None, typer.Option("--reason", "-r", help="Approval reason")] = None,
+    reviewed_by: Annotated[str, typer.Option("--reviewed-by", help="Who is approving")] = "Director",
 ) -> None:
     """Approve a review (typically used by: humans)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Check review exists and is pending
-    review = manager.get_review(review_id)
-    if not review:
-        console.print(f"[red]Error: Review #{review_id} not found.[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = ReviewManager(db)
+        review = CLIError.enforce_defined(manager.get_review(review_id), f"Review #{review_id} not found.")
 
-    if review.status != ReviewStatus.PENDING.value:
-        console.print(f"[yellow]Warning: Review #{review_id} is already {review.status}.[/yellow]")
-        return
+        if review.outcome != ReviewOutcome.PENDING.value:
+            terminal_message(
+                f"Review #{review_id} is already {review.outcome}.",
+                subject="Warning",
+                subject_color="yellow",
+            )
+            return
 
-    # Approve the review
-    manager.approve_review(review_id, reviewed_by=reviewed_by, reason=reason)
+        manager.approve_review(review_id, reviewed_by=reviewed_by, reason=reason)
 
-    console.print(f"[green]✓[/green] Approved review #{review_id}")
+    body_parts = [f"Approved review #{review_id}"]
     if review.task_id:
-        console.print(f"  Task {review.task_id} is now unblocked")
+        body_parts.append(f"Task {review.task_id} is now unblocked")
 
-    logger.info(f"Approved review {review_id}")
+    terminal_message(conjoin(*body_parts), subject="Success", subject_color="green")
 
 
 @app.command()
-@handle_errors("Failed to reject review")
+@handle_errors("Failed to reject review", handle_exc_class=SiteNineError)
 def reject(
-    review_id: int = typer.Argument(..., help="Review ID"),
-    reason: str = typer.Option(..., "--reason", "-r", help="Rejection reason (required)"),
-    reviewed_by: str = typer.Option("Director", "--reviewed-by", help="Who is rejecting"),
+    review_id: Annotated[int, typer.Argument(help="Review ID")],
+    reason: Annotated[str, typer.Option("--reason", "-r", help="Rejection reason (required)")],
+    reviewed_by: Annotated[str, typer.Option("--reviewed-by", help="Who is rejecting")] = "Director",
 ) -> None:
     """Reject a review (typically used by: humans)"""
-    manager = _get_manager()
+    db_path = require_db_path()
 
-    # Check review exists and is pending
-    review = manager.get_review(review_id)
-    if not review:
-        console.print(f"[red]Error: Review #{review_id} not found.[/red]")
-        raise typer.Exit(1)
+    with Database(db_path) as db:
+        manager = ReviewManager(db)
+        review = CLIError.enforce_defined(manager.get_review(review_id), f"Review #{review_id} not found.")
 
-    if review.status != ReviewStatus.PENDING.value:
-        console.print(f"[yellow]Warning: Review #{review_id} is already {review.status}.[/yellow]")
-        return
+        if review.outcome != ReviewOutcome.PENDING.value:
+            terminal_message(
+                f"Review #{review_id} is already {review.outcome}.",
+                subject="Warning",
+                subject_color="yellow",
+            )
+            return
 
-    # Reject the review
-    manager.reject_review(review_id, reason=reason, reviewed_by=reviewed_by)
+        manager.reject_review(review_id, reason=reason, reviewed_by=reviewed_by)
 
-    console.print(f"[red]✗[/red] Rejected review #{review_id}")
-    console.print(f"  Reason: {reason}")
-
-    logger.info(f"Rejected review {review_id}: {reason}")
+    terminal_message(
+        conjoin(f"Rejected review #{review_id}", f"Reason: {reason}"),
+        subject="Rejected",
+        subject_color="red",
+    )
 
 
 @app.command()
-@handle_errors("Failed to show blocked tasks")
-def blocked() -> None:
-    """Show tasks blocked by pending reviews (typically used by: both)"""
-    manager = _get_manager()
+@handle_errors("Failed to show blocked tasks", handle_exc_class=SiteNineError)
+def blocked(
+    review_id: Annotated[
+        int | None, typer.Option("--review-id", "-r", help="Show tasks blocked by specific review")
+    ] = None,
+) -> None:
+    """Show tasks blocked by reviews (typically used by: both)"""
+    db_path = require_db_path()
 
-    blocked_tasks = manager.get_blocked_tasks()
+    if review_id:
+        with Database(db_path) as db:
+            manager = ReviewManager(db)
+            blocked_task_ids = manager.get_tasks_blocked_by_review(review_id)
 
-    if not blocked_tasks:
-        console.print("[green]No tasks are currently blocked by reviews.[/green]")
-        return
+        if not blocked_task_ids:
+            terminal_message(
+                f"No tasks are currently blocked by review #{review_id}.",
+                subject="Clear",
+                subject_color="green",
+            )
+            return
 
-    table = Table(title="Blocked Tasks")
-    table.add_column("Task ID", style="cyan")
-    table.add_column("Review ID", style="magenta", justify="right")
-    table.add_column("Review Type", style="blue")
-    table.add_column("Review Title", style="white")
+        body_parts = [f"Tasks blocked by review #{review_id}:"]
+        for task_id in blocked_task_ids:
+            body_parts.append(f"  - {task_id}")
+        body_parts.append("")
+        body_parts.append(f"{len(blocked_task_ids)} task(s) blocked by review #{review_id}")
 
-    for task_id, review in blocked_tasks:
-        table.add_row(
-            task_id,
-            str(review.id),
-            REVIEW_TYPE_DISPLAY.get(ReviewType(review.type), review.type),
-            review.title[:60] + "..." if len(review.title) > 60 else review.title,
+        terminal_message(conjoin(*body_parts), subject="Blocked", subject_color="yellow")
+    else:
+        with Database(db_path) as db:
+            manager = ReviewManager(db)
+            pending_reviews = manager.get_pending_reviews()
+
+        if not pending_reviews:
+            terminal_message("No pending reviews.", subject="Clear", subject_color="green")
+            return
+
+        table = Table(title="Pending Reviews")
+        table.add_column("Review ID", style="magenta", justify="right")
+        table.add_column("Type", style="blue")
+        table.add_column("Title", style="white")
+        table.add_column("Requested", style="dim")
+
+        for review in pending_reviews:
+            table.add_row(
+                str(review.id),
+                str(ReviewType(review.type)),
+                review.title[:50] + "..." if len(review.title) > 50 else review.title,
+                str(review.requested_at)[:16],
+            )
+
+        terminal_message(table, indent=False)
+        terminal_message(
+            conjoin(
+                f"{len(pending_reviews)} pending review(s).",
+                "Use 's9 review approve <review-id>' to unblock tasks.",
+            ),
+            subject="Summary",
+            subject_color="yellow",
         )
-
-    console.print(table)
-    console.print()
-    console.print(f"[yellow]{len(blocked_tasks)} task(s) are blocked by pending reviews.[/yellow]")
-    console.print("Use [cyan]s9 review approve <review-id>[/cyan] to unblock tasks.")
-
-    logger.debug(f"Displayed {len(blocked_tasks)} blocked tasks")

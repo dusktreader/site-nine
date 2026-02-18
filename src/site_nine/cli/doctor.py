@@ -8,7 +8,7 @@ import typer
 from snick import conjoin
 from typerdrive import handle_errors, terminal_message
 
-from site_nine.cli.utils import abort, abort_unless
+from site_nine.cli.utils import CLIError
 from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
 from site_nine.doctor.manager import DoctorManager, get_fail_hints, get_fail_summary
@@ -19,9 +19,10 @@ from site_nine.doctor.rendering import (
     render_summary_body,
     render_summary_table,
 )
+from site_nine.exceptions import SiteNineError
 
 
-@handle_errors("Failed to run health checks")
+@handle_errors("Failed to run health checks", handle_exc_class=SiteNineError)
 def doctor_command(
     fix: Annotated[bool, typer.Option("--fix", help="Apply fixes automatically")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show detailed output")] = False,
@@ -50,17 +51,16 @@ def doctor_command(
     try:
         opencode_dir = get_opencode_dir()
     except FileNotFoundError:
-        abort("No .opencode directory found. Run 's9 init' first.")
+        raise CLIError("No .opencode directory found. Run 's9 init' first.")
 
     db_path = opencode_dir / "data" / "project.db"
 
-    abort_unless(
+    CLIError.require_condition(
         db_path.exists(),
         conjoin(
             f"Database file not found: {db_path}",
             "Run 's9 init' to initialize the project.",
         ),
-        subject="Cannot proceed without database file",
     )
 
     terminal_message("Running diagnostics...", subject="Doctor")

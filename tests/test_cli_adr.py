@@ -48,10 +48,11 @@ def test_adr_update_not_found(initialized_project: Path):
 
 
 def test_adr_sync(initialized_project: Path):
-    """Test syncing ADRs"""
+    """Test syncing ADRs — aborts when no ADRs directory exists"""
     result = runner.invoke(app, ["adr", "sync"])
 
-    assert result.exit_code == 0
+    assert result.exit_code == 1
+    assert "No ADRs directory" in result.output
 
 
 def test_adr_update_status_after_create(initialized_project: Path):
@@ -361,63 +362,63 @@ def test_adr_multiple_creates(initialized_project: Path):
 
 
 def test_parse_adr_id(tmp_path: Path):
-    """Unit test _parse_adr_id extracts ADR-NNN from filenames."""
-    from site_nine.cli.adr import _parse_adr_id
+    """Unit test parse_adr_id extracts ADR-NNN from filenames."""
+    from site_nine.adrs import parse_adr_id
 
     # Standard filename
-    assert _parse_adr_id("ADR-001-adapter-pattern.md") == "ADR-001"
+    assert parse_adr_id("ADR-001-adapter-pattern.md") == "ADR-001"
     # Full path string
-    assert _parse_adr_id(str(tmp_path / "ADR-042-some-title.md")) == "ADR-042"
+    assert parse_adr_id(str(tmp_path / "ADR-042-some-title.md")) == "ADR-042"
     # No match
-    assert _parse_adr_id("some-random-file.md") is None
+    assert parse_adr_id("some-random-file.md") is None
     # Edge: ADR with many digits
-    assert _parse_adr_id("ADR-12345-long-id.md") == "ADR-12345"
+    assert parse_adr_id("ADR-12345-long-id.md") == "ADR-12345"
 
 
 def test_parse_adr_title(tmp_path: Path):
-    """Unit test _parse_adr_title extracts title from markdown content."""
-    from site_nine.cli.adr import _parse_adr_title
+    """Unit test parse_adr_title extracts title from markdown content."""
+    from site_nine.adrs import parse_adr_title
 
     # Standard pattern: # ADR-001: Some Title
     md_file = tmp_path / "ADR-001-test.md"
     md_file.write_text("# ADR-001: My Great Decision\n\n**Status:** PROPOSED\n")
-    assert _parse_adr_title(md_file) == "My Great Decision"
+    assert parse_adr_title(md_file) == "My Great Decision"
 
     # Fallback: plain heading without ADR prefix
     md_file2 = tmp_path / "ADR-002-test.md"
     md_file2.write_text("# Just A Heading\n\nSome content.\n")
-    assert _parse_adr_title(md_file2) == "Just A Heading"
+    assert parse_adr_title(md_file2) == "Just A Heading"
 
     # No heading at all
     md_file3 = tmp_path / "ADR-003-test.md"
     md_file3.write_text("No heading here, just text.\n")
-    assert _parse_adr_title(md_file3) is None
+    assert parse_adr_title(md_file3) is None
 
     # Non-existent file returns None (exception path)
-    assert _parse_adr_title(tmp_path / "nonexistent.md") is None
+    assert parse_adr_title(tmp_path / "nonexistent.md") is None
 
 
 def test_parse_adr_status(tmp_path: Path):
-    """Unit test _parse_adr_status extracts status from markdown content."""
-    from site_nine.cli.adr import _parse_adr_status
+    """Unit test parse_adr_status extracts status from markdown content."""
+    from site_nine.adrs import parse_adr_status
 
     # Valid status
     md_file = tmp_path / "ADR-001.md"
     md_file.write_text("# ADR-001: Title\n\n**Status:** ACCEPTED\n")
-    assert _parse_adr_status(md_file) == "ACCEPTED"
+    assert parse_adr_status(md_file) == "ACCEPTED"
 
     # Invalid status string falls back to PROPOSED
     md_file2 = tmp_path / "ADR-002.md"
     md_file2.write_text("# ADR-002: Title\n\n**Status:** BOGUS\n")
-    assert _parse_adr_status(md_file2) == "PROPOSED"
+    assert parse_adr_status(md_file2) == "PROPOSED"
 
     # No status line at all falls back to PROPOSED
     md_file3 = tmp_path / "ADR-003.md"
     md_file3.write_text("# ADR-003: Title\n\nNo status here.\n")
-    assert _parse_adr_status(md_file3) == "PROPOSED"
+    assert parse_adr_status(md_file3) == "PROPOSED"
 
     # Non-existent file falls back to PROPOSED (exception path)
-    assert _parse_adr_status(tmp_path / "nonexistent.md") == "PROPOSED"
+    assert parse_adr_status(tmp_path / "nonexistent.md") == "PROPOSED"
 
 
 def test_adr_create_success_full(initialized_project: Path):
@@ -450,7 +451,7 @@ def test_adr_create_invalid_status(initialized_project: Path):
     )
 
     assert result.exit_code != 0
-    assert "Invalid status" in result.stdout or "Error" in result.stdout
+    assert "Invalid value" in result.output
 
 
 def test_adr_list_with_status_filter_valid(initialized_project: Path):
@@ -471,7 +472,7 @@ def test_adr_list_invalid_status(initialized_project: Path):
     result = runner.invoke(app, ["adr", "list", "--status", "NOTASTATUS"])
 
     assert result.exit_code != 0
-    assert "Invalid status" in result.stdout or "Error" in result.stdout
+    assert "Invalid value" in result.output
 
 
 def test_adr_list_status_no_results(initialized_project: Path):
@@ -540,7 +541,7 @@ def test_adr_update_invalid_status(initialized_project: Path):
     )
 
     assert result.exit_code != 0
-    assert "Invalid status" in result.stdout or "Error" in result.stdout
+    assert "Invalid value" in result.output
 
 
 def test_adr_update_no_changes(initialized_project: Path):
@@ -554,7 +555,7 @@ def test_adr_update_no_changes(initialized_project: Path):
     result = runner.invoke(app, ["adr", "update", "ADR-001"])
 
     assert result.exit_code != 0
-    assert "No updates" in result.stdout
+    assert "No updates" in result.output
 
 
 def test_adr_sync_with_files(initialized_project: Path):
@@ -588,8 +589,8 @@ def test_adr_sync_no_directory(initialized_project: Path):
 
     result = runner.invoke(app, ["adr", "sync"])
 
-    assert result.exit_code == 0
-    assert "No ADRs directory" in result.stdout
+    assert result.exit_code == 1
+    assert "No ADRs directory" in result.output
 
 
 def test_adr_sync_no_files(initialized_project: Path):
@@ -599,8 +600,8 @@ def test_adr_sync_no_files(initialized_project: Path):
 
     result = runner.invoke(app, ["adr", "sync"])
 
-    assert result.exit_code == 0
-    assert "No ADR files found" in result.stdout
+    assert result.exit_code == 1
+    assert "No ADR files found" in result.output
 
 
 def test_adr_sync_updates_existing(initialized_project: Path):
@@ -633,7 +634,7 @@ def test_adr_sync_skips_unparseable_id(initialized_project: Path):
     adrs_dir.mkdir(parents=True, exist_ok=True)
 
     # The glob is ADR-*.md, so the file needs to match that pattern but
-    # _parse_adr_id looks for "ADR-\d+", so "ADR-xyz" won't parse.
+    # parse_adr_id looks for "ADR-\d+", so "ADR-xyz" won't parse.
     (adrs_dir / "ADR-xyz-bad-id.md").write_text("# Some Title\n\n**Status:** PROPOSED\n")
 
     result = runner.invoke(app, ["adr", "sync"])

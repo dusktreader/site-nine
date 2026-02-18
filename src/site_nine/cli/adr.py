@@ -8,15 +8,16 @@ from snick import conjoin
 from typerdrive import handle_errors, terminal_message
 
 from site_nine.adrs import ADRError, ADRManager, ADRStatus, parse_adr_id, parse_adr_status, parse_adr_title
-from site_nine.cli.utils import abort, abort_unless, require_db_path
+from site_nine.cli.utils import CLIError, require_db_path
 from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
+from site_nine.exceptions import SiteNineError
 
 app = typer.Typer(help="Manage Architecture Decision Records (ADRs)")
 
 
 @app.command()
-@handle_errors("Failed to create ADR", handle_exc_class=(ADRError, FileNotFoundError))
+@handle_errors("Failed to create ADR", handle_exc_class=SiteNineError)
 def create(
     title: Annotated[str, typer.Option("--title", "-t", help="ADR title")],
     status: Annotated[
@@ -37,7 +38,7 @@ def create(
 
 
 @app.command("list")
-@handle_errors("Failed to list ADRs", handle_exc_class=(ADRError, FileNotFoundError))
+@handle_errors("Failed to list ADRs", handle_exc_class=SiteNineError)
 def list_adrs(
     status: Annotated[
         ADRStatus | None, typer.Option("--status", "-s", case_sensitive=False, help="Filter by status")
@@ -68,15 +69,14 @@ def list_adrs(
 
 
 @app.command()
-@handle_errors("Failed to show ADR", handle_exc_class=(ADRError, FileNotFoundError))
+@handle_errors("Failed to show ADR", handle_exc_class=SiteNineError)
 def show(adr_id: Annotated[str, typer.Argument(help="ADR ID (e.g., ADR-001)")]) -> None:
     """Show ADR details (typically used by: both)"""
     db_path = require_db_path()
 
     with Database(db_path) as db:
         manager = ADRManager(db)
-        adr = manager.get_adr(adr_id)
-        abort_unless(adr, f"ADR {adr_id} not found")
+        adr = CLIError.enforce_defined(manager.get_adr(adr_id), f"ADR {adr_id} not found")
 
         epic_ids = manager.get_adr_epics(adr_id)
         task_ids = manager.get_adr_tasks(adr_id)
@@ -98,7 +98,7 @@ def show(adr_id: Annotated[str, typer.Argument(help="ADR ID (e.g., ADR-001)")]) 
 
 
 @app.command()
-@handle_errors("Failed to update ADR", handle_exc_class=(ADRError, FileNotFoundError))
+@handle_errors("Failed to update ADR", handle_exc_class=SiteNineError)
 def update(
     adr_id: Annotated[str, typer.Argument(help="ADR ID (e.g., ADR-001)")],
     title: Annotated[str | None, typer.Option("--title", "-t", help="New title")] = None,
@@ -115,12 +115,11 @@ def update(
     if status:
         updates["status"] = status.value
 
-    abort_unless(updates, "No updates provided. Use --title or --status.")
+    CLIError.require_condition(bool(updates), "No updates provided. Use --title or --status.")
 
     with Database(db_path) as db:
         manager = ADRManager(db)
-        adr = manager.get_adr(adr_id)
-        abort_unless(adr, f"ADR {adr_id} not found")
+        CLIError.enforce_defined(manager.get_adr(adr_id), f"ADR {adr_id} not found")
 
         manager.update_adr(adr_id, **updates)
 
@@ -131,17 +130,17 @@ def update(
 
 
 @app.command()
-@handle_errors("Failed to sync ADRs", handle_exc_class=(ADRError, FileNotFoundError))
+@handle_errors("Failed to sync ADRs", handle_exc_class=SiteNineError)
 def sync() -> None:
     """Sync ADRs from filesystem to database (typically used by: both)"""
     db_path = require_db_path()
     opencode_dir = get_opencode_dir()
     adrs_dir = opencode_dir / "docs" / "adrs"
 
-    abort_unless(adrs_dir.exists(), "No ADRs directory found (.opencode/docs/adrs/)")
+    CLIError.require_condition(adrs_dir.exists(), "No ADRs directory found (.opencode/docs/adrs/)")
 
     adr_files = sorted(adrs_dir.glob("ADR-*.md"))
-    abort_unless(adr_files, "No ADR files found in .opencode/docs/adrs/")
+    CLIError.require_condition(bool(adr_files), "No ADR files found in .opencode/docs/adrs/")
 
     imported_count = 0
     updated_count = 0

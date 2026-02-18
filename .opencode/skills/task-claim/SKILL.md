@@ -29,38 +29,31 @@ I provide comprehensive instructions for claiming tasks in the s9 task database.
 ## Command Syntax
 
 ```bash
-s9 task claim TASK_ID --agent-name "YourName"
+s9 task claim TASK_ID --mission MISSION_ID --role ROLE
 ```
 
 **Required:**
-- `TASK_ID` - The task to claim (e.g., BLD-H-0037)
-- `--agent-name` - Your daemon name (not your role name)
+- `TASK_ID` - The task to claim (e.g., ENG-H-0037)
+- `--mission` or `-m` - Your mission ID (from `s9 mission start`)
+- `--role` or `-r` - Your role (must match task's assigned role)
 
 ## What Happens When You Claim
 
 1. ✅ Status changes: `TODO` → `UNDERWAY`
-2. ✅ `agent_name` set to your name
+2. ✅ `mission_id` set to your mission ID
 3. ✅ `claimed_at` timestamp recorded
 4. ✅ Markdown file header updated in `.opencode/work/tasks/`
 
-## Agent Name
+## Mission ID
 
-Use your **daemon name** from the session, not your role:
+Use your **mission ID** from your current mission:
 
-### Correct
-- ✅ "Goibniu"
-- ✅ "Ishtar"
-- ✅ "Thoth-iii"
-- ✅ "Ptah"
+**How to find your mission ID:**
+- It was displayed when you ran `s9 mission start`
+- Check `s9 mission list` to see your active missions
+- Look for the mission number (e.g., mission #42)
 
-### Incorrect
-- ❌ "Engineer" (that's your role, not your name)
-- ❌ "Administrator" (that's your role, not your name)
-- ❌ "agent" (too generic)
-
-**How to find your daemon name:**
-- Check your session file name (e.g., `2026-02-05.engineer.goibniu.md`)
-- Use `s9 persona suggest <Role>` to generate a new name
+**Note:** You must have an active mission to claim tasks. If you don't have one, start a mission first with `s9 mission start`.
 
 ## Example: Claiming a Task
 
@@ -69,17 +62,17 @@ Use your **daemon name** from the session, not your role:
 s9 task list --role Engineer --status TODO
 
 # Output shows available tasks:
-# BLD-H-0037 | Implement Rate Limiting Middleware | TODO | HIGH | Engineer
+# ENG-H-0037 | Implement Rate Limiting Middleware | TODO | HIGH | Engineer
 
-# 2. Claim the task
-s9 task claim BLD-H-0037 --agent-name "Goibniu"
+# 2. Claim the task (assuming mission ID is 42)
+s9 task claim ENG-H-0037 --mission 42 --role Engineer
 
-# Output: ✓ Claimed task BLD-H-0037
+# Output: ✓ Claimed task ENG-H-0037
 
 # 3. Verify it was claimed
-s9 task show BLD-H-0037
+s9 task show ENG-H-0037
 # Status: UNDERWAY
-# Agent: Goibniu
+# Mission: 42
 # Claimed: 2026-02-05T22:00:00+00:00
 ```
 
@@ -97,17 +90,17 @@ The database prevents race conditions:
 If a task is already claimed, you'll get an error:
 
 ```bash
-s9 task claim BLD-H-0037 --agent-name "Ishtar"
-# Error: Task BLD-H-0037 is already claimed by Goibniu
+s9 task claim ENG-H-0037 --mission 43 --role Engineer
+# Error: Task ENG-H-0037 is already claimed by mission 42
 ```
 
 **What to do:**
-1. Check who claimed it:
+1. Check which mission claimed it:
    ```bash
-   s9 task show BLD-H-0037
+   s9 task show ENG-H-0037
    ```
 
-2. Coordinate with the other agent if needed
+2. Coordinate with the other mission/agent if needed
 
 3. Choose a different task:
    ```bash
@@ -119,8 +112,8 @@ s9 task claim BLD-H-0037 --agent-name "Ishtar"
 You can claim multiple tasks, but claim one at a time:
 
 ```bash
-s9 task claim BLD-H-0037 --agent-name "Goibniu"
-s9 task claim BLD-H-0038 --agent-name "Goibniu"
+s9 task claim ENG-H-0037 --mission 42 --role Engineer
+s9 task claim ENG-H-0038 --mission 42 --role Engineer
 ```
 
 **Best practice:** Focus on one task at a time. Only claim multiple if:
@@ -138,8 +131,8 @@ s9 task claim BLD-H-0038 --agent-name "Goibniu"
 ### Check Dependencies
 
 ```bash
-s9 task show BLD-H-0038
-# Depends on: BLD-H-0037
+s9 task show ENG-H-0038
+# Depends on: ENG-H-0037
 ```
 
 If task has dependencies:
@@ -167,7 +160,7 @@ Tasks are assigned to specific roles:
 ### Do
 - ✅ Claim one task at a time (stay focused)
 - ✅ Check dependencies before claiming
-- ✅ Use your daemon name, not role name
+- ✅ Use your mission ID and role
 - ✅ Verify claim succeeded with `s9 task show`
 - ✅ Start work on task soon after claiming
 
@@ -182,17 +175,22 @@ Tasks are assigned to specific roles:
 ### "Task not found"
 - Check task ID spelling and case
 - Verify task exists: `s9 task list | grep TASK_ID`
-- Make sure you're using the full task ID (e.g., BLD-H-0037)
+- Make sure you're using the full task ID (e.g., ENG-H-0037)
 
 ### "Task already claimed"
 - Someone else is working on it
 - Check: `s9 task show TASK_ID`
-- Choose a different task or coordinate with the other agent
+- Choose a different task or coordinate with the other mission
 
-### "Invalid agent name"
-- Don't use role names (use daemon names)
-- Use quotes around names with spaces or special characters
-- Check your session file for your daemon name
+### "Mission not found"
+- Invalid mission ID provided
+- Check your active mission: `s9 mission list`
+- Make sure you started a mission first: `s9 mission start`
+
+### "Role mismatch"
+- Your role doesn't match the task's assigned role
+- Check task details: `s9 task show TASK_ID`
+- Either claim a task for your role, or coordinate with Administrator
 
 ### "Database is locked"
 - Another process is writing (rare with WAL mode)

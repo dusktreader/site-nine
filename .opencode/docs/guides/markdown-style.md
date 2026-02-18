@@ -1,173 +1,89 @@
 # Markdown Style Guide
 
-This document establishes markdown formatting standards for the site-nine project. **All agents must follow these conventions** when creating or editing markdown files.
+Markdown formatting standards for site-nine. **All agents must follow these conventions.**
 
-This applies to:
-- Documentation in `docs/source/` (human-facing documentation)
-- ADRs in `.opencode/docs/adrs/`
-- Mission files in `.opencode/work/missions/`
-- Task files in `.opencode/work/tasks/`
-- All other markdown files in the repository
-
-Following these conventions ensures consistency across all documentation.
+Applies to: documentation (`docs/source/`), ADRs, mission files, task files, and all markdown files.
 
 
-## Heading styles
+## Heading Styles
 
 ### Format
 
-Use ATX-style headings with hash marks (`#`). Do not use Setext-style underlines.
+ATX-style with hash marks (`#`). No Setext-style underlines.
 
 ```markdown
 # Heading 1
-
 ## Heading 2
-
 ### Heading 3
 ```
 
 
 ### Capitalization
 
-- **H1 (document titles)**: Title Case
-- **H2 and below (sections)**: Sentence case
-
-**Examples:**
-
-```markdown
-# Markdown Style Guide
-
-## Heading styles
-
-### Format conventions
-```
+- **H1 (titles)**: Title Case
+- **H2+ (sections)**: Sentence case
 
 
 ### Spacing
 
-Place **2 blank lines** before a heading UNLESS the parent heading has no content or paragraphs.
+**Before headings:** 2 blank lines (unless stacked with no content between).
 
-**Correct:**
-
-```markdown
-## Section one
-
-This section has content, so the next heading needs 2 blank lines.
+**After headings:** 1 blank line before content.
 
 
-## Section two
+## Line Wrapping
 
-More content here.
-```
-
-**Correct:**
-
-```markdown
-## Section one
-
-### Subsection
-
-No blank lines needed between stacked headings.
-```
-
-**Incorrect:**
-
-```markdown
-## Section one
+Wrap at **120 characters** for prose. Code blocks, tables, URLs, and commands are exempt.
 
 
-### Subsection
-```
+## Code Blocks
 
-
-## Line wrapping
-
-Wrap lines at **120 characters** for prose content. Code blocks and tables are exempt from this rule.
-
-**When to wrap:**
-- Paragraph text in documentation
-- List items with long descriptions
-- Notes and descriptions in task files
-
-**When not to wrap:**
-- Code blocks
-- Table content
-- URLs
-- Command examples
-
-
-## Code blocks
-
-Use fenced code blocks with triple backticks. Always specify a language identifier for syntax highlighting.
+Fenced code blocks with triple backticks and language identifier.
 
 ```markdown
 ```bash
-s9 task create "Fix bug in parser"
+s9 task create "Fix bug"
 ```
 ```
 
-**Common language identifiers:**
-- `bash` - Shell commands
-- `python` - Python code
-- `yaml` - YAML configuration
-- `markdown` - Markdown examples
-- `text` - Plain text output
-- `json` - JSON data
+**Common languages:** `bash`, `python`, `yaml`, `markdown`, `text`, `json`
 
-**Do not use** indented code blocks (4-space indent style).
+**Don't use** indented code blocks (4-space style).
 
 
 ## Lists
 
-**When to use lists:**
-- Enumerating distinct items, features, or options
-- Sequential steps in a process
-- Multiple related examples or cases
-- Key points that benefit from visual separation
+**Use lists for:** Distinct items, sequential steps, related examples, key points needing visual separation.
 
-**When NOT to use lists:**
-- Content that flows naturally as prose
-- Explanations that need narrative structure
-- Single items (just use a paragraph)
-- Excessive nesting (more than 2 levels deep)
+**Don't use for:** Prose content, narrative explanations, single items, excessive nesting (>2 levels).
 
-**Golden rule:** Use lists when enumeration adds clarity. If the content reads better as flowing prose, skip the
-bullets. Lists are tools for clarity, not default formatting.
+**Golden rule:** Use lists when enumeration adds clarity.
 
 
-### Unordered lists
+### Unordered Lists
 
-Use hyphens (`-`) as bullets. Use 2-space indentation for nested items.
+Hyphens (`-`) with 2-space nesting.
 
 ```markdown
 - First item
 - Second item
   - Nested item
-  - Another nested item
 - Third item
 ```
 
-Place a blank line before and after lists when separating from other block elements (paragraphs, headings, code blocks).
+Blank line before and after lists when separating from other blocks.
 
 
-### Ordered lists
+### Ordered Lists
 
-Use sequential numbering (`1.`, `2.`, `3.`).
-
-```markdown
-1. First step
-2. Second step
-3. Third step
-```
-
-You may use auto-numbering (all items as `1.`) if preferred, but be consistent within a document.
+Sequential numbering (`1.`, `2.`, `3.`) or auto-numbering (all `1.`). Be consistent within document.
 
 
 ## Tables
 
 ### Alignment
 
-**ALWAYS align table columns vertically in the source markdown.** Tables must be readable in both the editor and the browser. Properly aligned tables make code review, manual editing, and understanding content structure much easier.
+**ALWAYS align columns vertically.** Tables must be readable in source and browser.
 
 **Good:**
 
@@ -178,206 +94,103 @@ You may use auto-numbering (all items as `1.`) if preferred, but be consistent w
 | Data       | More data  | Even more    |
 ```
 
-**Unacceptable:**
-
-```markdown
-| Column One | Column Two | Column Three |
-|---|---|---|
-| Short | Medium | Long content |
-| Data | More data | Even more |
-```
-
-**Why this matters:** Unaligned tables are difficult to read and edit in source files. Since markdown is read both as source and rendered output, source readability is just as important as rendered appearance.
-
 
 ### Syntax
 
-- Use leading and trailing pipes on every row
-- Use simple hyphens in separator row (no alignment syntax like `:---:` or `---:` unless alignment is needed)
-- Left-align content by default
+- Leading and trailing pipes on every row
+- Simple hyphens in separator row (use alignment syntax `:---:` / `---:` only when needed)
+- Left-align by default
 
 
 ## Emphasis
 
-### Bold
+**Bold:** `**double asterisks**`
 
-Use double asterisks for bold text.
+**Italic:** `_single underscores_`
 
-```markdown
-**bold text**
-```
-
-
-### Italic
-
-Use single underscores for italic text.
-
-```markdown
-_italic text_
-```
-
-
-### Bold in lists
-
-Use bold for emphasis on key terms in list items.
-
-```markdown
-- **Project name** - The name of your project
-- **Project type** - Select from python, typescript, go, rust, or other
-```
+**Bold in lists:** Use for key terms: `- **Term** - Description`
 
 
 ## Admonitions
 
-Admonitions are special callout boxes used to highlight important information. Use them sparingly to draw attention
-to critical notes, warnings, or tips.
+Callout boxes for critical information. Use sparingly.
 
-**When to use admonitions:**
-- Critical warnings about destructive operations
-- Important prerequisites or requirements
-- Security considerations
-- Common pitfalls or gotchas
-- Key concepts that deserve emphasis
+**Use for:** Critical warnings, prerequisites, security concerns, common pitfalls, key concepts.
 
-**When NOT to use admonitions:**
-- General information (use regular prose)
-- Every other paragraph (overuse reduces impact)
-- Styling regular content (not for visual variety)
+**Don't use for:** General info, every paragraph, styling regular content.
 
-**Golden rule:** If everything is important, nothing is important. Reserve admonitions for content that truly deserves
-special attention.
+**Golden rule:** If everything is important, nothing is important.
 
 
-### For MkDocs documentation (`docs/source/`)
-
-Use MkDocs-style admonitions with `!!!` or `???` syntax:
+### MkDocs (`docs/source/`)
 
 ```markdown
 !!! note
-    This is a note admonition.
+    This is a note.
 
 !!! warning
-    This is a warning about potential issues.
+    Potential issues.
 
 !!! danger
-    This is a critical warning about dangerous operations.
-
-!!! tip
-    This is a helpful tip for users.
-
-!!! info
-    This is informational content.
+    Critical warning.
 ```
 
-**Collapsible admonitions:**
+**Types:** `note`, `abstract`, `info`, `tip`, `success`, `question`, `warning`, `failure`, `danger`, `bug`, `example`,
+`quote`
 
-```markdown
-??? note "Click to expand"
-    This content is collapsed by default.
-
-???+ warning "Expanded by default"
-    This content is expanded by default but can be collapsed.
-```
-
-**Available types:** `note`, `abstract`, `info`, `tip`, `success`, `question`, `warning`, `failure`, `danger`, `bug`,
-`example`, `quote`
+**Collapsible:** Use `???` for collapsed, `???+` for expanded by default.
 
 
-### For all other markdown files
+### Other Markdown Files
 
-Use GitHub-style admonitions with blockquote syntax:
+GitHub-style with blockquote syntax:
 
 ```markdown
 > [!NOTE]
-> This is a note admonition.
+> This is a note.
 
 > [!WARNING]
-> This is a warning about potential issues.
+> Potential issues.
 
 > [!IMPORTANT]
-> This highlights critical information.
-
-> [!TIP]
-> This provides a helpful tip.
-
-> [!CAUTION]
-> This warns about potential problems.
+> Critical information.
 ```
 
-**Available types:** `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`
-
-**Example usage:**
-
-```markdown
-Before running this command, ensure your database is backed up.
-
-> [!WARNING]
-> This operation will delete all data in the database. This action cannot be undone.
-
-To proceed with the deletion:
-```
+**Types:** `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`
 
 
-## Links
+## Links, Rules, Emoji
 
-Use inline reference style for links.
+**Links:** Inline reference style: `[Link text](path/to/file.md)`
 
-```markdown
-[Link text](path/to/file.md)
-[External link](https://example.com)
-```
+**Horizontal rules:** 8 hyphens: `--------`
 
-
-## Horizontal rules
-
-Use 8 hyphens for horizontal rules.
-
-```markdown
---------
-```
+**Emoji:** Use sparingly for section markers, status indicators, warnings. Avoid in technical docs, ADRs, API refs.
 
 
-## Emoji usage
+## Front Matter
 
-Use emojis sparingly and purposefully. Appropriate uses include:
-
-- Section markers in guides (e.g., `### 📚 Essential Reading`)
-- Status indicators in task files
-- Warning/info callouts (e.g., `### ⚠️ Critical Requirements`)
-
-Avoid emoji in:
-- Technical documentation
-- ADRs
-- API references
-- Code comments
-
-
-## Front matter
-
-Mission files and certain documentation may use YAML front matter. Place it at the very beginning of the file with no
-blank lines before it.
+YAML front matter at file beginning (no blank lines before).
 
 ```markdown
 ---
 id: MISSION-001
 persona: haya-ji
 role: Documentarian
-status: active
 ---
 
 # Mission Title
 ```
 
 
-## Summary checklist
+## Checklist
 
-When creating or editing markdown files, ensure:
-
-- [ ] ATX-style headings (`#`) with proper capitalization (Title Case for H1, Sentence case for H2+)
-- [ ] 2 blank lines before headings (except when stacked with no content between)
-- [ ] Lines wrapped at 120 characters (prose only)
-- [ ] Fenced code blocks with language identifiers
-- [ ] Hyphen bullets (`-`) with 2-space indentation
-- [ ] Tables aligned vertically in source
-- [ ] Minimal and purposeful emoji usage
-- [ ] Links use inline reference style `[text](path)`
+- [ ] ATX headings (`#`) - Title Case H1, Sentence case H2+
+- [ ] 2 blank lines before headings (except stacked)
+- [ ] 1 blank line after headings
+- [ ] 120-char line wrap (prose only)
+- [ ] Fenced code blocks with language IDs
+- [ ] Hyphen bullets (`-`) with 2-space indent
+- [ ] Aligned table columns
+- [ ] Minimal emoji
+- [ ] Inline links `[text](path)`

@@ -1,593 +1,317 @@
 # Troubleshooting Guide
 
-Common issues and solutions for developing site-nine.
+Common issues and solutions.
 
 ## Quick Diagnostics
 
-When something goes wrong, start here:
-
 ```bash
-# Check installation
-s9 --version
-
-# Verify dependencies
-uv sync
-
-# Run all quality checks
-make qa
-
-# Check git status
-git status
+s9 --version        # Check installation
+uv sync             # Verify dependencies
+make qa             # Run quality checks
+git status          # Check git status
 ```
 
 ## Tests Failing
 
-### Symptoms
-
-- `make qa/test` fails
-- pytest shows test failures
-- CI/CD pipeline fails on tests
-
-### Diagnosis
-
+**Diagnosis:**
 ```bash
-# Run with verbose output to see details
-uv run pytest -vv
-
-# Run specific failing test
-uv run pytest tests/cli/test_task.py::test_create_task -vv
-
-# Run with full traceback
-uv run pytest --tb=long
-
-# Check test coverage
-uv run pytest --cov=src/site_nine --cov-report=term-missing
+uv run pytest -vv                                              # Verbose output
+uv run pytest tests/cli/test_task.py::test_create_task -vv   # Specific test
+uv run pytest --tb=long                                        # Full traceback
+uv run pytest --cov=src/site_nine --cov-report=term-missing  # Coverage
 ```
 
-### Solutions
+**Solutions:**
 
-**Formatting issues:**
+Formatting issues:
 ```bash
-# Format code automatically
-make qa/format
-
-# Check what changed
-git diff
-
-# Run tests again
-make qa/test
+make qa/format && make qa/test
 ```
 
-**Linting issues:**
+Linting issues:
 ```bash
-# Check linting errors
-make qa/lint
-
-# Fix auto-fixable issues
-ruff check --fix src/ tests/
-
-# Run tests again
-make qa/test
+ruff check --fix src/ tests/ && make qa/test
 ```
 
-**Import errors in tests:**
+Import errors:
 ```bash
-# Reinstall in development mode
 uv sync
-
-# Verify package is installed
 uv run python -c "import site_nine; print(site_nine.__file__)"
 ```
 
-**Database state issues:**
+Database state:
 ```bash
-# Test database might be stale
-rm -f tests/.test.db
-
-# Re-run tests
-make qa/test
+rm -f tests/.test.db && make qa/test
 ```
 
-**Fixture issues:**
+Fixture issues:
 ```bash
-# Check fixture definitions
-grep -r "@pytest.fixture" tests/
-
-# Verify fixture usage matches definition
-uv run pytest --fixtures
+uv run pytest --fixtures  # List all fixtures
 ```
 
-### Common Test Failures
+**Common Failures:**
 
-**`ModuleNotFoundError: No module named 'site_nine'`**
-```bash
-# Solution: Reinstall package
-uv sync
-uv run pytest
-```
-
-**`AssertionError` in tests**
-- Read the test output carefully
-- Check if the test expectations match actual behavior
-- Verify test data is correct
-- Check for flaky tests (timing issues)
-
-**`fixture 'xyz' not found`**
-```bash
-# Check conftest.py files
-find tests/ -name conftest.py
-
-# Verify fixture is defined
-grep "def xyz" tests/conftest.py
-```
+- `ModuleNotFoundError: No module named 'site_nine'` → `uv sync && uv run pytest`
+- `AssertionError` → Read test output, verify expectations match behavior, check for flaky tests
+- `fixture 'xyz' not found` → Check `tests/conftest.py` for fixture definition
 
 ## Database Issues
 
-### Symptoms
-
-- CLI commands fail with database errors
-- `project.db` is locked or corrupted
-- Missing tables or columns
-- Data is missing or incorrect
-
-### Diagnosis
-
+**Diagnosis:**
 ```bash
-# Check database exists
-ls -la .opencode/data/project.db
-
-# Verify schema
-sqlite3 .opencode/data/project.db ".schema"
-
-# Check tables
-sqlite3 .opencode/data/project.db ".tables"
-
-# Query data
-sqlite3 .opencode/data/project.db "SELECT * FROM tasks LIMIT 5;"
+ls -la .opencode/data/project.db                            # Check existence
+sqlite3 .opencode/data/project.db ".schema"                 # View schema
+sqlite3 .opencode/data/project.db ".tables"                 # List tables
+sqlite3 .opencode/data/project.db "SELECT * FROM tasks;"   # Query data
 ```
 
-### Solutions
+**Solutions:**
 
-**Database doesn't exist:**
+Database doesn't exist:
 ```bash
-# Run s9 init to create database
 s9 init
-
-# Verify database was created
 ls -la .opencode/data/project.db
 ```
 
-**Database is locked:**
+Database locked:
 ```bash
-# Check for stuck processes
-ps aux | grep s9
-
-# Kill stuck processes
-kill <PID>
-
-# Try command again
-s9 task list
+ps aux | grep s9    # Find stuck processes
+kill <PID>          # Kill them
+s9 task list        # Retry
 ```
 
-**Schema is wrong (missing tables/columns):**
+Wrong schema:
 ```bash
-# Backup existing database
 cp .opencode/data/project.db .opencode/data/project.db.backup
-
-# Check schema file
-cat src/site_nine/templates/schema.sql
-
-# Reinitialize database (WARNING: loses data)
-rm .opencode/data/project.db
-s9 init
-
-# Or: Create migration script for schema changes
+rm .opencode/data/project.db && s9 init  # WARNING: loses data
+# Or create migration script
 ```
 
-**Database is corrupted:**
+Database corrupted:
 ```bash
-# Try to recover
 sqlite3 .opencode/data/project.db ".recover"
-
-# If recovery fails, restore from backup
-cp .opencode/data/project.db.backup .opencode/data/project.db
-
-# If no backup, reinitialize (loses data)
-rm .opencode/data/project.db
-s9 init
+# If fails: cp .opencode/data/project.db.backup .opencode/data/project.db
 ```
 
-**Foreign key constraint errors:**
+Foreign key errors:
 ```bash
-# Check if foreign keys are enabled
 sqlite3 .opencode/data/project.db "PRAGMA foreign_keys;"
-
-# Verify referenced data exists
 sqlite3 .opencode/data/project.db "SELECT * FROM tasks WHERE id = 'ENG-H-0001';"
 ```
 
 ## CLI Not Working
 
-### Symptoms
-
-- `s9: command not found`
-- `ModuleNotFoundError: No module named 's9'`
-- CLI commands hang or crash
-- Wrong version installed
-
-### Diagnosis
-
+**Diagnosis:**
 ```bash
-# Check if s9 is installed
-which s9
-
-# Check version
-s9 --version
-
-# Check Python path
-uv run python -c "import sys; print(sys.path)"
-
-# Verify package structure
-ls -la src/site_nine/
+which s9                                             # Check if installed
+s9 --version                                         # Check version
+uv run python -c "import sys; print(sys.path)"      # Check Python path
+ls -la src/site_nine/                               # Verify structure
 ```
 
-### Solutions
+**Solutions:**
 
-**`s9: command not found`**
-
+`s9: command not found`:
 ```bash
-# Option 1: Install as uv tool (recommended)
-uv tool uninstall site-nine  # Remove old version first
+# Option 1: uv tool (recommended)
+uv tool uninstall site-nine
 uv tool install --editable .
 s9 --version
 
-# Option 2: Use uv run (doesn't install globally)
+# Option 2: uv run (no global install)
 uv run s9 --help
 
-# Option 3: Install with pip
+# Option 3: pip
 pip install --editable .
-s9 --version
 ```
 
-**`ModuleNotFoundError: No module named 's9'`**
-
-This happens when the package was renamed from `s9` to `site_nine`:
-
+`ModuleNotFoundError: No module named 's9'` (old package name):
 ```bash
-# Uninstall old version
 uv tool uninstall s9
 uv tool uninstall site-nine
-
-# Reinstall with correct name
 uv tool install --editable .
-
-# Verify
 s9 --version
 ```
 
-**CLI hangs or crashes:**
+CLI hangs/crashes:
 ```bash
-# Check for infinite loops or deadlocks
-ps aux | grep s9
-
-# Run with debugging
-uv run python -m pdb -m site_nine.cli.main task list
-
-# Check logs
-tail -f ~/.local/share/site-nine/logs/site-nine.log  # If logging is configured
+ps aux | grep s9                                         # Check for deadlocks
+uv run python -m pdb -m site_nine.cli.main task list   # Debug
 ```
 
-**Wrong version installed:**
+Wrong version:
 ```bash
-# Check installed version
-s9 --version
-
-# Check git branch
-git branch
-
-# Reinstall from current branch
+s9 --version && git branch
 uv tool uninstall site-nine
 uv tool install --editable .
-s9 --version
 ```
 
 ## Import Errors
 
-### Symptoms
-
-- `ModuleNotFoundError: No module named 'site_nine'`
-- `ImportError: cannot import name 'X' from 'site_nine.Y'`
-- Circular import errors
-
-### Diagnosis
-
+**Diagnosis:**
 ```bash
-# Check Python path
 uv run python -c "import sys; print(sys.path)"
-
-# Try importing directly
 uv run python -c "import site_nine; print(site_nine.__file__)"
-
-# Check for __init__.py files
 find src/site_nine -name __init__.py
-
-# Verify package structure
 tree src/site_nine/
 ```
 
-### Solutions
+**Solutions:**
 
-**Module not found:**
+Module not found:
 ```bash
-# Reinstall in development mode
 uv sync
-
-# Verify installation
 uv run python -c "import site_nine; print(site_nine.__version__)"
 ```
 
-**Circular imports:**
+Circular imports:
 ```python
-# Identify the cycle
+# Identify cycle
 uv run python -c "import site_nine.module_name"
-# Look for the circular dependency in the traceback
+# Check traceback for cycle
 
-# Solutions:
-# 1. Move import inside function
-# 2. Use TYPE_CHECKING for type hints
-# 3. Restructure code to break dependency cycle
+# Fix: Move import inside function, use TYPE_CHECKING, or restructure code
 ```
 
-**Missing __init__.py:**
+Missing `__init__.py`:
 ```bash
-# Find directories without __init__.py
 find src/site_nine -type d -exec test ! -e {}/__init__.py \; -print
-
-# Add __init__.py to each directory
 touch src/site_nine/submodule/__init__.py
 ```
 
 ## Dependency Issues
 
-### Symptoms
-
-- `uv sync` fails
-- Package conflicts
-- Missing dependencies
-- Wrong Python version
-
-### Diagnosis
-
+**Diagnosis:**
 ```bash
-# Check Python version
-python --version
-uv run python --version
-
-# Check pyproject.toml
+python --version && uv run python --version
 cat pyproject.toml | grep requires-python
-
-# List installed packages
 uv pip list
-
-# Check for conflicts
 uv pip check
 ```
 
-### Solutions
+**Solutions:**
 
-**Wrong Python version:**
+Wrong Python version:
 ```bash
-# Use uv to manage Python versions
 uv python install 3.12
-
-# Set Python version for project
 uv python pin 3.12
 ```
 
-**Dependency conflicts:**
+Dependency conflicts:
 ```bash
-# Update dependencies
 uv lock --upgrade
-
-# Reinstall all dependencies
 uv sync --reinstall
 ```
 
-**Missing dependencies:**
+Missing dependencies:
 ```bash
-# Install all dependencies from lock file
 uv sync
-
-# Install additional dependency
 uv add <package-name>
 ```
 
 ## Git Issues
 
-### Symptoms
-
-- Merge conflicts
-- Detached HEAD state
-- Uncommitted changes blocking operations
-- Wrong branch
-
-### Diagnosis
-
+**Diagnosis:**
 ```bash
-# Check status
 git status
-
-# Check branch
 git branch
-
-# Check remote
 git remote -v
-
-# Check log
 git log --oneline -10
 ```
 
-### Solutions
+**Solutions:**
 
-**Merge conflicts:**
+Merge conflicts:
 ```bash
-# See conflicted files
-git status
-
-# Resolve conflicts manually, then:
+git status                       # See conflicts
+# Resolve manually, then:
 git add <resolved-files>
 git commit
-
-# Or abort merge
-git merge --abort
+# Or: git merge --abort
 ```
 
-**Detached HEAD:**
+Detached HEAD:
 ```bash
-# Create branch from detached HEAD
-git checkout -b fix/detached-head
-
-# Or go back to main
-git checkout main
+git checkout -b fix/detached-head  # Create branch
+# Or: git checkout main            # Go back
 ```
 
-**Uncommitted changes:**
+Uncommitted changes:
 ```bash
-# Stash changes
-git stash
-
-# Do operation
+git stash                          # Save changes
 git checkout other-branch
-
-# Restore changes
-git stash pop
-
-# Or discard changes (WARNING: destructive)
-git reset --hard HEAD
+git stash pop                      # Restore
+# Or: git reset --hard HEAD        # WARNING: destroys changes
 ```
 
-**Wrong branch:**
+Wrong branch:
 ```bash
-# Switch to correct branch
 git checkout main
-
-# Move uncommitted changes to new branch
-git stash
-git checkout -b feature/new-branch
-git stash pop
+# Or move changes: git stash && git checkout -b feature/new && git stash pop
 ```
 
 ## Performance Issues
 
-### Symptoms
-
-- Slow tests
-- Slow CLI commands
-- High memory usage
-- Slow database queries
-
-### Diagnosis
-
+**Diagnosis:**
 ```bash
-# Profile tests
-uv run pytest --profile
-
-# Profile CLI command
-uv run python -m cProfile -s cumtime -m site_nine.cli.main task list
-
-# Check database query performance
+uv run pytest --profile                                                # Profile tests
+uv run python -m cProfile -s cumtime -m site_nine.cli.main task list  # Profile CLI
 sqlite3 .opencode/data/project.db "EXPLAIN QUERY PLAN SELECT * FROM tasks WHERE status='TODO';"
 ```
 
-### Solutions
+**Solutions:**
 
-**Slow tests:**
+Slow tests:
 ```bash
-# Run tests in parallel
-uv run pytest -n auto
-
-# Identify slow tests
-uv run pytest --durations=10
-
-# Skip slow tests during development
-uv run pytest -m "not slow"
+uv run pytest -n auto              # Parallel
+uv run pytest --durations=10       # Find slow tests
+uv run pytest -m "not slow"        # Skip slow tests
 ```
 
-**Slow database queries:**
+Slow queries:
 ```sql
--- Add indexes
 CREATE INDEX idx_tasks_status ON tasks(status);
 CREATE INDEX idx_tasks_role ON tasks(role);
-
--- Verify indexes exist
-.indexes tasks
 ```
 
-**High memory usage:**
+High memory:
 ```bash
-# Profile memory
 uv run python -m memory_profiler script.py
-
-# Check for memory leaks
-# Use objgraph or tracemalloc
 ```
 
 ## Integration Test Issues
 
-### Symptoms
-
-- Integration tests fail
-- Docker containers not starting
-- Services not accessible
-- Timeouts
-
-### Diagnosis
-
+**Diagnosis:**
 ```bash
-# Check Docker status
 docker ps
-
-# Check service logs
 docker compose logs
-
-# Check network
 docker network ls
 docker network inspect site-nine_default
 ```
 
-### Solutions
+**Solutions:**
 
-**Docker not running:**
+Docker not running:
 ```bash
-# Start Docker daemon
-# (varies by OS)
-
-# Verify Docker is running
-docker ps
+docker ps  # Verify Docker daemon is up
 ```
 
-**Services not starting:**
+Services not starting:
 ```bash
-# Restart services
 docker compose down
 docker compose up -d
-
-# Check logs for errors
 docker compose logs -f
 ```
 
-**Port conflicts:**
+Port conflicts:
 ```bash
-# Check what's using the port
 lsof -i :5432  # PostgreSQL
 lsof -i :6379  # Redis
-
-# Kill conflicting process or change port in docker-compose.yml
+# Kill process or change port in docker-compose.yml
 ```
 
-**Network issues:**
+Network issues:
 ```bash
-# Recreate network
 docker compose down
 docker network prune
 docker compose up -d
@@ -595,48 +319,31 @@ docker compose up -d
 
 ## Getting Help
 
-### Before Asking for Help
+**Before asking:**
+1. Check this guide
+2. Search GitHub issues
+3. Read error messages carefully
+4. Try basic diagnostics
+5. Check recent changes (`git log`)
 
-1. ✅ Check this troubleshooting guide
-2. ✅ Search existing issues on GitHub
-3. ✅ Read error messages carefully
-4. ✅ Try basic diagnostics above
-5. ✅ Check recent changes (git log)
+**When asking, include:**
+- Error message (full traceback)
+- Command you ran
+- Expected vs actual behavior
+- Environment (OS, Python version, s9 version)
+- Recent changes (`git log -5`)
 
-### When Asking for Help
-
-Include:
-- **Error message** (full traceback)
-- **Command you ran** (exact command)
-- **Expected behavior** (what should happen)
-- **Actual behavior** (what actually happened)
-- **Environment** (OS, Python version, s9 version)
-- **Recent changes** (git log -5)
-
-### Useful Debug Commands
-
+**Debug commands:**
 ```bash
-# Environment info
 uv run python --version
 s9 --version
-git branch
-git log -3 --oneline
-
-# Full system info
-uv run python -c "import sys; print(sys.version)"
-uv run python -c "import platform; print(platform.platform())"
-
-# Package versions
+git branch && git log -3 --oneline
 uv pip list
-
-# Git state
-git status
-git diff
+git status && git diff
 ```
 
 ## Related Documentation
 
-- **Testing Guide:** `.opencode/docs/guides/testing.md` - Test patterns and debugging
-- **Commit Guidelines:** `.opencode/docs/guides/commit-guidelines.md` - Git workflow
-- **Architecture Guide:** `.opencode/docs/guides/architecture.md` - System overview
-- **Code Review Guide:** `.opencode/docs/guides/code-review.md` - Review checklist and best practices
+- **Testing Guide:** `.opencode/docs/guides/testing.md`
+- **Commit Guidelines:** `.opencode/docs/guides/commit-guidelines.md`
+- **Code Review Guide:** `.opencode/docs/guides/code-review.md`

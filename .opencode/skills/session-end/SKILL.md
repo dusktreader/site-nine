@@ -23,7 +23,8 @@ All commands in this skill use the `s9` executable via bash. You should NOT atte
 **You should ONLY execute this skill if:**
 1. ✅ The Director explicitly used the `/dismiss` command, OR
 2. ✅ The Director explicitly said you're dismissed/done/released, OR
-3. ✅ The Director clearly indicated the session is ending
+3. ✅ The Director clearly indicated the session is ending, OR
+4. ✅ You just completed a handoff via the `handoff-workflow` skill (Step 7 directs you here)
 
 **DO NOT execute this skill if:**
 - ❌ You're just finished with one task (claim another task instead)
@@ -38,10 +39,10 @@ Director, are you dismissing me? Should I end my mission and close this session?
 ```
 
 **Why this matters:**
-- Ending your mission prematurely creates "zombie" IDLE missions in the database
+- Ending your mission prematurely creates "zombie" ACTIVE/IDLE missions in the database
+- Missions without heartbeats for >8h are flagged as stale by `s9 doctor`
 - Tasks get left in inconsistent states
 - The system accumulates abandoned work
-- `s9 doctor` will report issues
 - You waste the Director's time
 
 **If you proceed incorrectly, the Director will be frustrated with you.**
@@ -280,14 +281,15 @@ s9 mission end <your-mission-id>
 
 **What this command does:**
 - Sets the `end_time` in the missions table
+- Sets the mission status to `ENDED`
 - Marks the mission as officially closed
 - Updates the mission file frontmatter
-- Prevents the mission from showing up as IDLE in the dashboard
+- Prevents the mission from showing up as ACTIVE/IDLE in the dashboard
 
 **IF YOU DO NOT RUN THIS COMMAND:**
 - ❌ Your mission will remain "active" in the database indefinitely
-- ❌ It will show as IDLE in `s9 dashboard`
-- ❌ `s9 doctor` will report it as abandoned work
+- ❌ It will show as ACTIVE or IDLE in `s9 dashboard`
+- ❌ `s9 doctor` will flag it as stale after 8 hours with no heartbeat
 - ❌ The Director will have to manually clean up after you
 
 **Verify it worked:**
@@ -295,7 +297,7 @@ s9 mission end <your-mission-id>
 s9 mission show <your-mission-id>
 ```
 
-You should see an `end_time` in the output. If you see `end_time: None`, **THE COMMAND FAILED** - run it again.
+You should see `end_time` and `Status: Ended` in the output. If you see `end_time: None`, **THE COMMAND FAILED** - run it again.
 
 ## Step 9: Rename TUI Session to Indicate Dismissal
 

@@ -75,12 +75,12 @@ Located in `.opencode/docs/adrs/`:
 ### 4. Implementation Roadmap
 
 - **[Implementation Roadmap](./implementation-roadmap.md)**
-  - Detailed 6-8 week timeline broken into 5 phases
-  - **Phase 1 (Weeks 1-2)**: Adapter Foundation - protocols, OpenCodeAdapter, ToolRegistry
-  - **Phase 2 (Weeks 3-4)**: Cursor MCP Integration - CursorAdapter, MCP server, E2E tests
-  - **Phase 3 (Week 5)**: Unified Configuration - ToolConfig, config loaders, PathResolver
-  - **Phase 4 (Week 6)**: Skills Refactoring - skill.yaml format, executor, legacy converter
-  - **Phase 5 (Weeks 7-8)**: Testing & Polish - 90% coverage, docs, v2.0.0 release
+  - Detailed implementation timeline broken into 5 phases
+  - **Phase 1**: Adapter Foundation (XL) - protocols, OpenCodeAdapter, ToolRegistry
+  - **Phase 2**: Cursor MCP Integration (XL) - CursorAdapter, MCP server, E2E tests
+  - **Phase 3**: Unified Configuration (L) - ToolConfig, config loaders, PathResolver
+  - **Phase 4**: Skills Refactoring (L) - skill.yaml format, executor, legacy converter
+  - **Phase 5**: Testing & Polish (XL) - 90% coverage, docs, v2.0.0 release
   - Each phase has detailed tasks, deliverables, acceptance criteria
   - Risk management and success metrics
 
@@ -90,17 +90,17 @@ Located in `.opencode/docs/adrs/`:
 
 If you're implementing this architecture, read these documents in this order:
 
-1. **[ADR-001](../adrs/ADR-001-adapter-pattern-abstraction.md)** - Understand why adapter pattern (5 min)
-2. **[ADR-005](../adrs/ADR-005-backward-compatibility-strategy.md)** - Understand backward compatibility requirements (5 min)
-3. **[Technical Design Part 1](./technical-design-document.md)** - Learn ToolAdapter protocol (20 min)
-4. **[Implementation Roadmap](./implementation-roadmap.md)** - See task breakdown (15 min)
-5. **Current Codebase** - Review `src/site_nine/core/paths.py` to understand existing path resolution (10 min)
+1. **[ADR-001](../adrs/ADR-001-adapter-pattern-abstraction.md)** - Understand why adapter pattern
+2. **[ADR-005](../adrs/ADR-005-backward-compatibility-strategy.md)** - Understand backward compatibility requirements
+3. **[Technical Design Part 1](./technical-design-document.md)** - Learn ToolAdapter protocol
+4. **[Implementation Roadmap](./implementation-roadmap.md)** - See task breakdown
+5. **Current Codebase** - Review `src/site_nine/core/paths.py` to understand existing path resolution
 
-Total reading time: ~1 hour
+**Total**: M (Medium-sized reading task)
 
 ### Implementation Start
 
-**Phase 1, Week 1, Task 1.1: Create ToolAdapter Protocol**
+**Phase 1, Task 1.1: Create ToolAdapter Protocol (L)**
 
 ```bash
 # Create the adapter protocol
@@ -178,7 +178,7 @@ SkillRenderer (Presentation)
 - ✅ 5 ADRs documenting key decisions
 - ✅ 2-part technical design document (50+ pages)
 - ✅ Cursor MCP PoC specification ready for implementation
-- ✅ 6-8 week implementation roadmap with task breakdown
+- ✅ XXL implementation roadmap with detailed task breakdown
 - ✅ Engineer can start Phase 1 without architectural blockers
 
 ### Implementation Phase (Next)
@@ -195,14 +195,14 @@ See [Implementation Roadmap](./implementation-roadmap.md) for complete acceptanc
 
 ## Timeline
 
-- **Architecture Design**: 1 week (COMPLETE ✅)
-- **Phase 1 Implementation**: 2 weeks (Adapter Foundation)
-- **Phase 2 Implementation**: 2 weeks (Cursor MCP Integration)
-- **Phase 3 Implementation**: 1 week (Unified Configuration)
-- **Phase 4 Implementation**: 1 week (Skills Refactoring)
-- **Phase 5 Implementation**: 2 weeks (Testing & Polish)
+- **Architecture Design**: COMPLETE ✅
+- **Phase 1 Implementation**: XL (Adapter Foundation)
+- **Phase 2 Implementation**: XL (Cursor MCP Integration)
+- **Phase 3 Implementation**: L (Unified Configuration)
+- **Phase 4 Implementation**: L (Skills Refactoring)
+- **Phase 5 Implementation**: XL (Testing & Polish)
 
-**Total**: 7-9 weeks from architecture start to v2.0.0 release
+**Total**: XXL (Epic-level multi-phase implementation)
 
 ## Related Tasks
 
@@ -240,25 +240,25 @@ If you have questions about this architecture:
 
 ### By Phase
 
-**Phase 1 (Weeks 1-2): Adapter Foundation**
+**Phase 1 (XL): Adapter Foundation**
 - [Technical Design Part 1](./technical-design-document.md) - ToolAdapter protocol spec
 - [ADR-001](../adrs/ADR-001-adapter-pattern-abstraction.md) - Adapter pattern rationale
 - [ADR-005](../adrs/ADR-005-backward-compatibility-strategy.md) - OpenCodeAdapter requirements
 
-**Phase 2 (Weeks 3-4): Cursor MCP Integration**
+**Phase 2 (XL): Cursor MCP Integration**
 - [Cursor MCP PoC Spec](./cursor-mcp-poc-spec.md) - CursorAdapter specification
 - [ADR-002](../adrs/ADR-002-cursor-mcp-first-target.md) - Why Cursor MCP?
 - [Technical Design Part 2](./technical-design-document-part2.md) - ToolRegistry for detection
 
-**Phase 3 (Week 5): Unified Configuration**
+**Phase 3 (L): Unified Configuration**
 - [ADR-003](../adrs/ADR-003-unified-configuration-system.md) - Configuration design
 - [Technical Design Part 1](./technical-design-document.md) - ToolConfig specification
 
-**Phase 4 (Week 6): Skills Refactoring**
+**Phase 4 (L): Skills Refactoring**
 - [ADR-004](../adrs/ADR-004-skills-refactoring-approach.md) - Skills architecture
 - [Technical Design Part 2](./technical-design-document-part2.md) - SkillExecutor & SkillRenderer
 
-**Phase 5 (Weeks 7-8): Testing & Polish**
+**Phase 5 (XL): Testing & Polish**
 - [Technical Design Part 2](./technical-design-document-part2.md) - Testing strategy
 - [Implementation Roadmap](./implementation-roadmap.md) - Release criteria
 

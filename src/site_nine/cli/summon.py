@@ -5,12 +5,14 @@ from typing import Annotated
 
 import typer
 from snick import conjoin
-from typerdrive import attach_settings, terminal_message
+from typerdrive import attach_settings, handle_errors, terminal_message
 
-from site_nine.cli.utils import abort, abort_unless
+from site_nine.cli.utils import CLIError
 from site_nine.core.settings import SiteNineSettings
+from site_nine.exceptions import SiteNineError
 
 
+@handle_errors("Failed to summon agent", handle_exc_class=SiteNineError)
 @attach_settings(SiteNineSettings)
 def summon_command(
     ctx: typer.Context,
@@ -35,7 +37,7 @@ def summon_command(
         s9 summon operator --task OPR-H-0065
         s9 summon operator --model github-copilot/gpt-5
     """
-    abort_unless(
+    CLIError.require_condition(
         not (auto_assign and task),
         conjoin(
             "Cannot use both --auto-assign and --task flags together.",
@@ -78,6 +80,6 @@ def summon_command(
     try:
         subprocess.run(["opencode", "--model", model, "--prompt", summon_cmd], check=True)
     except subprocess.CalledProcessError as e:
-        abort(f"Error launching OpenCode: {e}")
+        raise CLIError(f"Error launching OpenCode: {e}")
     except FileNotFoundError:
-        abort("'opencode' command not found. Is OpenCode installed?")
+        raise CLIError("'opencode' command not found. Is OpenCode installed?")

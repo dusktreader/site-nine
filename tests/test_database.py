@@ -8,9 +8,9 @@ from site_nine.core.database import Database
 def test_database_init(temp_dir: Path):
     """Test database initialization"""
     db_path = temp_dir / "test.db"
-    db = Database(db_path)
-    assert db.db_path == db_path
-    assert db.engine is not None
+    with Database(db_path) as db:
+        assert db.db_path == db_path
+        assert db.engine is not None
 
 
 def test_initialize_schema(test_db: Database):
@@ -19,56 +19,55 @@ def test_initialize_schema(test_db: Database):
     result = test_db.execute_query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
     table_names = [row["name"] for row in result]
 
-    assert "daemon_names" in table_names
-    assert "agents" in table_names
+    assert "personas" in table_names
+    assert "missions" in table_names
     assert "tasks" in table_names
     assert "task_dependencies" in table_names
 
 
 def test_execute_query(test_db: Database):
     """Test query execution"""
-    # Insert a daemon name with valid role
+    # Insert a persona with valid role
     test_db.execute_update(
         """
-        INSERT INTO daemon_names (name, role, mythology, description, usage_count)
-        VALUES (:name, :role, :mythology, :description, :usage_count)
+        INSERT INTO personas (name, role, mythology, description)
+        VALUES (:name, :role, :mythology, :description)
         """,
         {
-            "name": "test-daemon",
+            "name": "test-query-persona",
             "role": "Administrator",
             "mythology": "test",
-            "description": "Test daemon",
-            "usage_count": 0,
+            "description": "Test persona",
         },
     )
 
     # Query it back
     result = test_db.execute_query(
-        "SELECT * FROM daemon_names WHERE name = :name",
-        {"name": "test-daemon"},
+        "SELECT * FROM personas WHERE name = :name",
+        {"name": "test-query-persona"},
     )
 
     assert len(result) == 1
-    assert result[0]["name"] == "test-daemon"
+    assert result[0]["name"] == "test-query-persona"
     assert result[0]["role"] == "Administrator"
 
 
 def test_execute_update(test_db: Database):
     """Test update execution"""
-    # Insert a daemon name with valid role
+    # Insert a persona with valid role
     test_db.execute_update(
         """
-        INSERT INTO daemon_names (name, role, mythology, description, usage_count)
-        VALUES ('update-test', 'Engineer', 'test', 'Test', 0)
+        INSERT INTO personas (name, role, mythology, description)
+        VALUES ('update-test', 'Architect', 'test', 'Test')
         """
     )
 
     # Update it
-    test_db.execute_update("UPDATE daemon_names SET usage_count = 5 WHERE name = 'update-test'")
+    test_db.execute_update("UPDATE personas SET description = 'Updated' WHERE name = 'update-test'")
 
     # Verify update
-    result = test_db.execute_query("SELECT usage_count FROM daemon_names WHERE name = 'update-test'")
-    assert result[0]["usage_count"] == 5
+    result = test_db.execute_query("SELECT description FROM personas WHERE name = 'update-test'")
+    assert result[0]["description"] == "Updated"
 
 
 def test_get_session(temp_dir):
@@ -77,12 +76,41 @@ def test_get_session(temp_dir):
     from site_nine.core.database import Database
 
     db_path = temp_dir / "test.db"
-    db = Database(db_path)
-    db.initialize_schema()
+    with Database(db_path) as db:
+        db.initialize_schema()
 
-    session = db.get_session()
+        session = db.get_session()
 
-    # Should return a session object
-    assert session is not None
-    # Should be able to close it
-    session.close()
+        # Should return a session object
+        assert session is not None
+        # Should be able to close it
+        session.close()
+
+
+def test_execute_insert(test_db: Database):
+    """Test insert execution with lastrowid return"""
+    # Insert a persona and get the row ID
+    row_id = test_db.execute_insert(
+        """
+        INSERT INTO personas (name, role, mythology, description)
+        VALUES (:name, :role, :mythology, :description)
+        """,
+        {
+            "name": "insert-test-persona",
+            "role": "Engineer",
+            "mythology": "test",
+            "description": "Test insert",
+        },
+    )
+
+    # Row ID should be returned
+    assert row_id is not None
+    assert row_id > 0
+
+    # Verify the row was inserted
+    result = test_db.execute_query(
+        "SELECT * FROM personas WHERE name = :name",
+        {"name": "insert-test-persona"},
+    )
+    assert len(result) == 1
+    assert result[0]["name"] == "insert-test-persona"

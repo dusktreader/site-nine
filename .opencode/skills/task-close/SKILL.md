@@ -31,14 +31,16 @@ I provide comprehensive instructions for closing tasks in the s9 task database. 
 
 ```bash
 s9 task close TASK_ID \
-  --status {COMPLETE|PAUSED|BLOCKED|ABORTED} \
-  --notes "Final summary"
+  --status {COMPLETE|ABORTED} \
+  [--notes "Final summary"]
 ```
 
 **Required:**
 - `TASK_ID` - The task to close
-- `--status` - Closing status (see below)
-- `--notes` - Summary of why closing with this status
+
+**Optional:**
+- `--status` or `-s` - Closing status (default: COMPLETE)
+- `--notes` or `-n` - Summary of why closing with this status
 
 ## Status Options
 
@@ -53,50 +55,10 @@ Use when:
 
 **Example:**
 ```bash
-s9 task close BLD-H-0037 \
+s9 task close ENG-H-0037 \
   --status COMPLETE \
   --notes "Rate limiting implemented and tested. All tests passing. Documentation updated."
 ```
-
-### PAUSED - Temporarily Stopped
-
-Use when:
-- Will resume later
-- Paused for higher priority work
-- Waiting for non-blocking dependency
-- Low priority, postponing
-
-**Example:**
-```bash
-s9 task close DOC-M-0019 \
-  --status PAUSED \
-  --notes "Pausing to work on critical security issue BLD-C-0003. Will resume after."
-```
-
-**Don't use PAUSED for:**
-- Tasks you'll never resume (use ABORTED)
-- Blocked by hard dependency (use BLOCKED)
-
-### BLOCKED - Can't Proceed
-
-Use when:
-- Waiting for external dependency
-- Needs decision from stakeholder
-- Technical blocker discovered
-- Waiting for another task to complete
-- Missing required resources
-
-**Example:**
-```bash
-s9 task close OPR-H-0038 \
-  --status BLOCKED \
-  --notes "Blocked by BLD-H-0037. Can't deploy gateway until rate limiting is complete."
-```
-
-**Include in notes:**
-- What you're blocked on
-- Task ID of blocking dependency (if applicable)
-- Who needs to unblock (if known)
 
 ### ABORTED - Cancelled
 
@@ -130,15 +92,15 @@ When you close a task:
 
 ```bash
 # Update final time and status
-s9 task update BLD-H-0037 --actual-hours 6.5
+s9 task update ENG-H-0037 --actual-hours 6.5
 
 # Close as complete
-s9 task close BLD-H-0037 \
+s9 task close ENG-H-0037 \
   --status COMPLETE \
   --notes "Rate limiting implemented and tested. All tests passing. Documentation updated. PR #123 merged."
 
 # Verify
-s9 task show BLD-H-0037
+s9 task show ENG-H-0037
 # Status: COMPLETE
 # Closed: 2026-02-05T23:30:00+00:00
 ```
@@ -152,7 +114,7 @@ s9 task update DOC-M-0019 --notes "50% complete - intro and setup sections done"
 # Pause it
 s9 task close DOC-M-0019 \
   --status PAUSED \
-  --notes "Pausing to handle critical security documentation for BLD-C-0003. Will resume after."
+  --notes "Pausing to handle critical security documentation for ENG-C-0003. Will resume after."
 ```
 
 ### Blocking on Dependency
@@ -161,7 +123,7 @@ s9 task close DOC-M-0019 \
 # Document the blocker
 s9 task close OPR-H-0038 \
   --status BLOCKED \
-  --notes "Blocked by BLD-H-0037. Need rate limiting middleware complete before deploying gateway. Estimated unblock: 2026-02-06."
+  --notes "Blocked by ENG-H-0037. Need rate limiting middleware complete before deploying gateway. Estimated unblock: 2026-02-06."
 ```
 
 ### Aborting Obsolete Task
@@ -180,17 +142,17 @@ To resume a paused or blocked task:
 
 ```bash
 # Update status back to UNDERWAY
-s9 task update BLD-H-0038 --status UNDERWAY --notes "Blocker resolved, resuming work"
+s9 task update ENG-H-0038 --status UNDERWAY --notes "Blocker resolved, resuming work"
 ```
 
 ### If Not Your Task
 
 ```bash
-# Claim it again
-s9 task claim BLD-H-0038 --agent-name "YourName"
+# Claim it again (using your mission ID and role)
+s9 task claim ENG-H-0038 --mission MISSION_ID --role Engineer
 
-# Update to UNDERWAY and add notes
-s9 task update BLD-H-0038 --notes "Blocker resolved, starting implementation"
+# Update status and add notes
+s9 task update ENG-H-0038 --status UNDERWAY --notes "Blocker resolved, starting implementation"
 ```
 
 ## Before Closing
@@ -201,7 +163,7 @@ s9 task update BLD-H-0038 --notes "Blocker resolved, starting implementation"
 - ✅ Tests written and passing
 - ✅ Code reviewed
 - ✅ Documentation updated
-- ✅ Time tracked accurately
+- ✅ Progress notes updated
 - ✅ Final notes written
 
 ### Checklist for PAUSED
@@ -255,7 +217,7 @@ s9 task update BLD-H-0038 --notes "Blocker resolved, starting implementation"
 
 ### "Task not claimed"
 - You can only close tasks you've claimed
-- Claim it first: `s9 task claim TASK_ID --agent-name "YourName"`
+- Claim it first: `s9 task claim TASK_ID --mission MISSION_ID --role ROLE`
 
 ### "Missing required notes"
 - `--notes` is required when closing
@@ -265,7 +227,7 @@ s9 task update BLD-H-0038 --notes "Blocker resolved, starting implementation"
 
 Verify task was closed:
 ```bash
-s9 task show BLD-H-0037
+s9 task show ENG-H-0037
 ```
 
 Check status and closing timestamp are correct.
@@ -275,14 +237,14 @@ Check status and closing timestamp are correct.
 ### Complete a Task End-to-End
 
 ```bash
-# 1. Claim it
-s9 task claim BLD-H-0037 --agent-name "Goibniu"
+# 1. Claim it (assuming mission ID 42)
+s9 task claim ENG-H-0037 --mission 42 --role Engineer
 
 # 2. Work on it, update progress
-s9 task update BLD-H-0037 --notes "Implemented core functionality" --actual-hours 2.0
+s9 task update ENG-H-0037 --status UNDERWAY --notes "Implemented core functionality"
 
 # 3. Close when done
-s9 task close BLD-H-0037 \
+s9 task close ENG-H-0037 \
   --status COMPLETE \
   --notes "All tests passing, code reviewed, documentation complete"
 ```
@@ -291,32 +253,32 @@ s9 task close BLD-H-0037 \
 
 ```bash
 # Working on medium priority task
-s9 task update DOC-M-0019 --notes "50% complete"
+s9 task update DOC-M-0019 --status UNDERWAY --notes "50% complete"
 
 # Critical issue appears
-s9 task close DOC-M-0019 --status PAUSED --notes "Pausing for BLD-C-0003"
+s9 task close DOC-M-0019 --status PAUSED --notes "Pausing for ENG-C-0003"
 
-# Work on critical issue
-s9 task claim BLD-C-0003 --agent-name "Goibniu"
-s9 task close BLD-C-0003 --status COMPLETE --notes "Security issue fixed"
+# Work on critical issue (assuming mission ID 42)
+s9 task claim ENG-C-0003 --mission 42 --role Engineer
+s9 task close ENG-C-0003 --status COMPLETE --notes "Security issue fixed"
 
 # Resume paused task
-s9 task update DOC-M-0019 --status UNDERWAY --notes "Resuming after BLD-C-0003"
+s9 task update DOC-M-0019 --status UNDERWAY --notes "Resuming after ENG-C-0003"
 ```
 
 ### Hit a Blocker
 
 ```bash
 # Working on task
-s9 task update OPR-H-0038 --notes "Need BLD-H-0037 to be complete first"
+s9 task update OPR-H-0038 --notes "Need ENG-H-0037 to be complete first"
 
 # Mark as blocked
 s9 task close OPR-H-0038 \
   --status BLOCKED \
-  --notes "Blocked by BLD-H-0037. Will resume when rate limiting is deployed."
+  --notes "Blocked by ENG-H-0037. Will resume when rate limiting is deployed."
 
 # When blocker is resolved
-s9 task update OPR-H-0038 --status UNDERWAY --notes "BLD-H-0037 complete, resuming"
+s9 task update OPR-H-0038 --status UNDERWAY --notes "ENG-H-0037 complete, resuming"
 ```
 
 ## See Also

@@ -4,10 +4,8 @@ import json
 from datetime import datetime
 from typing import Any
 
+import pendulum
 from pydantic import BaseModel
-from rich.console import Console
-
-console = Console()
 
 
 def to_json_serializable(obj: Any) -> Any:
@@ -22,6 +20,10 @@ def to_json_serializable(obj: Any) -> Any:
     # Handle Pydantic models
     if isinstance(obj, BaseModel):
         return obj.model_dump()
+
+    # Handle pendulum DateTime objects (must come before datetime check)
+    if isinstance(obj, pendulum.DateTime):
+        return obj.in_tz("UTC").to_iso8601_string()
 
     # Handle datetime objects
     if isinstance(obj, datetime):
@@ -69,7 +71,7 @@ def format_json_response(
             response["count"] = count
 
     # Add timestamp
-    response["timestamp"] = datetime.now().isoformat()
+    response["timestamp"] = pendulum.now("UTC").to_iso8601_string()
 
     # Add any additional metadata
     if metadata:
@@ -96,7 +98,7 @@ def format_json_error(
     response = {
         "status": "error",
         "error": error_message,
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": pendulum.now("UTC").to_iso8601_string(),
     }
 
     if error_code:

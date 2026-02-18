@@ -145,6 +145,26 @@ def show(
 
 
 @app.command()
+@handle_errors("Failed to release task", handle_exc_class=SiteNineError)
+def release(
+    task_id: Annotated[str, typer.Argument(help="Task ID")],
+) -> None:
+    """Release a task back to TODO (unassign from current mission) (typically used by: agents)"""
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        manager = TaskManager(db)
+        CLIError.enforce_defined(manager.get_task(task_id), f"Task '{task_id}' not found.")
+        manager.release_task(task_id)
+
+    terminal_message(
+        f"Task {task_id} released back to TODO",
+        subject="Done",
+        subject_color="green",
+    )
+
+
+@app.command()
 @handle_errors("Failed to claim task", handle_exc_class=SiteNineError)
 def claim(
     task_id: Annotated[str, typer.Argument(help="Task ID")],
@@ -550,15 +570,104 @@ def search(
 
 
 @app.command()
-@handle_errors("Failed to suggest next tasks", handle_exc_class=SiteNineError)
+@handle_errors("Failed to get next task", handle_exc_class=SiteNineError)
 def next(
-    role: Annotated[str | None, typer.Option("--role", "-r", help="Filter by role")] = None,
+    mission: Annotated[int | None, typer.Option("--mission", "-m", help="Mission ID (for epic auto-claim)")] = None,
+    role: Annotated[str | None, typer.Option("--role", "-r", help="Filter by role (for suggestions)")] = None,
     count: Annotated[int, typer.Option("--count", "-c", help="Number of suggestions")] = 3,
     json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
-    """Suggest next tasks to work on"""
+    """Get next task: auto-claim for epic missions, or suggest tasks
+
+    Two modes:
+    1. Epic Mission Mode (--mission provided):
+       Auto-finds and claims the next TODO task in the mission's epic
+       matching the mission's role. Requires epic-scoped mission.
+
+    2. Suggestion Mode (no --mission):
+       Lists suggested TODO tasks to work on (existing behavior).
+    """
     db_path = require_db_path()
 
+    # Mode 1: Epic mission auto-claim
+    if mission is not None:
+        with Database(db_path) as db:
+            manager = TaskManager(db)
+
+            # Get next task in epic
+            task = manager.get_next_epic_task(mission)
+
+            if not task:
+                if json_output:
+                    output_json(format_json_response({"error": "No available tasks in mission's epic"}))
+                else:
+                    terminal_message(
+                        "No available TODO tasks found in mission's epic matching your role.",
+                        subject="Info",
+                        subject_color="blue",
+                    )
+                return
+
+            # Check for blocks and dependencies
+            block_manager = BlockManager(db)
+            dep_manager = DependencyManager(db)
+
+            unresolved_blocks = block_manager.get_unresolved_blocks(task.id)
+            if unresolved_blocks:
+                block_lines = [f"Next task {task.id} is blocked by {len(unresolved_blocks)} external blocker(s):"]
+                for block in unresolved_blocks:
+                    block_lines.append(f"  - {block.block_type}: {block.description}")
+                block_lines.append("")
+                block_lines.append("Use 's9 block resolve <block-id>' to unblock this task.")
+                raise CLIError(conjoin(*block_lines))
+
+            incomplete_deps = dep_manager.check_task_blocked_by_dependencies(task.id)
+            if incomplete_deps:
+                dep_lines = [f"Next task {task.id} is blocked by {len(incomplete_deps)} incomplete dependency(ies):"]
+                for dep_id in incomplete_deps:
+                    dep_lines.append(f"  - {dep_id}")
+                dep_lines.append("")
+                dep_lines.append("These tasks must be completed first.")
+                raise CLIError(conjoin(*dep_lines))
+
+            # Get mission role for claiming
+            mission_rows = db.execute_query(
+                "SELECT role FROM missions WHERE id = :mission_id",
+                {"mission_id": mission},
+            )
+            CLIError.require_condition(mission_rows, f"Mission {mission} not found")
+            mission_role = mission_rows[0]["role"]
+
+            # Claim the task
+            manager.claim_task(task.id, mission, mission_role)
+
+        if json_output:
+            output_json(
+                format_json_response(
+                    {
+                        "id": task.id,
+                        "title": task.title,
+                        "priority": task.priority,
+                        "role": task.role,
+                        "status": "UNDERWAY",
+                        "mission_id": mission,
+                    }
+                )
+            )
+        else:
+            terminal_message(
+                conjoin(
+                    f"Claimed next task: {task.id}",
+                    f"  Title: {task.title}",
+                    f"  Priority: {task.priority}",
+                    f"  Role: {task.role}",
+                ),
+                subject="Done",
+                subject_color="green",
+            )
+        return
+
+    # Mode 2: Suggestion mode (original behavior)
     with Database(db_path) as db:
         manager = TaskManager(db)
         todo_tasks = manager.suggest_next_tasks(role=role, count=count)
@@ -602,6 +711,7 @@ def next(
     terminal_message(
         conjoin(
             "To claim a task: s9 task claim <TASK_ID> --mission <id> --role <role>",
+            "To auto-claim next epic task: s9 task next --mission <id>",
             "To see details: s9 task show <TASK_ID>",
         ),
         subject="Tip",

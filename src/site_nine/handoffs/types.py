@@ -1,20 +1,24 @@
 """Handoff types and enums"""
 
-from enum import Enum
+import inflection
+from auto_name_enum import AutoNameEnum, LowerCaseMixin, auto
 
 
-class HandoffStatus(str, Enum):
-    """Status of a handoff"""
+class HandoffStatus(AutoNameEnum, LowerCaseMixin):
+    """
+    Status of a handoff
 
-    PENDING = "pending"
-    ACCEPTED = "accepted"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
+    Attributes:
+        PENDING: Handoff created, awaiting acceptance
+        ACCEPTED: Handoff accepted, work in progress
+        COMPLETED: Handoff work finished successfully
+        CANCELLED: Handoff cancelled before completion
+    """
 
+    PENDING = auto()
+    ACCEPTED = auto()
+    COMPLETED = auto()
+    CANCELLED = auto()
 
-HANDOFF_STATUS_DISPLAY = {
-    HandoffStatus.PENDING: "Pending",
-    HandoffStatus.ACCEPTED: "Accepted",
-    HandoffStatus.COMPLETED: "Completed",
-    HandoffStatus.CANCELLED: "Cancelled",
-}
+    def __str__(self) -> str:
+        return inflection.titleize(self.value)

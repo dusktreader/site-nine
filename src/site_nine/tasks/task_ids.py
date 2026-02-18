@@ -2,17 +2,21 @@
 
 import re
 
+from buzz import enforce_defined, require_condition
+
+from site_nine.core.roles import Role
+
 # Role prefix mapping
 ROLE_PREFIXES = {
-    "Administrator": "ADM",
-    "Architect": "ARC",
-    "Engineer": "ENG",
-    "Tester": "TST",
-    "Documentarian": "DOC",
-    "Designer": "DES",
-    "Inspector": "INS",
-    "Operator": "OPR",
-    "Historian": "HIS",
+    Role.ADMINISTRATOR.title_case: "ADM",
+    Role.ARCHITECT.title_case: "ARC",
+    Role.ENGINEER.title_case: "ENG",
+    Role.TESTER.title_case: "TST",
+    Role.DOCUMENTARIAN.title_case: "DOC",
+    Role.DESIGNER.title_case: "DES",
+    Role.INSPECTOR.title_case: "INS",
+    Role.OPERATOR.title_case: "OPR",
+    Role.HISTORIAN.title_case: "HIS",
 }
 
 # Reverse mapping
@@ -33,37 +37,37 @@ CODE_TO_PRIORITY = {v: k for k, v in PRIORITY_CODES.items()}
 TASK_ID_PATTERN = re.compile(r"^([A-Z]{3})-([CHML])-(\d{4})$")
 
 
-def validate_task_id(task_id: str) -> tuple[bool, str | None]:
+def validate_task_id(task_id: str) -> None:
     """
     Validate task ID format.
 
     Args:
         task_id: Task ID to validate (e.g., "OPR-H-0001")
 
-    Returns:
-        Tuple of (is_valid, error_message)
+    Raises:
+        ValueError: If task ID format is invalid
     """
-    match = TASK_ID_PATTERN.match(task_id)
-    if not match:
-        return False, "Invalid format. Expected: PREFIX-PRIORITY-NUMBER (e.g., OPR-H-0001)"
+    match = enforce_defined(
+        TASK_ID_PATTERN.match(task_id),
+        "Invalid format. Expected: PREFIX-PRIORITY-NUMBER (e.g., OPR-H-0001)",
+        raise_exc_class=ValueError,
+    )
 
     prefix, priority_code, number = match.groups()
 
-    # Validate prefix
-    if prefix not in PREFIX_TO_ROLE:
-        valid_prefixes = ", ".join(sorted(ROLE_PREFIXES.values()))
-        return False, f"Invalid role prefix '{prefix}'. Valid: {valid_prefixes}"
+    valid_prefixes = ", ".join(sorted(ROLE_PREFIXES.values()))
+    require_condition(
+        prefix in PREFIX_TO_ROLE, f"Invalid role prefix '{prefix}'. Valid: {valid_prefixes}", raise_exc_class=ValueError
+    )
 
-    # Validate priority code
-    if priority_code not in CODE_TO_PRIORITY:
-        return False, f"Invalid priority code '{priority_code}'. Valid: C, H, M, L"
+    require_condition(
+        priority_code in CODE_TO_PRIORITY,
+        f"Invalid priority code '{priority_code}'. Valid: C, H, M, L",
+        raise_exc_class=ValueError,
+    )
 
-    # Validate number range
     num = int(number)
-    if num < 1 or num > 9999:
-        return False, "Number must be between 0001 and 9999"
-
-    return True, None
+    require_condition(1 <= num <= 9999, "Number must be between 0001 and 9999", raise_exc_class=ValueError)
 
 
 def parse_task_id(task_id: str) -> tuple[str, str, int] | None:
@@ -101,19 +105,18 @@ def format_task_id(role: str, priority: str, number: int) -> str:
 
     Returns:
         Formatted task ID (e.g., "OPR-H-0001")
+
+    Raises:
+        ValueError: If any component is invalid
     """
-    prefix = ROLE_PREFIXES.get(role)
-    if not prefix:
-        raise ValueError(f"Invalid role: {role}")
+    prefix = enforce_defined(ROLE_PREFIXES.get(role), f"Invalid role: {role}", raise_exc_class=ValueError)
+    priority_code = enforce_defined(
+        PRIORITY_CODES.get(priority), f"Invalid priority: {priority}", raise_exc_class=ValueError
+    )
 
-    priority_code = PRIORITY_CODES.get(priority)
-    if not priority_code:
-        raise ValueError(f"Invalid priority: {priority}")
-
-    if number < 1 or number > 9999:
-        raise ValueError("Number must be between 1 and 9999")
-
-    return f"{prefix}-{priority_code}-{number:04d}"
+    task_id = f"{prefix}-{priority_code}-{number:04d}"
+    validate_task_id(task_id)
+    return task_id
 
 
 def get_next_task_number(db) -> int:
@@ -126,20 +129,16 @@ def get_next_task_number(db) -> int:
     Returns:
         Next sequential number (1-9999)
     """
-    # Extract number from all task IDs
-    result = db.execute_query("SELECT id FROM tasks ORDER BY id DESC")
+    result = db.execute_query(
+        """
+        SELECT MAX(CAST(SUBSTR(id, -4) AS INTEGER)) as max_num
+        FROM tasks
+        """
+    )
 
-    if not result:
+    max_num = result[0]["max_num"]
+    if max_num is None:
         return 1
-
-    # Find highest number across all task IDs
-    max_num = 0
-    for row in result:
-        task_id = row["id"]
-        match = TASK_ID_PATTERN.match(task_id)
-        if match:
-            num = int(match.group(3))
-            max_num = max(max_num, num)
 
     return max_num + 1
 
@@ -153,15 +152,16 @@ def sort_task_ids(task_ids: list[str]) -> list[str]:
 
     Returns:
         Sorted list of task IDs
+
+    Raises:
+        ValueError: If any task ID is invalid
     """
     priority_order = {"C": 0, "H": 1, "M": 2, "L": 3}
 
     def sort_key(task_id: str) -> tuple:
-        match = TASK_ID_PATTERN.match(task_id)
-        if not match:
-            # Put invalid IDs at the end
-            return (999, "ZZZ", 9999)
-
+        match = enforce_defined(
+            TASK_ID_PATTERN.match(task_id), f"Invalid task ID format: {task_id}", raise_exc_class=ValueError
+        )
         prefix, priority_code, number = match.groups()
         return (priority_order.get(priority_code, 999), prefix, int(number))
 

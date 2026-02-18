@@ -17,10 +17,13 @@ dependencies = [
     "pyyaml>=6.0.0",
     "sqlalchemy>=2.0.0",
     "tabulate>=0.9.0",
+    "auto-name-enum @ git+https://github.com/dusktreader/auto-name-enum.git@v4.0.0",
+    "py-buzz>=7.3.0",
+    "pendulum>=3.2.0",
 ]
 
 [project.scripts]
-s9 = "site_nine.cli:main"
+s9 = "site_nine.__main__:app"
 
 
 [project.urls]

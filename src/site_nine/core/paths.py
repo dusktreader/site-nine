@@ -1,12 +1,14 @@
-"""Path utilities for finding and resolving .opencode directory"""
+"""Path utilities for project and package paths"""
 
+from importlib.resources import files
 from pathlib import Path
 
+from site_nine.core.exceptions import PathTraversalError
 
-class PathTraversalError(ValueError):
-    """Raised when a path attempts to escape the project boundary"""
 
-    pass
+def get_package_data_dir() -> Path:
+    """Get path to site_nine/data/ directory containing schema.sql, seed.sql, etc."""
+    return Path(str(files("site_nine").joinpath("data")))
 
 
 def find_opencode_dir(start_path: Path | None = None) -> Path | None:
@@ -33,16 +35,13 @@ def find_opencode_dir(start_path: Path | None = None) -> Path | None:
 
     current = start_path.resolve()
 
-    # Walk up directory tree
     while True:
         opencode_dir = current / ".opencode"
         if opencode_dir.exists() and opencode_dir.is_dir():
             return opencode_dir
 
-        # Check if we've reached the filesystem root
         parent = current.parent
         if parent == current:
-            # Reached root without finding .opencode
             return None
 
         current = parent
@@ -70,6 +69,34 @@ def get_opencode_dir() -> Path:
         msg = ".opencode directory not found. Run 's9 init' in your project root to create it."
         raise FileNotFoundError(msg)
     return opencode_dir
+
+
+def get_db_path() -> Path:
+    """
+    Get path to the project database file.
+
+    Returns:
+        Path to the project.db file
+
+    Raises:
+        FileNotFoundError: If .opencode directory or project.db not found
+    """
+    opencode_dir = get_opencode_dir()
+    db_path = opencode_dir / "data" / "project.db"
+    if not db_path.exists():
+        raise FileNotFoundError("project.db not found. Run 's9 init' first.")
+    return db_path
+
+
+def resolve_opencode_path(relative_path: str) -> Path:
+    """
+    Resolve a path relative to .opencode (e.g. ".opencode/docs/adrs/foo.md") to an absolute path.
+
+    Raises:
+        FileNotFoundError: If .opencode directory not found
+    """
+    opencode_dir = get_opencode_dir()
+    return opencode_dir / Path(relative_path).relative_to(".opencode")
 
 
 def get_project_root() -> Path:
@@ -104,7 +131,7 @@ def validate_path_within_project(path: Path | str, *, allow_relative: bool = Tru
         Resolved Path object within project boundaries
 
     Raises:
-        PathTraversalError: If path attempts to escape project root
+        PathTraversalError: If path is outside project root
         FileNotFoundError: If .opencode directory not found
 
     Example:
@@ -112,24 +139,21 @@ def validate_path_within_project(path: Path | str, *, allow_relative: bool = Tru
         >>> validate_path_within_project(".opencode/work/sessions/foo.md")
         PosixPath('/project/root/.opencode/work/sessions/foo.md')
 
-        >>> # Dangerous path attempting traversal
+        >>> # Path outside project
         >>> validate_path_within_project("../../etc/passwd")
         Traceback (most recent call last):
-        PathTraversalError: Path traversal detected: path escapes project root
+        PathTraversalError: Path is outside project directory
 
         >>> # Absolute path outside project
         >>> validate_path_within_project("/etc/passwd")
         Traceback (most recent call last):
-        PathTraversalError: Path traversal detected: path escapes project root
+        PathTraversalError: Path is outside project directory
     """
     project_root = get_project_root()
 
-    # Convert to Path object if string
     if isinstance(path, str):
         path = Path(path)
 
-    # Resolve the path to handle .. and symlinks
-    # If path is relative, resolve it relative to project root
     if not path.is_absolute():
         if allow_relative:
             resolved_path = (project_root / path).resolve()
@@ -138,11 +162,10 @@ def validate_path_within_project(path: Path | str, *, allow_relative: bool = Tru
     else:
         resolved_path = path.resolve()
 
-    # Check if resolved path is within project root
     try:
         resolved_path.relative_to(project_root)
     except ValueError:
-        msg = f"Path traversal detected: path escapes project root ({resolved_path} not within {project_root})"
+        msg = f"Path is outside project directory: {resolved_path} is not within {project_root}"
         raise PathTraversalError(msg) from None
 
     return resolved_path
