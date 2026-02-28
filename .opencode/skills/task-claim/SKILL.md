@@ -8,17 +8,9 @@ metadata:
   workflow: task-claiming
 ---
 
-## Important: CLI Tool Usage
-
-**CRITICAL:** This project uses the `s9` CLI executable throughout these instructions.
-- **CLI executable:** `s9` (use in bash commands)
-- **Python module:** `site_nine` (use in Python imports: `from site_nine import ...`)
-
-All commands in this skill use the `s9` executable via bash. You should NOT attempt to import an `s9` module in Python code.
-
 ## What I Do
 
-I provide comprehensive instructions for claiming tasks in the s9 task database. Use this skill when you need to take ownership of a task and start working on it.
+I provide comprehensive instructions for claiming tasks in the s9 task database using the `task_claim` tool. Use this skill when you need to take ownership of a task and start working on it.
 
 ## Who Claims Tasks
 
@@ -26,55 +18,60 @@ I provide comprehensive instructions for claiming tasks in the s9 task database.
 - Typically done at start of session
 - When picking up available work from the task queue
 
-## Command Syntax
+## Tool Syntax
 
-```bash
-s9 task claim TASK_ID --mission MISSION_ID --role ROLE
+Invoke the `task_claim` tool with the task ID:
+
+```
+Invoke task_claim tool with task_id="TASK_ID"
 ```
 
 **Required:**
-- `TASK_ID` - The task to claim (e.g., ENG-H-0037)
-- `--mission` or `-m` - Your mission ID (from `s9 mission start`)
-- `--role` or `-r` - Your role (must match task's assigned role)
+- `task_id` - The task to claim (e.g., "ENG-H-0037")
+
+**Automatic:**
+- Mission ID - Retrieved automatically from your current session context
+- Role - Retrieved automatically from your mission record
+
+The tool automatically determines your mission ID and role from the current OpenCode session, so you don't need to provide them manually.
 
 ## What Happens When You Claim
 
 1. ✅ Status changes: `TODO` → `UNDERWAY`
-2. ✅ `mission_id` set to your mission ID
+2. ✅ `mission_id` set to your mission ID (retrieved automatically from session)
 3. ✅ `claimed_at` timestamp recorded
 4. ✅ Markdown file header updated in `.opencode/work/tasks/`
 
-## Mission ID
-
-Use your **mission ID** from your current mission:
-
-**How to find your mission ID:**
-- It was displayed when you ran `s9 mission start`
-- Check `s9 mission list` to see your active missions
-- Look for the mission number (e.g., mission #42)
-
-**Note:** You must have an active mission to claim tasks. If you don't have one, start a mission first with `s9 mission start`.
-
 ## Example: Claiming a Task
 
-```bash
-# 1. Find available tasks for your role
-s9 task list --role Engineer --status TODO
+Finding and claiming a task:
 
-# Output shows available tasks:
-# ENG-H-0037 | Implement Rate Limiting Middleware | TODO | HIGH | Engineer
+1. **Find available tasks** (using bash to list tasks):
+   ```bash
+   s9 task list --role Engineer --status TODO
+   ```
 
-# 2. Claim the task (assuming mission ID is 42)
-s9 task claim ENG-H-0037 --mission 42 --role Engineer
+2. **Invoke the task_claim tool** with the task ID:
+   ```
+   Invoke task_claim tool with task_id="ENG-H-0037"
+   ```
+   
+   The tool will:
+   - Automatically retrieve your mission ID from the current session
+   - Automatically retrieve your role from your mission record
+   - Claim the task and update its status to UNDERWAY
+   - Return confirmation that the task was claimed
 
-# Output: ✓ Claimed task ENG-H-0037
-
-# 3. Verify it was claimed
-s9 task show ENG-H-0037
-# Status: UNDERWAY
-# Mission: 42
-# Claimed: 2026-02-05T22:00:00+00:00
-```
+3. **Verify the claim** (optional, using bash):
+   ```bash
+   s9 task show ENG-H-0037
+   ```
+   Output will show:
+   ```
+   Status: UNDERWAY
+   Mission: [your-mission-id]
+   Claimed: [timestamp]
+   ```
 
 ## Concurrency Protection
 
@@ -87,33 +84,29 @@ The database prevents race conditions:
 
 ## Already Claimed Tasks
 
-If a task is already claimed, you'll get an error:
+If a task is already claimed, the tool will return an error:
 
-```bash
-s9 task claim ENG-H-0037 --mission 43 --role Engineer
-# Error: Task ENG-H-0037 is already claimed by mission 42
+```
+Error: Task ENG-H-0037 is already claimed by mission 42
 ```
 
 **What to do:**
-1. Check which mission claimed it:
+1. Check which mission claimed it (using bash):
    ```bash
    s9 task show ENG-H-0037
    ```
 
 2. Coordinate with the other mission/agent if needed
 
-3. Choose a different task:
-   ```bash
-   s9 task list --role Engineer --status TODO
-   ```
+3. Choose a different task and invoke the tool again with the new task ID
 
 ## Claiming Multiple Tasks
 
-You can claim multiple tasks, but claim one at a time:
+You can claim multiple tasks by invoking the tool multiple times:
 
-```bash
-s9 task claim ENG-H-0037 --mission 42 --role Engineer
-s9 task claim ENG-H-0038 --mission 42 --role Engineer
+```
+Invoke task_claim tool with task_id="ENG-H-0037"
+Invoke task_claim tool with task_id="ENG-H-0038"
 ```
 
 **Best practice:** Focus on one task at a time. Only claim multiple if:
@@ -160,8 +153,8 @@ Tasks are assigned to specific roles:
 ### Do
 - ✅ Claim one task at a time (stay focused)
 - ✅ Check dependencies before claiming
-- ✅ Use your mission ID and role
-- ✅ Verify claim succeeded with `s9 task show`
+- ✅ Use the `task_claim` tool to claim tasks
+- ✅ Verify claim succeeded (check tool output or use `s9 task show`)
 - ✅ Start work on task soon after claiming
 
 ### Don't
@@ -174,28 +167,23 @@ Tasks are assigned to specific roles:
 
 ### "Task not found"
 - Check task ID spelling and case
-- Verify task exists: `s9 task list | grep TASK_ID`
-- Make sure you're using the full task ID (e.g., ENG-H-0037)
+- Verify task exists using bash: `s9 task list | grep TASK_ID`
+- Make sure you're using the full task ID (e.g., "ENG-H-0037")
 
 ### "Task already claimed"
 - Someone else is working on it
-- Check: `s9 task show TASK_ID`
+- Check using bash: `s9 task show TASK_ID`
 - Choose a different task or coordinate with the other mission
 
-### "Mission not found"
-- Invalid mission ID provided
-- Check your active mission: `s9 mission list`
-- Make sure you started a mission first: `s9 mission start`
+### "No active mission found"
+- The tool cannot find your mission from the session context
+- Make sure you initialized your mission with the `mission-start` skill
+- Contact the Director if your mission appears to be corrupted
 
 ### "Role mismatch"
 - Your role doesn't match the task's assigned role
-- Check task details: `s9 task show TASK_ID`
+- Check task details using bash: `s9 task show TASK_ID`
 - Either claim a task for your role, or coordinate with Administrator
-
-### "Database is locked"
-- Another process is writing (rare with WAL mode)
-- Wait a moment and retry
-- Check for stuck processes: `ps aux | grep s9`
 
 ## After Claiming
 

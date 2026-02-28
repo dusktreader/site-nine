@@ -201,6 +201,24 @@ class TaskManager:
                 raise_exc_class=TaskError,
             )
 
+        # Check if task's epic is locked — agents cannot claim tasks from locked epics
+        task_rows_for_lock = self.db.execute_query(
+            "SELECT epic_id FROM tasks WHERE id = :task_id",
+            {"task_id": task_id},
+        )
+        if task_rows_for_lock:
+            task_epic_id_for_lock = task_rows_for_lock[0]["epic_id"]
+            if task_epic_id_for_lock is not None:
+                epic_rows = self.db.execute_query(
+                    "SELECT locked FROM epics WHERE id = :epic_id",
+                    {"epic_id": task_epic_id_for_lock},
+                )
+                if epic_rows and epic_rows[0]["locked"]:
+                    raise TaskError(
+                        f"Cannot claim task {task_id}: epic {task_epic_id_for_lock} is locked. "
+                        "Contact the Director to unlock the epic before claiming tasks."
+                    )
+
         handoff_rows = self.db.execute_query(
             """
             SELECT id FROM handoffs
@@ -293,13 +311,13 @@ class TaskManager:
 
     def update_task(self, task_id: str, **updates) -> None:
         """
-        Update task fields (title, description, priority, category).
+        Update task fields (title, description, priority, category, notes).
 
         Args:
             task_id: Task ID
-            **updates: Fields to update (title, description, priority, category)
+            **updates: Fields to update (title, description, priority, category, notes)
         """
-        allowed_fields = {"title", "description", "priority", "category"}
+        allowed_fields = {"title", "description", "priority", "category", "notes"}
         update_fields = []
         params = {"task_id": task_id}
 

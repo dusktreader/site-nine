@@ -51,43 +51,6 @@ def _format_message_preview(body: str, max_length: int = 60) -> str:
     return preview
 
 
-def _format_desk_inbox_summary(
-    msg_manager: MessageManager,
-    conversations: list,
-    mission_id: int,
-) -> list[str]:
-    """Format unread messages as inbox-style summary lines for desk mode display.
-
-    Collects unread messages from other missions across all conversations and formats
-    them per ADR-009 lines 160-171 specification.
-
-    Args:
-        msg_manager: MessageManager instance for querying unread messages
-        conversations: List of unread Conversation objects
-        mission_id: Current mission ID (to exclude own messages)
-
-    Returns:
-        List of formatted output lines. Empty list if no unread messages from others.
-    """
-    inbox_messages: list[Message] = []
-    for conv in conversations:
-        unread_msgs = msg_manager.get_unread_messages(conv.id, mission_id)
-        for msg in unread_msgs:
-            if msg.from_mission_id != mission_id:
-                inbox_messages.append(msg)
-
-    if not inbox_messages:
-        return []
-
-    lines: list[str] = []
-    lines.append(f"Checking comms... {len(inbox_messages)} new message(s)!")
-    for msg in inbox_messages:
-        lines.append(f'- {msg.id} from Mission #{msg.from_mission_id}: "{msg.subject}"')
-    lines.append("")
-    lines.append('Reply with: s9 comms reply <MSG_ID> "your response"')
-    return lines
-
-
 @app.command()
 @handle_errors("Failed to send message", handle_exc_class=SiteNineError)
 def send(
@@ -384,6 +347,54 @@ def reply(
 
 
 @app.command()
+@handle_errors("Failed to acknowledge message", handle_exc_class=SiteNineError)
+def ack(
+    message_id: Annotated[str, typer.Argument(help="Message ID to acknowledge")],
+    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
+) -> None:
+    """Acknowledge a message as read/processed.
+
+    Marks a message as acknowledged by the current mission, indicating
+    that the message has been read and processed. This improves
+    accountability and workflow coordination between agents.
+    """
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        mission_id = _get_current_mission_id(db)
+        msg_manager = MessageManager(db)
+
+        # Verify message exists and acknowledge it
+        msg_manager.acknowledge_message(message_id, mission_id)
+
+        # Get message details for output
+        message = msg_manager.get_message(message_id)
+        CLIError.require_condition(message is not None, f"Message {message_id} not found")
+
+    if json_output:
+        output_json(
+            format_json_response(
+                {
+                    "message_id": message_id,
+                    "mission_id": mission_id,
+                    "acknowledged": True,
+                }
+            )
+        )
+    else:
+        terminal_message(
+            conjoin(
+                f"✅ Acknowledged message {message_id}",
+                "",
+                f'  Subject: "{message.subject}"',
+                f"  From: Mission #{message.from_mission_id}",
+            ),
+            subject="Done",
+            subject_color="green",
+        )
+
+
+@app.command()
 @handle_errors("Failed to show inbox", handle_exc_class=SiteNineError)
 def inbox(
     all_conversations: Annotated[bool, typer.Option("--all", "-a", help="Show all conversations")] = False,
@@ -528,6 +539,11 @@ def show(
         # Get all messages in conversation
         messages = msg_manager.list_messages(conversation_id=conv_id)
 
+        # Get acknowledgements for all messages
+        message_acks: dict[str, list[dict]] = {}
+        for msg in messages:
+            message_acks[msg.id] = msg_manager.get_message_acknowledgements(msg.id)
+
         # Update view for current mission
         msg_manager.update_conversation_view(conv_id, mission_id)
 
@@ -551,6 +567,7 @@ def show(
                             "priority": msg.priority,
                             "parent_message_id": msg.parent_message_id,
                             "created_at": msg.created_at,
+                            "acknowledgements": message_acks.get(msg.id, []),
                         }
                         for msg in messages
                     ],
@@ -569,6 +586,16 @@ def show(
             indent = "  " if msg.parent_message_id else ""
             console.print(f"{indent}[cyan]{msg.id}[/cyan] - [magenta]Mission {msg.from_mission_id}[/magenta]")
             console.print(f"{indent}[yellow]Priority: {msg.priority}[/yellow] | [dim]{msg.created_at}[/dim]")
+
+            # Show acknowledgements if any
+            acks = message_acks.get(msg.id, [])
+            if acks:
+                ack_str = f"{len(acks)} ack" + ("s" if len(acks) > 1 else "")
+                ack_names = ", ".join([f"{a['persona_name']} ({a['role']})" for a in acks[:3]])
+                if len(acks) > 3:
+                    ack_names += f", +{len(acks) - 3} more"
+                console.print(f"{indent}[green]✓ {ack_str}: {ack_names}[/green]")
+
             console.print(f"{indent}[white bold]{msg.subject}[/white bold]")
             console.print()
             # Render markdown body with indent
@@ -727,129 +754,3 @@ def status(
             )
 
         console.print(table)
-
-
-@app.command()
-@handle_errors("Failed to manage desk mode", handle_exc_class=SiteNineError)
-def desk(
-    stop: Annotated[bool, typer.Option("--stop", help="Stop desk mode")] = False,
-    start: Annotated[bool, typer.Option("--start", help="Start desk mode (default)")] = False,
-    mission_id: Annotated[int | None, typer.Option("--mission", "-m", help="Mission ID (defaults to current)")] = None,
-    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
-) -> None:
-    """Enable/disable desk mode for receiving questions from other agents.
-
-    Desk mode advertises your mission as available for questions.
-    When started, it runs a monitoring loop that checks for new messages
-    every 30 seconds and outputs status.
-
-    Usage:
-      s9 comms desk              # Start desk mode (default)
-      s9 comms desk --start      # Explicit start
-      s9 comms desk --stop       # Stop desk mode
-    """
-    import signal
-    import time
-
-    db_path = require_db_path()
-
-    with Database(db_path) as db:
-        mid = mission_id if mission_id is not None else _get_current_mission_id(db)
-        mission_mgr = MissionManager(db)
-
-        mission = mission_mgr.get_mission(mid)
-        CLIError.require_condition(mission is not None, f"Mission #{mid} not found")
-        assert mission is not None
-        CLIError.require_condition(mission.end_time is None, f"Mission #{mid} has already ended")
-
-        if stop:
-            # Stop desk mode
-            mission_mgr.set_desk_mode(mid, active=False)
-            if json_output:
-                output_json(format_json_response({"mission_id": mid, "desk_mode_active": False}))
-            else:
-                terminal_message(
-                    "Desk mode disabled",
-                    subject="Done",
-                    subject_color="green",
-                )
-            return
-
-        # Start desk mode
-        mission_mgr.set_desk_mode(mid, active=True)
-
-        scope_label = f"epic {mission.epic_id}" if mission.epic_id else "all"
-
-    if json_output:
-        # In JSON mode, just enable and report status once (no polling loop)
-        with Database(db_path) as db:
-            msg_manager = MessageManager(db)
-            conversations = msg_manager.get_unread_conversations(mid)
-
-            # Collect unread message summaries for inbox display (exclude own messages)
-            unread_messages = []
-            for conv in conversations:
-                for msg in msg_manager.get_unread_messages(conv.id, mid):
-                    if msg.from_mission_id != mid:
-                        unread_messages.append(
-                            {
-                                "message_id": msg.id,
-                                "from_mission_id": msg.from_mission_id,
-                                "subject": msg.subject,
-                                "priority": msg.priority,
-                                "conversation_id": conv.id,
-                            }
-                        )
-
-        output_json(
-            format_json_response(
-                {
-                    "mission_id": mid,
-                    "desk_mode_active": True,
-                    "scope": scope_label,
-                    "unread_count": len(unread_messages),
-                    "unread_messages": unread_messages,
-                }
-            )
-        )
-        return
-
-    terminal_message(
-        conjoin(
-            f"Desk mode enabled for {scope_label}",
-            "Monitoring for messages (checking every 30s)...",
-            "",
-            "Press Ctrl+C to stop desk mode.",
-        ),
-        subject="Desk Mode",
-        subject_color="green",
-    )
-
-    # Set up signal handler for clean exit
-    def _handle_interrupt(sig: int, frame: object) -> None:
-        console.print()  # newline after ^C
-        with Database(db_path) as db:
-            mission_mgr = MissionManager(db)
-            mission_mgr.set_desk_mode(mid, active=False)
-        terminal_message("Desk mode disabled", subject="Done", subject_color="green")
-        raise SystemExit(0)
-
-    signal.signal(signal.SIGINT, _handle_interrupt)
-
-    # Polling loop — inbox-style display per ADR-009 lines 160-171
-    while True:
-        time.sleep(30)
-
-        with Database(db_path) as db:
-            msg_manager = MessageManager(db)
-            conversations = msg_manager.get_unread_conversations(mid)
-
-            if conversations:
-                lines = _format_desk_inbox_summary(msg_manager, conversations, mid)
-                if lines:
-                    for line in lines:
-                        console.print(line)
-                else:
-                    console.print("Checking comms... No new messages. (0 unread)")
-            else:
-                console.print("Checking comms... No new messages. (0 unread)")

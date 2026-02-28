@@ -10,7 +10,7 @@ from typerdrive import (
 )
 from typerdrive.logging.commands import add_logs_subcommand
 
-from site_nine.cli import adr, block, comms, epic, guide, handoff, mission, persona, review, role, task
+from site_nine.cli import adr, block, comms, epic, guide, mission, persona, review, role, task
 from site_nine.cli.dashboard import dashboard_command
 from site_nine.cli.doctor import doctor_command
 from site_nine.cli.init import init_command
@@ -42,7 +42,6 @@ app.add_typer(persona.app, name="persona")
 app.add_typer(guide.app, name="guide")
 app.add_typer(review.app, name="review")
 app.add_typer(role.app, name="role")
-app.add_typer(handoff.app, name="handoff")
 app.add_typer(block.app, name="block")
 app.add_typer(adr.app, name="adr")
 app.add_typer(comms.app, name="comms")

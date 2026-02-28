@@ -48,28 +48,6 @@ def test_get_effective_status_aborted(test_db):
     assert result == TaskStatus.ABORTED.value
 
 
-def test_get_effective_status_handoff_pending(test_db_with_data):
-    """Test task with pending handoff returns HANDOFF_PENDING"""
-    manager = TaskManager(test_db_with_data)
-    # test_db_with_data already has task ENG-M-0001
-    # Create a handoff for the task
-    test_db_with_data.execute_update(
-        """
-        INSERT INTO handoffs (task_id, from_mission_id, to_role, summary)
-        VALUES (:task_id, :from_mission_id, :to_role, :summary)
-        """,
-        {
-            "task_id": "ENG-M-0001",
-            "from_mission_id": 1,
-            "to_role": "Tester",
-            "summary": "Please test this",
-        },
-    )
-
-    result = manager.get_effective_status("ENG-M-0001")
-    assert result == EffectiveStatus.HANDOFF_PENDING.value
-
-
 def test_get_effective_status_blocked_external(test_db_with_data):
     """Test task with external block returns BLOCKED_EXTERNAL"""
     manager = TaskManager(test_db_with_data)

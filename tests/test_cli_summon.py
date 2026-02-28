@@ -1,7 +1,7 @@
 """Tests for summon CLI command"""
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from site_nine.__main__ import app
 from typer.testing import CliRunner
@@ -74,38 +74,25 @@ def test_summon_conflict_auto_assign_and_task(initialized_project: Path):
     assert "Cannot use both" in output
 
 
-@patch("site_nine.cli.summon.subprocess.run")
-def test_summon_calls_opencode(mock_run, initialized_project: Path):
-    """Test that summon actually calls opencode subprocess"""
-    mock_run.return_value = None
+@patch("site_nine.cli.summon.os.execvp")
+def test_summon_calls_opencode(mock_execvp, initialized_project: Path):
+    """Test that interactive summon uses os.execvp to replace the process"""
+    mock_execvp.return_value = None
 
     result = runner.invoke(app, ["summon", "operator"])
 
-    # Should have called subprocess.run
-    mock_run.assert_called_once()
-    call_args = mock_run.call_args[0][0]
-    assert "opencode" in call_args
-    assert "/summon operator" in " ".join(call_args)
+    mock_execvp.assert_called_once()
+    call_args = mock_execvp.call_args
+    assert call_args[0][0] == "opencode"
+    cmd_list = call_args[0][1]
+    assert "opencode" in cmd_list
+    assert "--prompt" in cmd_list
 
 
-@patch("site_nine.cli.summon.subprocess.run")
-def test_summon_handles_subprocess_error(mock_run, initialized_project: Path):
-    """Test that summon handles subprocess errors gracefully"""
-    import subprocess
-
-    mock_run.side_effect = subprocess.CalledProcessError(1, "opencode")
-
-    result = runner.invoke(app, ["summon", "operator"])
-
-    assert result.exit_code != 0
-    output = " ".join(result.output.split())
-    assert "Error" in output
-
-
-@patch("site_nine.cli.summon.subprocess.run")
-def test_summon_handles_opencode_not_found(mock_run, initialized_project: Path):
+@patch("site_nine.cli.summon.os.execvp")
+def test_summon_handles_opencode_not_found(mock_execvp, initialized_project: Path):
     """Test that summon handles missing opencode command"""
-    mock_run.side_effect = FileNotFoundError()
+    mock_execvp.side_effect = FileNotFoundError()
 
     result = runner.invoke(app, ["summon", "operator"])
 
@@ -158,3 +145,152 @@ def test_summon_short_flags(initialized_project: Path):
     assert result.exit_code == 0
     output = " ".join(result.output.split())
     assert "atlas" in output
+
+
+# ---------------------------------------------------------------------------
+# Desk mode tests
+# ---------------------------------------------------------------------------
+
+
+def test_summon_desk_dry_run_shows_desk_label(initialized_project: Path):
+    """Test that --desk --dry-run shows desk-mode specific output"""
+    result = runner.invoke(app, ["summon", "engineer", "--desk", "--dry-run"])
+
+    assert result.exit_code == 0
+    output = " ".join(result.output.split())
+    assert "desk" in output.lower()
+    assert "engineer" in output
+
+
+def test_summon_desk_dry_run_uses_opencode_run(initialized_project: Path):
+    """Test that --desk --dry-run shows 'opencode run' (not 'opencode --prompt')"""
+    result = runner.invoke(app, ["summon", "engineer", "--desk", "--dry-run"])
+
+    assert result.exit_code == 0
+    output = " ".join(result.output.split())
+    assert "opencode run" in output
+
+
+def test_summon_desk_instruction_message_contains_desk_mode(initialized_project: Path):
+    """Test that --desk appends 'Mode: desk' to the instruction message"""
+    result = runner.invoke(app, ["summon", "tester", "--desk", "--dry-run"])
+
+    assert result.exit_code == 0
+    output = " ".join(result.output.split())
+    assert "desk" in output.lower()
+
+
+def test_summon_desk_dry_run_with_persona(initialized_project: Path):
+    """Test that --desk --dry-run includes persona in instruction"""
+    result = runner.invoke(app, ["summon", "engineer", "--desk", "--persona", "atlas", "--dry-run"])
+
+    assert result.exit_code == 0
+    output = " ".join(result.output.split())
+    assert "atlas" in output
+    assert "engineer" in output
+
+
+def test_summon_desk_dry_run_with_task(initialized_project: Path):
+    """Test that --desk --dry-run includes task ID in instruction"""
+    result = runner.invoke(app, ["summon", "engineer", "--desk", "--task", "ENG-H-0001", "--dry-run"])
+
+    assert result.exit_code == 0
+    output = " ".join(result.output.split())
+    assert "ENG-H-0001" in output
+
+
+def test_summon_desk_dry_run_with_auto_assign(initialized_project: Path):
+    """Test that --desk --dry-run with --auto-assign includes auto-assign in instruction"""
+    result = runner.invoke(app, ["summon", "engineer", "--desk", "--auto-assign", "--dry-run"])
+
+    assert result.exit_code == 0
+    output = " ".join(result.output.split())
+    assert "auto-assign" in output
+
+
+@patch("site_nine.cli.summon.subprocess.Popen")
+def test_summon_desk_spawns_popen(mock_popen, initialized_project: Path):
+    """Test that --desk spawns subprocess.Popen (headless, non-blocking)"""
+    mock_popen.return_value = MagicMock()
+
+    result = runner.invoke(app, ["summon", "engineer", "--desk"])
+
+    assert result.exit_code == 0
+    mock_popen.assert_called_once()
+    cmd_args = mock_popen.call_args[0][0]
+    assert cmd_args[0] == "opencode"
+    assert cmd_args[1] == "run"
+
+
+@patch("site_nine.cli.summon.subprocess.Popen")
+def test_summon_desk_popen_includes_model(mock_popen, initialized_project: Path):
+    """Test that --desk Popen call includes --model flag"""
+    mock_popen.return_value = MagicMock()
+
+    result = runner.invoke(app, ["summon", "engineer", "--desk", "--model", "github-copilot/gpt-4"])
+
+    assert result.exit_code == 0
+    mock_popen.assert_called_once()
+    cmd_args = mock_popen.call_args[0][0]
+    assert "--model" in cmd_args
+    assert "gpt-4" in " ".join(cmd_args)
+
+
+@patch("site_nine.cli.summon.subprocess.Popen")
+def test_summon_desk_popen_includes_instruction(mock_popen, initialized_project: Path):
+    """Test that --desk Popen call includes the instruction as last positional arg"""
+    mock_popen.return_value = MagicMock()
+
+    result = runner.invoke(app, ["summon", "tester", "--desk"])
+
+    assert result.exit_code == 0
+    cmd_args = mock_popen.call_args[0][0]
+    # The instruction message should be the last element
+    instruction = cmd_args[-1]
+    assert "tester" in instruction.lower() or "Tester" in instruction
+    assert "desk" in instruction.lower()
+
+
+@patch("site_nine.cli.summon.subprocess.Popen")
+def test_summon_desk_popen_not_execvp(mock_popen, initialized_project: Path):
+    """Test that --desk does NOT use os.execvp (stays non-blocking)"""
+    mock_popen.return_value = MagicMock()
+
+    with patch("site_nine.cli.summon.os.execvp") as mock_execvp:
+        result = runner.invoke(app, ["summon", "engineer", "--desk"])
+
+    assert result.exit_code == 0
+    mock_popen.assert_called_once()
+    mock_execvp.assert_not_called()
+
+
+@patch("site_nine.cli.summon.subprocess.Popen")
+def test_summon_interactive_not_popen(mock_popen, initialized_project: Path):
+    """Test that interactive mode (no --desk) does NOT use subprocess.Popen"""
+    with patch("site_nine.cli.summon.os.execvp") as mock_execvp:
+        mock_execvp.return_value = None
+        result = runner.invoke(app, ["summon", "engineer"])
+
+    mock_popen.assert_not_called()
+    mock_execvp.assert_called_once()
+
+
+@patch("site_nine.cli.summon.subprocess.Popen")
+def test_summon_desk_handles_file_not_found(mock_popen, initialized_project: Path):
+    """Test that --desk raises CLIError when opencode is not found"""
+    mock_popen.side_effect = FileNotFoundError()
+
+    result = runner.invoke(app, ["summon", "engineer", "--desk"])
+
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert "not found" in output.lower()
+
+
+def test_summon_desk_conflict_auto_assign_and_task(initialized_project: Path):
+    """Test that --desk still enforces --auto-assign / --task exclusion"""
+    result = runner.invoke(app, ["summon", "engineer", "--desk", "--auto-assign", "--task", "ENG-H-0001"])
+
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert "Cannot use both" in output

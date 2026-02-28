@@ -8,7 +8,11 @@
 
 ## Overview
 
-**site-nine** is an orchestration framework designed to work with [OpenCode](https://github.com/khulnasoft/opencode) for AI-assisted software development. Work naturally with specialized AI agents through conversation, while site-nine handles project coordination behind the scenes.
+**site-nine** is an orchestration framework for AI-assisted software development. Work naturally with specialized AI 
+agents through conversation, while site-nine handles project coordination behind the scenes.
+
+Currently optimized for [OpenCode](https://github.com/khulnasoft/opencode), with planned support for Cursor, Aider, and 
+other AI coding tools via an adapter architecture.
 
 site-nine provides:
 

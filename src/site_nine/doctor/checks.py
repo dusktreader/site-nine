@@ -461,62 +461,102 @@ def check_orphaned_underway(db: Database, *, verbose: bool = False) -> tuple[str
 
 
 def check_stale_missions(
-    db: Database, opencode_dir: Path, *, verbose: bool = False
+    db: Database, opencode_dir: Path, *, verbose: bool = False, stale_days: int = 7
 ) -> tuple[str, list[DiagnosticIssue]]:
-    """Check 10c: Active/idle missions with no recent heartbeat (>8h)."""
+    """Check 10c: Detect stale missions (SUSPENDED >threshold or ACTIVE with stale last_activity_at).
+
+    Args:
+        db: Database connection
+        opencode_dir: Project .opencode directory
+        verbose: Include detailed output
+        stale_days: Number of days after which a mission is considered stale (default: 7)
+
+    Detects two types of stale missions:
+    1. Suspended stale: SUSPENDED status for >threshold days
+    2. Active stale: ACTIVE status but last_activity_at >threshold days
+    """
     from site_nine.missions import MissionManager
 
     mission_manager = MissionManager(db)
 
-    active_missions = db.execute_query("""
-        SELECT id, codename, persona_name, start_date, start_time, last_active_at, status
+    # Check both SUSPENDED and ACTIVE missions
+    missions_to_check = db.execute_query("""
+        SELECT id, codename, persona_name, start_date, start_time, 
+               last_activity_at, last_active_at, status, suspension_time
         FROM missions
-        WHERE status IN ('ACTIVE', 'IDLE')
+        WHERE status IN ('ACTIVE', 'IDLE', 'SUSPENDED')
     """)
 
-    stale_threshold = datetime.now(timezone.utc) - timedelta(hours=8)
+    stale_threshold = datetime.now(timezone.utc) - timedelta(days=stale_days)
     issues: list[DiagnosticIssue] = []
 
-    for mission in active_missions:
+    for mission in missions_to_check:
         try:
-            # Use last_active_at as the primary staleness signal
-            last_active_str = mission.get("last_active_at")
-            if last_active_str:
-                last_active_dt = datetime.fromisoformat(last_active_str.replace("Z", "+00:00"))
-                if last_active_dt.tzinfo is None:
-                    last_active_dt = last_active_dt.replace(tzinfo=timezone.utc)
-            else:
-                # Fall back to start_date + start_time for missions without last_active_at
-                start_datetime_str = f"{mission['start_date']}T{mission['start_time']}"
-                last_active_dt = datetime.fromisoformat(start_datetime_str).replace(tzinfo=timezone.utc)
+            mission_id = mission["id"]
+            status = mission.get("status", "ACTIVE")
 
-            if last_active_dt < stale_threshold:
-                age_hours = (datetime.now(timezone.utc) - last_active_dt).total_seconds() / 3600
+            # Determine the relevant timestamp based on status
+            if status == "SUSPENDED":
+                # For suspended missions, check suspension_time
+                timestamp_str = mission.get("suspension_time")
+                timestamp_type = "suspended"
+            else:
+                # For ACTIVE/IDLE missions, check last_activity_at (ADR-013 field)
+                # Fall back to last_active_at (legacy field) if last_activity_at is not set
+                timestamp_str = mission.get("last_activity_at") or mission.get("last_active_at")
+                timestamp_type = "last_activity"
+
+            if timestamp_str:
+                timestamp_dt = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                if timestamp_dt.tzinfo is None:
+                    timestamp_dt = timestamp_dt.replace(tzinfo=timezone.utc)
+            else:
+                # Fall back to start_date + start_time for missions without activity timestamps
+                start_datetime_str = f"{mission['start_date']}T{mission['start_time']}"
+                timestamp_dt = datetime.fromisoformat(start_datetime_str).replace(tzinfo=timezone.utc)
+                timestamp_type = "started"
+
+            if timestamp_dt < stale_threshold:
+                age_hours = (datetime.now(timezone.utc) - timestamp_dt).total_seconds() / 3600
                 age_days = int(age_hours / 24)
-                mission_id = mission["id"]
-                status = mission.get("status", "ACTIVE")
 
                 if age_days > 0:
                     age_display = f"{age_days} day(s)"
                 else:
                     age_display = f"{int(age_hours)} hour(s)"
 
-                desc = (
-                    f"Mission #{mission['id']} ({mission['codename']}, {mission['persona_name']}): "
-                    f"status {status}, no heartbeat for {age_display}"
-                )
-
-                def make_fix(mid: int = mission_id) -> None:
-                    mission_manager.end_mission(mid)
-
-                issues.append(
-                    DiagnosticIssue(
-                        category="abandoned_work",
-                        severity=Severity.FIXABLE,
-                        description=desc,
-                        fix_fn=make_fix,
+                if status == "SUSPENDED":
+                    desc = (
+                        f"Mission #{mission['id']} ({mission['codename']}, {mission['persona_name']}): "
+                        f"SUSPENDED for {age_display}"
                     )
-                )
+
+                    # SUSPENDED missions are auto-fixable
+                    def make_fix(mid: int = mission_id) -> None:
+                        mission_manager.end_mission(mid)
+
+                    issues.append(
+                        DiagnosticIssue(
+                            category="stale_mission",
+                            severity=Severity.FIXABLE,
+                            description=desc,
+                            fix_fn=make_fix,
+                        )
+                    )
+                else:
+                    desc = (
+                        f"Mission #{mission['id']} ({mission['codename']}, {mission['persona_name']}): "
+                        f"status {status}, no activity for {age_display}"
+                    )
+                    # ACTIVE stale missions are warnings - require manual intervention
+                    issues.append(
+                        DiagnosticIssue(
+                            category="stale_mission",
+                            severity=Severity.WARNING,
+                            description=desc,
+                            fix_fn=None,  # No automatic fix for active stale missions
+                        )
+                    )
 
         except (ValueError, TypeError):
             continue

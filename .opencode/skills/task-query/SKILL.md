@@ -8,27 +8,28 @@ metadata:
   workflow: task-discovery
 ---
 
-## Important: CLI Tool Usage
-
-**CRITICAL:** This project uses the `s9` CLI executable throughout these instructions.
-- **CLI executable:** `s9` (use in bash commands)
-- **Python module:** `site_nine` (use in Python imports: `from site_nine import ...`)
-
-All commands in this skill use the `s9` executable via bash. You should NOT attempt to import an `s9` module in Python code.
-
 ## What I Do
 
-I provide comprehensive instructions for finding, listing, and reporting on tasks in the s9 task database. Use this skill to discover available work, view task details, and generate reports.
+I provide comprehensive instructions for finding, listing, and reporting on tasks in the s9 task database using the `task_show` and `task_list` tools. Use this skill to discover available work, view task details, and generate reports.
+
+## Tool Overview
+
+This skill uses:
+- **`task_show` tool** - Get full details for a specific task
+- **`task_list` tool** - List and filter tasks by various criteria
+- **`task_report` tool** - Generate formatted reports
+
+All tools return clean JSON results and automatically receive mission context from OpenCode.
 
 ## List Available Tasks
 
 ### By Status
 
-```bash
-s9 task list --status TODO
-s9 task list --status UNDERWAY
-s9 task list --status TODO,UNDERWAY
-s9 task list --status COMPLETE
+```python
+task_list(status="TODO")
+task_list(status="UNDERWAY")
+task_list(status="TODO,UNDERWAY")
+task_list(status="COMPLETE")
 ```
 
 **Available statuses:**
@@ -42,10 +43,10 @@ s9 task list --status COMPLETE
 
 ### By Role
 
-```bash
-s9 task list --role Engineer --status TODO
-s9 task list --role Administrator --status TODO
-s9 task list --role Tester
+```python
+task_list(role="Engineer", status="TODO")
+task_list(role="Administrator", status="TODO")
+task_list(role="Tester")
 ```
 
 **Available roles:**
@@ -61,10 +62,10 @@ s9 task list --role Tester
 
 ### By Priority
 
-```bash
-s9 task list --priority CRITICAL,HIGH --status TODO
-s9 task list --priority HIGH
-s9 task list --priority MEDIUM,LOW
+```python
+task_list(priority="CRITICAL,HIGH", status="TODO")
+task_list(priority="HIGH")
+task_list(priority="MEDIUM,LOW")
 ```
 
 **Priority levels:**
@@ -77,8 +78,8 @@ s9 task list --priority MEDIUM,LOW
 
 Show only TODO and UNDERWAY tasks:
 
-```bash
-s9 task list --active-only
+```python
+task_list(active_only=True)
 ```
 
 This is the most common query for finding work.
@@ -87,33 +88,33 @@ This is the most common query for finding work.
 
 See tasks claimed by specific agent:
 
-```bash
-s9 task list --agent "Goibniu"
-s9 task list --agent "Ishtar" --status UNDERWAY
-s9 task list --agent "Ptah" --status COMPLETE
+```python
+task_list(agent="Goibniu")
+task_list(agent="Ishtar", status="UNDERWAY")
+task_list(agent="Ptah", status="COMPLETE")
 ```
 
 ### Combining Filters
 
 Filters can be combined:
 
-```bash
+```python
 # High priority Engineer tasks that are TODO
-s9 task list --role Engineer --priority HIGH --status TODO
+task_list(role="Engineer", priority="HIGH", status="TODO")
 
 # Active tasks assigned to Goibniu
-s9 task list --agent "Goibniu" --active-only
+task_list(agent="Goibniu", active_only=True)
 
 # Completed tasks for a specific role
-s9 task list --role Tester --status COMPLETE
+task_list(role="Tester", status="COMPLETE")
 ```
 
 ## View Task Details
 
 Get full details for a specific task:
 
-```bash
-s9 task show ENG-H-0037
+```python
+task_show(task_id="ENG-H-0037")
 ```
 
 **Shows:**
@@ -129,55 +130,51 @@ s9 task show ENG-H-0037
 
 ### Example Output
 
-```
-Task: ENG-H-0037
-Title: Implement Rate Limiting Middleware
-Status: UNDERWAY
-Priority: HIGH
-Role: Engineer
-Category: Security
-Agent: Goibniu
-Created: 2026-02-03T10:00:00+00:00
-Claimed: 2026-02-05T14:00:00+00:00
-Actual Hours: 4.0
-
-Objective:
-Add rate limiting to protect API endpoints from abuse
-
-Description:
-Implement token bucket rate limiting with configurable limits per endpoint
-
-Dependencies: None
-
-Notes:
-- Implemented token bucket algorithm, added configuration (2.0 hours)
-- Added tests, all passing (4.0 hours)
-
-File: .opencode/work/tasks/ENG-H-0037.md
+```json
+{
+  "task_id": "ENG-H-0037",
+  "title": "Implement Rate Limiting Middleware",
+  "status": "UNDERWAY",
+  "priority": "HIGH",
+  "role": "Engineer",
+  "category": "Security",
+  "agent": "Goibniu",
+  "created_at": "2026-02-03T10:00:00+00:00",
+  "claimed_at": "2026-02-05T14:00:00+00:00",
+  "actual_hours": 4.0,
+  "objective": "Add rate limiting to protect API endpoints from abuse",
+  "description": "Implement token bucket rate limiting with configurable limits per endpoint",
+  "dependencies": [],
+  "notes": [
+    "Implemented token bucket algorithm, added configuration (2.0 hours)",
+    "Added tests, all passing (4.0 hours)"
+  ],
+  "file_path": ".opencode/work/tasks/ENG-H-0037.md"
+}
 ```
 
 ## Generate Reports
 
 ### Markdown Report
 
-```bash
-s9 task report --format markdown
+```python
+task_report(format="markdown")
 ```
 
 Generates markdown-formatted report of all tasks, suitable for documentation.
 
 ### Table Format
 
-```bash
-s9 task report --format table
+```python
+task_report(format="table")
 ```
 
 Generates ASCII table suitable for terminal display.
 
 ### JSON Format
 
-```bash
-s9 task report --format json
+```python
+task_report(format="json")
 ```
 
 Generates JSON output for programmatic processing.
@@ -186,85 +183,85 @@ Generates JSON output for programmatic processing.
 
 Reports can be filtered by role:
 
-```bash
-s9 task report --role Engineer --format markdown
-s9 task report --role Administrator --format table
+```python
+task_report(role="Engineer", format="markdown")
+task_report(role="Administrator", format="table")
 ```
 
 ## Finding Work
 
 ### Find Available Work for Your Role
 
-```bash
+```python
 # Find TODO tasks for your role
-s9 task list --role Engineer --status TODO
+task_list(role="Engineer", status="TODO")
 
 # Find high-priority TODO tasks
-s9 task list --role Engineer --priority CRITICAL,HIGH --status TODO
+task_list(role="Engineer", priority="CRITICAL,HIGH", status="TODO")
 
 # Find any active work
-s9 task list --role Engineer --active-only
+task_list(role="Engineer", active_only=True)
 ```
 
 ### Find Critical/Urgent Work
 
-```bash
+```python
 # Critical tasks across all roles
-s9 task list --priority CRITICAL --status TODO
+task_list(priority="CRITICAL", status="TODO")
 
 # High priority tasks needing attention
-s9 task list --priority HIGH --status TODO,UNDERWAY
+task_list(priority="HIGH", status="TODO,UNDERWAY")
 ```
 
 ### Find Blocked Tasks
 
-```bash
+```python
 # See what's blocked
-s9 task list --status BLOCKED
+task_list(status="BLOCKED")
 
 # Check your blocked tasks
-s9 task list --agent "YourName" --status BLOCKED
+task_list(agent="YourName", status="BLOCKED")
 ```
 
 ### Check Dependencies
 
 Before claiming a task, check if it has dependencies:
 
-```bash
-s9 task show ENG-H-0038
-# Depends on: ENG-H-0037
+```python
+result = task_show(task_id="ENG-H-0038")
+# Check result["dependencies"]
 
 # Check if dependency is complete
-s9 task show ENG-H-0037
-# Status: COMPLETE ✅
+dep_result = task_show(task_id="ENG-H-0037")
+# Check dep_result["status"] == "COMPLETE"
 ```
 
 ## Common Query Patterns
 
 ### Morning Standup
 
-```bash
+```python
 # What am I working on?
-s9 task list --agent "YourName" --status UNDERWAY
+task_list(agent="YourName", status="UNDERWAY")
 
 # What's next to work on?
-s9 task list --role YourRole --priority HIGH --status TODO
+task_list(role="YourRole", priority="HIGH", status="TODO")
 
 # What's blocked?
-s9 task list --status BLOCKED
+task_list(status="BLOCKED")
 ```
 
 ### Finding Next Task
 
-```bash
+```python
 # 1. Check critical tasks first
-s9 task list --priority CRITICAL --status TODO
+task_list(priority="CRITICAL", status="TODO")
 
 # 2. Then high priority for your role
-s9 task list --role YourRole --priority HIGH --status TODO
+task_list(role="YourRole", priority="HIGH", status="TODO")
 
 # 3. Look at medium priority if nothing urgent
-s9 task list --role YourRole --priority MEDIUM --status TODO
+task_list(role="YourRole", priority="MEDIUM", status="TODO")
 ```
 
 #### When to Auto-Claim vs. Ask
@@ -284,37 +281,37 @@ The key distinction: imperative commands ("find", "get", "claim") indicate the u
 
 ### Progress Check
 
-```bash
+```python
 # How many tasks completed?
-s9 task list --status COMPLETE
+task_list(status="COMPLETE")
 
 # How many tasks in progress?
-s9 task list --status UNDERWAY
+task_list(status="UNDERWAY")
 
 # How much work left?
-s9 task list --status TODO
+task_list(status="TODO")
 ```
 
 ### Team Visibility
 
-```bash
+```python
 # What is each agent working on?
-s9 task list --status UNDERWAY
+task_list(status="UNDERWAY")
 
 # What has been completed?
-s9 task list --status COMPLETE
+task_list(status="COMPLETE")
 
 # Generate status report
-s9 task report --format markdown
+task_report(format="markdown")
 ```
 
 ## Tips and Best Practices
 
 ### Do
-- ✅ Use `--active-only` for quick work discovery
+- ✅ Use `active_only=True` for quick work discovery
 - ✅ Check dependencies before claiming tasks
 - ✅ Filter by role and priority to focus
-- ✅ Use `task show` to understand task fully before claiming
+- ✅ Use `task_show` to understand task fully before claiming
 - ✅ Generate reports for team status updates
 - ✅ Auto-claim when user gives imperative commands ("find next task", "get next task")
 - ✅ Distinguish between inquiry ("what tasks?") and action requests ("find next task")
@@ -331,13 +328,27 @@ s9 task report --format markdown
 
 ### List Output
 
-Task lists show key information in columns:
+Task lists return JSON arrays with key information:
 
-```
-TASK_ID | TITLE | STATUS | PRIORITY | ROLE | AGENT
-ENG-H-0037 | Implement Rate Limiting | UNDERWAY | HIGH | Engineer | Goibniu
-ENG-H-0038 | Configure Gateway | TODO | HIGH | Operator | -
-DOC-M-0019 | Update Documentation | PAUSED | MEDIUM | Documentarian | Ishtar
+```json
+[
+  {
+    "task_id": "ENG-H-0037",
+    "title": "Implement Rate Limiting",
+    "status": "UNDERWAY",
+    "priority": "HIGH",
+    "role": "Engineer",
+    "agent": "Goibniu"
+  },
+  {
+    "task_id": "ENG-H-0038",
+    "title": "Configure Gateway",
+    "status": "TODO",
+    "priority": "HIGH",
+    "role": "Operator",
+    "agent": null
+  }
+]
 ```
 
 ### Show Output
@@ -354,12 +365,12 @@ Full task details including:
 
 ### "No tasks found"
 - Check your filters aren't too restrictive
-- Try `s9 task list` without filters to see all tasks
+- Try `task_list()` without filters to see all tasks
 - Verify tasks exist for that role/status/priority
 
 ### "Task not found"
 - Check task ID spelling and case
-- Use `s9 task list | grep TASK_ID` to find it
+- Use `task_list()` to find available tasks
 - Make sure you're using the full task ID (e.g., ENG-H-0037)
 
 ### "Invalid filter value"
@@ -370,8 +381,8 @@ Full task details including:
 ## Performance Tips
 
 - Use filters to reduce output
-- Use `--active-only` instead of listing all statuses
-- Use `task show` for single task details
+- Use `active_only=True` instead of listing all statuses
+- Use `task_show` for single task details
 - Generate reports periodically, not constantly
 
 ## See Also

@@ -183,3 +183,30 @@ class ConversationView:
             mission_id=row["mission_id"],
             last_viewed_at=last_viewed_at,
         )
+
+
+@dataclass
+class MessageAcknowledgement:
+    """
+    Tracks when a mission acknowledges/processes a specific message.
+
+    Attributes:
+        message_id: Message identifier
+        mission_id: Mission ID that acknowledged the message
+        acknowledged_at: Acknowledgement timestamp
+    """
+
+    message_id: str
+    mission_id: int
+    acknowledged_at: pendulum.DateTime
+
+    @classmethod
+    def from_db_row(cls, row: dict) -> Self:
+        """Create MessageAcknowledgement from database row."""
+        acknowledged_at = parse_timestamp(row["acknowledged_at"])
+
+        return cls(
+            message_id=row["message_id"],
+            mission_id=row["mission_id"],
+            acknowledged_at=acknowledged_at,
+        )

@@ -1,6 +1,6 @@
 ---
 name: task-close
-description: Close tasks in the s9 database when complete, paused, blocked, or aborted
+description: Close tasks when complete or aborted using OpenCode tools
 license: MIT
 compatibility: opencode
 metadata:
@@ -8,39 +8,39 @@ metadata:
   workflow: task-completion
 ---
 
-## Important: CLI Tool Usage
-
-**CRITICAL:** This project uses the `s9` CLI executable throughout these instructions.
-- **CLI executable:** `s9` (use in bash commands)
-- **Python module:** `site_nine` (use in Python imports: `from site_nine import ...`)
-
-All commands in this skill use the `s9` executable via bash. You should NOT attempt to import an `s9` module in Python code.
-
 ## What I Do
 
-I provide comprehensive instructions for closing tasks in the s9 task database. Use this skill when a task is complete, needs to be paused, is blocked, or should be cancelled.
+I provide comprehensive instructions for closing tasks using the OpenCode `task_close` tool. Use this skill when a task is complete or should be cancelled.
 
 ## When to Close
 
 - Task is **complete** - all objectives met
-- **Pausing** work to focus on higher priority
-- **Blocked** and can't proceed
 - Task is **cancelled** or obsolete
 
-## Command Syntax
+## Tool Syntax
 
-```bash
-s9 task close TASK_ID \
-  --status {COMPLETE|ABORTED} \
-  [--notes "Final summary"]
+Use the `task_close` tool to close a task:
+
+```
+task_close(
+  task_id="TASK-ID",
+  status="COMPLETE",  # or "ABORTED"
+  notes="Final summary"
+)
 ```
 
 **Required:**
-- `TASK_ID` - The task to close
+- `task_id` - The task to close (e.g., "ENG-H-0037")
+- `status` - Closing status: "COMPLETE" or "ABORTED"
+- `notes` - Summary of why closing with this status
 
-**Optional:**
-- `--status` or `-s` - Closing status (default: COMPLETE)
-- `--notes` or `-n` - Summary of why closing with this status
+The tool automatically:
+- Looks up your current mission from the OpenCode session context
+- Records the `closed_at` timestamp
+- Updates the task status
+- Appends final notes to the task
+- Updates the markdown file in `.opencode/work/tasks/`
+- Removes the task from your active work queue
 
 ## Status Options
 
@@ -54,10 +54,12 @@ Use when:
 - Ready for production
 
 **Example:**
-```bash
-s9 task close ENG-H-0037 \
-  --status COMPLETE \
-  --notes "Rate limiting implemented and tested. All tests passing. Documentation updated."
+```
+task_close(
+  task_id="ENG-H-0037",
+  status="COMPLETE",
+  notes="Rate limiting implemented and tested. All tests passing. Documentation updated."
+)
 ```
 
 ### ABORTED - Cancelled
@@ -70,89 +72,51 @@ Use when:
 - Obsolete due to architecture change
 
 **Example:**
-```bash
-s9 task close DOC-L-0012 \
-  --status ABORTED \
-  --notes "Task obsolete after architecture change in ARC-H-0029. No longer needed."
+```
+task_close(
+  task_id="DOC-L-0012",
+  status="ABORTED",
+  notes="Task obsolete after architecture change in ARC-H-0029. No longer needed."
+)
 ```
 
 ## What Happens When You Close
 
-When you close a task:
+When you call the `task_close` tool:
 
 1. ✅ `closed_at` timestamp recorded
-2. ✅ `status` updated to specified value
-3. ✅ Final notes added (appended to existing notes)
+2. ✅ `status` updated to COMPLETE or ABORTED
+3. ✅ Final notes appended (not replaced)
 4. ✅ Markdown file header updated in `.opencode/work/tasks/`
 5. ✅ Task removed from active work queue
+6. ✅ Mission association maintained via session context
 
 ## Example Workflows
 
 ### Completing a Task
 
-```bash
-# Update final time and status
-s9 task update ENG-H-0037 --actual-hours 6.5
-
+```
 # Close as complete
-s9 task close ENG-H-0037 \
-  --status COMPLETE \
-  --notes "Rate limiting implemented and tested. All tests passing. Documentation updated. PR #123 merged."
+task_close(
+  task_id="ENG-H-0037",
+  status="COMPLETE",
+  notes="Rate limiting implemented and tested. All tests passing. Documentation updated. PR #123 merged."
+)
 
-# Verify
-s9 task show ENG-H-0037
+# Verify with task_show tool
+task_show(task_id="ENG-H-0037")
 # Status: COMPLETE
 # Closed: 2026-02-05T23:30:00+00:00
 ```
 
-### Pausing for Higher Priority
-
-```bash
-# Document what's done
-s9 task update DOC-M-0019 --notes "50% complete - intro and setup sections done"
-
-# Pause it
-s9 task close DOC-M-0019 \
-  --status PAUSED \
-  --notes "Pausing to handle critical security documentation for ENG-C-0003. Will resume after."
-```
-
-### Blocking on Dependency
-
-```bash
-# Document the blocker
-s9 task close OPR-H-0038 \
-  --status BLOCKED \
-  --notes "Blocked by ENG-H-0037. Need rate limiting middleware complete before deploying gateway. Estimated unblock: 2026-02-06."
-```
-
 ### Aborting Obsolete Task
 
-```bash
-s9 task close DOC-L-0012 \
-  --status ABORTED \
-  --notes "Task obsolete after architecture change in ARC-H-0029. New approach documented in ARC-H-0030 instead."
 ```
-
-## Resuming Paused/Blocked Tasks
-
-To resume a paused or blocked task:
-
-### If Still Your Task
-
-```bash
-# Update status back to UNDERWAY
-s9 task update ENG-H-0038 --status UNDERWAY --notes "Blocker resolved, resuming work"
-```
-
-### If Not Your Task
-
-```bash
-# Claim it again (using your mission ID and role)
-s9 task claim ENG-H-0038 --mission MISSION_ID --role Engineer
-
-# Update status and add notes
-s9 task update ENG-H-0038 --status UNDERWAY --notes "Blocker resolved, starting implementation"
+task_close(
+  task_id="DOC-L-0012",
+  status="ABORTED",
+  notes="Task obsolete after architecture change in ARC-H-0029. New approach documented in ARC-H-0030 instead."
+)
 ```
 
 ## Before Closing
@@ -166,20 +130,6 @@ s9 task update ENG-H-0038 --status UNDERWAY --notes "Blocker resolved, starting 
 - ✅ Progress notes updated
 - ✅ Final notes written
 
-### Checklist for PAUSED
-
-- ✅ Current progress documented
-- ✅ Clear reason for pausing
-- ✅ Time tracked up to pause point
-- ✅ Note when you'll resume (if known)
-
-### Checklist for BLOCKED
-
-- ✅ Blocker clearly identified
-- ✅ Blocking task ID noted (if applicable)
-- ✅ Estimated unblock time (if known)
-- ✅ Coordinated with blocking party
-
 ### Checklist for ABORTED
 
 - ✅ Clear reason for cancellation
@@ -190,44 +140,42 @@ s9 task update ENG-H-0038 --status UNDERWAY --notes "Blocker resolved, starting 
 ## Tips and Best Practices
 
 ### Do
-- ✅ Use correct status (COMPLETE vs PAUSED vs BLOCKED)
+- ✅ Use correct status (COMPLETE vs ABORTED)
 - ✅ Write clear closing notes
 - ✅ Close tasks before ending session
-- ✅ Update actual hours before closing
 - ✅ Reference related tasks in notes
-- ✅ Be specific about blockers
+- ✅ Update progress with `task_update` tool before closing
 
 ### Don't
 - ❌ Don't leave tasks UNDERWAY forever
 - ❌ Don't mark incomplete work as COMPLETE
-- ❌ Don't use PAUSED for permanent stops (use ABORTED)
-- ❌ Don't use BLOCKED for soft dependencies (use PAUSED)
 - ❌ Don't forget to write closing notes
+- ❌ Don't use vague or generic notes
 
 ## Troubleshooting
 
 ### "Task not found"
 - Check task ID spelling and case
-- Verify task exists: `s9 task list | grep TASK_ID`
+- Verify task exists with the `task_show` tool
 
 ### "Invalid status value"
-- Must be: COMPLETE, PAUSED, BLOCKED, or ABORTED
+- Must be: COMPLETE or ABORTED
 - Check spelling and case
 - See status options above
 
 ### "Task not claimed"
 - You can only close tasks you've claimed
-- Claim it first: `s9 task claim TASK_ID --mission MISSION_ID --role ROLE`
+- Claim it first with the `task_claim` tool
 
 ### "Missing required notes"
-- `--notes` is required when closing
+- `notes` parameter is required when closing
 - Provide meaningful summary of closure reason
 
 ## After Closing
 
-Verify task was closed:
-```bash
-s9 task show ENG-H-0037
+Verify task was closed with the `task_show` tool:
+```
+task_show(task_id="ENG-H-0037")
 ```
 
 Check status and closing timestamp are correct.
@@ -236,49 +184,51 @@ Check status and closing timestamp are correct.
 
 ### Complete a Task End-to-End
 
-```bash
-# 1. Claim it (assuming mission ID 42)
-s9 task claim ENG-H-0037 --mission 42 --role Engineer
+```
+# 1. Claim it with task_claim tool
+task_claim(task_id="ENG-H-0037")
 
 # 2. Work on it, update progress
-s9 task update ENG-H-0037 --status UNDERWAY --notes "Implemented core functionality"
+task_update(
+  task_id="ENG-H-0037",
+  status="UNDERWAY",
+  notes="Implemented core functionality"
+)
 
 # 3. Close when done
-s9 task close ENG-H-0037 \
-  --status COMPLETE \
-  --notes "All tests passing, code reviewed, documentation complete"
+task_close(
+  task_id="ENG-H-0037",
+  status="COMPLETE",
+  notes="All tests passing, code reviewed, documentation complete"
+)
 ```
 
-### Pause for Higher Priority
+### Switch to Higher Priority Task
 
-```bash
+```
 # Working on medium priority task
-s9 task update DOC-M-0019 --status UNDERWAY --notes "50% complete"
+task_update(
+  task_id="DOC-M-0019",
+  status="UNDERWAY",
+  notes="50% complete - intro and setup sections done"
+)
 
-# Critical issue appears
-s9 task close DOC-M-0019 --status PAUSED --notes "Pausing for ENG-C-0003"
+# Critical issue appears - close current task as ABORTED or COMPLETE depending on state
+# If you want to resume later, just leave it UNDERWAY and use task_release to hand it off
+# Otherwise, close it:
+task_close(
+  task_id="DOC-M-0019",
+  status="ABORTED",
+  notes="Stopping work to handle critical security issue ENG-C-0003"
+)
 
-# Work on critical issue (assuming mission ID 42)
-s9 task claim ENG-C-0003 --mission 42 --role Engineer
-s9 task close ENG-C-0003 --status COMPLETE --notes "Security issue fixed"
-
-# Resume paused task
-s9 task update DOC-M-0019 --status UNDERWAY --notes "Resuming after ENG-C-0003"
-```
-
-### Hit a Blocker
-
-```bash
-# Working on task
-s9 task update OPR-H-0038 --notes "Need ENG-H-0037 to be complete first"
-
-# Mark as blocked
-s9 task close OPR-H-0038 \
-  --status BLOCKED \
-  --notes "Blocked by ENG-H-0037. Will resume when rate limiting is deployed."
-
-# When blocker is resolved
-s9 task update OPR-H-0038 --status UNDERWAY --notes "ENG-H-0037 complete, resuming"
+# Work on critical issue
+task_claim(task_id="ENG-C-0003")
+task_close(
+  task_id="ENG-C-0003",
+  status="COMPLETE",
+  notes="Security issue fixed"
+)
 ```
 
 ## See Also

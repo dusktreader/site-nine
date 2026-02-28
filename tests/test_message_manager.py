@@ -306,3 +306,133 @@ class TestDeskModeInboxIntegration:
 
         assert count == len(messages)
         assert count == 3
+
+
+class TestMessageAcknowledgement:
+    """Tests for message acknowledgement tracking."""
+
+    def test_acknowledge_message(self, test_db):
+        """Test acknowledging a message."""
+        _create_missions(test_db, 2)
+        _create_conversation(test_db, "CONV-0001", 1, 2)
+        _create_message(test_db, "MSG-M-0001", "CONV-0001", 1, subject="Test")
+
+        mgr = MessageManager(test_db)
+        mgr.acknowledge_message("MSG-M-0001", 2)
+
+        # Verify acknowledgement was recorded
+        assert mgr.is_message_acknowledged_by("MSG-M-0001", 2) is True
+
+    def test_acknowledge_message_idempotent(self, test_db):
+        """Test acknowledging a message multiple times is idempotent."""
+        _create_missions(test_db, 2)
+        _create_conversation(test_db, "CONV-0001", 1, 2)
+        _create_message(test_db, "MSG-M-0001", "CONV-0001", 1, subject="Test")
+
+        mgr = MessageManager(test_db)
+
+        # Acknowledge twice
+        mgr.acknowledge_message("MSG-M-0001", 2)
+        mgr.acknowledge_message("MSG-M-0001", 2)
+
+        # Should still be acknowledged
+        assert mgr.is_message_acknowledged_by("MSG-M-0001", 2) is True
+
+        # Should have only one acknowledgement record
+        acks = mgr.get_message_acknowledgements("MSG-M-0001")
+        assert len(acks) == 1
+
+    def test_get_message_acknowledgements(self, test_db):
+        """Test getting all acknowledgements for a message."""
+        _create_missions(test_db, 3)
+        _create_conversation(test_db, "CONV-0001", 1, 2)
+        _create_message(test_db, "MSG-M-0001", "CONV-0001", 1, subject="Test")
+
+        mgr = MessageManager(test_db)
+
+        # Multiple missions acknowledge the same message
+        mgr.acknowledge_message("MSG-M-0001", 2)
+        mgr.acknowledge_message("MSG-M-0001", 3)
+
+        acks = mgr.get_message_acknowledgements("MSG-M-0001")
+        assert len(acks) == 2
+
+        mission_ids = {ack["mission_id"] for ack in acks}
+        assert mission_ids == {2, 3}
+
+    def test_is_message_acknowledged_by(self, test_db):
+        """Test checking if specific mission acknowledged a message."""
+        _create_missions(test_db, 3)
+        _create_conversation(test_db, "CONV-0001", 1, 2)
+        _create_message(test_db, "MSG-M-0001", "CONV-0001", 1, subject="Test")
+
+        mgr = MessageManager(test_db)
+
+        # Mission 2 acknowledges, mission 3 does not
+        mgr.acknowledge_message("MSG-M-0001", 2)
+
+        assert mgr.is_message_acknowledged_by("MSG-M-0001", 2) is True
+        assert mgr.is_message_acknowledged_by("MSG-M-0001", 3) is False
+
+    def test_get_unacknowledged_messages(self, test_db):
+        """Test getting unacknowledged messages for a mission."""
+        _create_missions(test_db, 2)
+        _create_conversation(test_db, "CONV-0001", 1, 2)
+        _create_message(test_db, "MSG-M-0001", "CONV-0001", 1, subject="Message 1")
+        _create_message(test_db, "MSG-M-0002", "CONV-0001", 1, subject="Message 2")
+        _create_message(test_db, "MSG-M-0003", "CONV-0001", 1, subject="Message 3")
+
+        mgr = MessageManager(test_db)
+
+        # Mission 2 acknowledges one message
+        mgr.acknowledge_message("MSG-M-0001", 2)
+
+        # Mission 2 should have 2 unacknowledged messages
+        unacked = mgr.get_unacknowledged_messages(2)
+        assert len(unacked) == 2
+
+        unacked_ids = {msg.id for msg in unacked}
+        assert unacked_ids == {"MSG-M-0002", "MSG-M-0003"}
+
+    def test_get_unacknowledged_messages_excludes_own_messages(self, test_db):
+        """Test that missions don't see their own messages as unacknowledged."""
+        _create_missions(test_db, 2)
+        _create_conversation(test_db, "CONV-0001", 1, 2)
+        _create_message(test_db, "MSG-M-0001", "CONV-0001", 1, subject="From mission 1")
+        _create_message(test_db, "MSG-M-0002", "CONV-0001", 2, subject="From mission 2")
+
+        mgr = MessageManager(test_db)
+
+        # Mission 1 should only see message from mission 2
+        unacked = mgr.get_unacknowledged_messages(1)
+        assert len(unacked) == 1
+        assert unacked[0].id == "MSG-M-0002"
+
+        # Mission 2 should only see message from mission 1
+        unacked = mgr.get_unacknowledged_messages(2)
+        assert len(unacked) == 1
+        assert unacked[0].id == "MSG-M-0001"
+
+    def test_get_unacknowledged_messages_excludes_closed_conversations(self, test_db):
+        """Test that closed conversations are excluded from unacknowledged messages."""
+        _create_missions(test_db, 2)
+        _create_conversation(test_db, "CONV-0001", 1, 2)
+        _create_message(test_db, "MSG-M-0001", "CONV-0001", 1, subject="Test")
+
+        # Close the conversation
+        test_db.execute_update("UPDATE conversations SET status = 'closed' WHERE id = 'CONV-0001'")
+
+        mgr = MessageManager(test_db)
+        unacked = mgr.get_unacknowledged_messages(2)
+
+        # Should not see messages from closed conversation
+        assert len(unacked) == 0
+
+    def test_acknowledge_nonexistent_message_raises_error(self, test_db):
+        """Test that acknowledging a non-existent message raises an error."""
+        _create_missions(test_db, 1)
+
+        mgr = MessageManager(test_db)
+
+        with pytest.raises(Exception):  # MessageNotFoundError
+            mgr.acknowledge_message("MSG-M-9999", 1)

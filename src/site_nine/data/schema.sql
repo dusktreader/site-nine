@@ -37,30 +37,54 @@ CREATE INDEX idx_personas_last_used ON personas(last_mission_at);
 -- Tracks missions (work assignments using personas)
 CREATE TABLE missions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    persona_name TEXT NOT NULL,           -- Persona name (e.g., 'terminus', 'atlas')
-    role TEXT NOT NULL                    -- Persona role for this mission
-        CHECK(role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
-    codename TEXT NOT NULL,               -- Mission codename (e.g., 'silent-phoenix', 'bold-shadow')
-    mission_file TEXT NOT NULL,           -- Path to mission file (e.g., '.opencode/work/missions/2026-01-30.09:15:55.operator.terminus.silent-phoenix.md')
-    start_time TEXT NOT NULL,             -- Mission start time (ISO 8601)
+    persona_name TEXT,                    -- Persona name (e.g., 'terminus', 'atlas'); NULL during ROLE_PENDING/PERSONA_PENDING
+    role TEXT                             -- Persona role for this mission; NULL during ROLE_PENDING
+        CHECK(role IS NULL OR role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
+    codename TEXT,                        -- Mission codename (e.g., 'silent-phoenix', 'bold-shadow'); set by mission_init
+    mission_file TEXT,                    -- Path to mission file; NULL until persona is set
+    start_date TEXT,                      -- Mission start date (YYYY-MM-DD); NULL until persona is set
+    start_time TEXT,                      -- Mission start time (ISO 8601); NULL until persona is set
     end_time TEXT,                        -- Mission end time (ISO 8601) or NULL if in progress
     objective TEXT,                       -- Brief mission objective
+    
+    -- Mission status and tracking
+    epic_id TEXT,                         -- Epic this mission is associated with
+    desk_mode_active INTEGER DEFAULT 0,   -- Whether desk mode is active (0 or 1)
+    status TEXT NOT NULL DEFAULT 'ACTIVE' -- Mission status: ACTIVE, IDLE, ENDED, SUSPENDED, etc.
+        CHECK(status IN ('ACTIVE', 'IDLE', 'ENDED', 'SUSPENDED', 'ROLE_PENDING', 'PERSONA_PENDING')),
+    last_active_at TEXT,                  -- Legacy: Last activity timestamp (kept for backward compatibility)
+    
+    -- OpenCode integration fields (ADR-013)
+    opencode_session_id TEXT,             -- OpenCode session ID (binds mission to session)
+    mode TEXT DEFAULT 'interactive',      -- Mission mode: 'interactive' or 'desk'
+    last_activity_at TEXT,                -- Last activity timestamp (plugin-managed, for stale detection)
+    suspension_time TEXT,                 -- When mission was suspended (ISO 8601)
+    suspension_reason TEXT,               -- Why mission was suspended
+    
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     
     -- Constraints
-    CHECK(length(persona_name) > 0),
-    CHECK(length(codename) > 0),
-    CHECK(length(mission_file) > 0),
-    
-    -- Foreign key to personas
-    FOREIGN KEY (persona_name) REFERENCES personas(name) ON DELETE RESTRICT
+    CHECK(persona_name IS NULL OR length(persona_name) > 0),
+    CHECK(codename IS NULL OR length(codename) > 0),
+    CHECK(mission_file IS NULL OR length(mission_file) > 0),
+
+    -- Foreign keys
+    FOREIGN KEY (persona_name) REFERENCES personas(name) ON DELETE RESTRICT,
+    FOREIGN KEY (epic_id) REFERENCES epics(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_missions_persona_name ON missions(persona_name);
 CREATE INDEX idx_missions_role ON missions(role);
 CREATE INDEX idx_missions_codename ON missions(codename);
-CREATE INDEX idx_missions_start_time ON missions(start_time);
+CREATE INDEX idx_missions_start_date ON missions(start_date);
+CREATE INDEX idx_missions_epic_id ON missions(epic_id);
+CREATE INDEX idx_missions_desk_mode ON missions(desk_mode_active);
+CREATE INDEX idx_missions_status ON missions(status);
+-- ADR-013 indexes
+CREATE UNIQUE INDEX idx_missions_session_id ON missions(opencode_session_id) WHERE opencode_session_id IS NOT NULL;
+CREATE INDEX idx_missions_mode ON missions(mode);
+CREATE INDEX idx_missions_suspended ON missions(status, suspension_time) WHERE status = 'SUSPENDED';
 
 -- Trigger to update updated_at timestamp
 CREATE TRIGGER update_missions_timestamp
@@ -78,11 +102,13 @@ CREATE TABLE epics (
     id TEXT PRIMARY KEY,              -- EPC-[P]-[NNNN] format (e.g., EPC-H-0001)
     title TEXT NOT NULL,
     description TEXT,
-    status TEXT NOT NULL              -- Computed from subtasks via triggers
+    status TEXT NOT NULL DEFAULT 'TODO' -- Computed from subtasks via triggers
         CHECK(status IN ('TODO', 'UNDERWAY', 'COMPLETE', 'ABORTED')),
     priority TEXT NOT NULL
         CHECK(priority IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')),
     aborted_reason TEXT,              -- Only if manually aborted
+    locked INTEGER NOT NULL DEFAULT 0, -- 1 if epic is locked (Director-only to set)
+    locked_at TEXT,                   -- ISO 8601 timestamp when epic was locked
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     completed_at TEXT,                -- Auto-set when all tasks complete
@@ -141,10 +167,7 @@ CREATE TABLE handoffs (
     task_id TEXT NOT NULL,                    -- Associated task being handed off
     from_mission_id INTEGER NOT NULL,         -- Mission handing off the work
     to_role TEXT NOT NULL                     -- Role receiving the handoff
-        CHECK(to_role IN ('Administrator', 'Architect', 'Builder', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
-    to_mission_id INTEGER,                    -- Mission that accepted the handoff (NULL if pending)
-    status TEXT NOT NULL DEFAULT 'pending'    -- Handoff status
-        CHECK(status IN ('pending', 'accepted', 'completed', 'cancelled')),
+        CHECK(to_role IN ('Administrator', 'Architect', 'Engineer', 'Tester', 'Documentarian', 'Designer', 'Inspector', 'Operator', 'Historian')),
     
     -- Handoff content
     summary TEXT NOT NULL,                    -- Brief summary of what's being handed off
@@ -154,22 +177,18 @@ CREATE TABLE handoffs (
     
     -- Timestamps
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    accepted_at TEXT,                         -- When handoff was accepted
-    completed_at TEXT,                        -- When work was completed
+    deleted_at TEXT,                          -- Soft delete timestamp (NULL if active)
     
     -- Foreign keys
     FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
-    FOREIGN KEY (from_mission_id) REFERENCES missions(id) ON DELETE CASCADE,
-    FOREIGN KEY (to_mission_id) REFERENCES missions(id) ON DELETE SET NULL
+    FOREIGN KEY (from_mission_id) REFERENCES missions(id) ON DELETE CASCADE
 );
 
 -- Indexes for performance
 CREATE INDEX idx_handoffs_task_id ON handoffs(task_id);
 CREATE INDEX idx_handoffs_from_mission ON handoffs(from_mission_id);
-CREATE INDEX idx_handoffs_to_mission ON handoffs(to_mission_id);
 CREATE INDEX idx_handoffs_to_role ON handoffs(to_role);
-CREATE INDEX idx_handoffs_status ON handoffs(status);
-CREATE INDEX idx_handoffs_created_at ON handoffs(created_at);
+CREATE INDEX idx_handoffs_deleted ON handoffs(deleted_at);
 
 -- ============================================================================
 -- TASKS TABLE
@@ -232,6 +251,21 @@ CREATE TABLE task_dependencies (
     FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
     FOREIGN KEY (depends_on_task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
+
+-- Task blocks
+CREATE TABLE blocks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id TEXT NOT NULL,
+    block_type TEXT NOT NULL,
+    description TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    resolved_at TEXT,
+    
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_blocks_task_id ON blocks(task_id);
+CREATE INDEX idx_blocks_resolved ON blocks(resolved_at);
 
 -- Indexes for performance
 CREATE INDEX idx_tasks_status ON tasks(status);
@@ -415,3 +449,129 @@ CREATE TABLE task_architecture_docs (
 
 CREATE INDEX idx_task_architecture_docs_task ON task_architecture_docs(task_id);
 CREATE INDEX idx_task_architecture_docs_adr ON task_architecture_docs(adr_id);
+
+-- ============================================================================
+-- MESSAGING TABLES
+-- ============================================================================
+-- Agent-to-agent communication system (ADR-008, ADR-009)
+
+-- Conversations and discussions
+CREATE TABLE conversations (
+    id TEXT PRIMARY KEY,                  -- CONV-[NNNN] format
+    subject TEXT NOT NULL,                -- Conversation subject
+    type TEXT NOT NULL                    -- 'conversation' (1-on-1) or 'discussion' (scoped)
+        CHECK(type IN ('conversation', 'discussion')),
+    status TEXT NOT NULL DEFAULT 'open'   -- 'open' or 'closed'
+        CHECK(status IN ('open', 'closed')),
+
+    -- Participants (for type='conversation')
+    participant_1_id INTEGER,             -- First participant mission ID
+    participant_2_id INTEGER,             -- Second participant mission ID
+
+    -- Scope (for type='discussion')
+    scope_type TEXT                       -- 'role', 'epic', or 'all'
+        CHECK(scope_type IN ('role', 'epic', 'all') OR scope_type IS NULL),
+    scope_role TEXT,                      -- Role name if scope_type='role'
+    scope_epic_id TEXT,                   -- Epic ID if scope_type='epic'
+
+    -- Optional context links
+    task_id TEXT,
+    epic_id TEXT,
+
+    -- Timestamps
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    closed_at TEXT,
+
+    FOREIGN KEY (participant_1_id) REFERENCES missions(id),
+    FOREIGN KEY (participant_2_id) REFERENCES missions(id),
+    FOREIGN KEY (scope_epic_id) REFERENCES epics(id),
+    FOREIGN KEY (task_id) REFERENCES tasks(id),
+    FOREIGN KEY (epic_id) REFERENCES epics(id)
+);
+
+CREATE INDEX idx_conversations_type ON conversations(type);
+CREATE INDEX idx_conversations_status ON conversations(status);
+CREATE INDEX idx_conversations_participant_1 ON conversations(participant_1_id);
+CREATE INDEX idx_conversations_participant_2 ON conversations(participant_2_id);
+CREATE INDEX idx_conversations_updated ON conversations(updated_at);
+
+-- Trigger to update updated_at on conversations
+CREATE TRIGGER update_conversations_timestamp
+AFTER UPDATE ON conversations
+FOR EACH ROW
+BEGIN
+    UPDATE conversations SET updated_at = datetime('now') WHERE id = NEW.id;
+END;
+
+-- Messages within conversations or discussions
+CREATE TABLE messages (
+    id TEXT PRIMARY KEY,                  -- MSG-[P]-[NNNN] format (P = priority code)
+    conversation_id TEXT NOT NULL,        -- Parent conversation/discussion
+    from_mission_id INTEGER NOT NULL,     -- Sender mission ID
+    subject TEXT NOT NULL,                -- Message subject
+    body TEXT NOT NULL,                   -- Markdown-formatted body
+    priority TEXT NOT NULL DEFAULT 'MEDIUM'
+        CHECK(priority IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')),
+
+    -- Threading (discussions only)
+    parent_message_id TEXT,               -- Parent message for threading (NULL = root)
+    thread_root_id TEXT,                  -- Root of thread tree (NULL if not threaded)
+
+    -- Optional context links
+    task_id TEXT,
+    epic_id TEXT,
+    artifact_path TEXT,                   -- Optional related file/artifact
+
+    -- Timestamps
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at TEXT,                      -- Optional expiration timestamp
+
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (from_mission_id) REFERENCES missions(id),
+    FOREIGN KEY (parent_message_id) REFERENCES messages(id),
+    FOREIGN KEY (thread_root_id) REFERENCES messages(id),
+    FOREIGN KEY (task_id) REFERENCES tasks(id),
+    FOREIGN KEY (epic_id) REFERENCES epics(id)
+);
+
+CREATE INDEX idx_messages_conversation ON messages(conversation_id);
+CREATE INDEX idx_messages_from_mission ON messages(from_mission_id);
+CREATE INDEX idx_messages_priority ON messages(priority);
+CREATE INDEX idx_messages_created ON messages(created_at);
+CREATE INDEX idx_messages_thread_root ON messages(thread_root_id);
+
+-- Trigger to update parent conversation updated_at when a message is added
+CREATE TRIGGER update_conversation_on_message_insert
+AFTER INSERT ON messages
+FOR EACH ROW
+BEGIN
+    UPDATE conversations SET updated_at = datetime('now') WHERE id = NEW.conversation_id;
+END;
+
+-- Tracks when each mission last viewed a conversation (for unread detection)
+CREATE TABLE conversation_views (
+    conversation_id TEXT NOT NULL,
+    mission_id INTEGER NOT NULL,
+    last_viewed_at TEXT NOT NULL DEFAULT (datetime('now')),
+
+    PRIMARY KEY (conversation_id, mission_id),
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (mission_id) REFERENCES missions(id)
+);
+
+CREATE INDEX idx_conversation_views_mission ON conversation_views(mission_id);
+
+-- Tracks when each mission acknowledges/processes a specific message
+CREATE TABLE message_acknowledgements (
+    message_id TEXT NOT NULL,
+    mission_id INTEGER NOT NULL,
+    acknowledged_at TEXT NOT NULL DEFAULT (datetime('now')),
+
+    PRIMARY KEY (message_id, mission_id),
+    FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+    FOREIGN KEY (mission_id) REFERENCES missions(id)
+);
+
+CREATE INDEX idx_message_acks_message ON message_acknowledgements(message_id);
+CREATE INDEX idx_message_acks_mission ON message_acknowledgements(mission_id);

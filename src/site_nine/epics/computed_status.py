@@ -9,10 +9,13 @@ def compute_epic_status(db: Database, epic_id: str) -> str:
     Compute epic status from its subtasks.
 
     Rules:
-    - COMPLETE: All tasks are COMPLETE
-    - ABORTED: All tasks are terminal (COMPLETE/ABORTED) and at least one is ABORTED
+    - ABORTED: The epic itself has been explicitly aborted (aborted_at IS NOT NULL)
+    - COMPLETE: All tasks are terminal (COMPLETE or ABORTED)
     - UNDERWAY: At least one task is UNDERWAY or COMPLETE (but not all terminal)
     - TODO: All tasks are TODO (or no tasks)
+
+    Note: Individual aborted tasks do not abort the epic. An epic is only ABORTED
+    when explicitly aborted via the abort command (sets aborted_at on the epic itself).
 
     Args:
         db: Database connection
@@ -21,6 +24,14 @@ def compute_epic_status(db: Database, epic_id: str) -> str:
     Returns:
         Computed status: TODO, UNDERWAY, COMPLETE, or ABORTED
     """
+    # Check if epic itself was explicitly aborted
+    epic_result = db.execute_query(
+        "SELECT aborted_at FROM epics WHERE id = :epic_id",
+        {"epic_id": epic_id},
+    )
+    if epic_result and epic_result[0]["aborted_at"] is not None:
+        return EpicStatus.ABORTED.value
+
     result = db.execute_query(
         """
         SELECT 
@@ -48,13 +59,9 @@ def compute_epic_status(db: Database, epic_id: str) -> str:
     if total == 0:
         return EpicStatus.TODO.value
 
-    # All tasks complete → COMPLETE
-    if complete == total:
+    # All tasks terminal (complete or aborted) → COMPLETE
+    if complete + aborted == total:
         return EpicStatus.COMPLETE.value
-
-    # All tasks terminal (complete or aborted) and at least one aborted → ABORTED
-    if (complete + aborted == total) and aborted > 0:
-        return EpicStatus.ABORTED.value
 
     # At least one task started (underway or complete) → UNDERWAY
     if underway > 0 or complete > 0:
@@ -71,8 +78,8 @@ def get_all_epic_statuses(db: Database) -> dict[str, str]:
     Returns:
         Dictionary mapping epic_id → computed status
     """
-    # Get all epics
-    epics = db.execute_query("SELECT id FROM epics")
+    # Get all epics (including aborted_at for explicit abort detection)
+    epics = db.execute_query("SELECT id, aborted_at FROM epics")
 
     if not epics:
         return {}
@@ -100,6 +107,11 @@ def get_all_epic_statuses(db: Database) -> dict[str, str]:
     for epic in epics:
         epic_id = epic["id"]
 
+        # Epic explicitly aborted → ABORTED
+        if epic["aborted_at"] is not None:
+            status_map[epic_id] = EpicStatus.ABORTED.value
+            continue
+
         # Epic has no tasks → TODO
         if epic_id not in task_counts:
             status_map[epic_id] = EpicStatus.TODO.value
@@ -111,12 +123,9 @@ def get_all_epic_statuses(db: Database) -> dict[str, str]:
         complete = counts["complete_count"]
         aborted = counts["aborted_count"]
 
-        # All complete → COMPLETE
-        if complete == total:
+        # All tasks terminal (complete or aborted) → COMPLETE
+        if complete + aborted == total:
             status_map[epic_id] = EpicStatus.COMPLETE.value
-        # All terminal and at least one aborted → ABORTED
-        elif (complete + aborted == total) and aborted > 0:
-            status_map[epic_id] = EpicStatus.ABORTED.value
         # At least one started → UNDERWAY
         elif underway > 0 or complete > 0:
             status_map[epic_id] = EpicStatus.UNDERWAY.value

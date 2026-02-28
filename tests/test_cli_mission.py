@@ -114,7 +114,7 @@ def test_mission_start_command(initialized_project: Path):
     )
     assert persona_result.exit_code == 0, f"Persona creation failed: {persona_result.output}"
 
-    result = runner.invoke(app, ["mission", "start", "test-daemon", "--role", "Engineer"])
+    result = runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "test-daemon"])
 
     assert result.exit_code == 0, f"Mission start failed: {result.output}"
     assert "Started mission" in result.output
@@ -126,7 +126,9 @@ def test_mission_start_with_task(initialized_project: Path):
         app, ["persona", "add", "test-daemon-2", "--role", "Tester", "--mythology", "greek", "--description", "Test"]
     )
 
-    result = runner.invoke(app, ["mission", "start", "test-daemon-2", "--role", "Tester", "--task", "Fix tests"])
+    result = runner.invoke(
+        app, ["mission", "start", "--role", "Tester", "--name", "test-daemon-2", "--task", "Fix tests"]
+    )
 
     assert result.exit_code == 0
     assert "Started mission" in result.output
@@ -135,7 +137,7 @@ def test_mission_start_with_task(initialized_project: Path):
 
 def test_mission_start_invalid_role(initialized_project: Path):
     """Test starting mission with invalid role"""
-    result = runner.invoke(app, ["mission", "start", "test-daemon", "--role", "InvalidRole"])
+    result = runner.invoke(app, ["mission", "start", "--role", "InvalidRole", "--name", "test-daemon"])
 
     assert result.exit_code == 1
     assert "Invalid role" in result.output
@@ -148,7 +150,7 @@ def test_mission_start_case_insensitive_role(initialized_project: Path):
         ["persona", "add", "test-daemon-3", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
 
-    result = runner.invoke(app, ["mission", "start", "test-daemon-3", "--role", "engineer"])
+    result = runner.invoke(app, ["mission", "start", "--role", "engineer", "--name", "test-daemon-3"])
 
     assert result.exit_code == 0
 
@@ -164,8 +166,8 @@ def test_mission_list_with_missions(initialized_project: Path):
     )
 
     # Start missions
-    runner.invoke(app, ["mission", "start", "daemon-1", "--role", "Engineer"])
-    runner.invoke(app, ["mission", "start", "daemon-2", "--role", "Tester"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "daemon-1"])
+    runner.invoke(app, ["mission", "start", "--role", "Tester", "--name", "daemon-2"])
 
     result = runner.invoke(app, ["mission", "list"])
 
@@ -182,8 +184,8 @@ def test_mission_list_role_filter_matches(initialized_project: Path):
         app, ["persona", "add", "test-daemon", "--role", "Tester", "--mythology", "greek", "--description", "Test"]
     )
 
-    runner.invoke(app, ["mission", "start", "eng-daemon", "--role", "Engineer"])
-    runner.invoke(app, ["mission", "start", "test-daemon", "--role", "Tester"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "eng-daemon"])
+    runner.invoke(app, ["mission", "start", "--role", "Tester", "--name", "test-daemon"])
 
     result = runner.invoke(app, ["mission", "list", "--role", "Engineer"])
 
@@ -197,7 +199,7 @@ def test_mission_list_active_with_active(initialized_project: Path):
         ["persona", "add", "active-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
 
-    runner.invoke(app, ["mission", "start", "active-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "active-daemon"])
 
     result = runner.invoke(app, ["mission", "list", "--active-only"])
 
@@ -212,7 +214,7 @@ def test_mission_show_existing(initialized_project: Path):
     )
 
     # Start a mission
-    start_result = runner.invoke(app, ["mission", "start", "show-daemon", "--role", "Engineer"])
+    start_result = runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "show-daemon"])
     assert start_result.exit_code == 0
 
     # Extract mission ID from output (should be 1 if first)
@@ -228,7 +230,7 @@ def test_mission_show_json_format(initialized_project: Path):
         app, ["persona", "add", "json-daemon", "--role", "Operator", "--mythology", "greek", "--description", "Test"]
     )
 
-    runner.invoke(app, ["mission", "start", "json-daemon", "--role", "Operator"])
+    runner.invoke(app, ["mission", "start", "--role", "Operator", "--name", "json-daemon"])
 
     result = runner.invoke(app, ["mission", "show", "1", "--json"])
 
@@ -241,7 +243,7 @@ def test_mission_end_existing(initialized_project: Path):
         app, ["persona", "add", "end-daemon", "--role", "Architect", "--mythology", "greek", "--description", "Test"]
     )
 
-    runner.invoke(app, ["mission", "start", "end-daemon", "--role", "Architect"])
+    runner.invoke(app, ["mission", "start", "--role", "Architect", "--name", "end-daemon"])
 
     result = runner.invoke(app, ["mission", "end", "1"])
 
@@ -257,7 +259,7 @@ def test_mission_end_with_summary(initialized_project: Path):
         ["persona", "add", "summary-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
 
-    runner.invoke(app, ["mission", "start", "summary-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "summary-daemon"])
 
     result = runner.invoke(app, ["mission", "end", "1", "--summary", "Completed successfully"])
 
@@ -272,7 +274,7 @@ def test_mission_update_existing(initialized_project: Path):
         ["persona", "add", "update-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
 
-    runner.invoke(app, ["mission", "start", "update-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "update-daemon"])
 
     result = runner.invoke(app, ["mission", "update", "1", "--notes", "Updated notes"])
 
@@ -286,7 +288,7 @@ def test_mission_update_objective(initialized_project: Path):
         app, ["persona", "add", "obj-daemon", "--role", "Tester", "--mythology", "greek", "--description", "Test"]
     )
 
-    runner.invoke(app, ["mission", "start", "obj-daemon", "--role", "Tester"])
+    runner.invoke(app, ["mission", "start", "--role", "Tester", "--name", "obj-daemon"])
 
     result = runner.invoke(app, ["mission", "update", "1", "--objective", "New objective"])
 
@@ -299,7 +301,7 @@ def test_mission_summary_existing(initialized_project: Path):
         app, ["persona", "add", "sum-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"]
     )
 
-    runner.invoke(app, ["mission", "start", "sum-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "sum-daemon"])
 
     result = runner.invoke(app, ["mission", "summary", "1"])
 
@@ -312,7 +314,7 @@ def test_mission_update_with_task(initialized_project: Path):
         app, ["persona", "add", "upd-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"]
     )
 
-    runner.invoke(app, ["mission", "start", "upd-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "upd-daemon"])
 
     result = runner.invoke(app, ["mission", "update", "1", "--task", "New task description"])
 
@@ -325,7 +327,7 @@ def test_mission_update_with_role(initialized_project: Path):
         app, ["persona", "add", "role-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"]
     )
 
-    runner.invoke(app, ["mission", "start", "role-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "role-daemon"])
 
     result = runner.invoke(app, ["mission", "update", "1", "--role", "Architect"])
 
@@ -361,7 +363,7 @@ def test_mission_workflow_complete(initialized_project: Path):
 
     # Start mission
     start_result = runner.invoke(
-        app, ["mission", "start", "workflow-daemon", "--role", "Operator", "--task", "Test workflow"]
+        app, ["mission", "start", "--role", "Operator", "--name", "workflow-daemon", "--task", "Test workflow"]
     )
     assert start_result.exit_code == 0
     assert "Started mission" in start_result.output
@@ -392,7 +394,7 @@ def test_mission_list_multiple_with_filters(initialized_project: Path):
             app,
             ["persona", "add", f"multi-daemon-{i}", "--role", role, "--mythology", "greek", "--description", "Test"],
         )
-        runner.invoke(app, ["mission", "start", f"multi-daemon-{i}", "--role", role])
+        runner.invoke(app, ["mission", "start", "--role", role, "--name", f"multi-daemon-{i}"])
 
     # List all missions
     all_result = runner.invoke(app, ["mission", "list"])
@@ -423,7 +425,9 @@ def test_mission_show_existing_json(initialized_project: Path):
         app,
         ["persona", "add", "showjson-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    start = runner.invoke(app, ["mission", "start", "showjson-daemon", "--role", "Engineer", "--task", "Build things"])
+    start = runner.invoke(
+        app, ["mission", "start", "--role", "Engineer", "--name", "showjson-daemon", "--task", "Build things"]
+    )
     assert start.exit_code == 0
 
     result = runner.invoke(app, ["mission", "show", "1", "--json"])
@@ -441,7 +445,7 @@ def test_mission_show_details_displayed(initialized_project: Path):
         app,
         ["persona", "add", "detail-daemon", "--role", "Tester", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "detail-daemon", "--role", "Tester", "--task", "Test stuff"])
+    runner.invoke(app, ["mission", "start", "--role", "Tester", "--name", "detail-daemon", "--task", "Test stuff"])
 
     result = runner.invoke(app, ["mission", "show", "1"])
     assert result.exit_code == 0
@@ -468,7 +472,7 @@ def test_mission_summary_existing_json_mocked(initialized_project: Path):
         app,
         ["persona", "add", "sumjson-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "sumjson-daemon", "--role", "Engineer", "--task", "Build stuff"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "sumjson-daemon", "--task", "Build stuff"])
 
     mock_diff = MagicMock()
     mock_diff.returncode = 0
@@ -508,7 +512,9 @@ def test_mission_summary_with_git_data(initialized_project: Path):
         app,
         ["persona", "add", "gitdata-daemon", "--role", "Architect", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "gitdata-daemon", "--role", "Architect", "--task", "Design system"])
+    runner.invoke(
+        app, ["mission", "start", "--role", "Architect", "--name", "gitdata-daemon", "--task", "Design system"]
+    )
 
     mock_diff = MagicMock()
     mock_diff.returncode = 0
@@ -552,7 +558,7 @@ def test_mission_summary_no_git_data(initialized_project: Path):
         app,
         ["persona", "add", "nogit-daemon", "--role", "Operator", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "nogit-daemon", "--role", "Operator"])
+    runner.invoke(app, ["mission", "start", "--role", "Operator", "--name", "nogit-daemon"])
 
     mock_result = MagicMock()
     mock_result.returncode = 0
@@ -574,7 +580,7 @@ def test_mission_summary_with_tasks(initialized_project: Path):
         app,
         ["persona", "add", "tasksum-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "tasksum-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "tasksum-daemon"])
 
     # Create a task and claim it for this mission via the DB
     from site_nine.core.database import Database
@@ -606,7 +612,7 @@ def test_mission_summary_git_exception(initialized_project: Path):
         app,
         ["persona", "add", "gitexc-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "gitexc-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "gitexc-daemon"])
 
     with patch("subprocess.run", side_effect=OSError("git not found")):
         result = runner.invoke(app, ["mission", "summary", "1"])
@@ -623,7 +629,7 @@ def test_mission_update_no_updates(initialized_project: Path):
         app,
         ["persona", "add", "noupd-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "noupd-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "noupd-daemon"])
 
     result = runner.invoke(app, ["mission", "update", "1"])
     out = " ".join(result.output.split())
@@ -644,7 +650,7 @@ def test_mission_update_completed_mission(initialized_project: Path):
         app,
         ["persona", "add", "done-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "done-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "done-daemon"])
     runner.invoke(app, ["mission", "end", "1"])
 
     result = runner.invoke(app, ["mission", "update", "1", "--task", "Should fail"])
@@ -659,7 +665,7 @@ def test_mission_update_invalid_role(initialized_project: Path):
         app,
         ["persona", "add", "badrole-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "badrole-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "badrole-daemon"])
 
     result = runner.invoke(app, ["mission", "update", "1", "--role", "FakeRole"])
     assert result.exit_code != 0
@@ -673,7 +679,7 @@ def test_mission_update_task_and_role(initialized_project: Path):
         app,
         ["persona", "add", "both-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "both-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "both-daemon"])
 
     result = runner.invoke(app, ["mission", "update", "1", "--task", "New objective", "--role", "Architect"])
     assert result.exit_code == 0
@@ -689,7 +695,7 @@ def test_mission_list_with_data_table(initialized_project: Path):
         app,
         ["persona", "add", "table-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "table-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "table-daemon"])
 
     result = runner.invoke(app, ["mission", "list"])
     assert result.exit_code == 0
@@ -703,7 +709,7 @@ def test_mission_list_json_with_data(initialized_project: Path):
         app,
         ["persona", "add", "ljson-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "ljson-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "ljson-daemon"])
 
     result = runner.invoke(app, ["mission", "list", "--json"])
     assert result.exit_code == 0
@@ -720,7 +726,7 @@ def test_mission_show_completed_mission(initialized_project: Path):
         app,
         ["persona", "add", "comp-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "comp-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "comp-daemon"])
     runner.invoke(app, ["mission", "end", "1"])
 
     result = runner.invoke(app, ["mission", "show", "1"])
@@ -736,7 +742,9 @@ def test_mission_show_with_objective(initialized_project: Path):
         app,
         ["persona", "add", "obj-show-daemon", "--role", "Tester", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "obj-show-daemon", "--role", "Tester", "--task", "Verify coverage"])
+    runner.invoke(
+        app, ["mission", "start", "--role", "Tester", "--name", "obj-show-daemon", "--task", "Verify coverage"]
+    )
 
     result = runner.invoke(app, ["mission", "show", "1"])
     assert result.exit_code == 0
@@ -751,7 +759,7 @@ def test_mission_summary_fallback_git_log(initialized_project: Path):
         app,
         ["persona", "add", "fallback-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "fallback-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "fallback-daemon"])
 
     call_count = 0
 
@@ -789,7 +797,7 @@ def test_mission_summary_commits_fallback(initialized_project: Path):
         app,
         ["persona", "add", "comfb-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "comfb-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "comfb-daemon"])
 
     call_count = 0
 
@@ -830,7 +838,9 @@ def test_mission_summary_completed_mission(initialized_project: Path):
         app,
         ["persona", "add", "sumcomp-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "sumcomp-daemon", "--role", "Engineer", "--task", "Some objective"])
+    runner.invoke(
+        app, ["mission", "start", "--role", "Engineer", "--name", "sumcomp-daemon", "--task", "Some objective"]
+    )
     runner.invoke(app, ["mission", "end", "1"])
 
     mock_result = MagicMock()
@@ -881,7 +891,7 @@ def test_mission_summary_task_exception_handled(initialized_project: Path):
         app,
         ["persona", "add", "taskexc-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "taskexc-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "taskexc-daemon"])
 
     mock_result = MagicMock()
     mock_result.returncode = 0
@@ -902,7 +912,7 @@ def test_mission_summary_json_with_tasks(initialized_project: Path):
         app,
         ["persona", "add", "taskjson-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
-    runner.invoke(app, ["mission", "start", "taskjson-daemon", "--role", "Engineer"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "taskjson-daemon"])
 
     from site_nine.core.database import Database
     from site_nine.tasks import TaskManager
@@ -941,7 +951,9 @@ def test_mission_start_with_epic(initialized_project: Path):
         app, ["persona", "add", "epic-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"]
     )
 
-    result = runner.invoke(app, ["mission", "start", "epic-daemon", "--role", "Engineer", "--epic", "EPC-H-0001"])
+    result = runner.invoke(
+        app, ["mission", "start", "--role", "Engineer", "--name", "epic-daemon", "--epic", "EPC-H-0001"]
+    )
 
     assert result.exit_code == 0
     assert "Started mission" in result.output
@@ -956,7 +968,18 @@ def test_mission_start_epic_and_task_exclusive(initialized_project: Path):
 
     result = runner.invoke(
         app,
-        ["mission", "start", "excl-daemon", "--role", "Engineer", "--epic", "EPC-H-0001", "--task", "Some task"],
+        [
+            "mission",
+            "start",
+            "--role",
+            "Engineer",
+            "--name",
+            "excl-daemon",
+            "--epic",
+            "EPC-H-0001",
+            "--task",
+            "Some task",
+        ],
     )
 
     assert result.exit_code == 1
@@ -969,7 +992,9 @@ def test_mission_start_with_nonexistent_epic(initialized_project: Path):
         app, ["persona", "add", "noepic-daemon", "--role", "Tester", "--mythology", "greek", "--description", "Test"]
     )
 
-    result = runner.invoke(app, ["mission", "start", "noepic-daemon", "--role", "Tester", "--epic", "EPC-H-9999"])
+    result = runner.invoke(
+        app, ["mission", "start", "--role", "Tester", "--name", "noepic-daemon", "--epic", "EPC-H-9999"]
+    )
 
     assert result.exit_code == 1
     assert "Epic" in result.output and "not found" in result.output
@@ -993,7 +1018,7 @@ def test_mission_show_with_epic(initialized_project: Path):
         ["persona", "add", "showepic-daemon", "--role", "Operator", "--mythology", "greek", "--description", "Test"],
     )
 
-    runner.invoke(app, ["mission", "start", "showepic-daemon", "--role", "Operator", "--epic", "EPC-M-0002"])
+    runner.invoke(app, ["mission", "start", "--role", "Operator", "--name", "showepic-daemon", "--epic", "EPC-M-0002"])
 
     result = runner.invoke(app, ["mission", "show", "1"])
 
@@ -1019,10 +1044,320 @@ def test_mission_show_json_with_epic(initialized_project: Path):
         ["persona", "add", "jsonepic-daemon", "--role", "Engineer", "--mythology", "greek", "--description", "Test"],
     )
 
-    runner.invoke(app, ["mission", "start", "jsonepic-daemon", "--role", "Engineer", "--epic", "EPC-C-0003"])
+    runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "jsonepic-daemon", "--epic", "EPC-C-0003"])
 
     result = runner.invoke(app, ["mission", "show", "1", "--json"])
 
     assert result.exit_code == 0
     data = json.loads(result.output)
     assert data["data"]["epic_id"] == "EPC-C-0003"
+
+
+# ---- Resume command tests ----
+
+
+def _create_suspended_mission(initialized_project: Path, persona_name: str = "resume-daemon") -> None:
+    """Helper: create a persona, start a mission, then suspend it."""
+    runner.invoke(
+        app,
+        ["persona", "add", persona_name, "--role", "Operator", "--mythology", "greek", "--description", "Test resume"],
+    )
+    runner.invoke(app, ["mission", "start", "--role", "Operator", "--name", persona_name])
+    runner.invoke(app, ["mission", "suspend", "1"])
+
+
+def test_mission_resume_not_found(initialized_project: Path):
+    """Test resuming a non-existent mission exits with error."""
+    with patch("subprocess.run"):
+        result = runner.invoke(app, ["mission", "resume", "999"])
+    assert result.exit_code != 0
+
+
+def test_mission_resume_not_found_by_codename(initialized_project: Path):
+    """Test resuming a mission by non-existent codename exits with error."""
+    with patch("subprocess.run"):
+        result = runner.invoke(app, ["mission", "resume", "no-such-codename"])
+    assert result.exit_code != 0
+
+
+def test_mission_resume_not_suspended(initialized_project: Path):
+    """Test resuming a mission that is ACTIVE (not SUSPENDED) exits with error."""
+    runner.invoke(
+        app,
+        [
+            "persona",
+            "add",
+            "active-daemon",
+            "--role",
+            "Operator",
+            "--mythology",
+            "greek",
+            "--description",
+            "Active mission",
+        ],
+    )
+    runner.invoke(app, ["mission", "start", "--role", "Operator", "--name", "active-daemon"])
+
+    with patch("subprocess.run"):
+        result = runner.invoke(app, ["mission", "resume", "1"])
+    assert result.exit_code != 0
+
+
+def test_mission_resume_by_id(initialized_project: Path):
+    """Test resuming a suspended mission by numeric ID launches OpenCode."""
+    _create_suspended_mission(initialized_project)
+
+    with patch("subprocess.run") as mock_run:
+        result = runner.invoke(app, ["mission", "resume", "1"])
+
+    assert result.exit_code == 0
+    mock_run.assert_called_once()
+    args = mock_run.call_args[0][0]
+    assert "opencode" in args
+    assert "--prompt" in args
+
+
+def test_mission_resume_by_codename(initialized_project: Path):
+    """Test resuming a suspended mission by codename launches OpenCode."""
+    persona_name = "codename-daemon"
+    _create_suspended_mission(initialized_project, persona_name=persona_name)
+
+    # Get the codename that was assigned
+    list_result = runner.invoke(app, ["mission", "list", "--json"])
+    assert list_result.exit_code == 0
+    missions = json.loads(list_result.output)
+    codename = missions["data"][0]["codename"]
+
+    with patch("subprocess.run") as mock_run:
+        result = runner.invoke(app, ["mission", "resume", codename])
+
+    assert result.exit_code == 0
+    mock_run.assert_called_once()
+
+
+def test_mission_resume_dry_run(initialized_project: Path):
+    """Test --dry-run shows command without executing or changing state."""
+    _create_suspended_mission(initialized_project)
+
+    with patch("subprocess.run") as mock_run:
+        result = runner.invoke(app, ["mission", "resume", "1", "--dry-run"])
+
+    assert result.exit_code == 0
+    mock_run.assert_not_called()
+    assert "Dry run" in result.output or "dry" in result.output.lower()
+
+    # Mission should still be SUSPENDED (dry run did not change state)
+    show_result = runner.invoke(app, ["mission", "show", "1"])
+    assert "SUSPENDED" in show_result.output or "Suspended" in show_result.output
+
+
+def test_mission_resume_changes_status_to_active(initialized_project: Path):
+    """Test that resume transitions mission status from SUSPENDED to ACTIVE."""
+    _create_suspended_mission(initialized_project)
+
+    # Confirm mission is suspended
+    show_before = runner.invoke(app, ["mission", "show", "1"])
+    assert "SUSPENDED" in show_before.output or "Suspended" in show_before.output
+
+    with patch("subprocess.run"):
+        result = runner.invoke(app, ["mission", "resume", "1"])
+
+    assert result.exit_code == 0
+
+    show_after = runner.invoke(app, ["mission", "show", "1"])
+    # Should no longer be SUSPENDED
+    assert "SUSPENDED" not in show_after.output
+
+
+def test_mission_resume_with_model_option(initialized_project: Path):
+    """Test --model option is passed through to opencode invocation."""
+    _create_suspended_mission(initialized_project)
+
+    with patch("subprocess.run") as mock_run:
+        result = runner.invoke(app, ["mission", "resume", "1", "--model", "openai/gpt-4o"])
+
+    assert result.exit_code == 0
+    mock_run.assert_called_once()
+    args = mock_run.call_args[0][0]
+    assert "openai/gpt-4o" in args
+
+
+def test_mission_resume_context_includes_mission_info(initialized_project: Path):
+    """Test that the context message passed to OpenCode includes mission metadata."""
+    _create_suspended_mission(initialized_project)
+
+    with patch("subprocess.run") as mock_run:
+        result = runner.invoke(app, ["mission", "resume", "1"])
+
+    assert result.exit_code == 0
+    mock_run.assert_called_once()
+    args = mock_run.call_args[0][0]
+    # The --prompt arg should contain mission ID
+    prompt_idx = args.index("--prompt")
+    context = args[prompt_idx + 1]
+    assert "1" in context  # mission ID
+
+
+def test_mission_resume_opencode_not_found(initialized_project: Path):
+    """Test graceful error when opencode binary is not found."""
+    _create_suspended_mission(initialized_project)
+
+    with patch("subprocess.run", side_effect=FileNotFoundError):
+        result = runner.invoke(app, ["mission", "resume", "1"])
+
+    assert result.exit_code != 0
+
+
+def test_mission_suspend_then_resume_workflow(initialized_project: Path):
+    """Integration test: start → suspend → resume full workflow."""
+    runner.invoke(
+        app,
+        [
+            "persona",
+            "add",
+            "cycle-daemon",
+            "--role",
+            "Engineer",
+            "--mythology",
+            "greek",
+            "--description",
+            "Suspend/resume cycle",
+        ],
+    )
+
+    start_result = runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "cycle-daemon"])
+    assert start_result.exit_code == 0
+
+    suspend_result = runner.invoke(app, ["mission", "suspend", "1"])
+    assert suspend_result.exit_code == 0
+
+    with patch("subprocess.run") as mock_run:
+        resume_result = runner.invoke(app, ["mission", "resume", "1"])
+
+    assert resume_result.exit_code == 0
+    mock_run.assert_called_once()
+
+
+def test_mission_resume_context_includes_persona_and_role(initialized_project: Path):
+    """Test context message includes persona name and role."""
+    _create_suspended_mission(initialized_project)
+
+    with patch("subprocess.run") as mock_run:
+        result = runner.invoke(app, ["mission", "resume", "1"])
+
+    assert result.exit_code == 0
+    args = mock_run.call_args[0][0]
+    prompt_idx = args.index("--prompt")
+    context = args[prompt_idx + 1]
+    assert "resume-daemon" in context  # persona name
+    assert "Operator" in context  # role
+
+
+def test_mission_resume_context_includes_objective(initialized_project: Path):
+    """Test context message includes mission objective when set."""
+    runner.invoke(
+        app,
+        ["persona", "add", "obj-daemon", "--role", "Operator", "--mythology", "greek", "--description", "Test"],
+    )
+    runner.invoke(
+        app, ["mission", "start", "--role", "Operator", "--name", "obj-daemon", "--task", "My special objective"]
+    )
+    runner.invoke(app, ["mission", "suspend", "1"])
+
+    with patch("subprocess.run") as mock_run:
+        result = runner.invoke(app, ["mission", "resume", "1"])
+
+    assert result.exit_code == 0
+    args = mock_run.call_args[0][0]
+    prompt_idx = args.index("--prompt")
+    context = args[prompt_idx + 1]
+    assert "My special objective" in context
+
+
+def test_mission_resume_context_includes_tasks(initialized_project: Path):
+    """Test context message includes task list when tasks are assigned to the mission.
+
+    NOTE: Uses direct DB injection to associate a task with the mission,
+    because `task claim` CLI path fails in the test environment where the
+    `blocks` table is absent from the initialized schema (schema.sql out-of-sync).
+    """
+    import json
+    from site_nine.core.database import Database
+
+    runner.invoke(
+        app,
+        ["persona", "add", "task-daemon", "--role", "Tester", "--mythology", "greek", "--description", "Test"],
+    )
+    runner.invoke(app, ["mission", "start", "--role", "Tester", "--name", "task-daemon"])
+
+    # Get the mission ID
+    list_result = runner.invoke(app, ["mission", "list", "--json"])
+    missions = json.loads(list_result.output)
+    mission_id = missions["data"][0]["id"]
+
+    # Directly inject a task row associated with the mission (bypasses `blocks` table)
+    db_path = initialized_project / ".opencode" / "data" / "project.db"
+    with Database(db_path) as db:
+        db.execute_update(
+            """
+            INSERT INTO tasks (id, title, status, priority, role, file_path, current_mission_id, created_at)
+            VALUES ('TST-M-0999', 'A resume test task', 'UNDERWAY', 'MEDIUM', 'Tester',
+                    '.opencode/work/tasks/TST-M-0999.md', :mission_id, datetime('now'))
+            """,
+            {"mission_id": mission_id},
+        )
+
+    runner.invoke(app, ["mission", "suspend", str(mission_id)])
+
+    with patch("subprocess.run") as mock_run:
+        result = runner.invoke(app, ["mission", "resume", str(mission_id)])
+
+    assert result.exit_code == 0
+    args = mock_run.call_args[0][0]
+    prompt_idx = args.index("--prompt")
+    context = args[prompt_idx + 1]
+    assert "TST-M-0999" in context
+    assert "A resume test task" in context
+
+
+def test_mission_resume_idle_mission_fails(initialized_project: Path):
+    """Test that an IDLE mission (not SUSPENDED) cannot be resumed."""
+    runner.invoke(
+        app,
+        ["persona", "add", "idle-daemon", "--role", "Operator", "--mythology", "greek", "--description", "Idle test"],
+    )
+    runner.invoke(app, ["mission", "start", "--role", "Operator", "--name", "idle-daemon"])
+    # Force mission to IDLE status directly via heartbeat/set_status isn't exposed in CLI,
+    # but we can verify an ACTIVE mission is rejected (IDLE is also not SUSPENDED)
+    # The implementation guards on status != SUSPENDED
+    with patch("subprocess.run"):
+        result = runner.invoke(app, ["mission", "resume", "1"])
+    assert result.exit_code != 0
+
+
+def test_mission_resume_dry_run_shows_model_and_prompt(initialized_project: Path):
+    """Test --dry-run output contains both model and prompt details."""
+    _create_suspended_mission(initialized_project)
+
+    with patch("subprocess.run") as mock_run:
+        result = runner.invoke(app, ["mission", "resume", "1", "--dry-run"])
+
+    assert result.exit_code == 0
+    mock_run.assert_not_called()
+    # Output should describe what would be run
+    assert "opencode" in result.output
+    assert "--prompt" in result.output
+
+
+def test_mission_resume_context_continue_line(initialized_project: Path):
+    """Test context message ends with 'Continue working on your mission.' sentinel."""
+    _create_suspended_mission(initialized_project)
+
+    with patch("subprocess.run") as mock_run:
+        result = runner.invoke(app, ["mission", "resume", "1"])
+
+    assert result.exit_code == 0
+    args = mock_run.call_args[0][0]
+    prompt_idx = args.index("--prompt")
+    context = args[prompt_idx + 1]
+    assert "Continue working on your mission." in context

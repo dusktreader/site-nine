@@ -117,6 +117,8 @@ def list(
                 "subtask_count": epic.subtask_count,
                 "created_at": epic.created_at,
                 "status_details": epic.status_details,
+                "locked": epic.locked,
+                "locked_at": str(epic.locked_at) if epic.locked_at else None,
                 "file_path": epic.file_path,
             }
             for epic in epics
@@ -125,10 +127,11 @@ def list(
     else:
         table = Table(title="Epics")
         table.add_column("ID", style="cyan", no_wrap=True)
-        table.add_column("Title", style="white")
+        table.add_column("Title", style="white", no_wrap=True)
         table.add_column("Status", style="yellow")
         table.add_column("Priority", style="magenta")
         table.add_column("Progress", style="green")
+        table.add_column("Lk", style="yellow", no_wrap=True)
         table.add_column("Created", style="dim")
 
         for epic in epics:
@@ -147,6 +150,7 @@ def list(
                 progress = "No tasks"
 
             created_date = epic.created_at.format("YYYY-MM-DD")
+            locked_text = Text("*", style="yellow bold") if epic.locked else Text("-", style="dim")
 
             table.add_row(
                 epic.id,
@@ -154,6 +158,7 @@ def list(
                 status_text,
                 epic.priority,
                 progress,
+                locked_text,
                 created_date,
             )
 
@@ -188,6 +193,8 @@ def show(
             "created_at": epic.created_at,
             "updated_at": epic.updated_at,
             "status_details": epic.status_details,
+            "locked": epic.locked,
+            "locked_at": str(epic.locked_at) if epic.locked_at else None,
             "file_path": epic.file_path,
             "subtasks": [
                 {
@@ -220,10 +227,14 @@ def show(
         f"Status:       [{status_color}]{epic.status or 'UNKNOWN'}[/{status_color}]",
         f"Priority:     {epic.priority}",
         f"Progress:     {progress}",
+        f"Locked:       {'[yellow]YES[/yellow]' if epic.locked else 'No'}",
         "",
         f"Created:      {epic.created_at}",
         f"Updated:      {epic.updated_at}",
     ]
+
+    if epic.locked and epic.locked_at:
+        body_parts.append(f"Locked At:    {epic.locked_at}")
 
     if epic.status_details:
         body_parts.append(f"Status Notes: {epic.status_details}")
@@ -449,3 +460,49 @@ def unlink_adr(
         adr_manager.unlink_from_epic(adr_id, epic_id)
 
     terminal_message(f"Unlinked ADR {adr_id} from epic {epic_id}", subject="Success", subject_color="green")
+
+
+@app.command(name="lock")
+@handle_errors("Failed to lock epic", handle_exc_class=SiteNineError)
+def lock_epic(
+    epic_id: Annotated[str, typer.Argument(help="Epic ID")],
+) -> None:
+    """Lock an epic to prevent agents from claiming its tasks (Director-only)"""
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        manager = EpicManager(db)
+        locked_epic = manager.lock_epic(epic_id)
+
+    terminal_message(
+        conjoin(
+            f"Epic {epic_id} is now locked",
+            f"Title: {locked_epic.title}",
+            "Agents cannot claim tasks belonging to this epic until it is unlocked.",
+        ),
+        subject="Locked",
+        subject_color="yellow",
+    )
+
+
+@app.command(name="unlock")
+@handle_errors("Failed to unlock epic", handle_exc_class=SiteNineError)
+def unlock_epic(
+    epic_id: Annotated[str, typer.Argument(help="Epic ID")],
+) -> None:
+    """Unlock an epic to allow agents to claim its tasks again (Director-only)"""
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        manager = EpicManager(db)
+        unlocked_epic = manager.unlock_epic(epic_id)
+
+    terminal_message(
+        conjoin(
+            f"Epic {epic_id} is now unlocked",
+            f"Title: {unlocked_epic.title}",
+            "Agents can now claim tasks belonging to this epic.",
+        ),
+        subject="Unlocked",
+        subject_color="green",
+    )

@@ -50,6 +50,45 @@ Architecture decision documentation: when to create, format, review process.
 Common development issues: environment setup, test failures, database issues.
 
 
+## Agent Coordination
+
+### [agent-discovery.md](./agent-discovery.md)
+
+Agent discovery patterns: finding available agents, using `--json` flags, desk mode status, messaging vs. asking
+Director.
+
+
+### [epic-missions-and-desk-mode.md](./epic-missions-and-desk-mode.md)
+
+Epic mission workflows: starting missions with `--epic`, using `s9 task next`, desk mode usage, periodic status
+checks, responding to messages.
+
+
+### [json-output-usage.md](./json-output-usage.md)
+
+JSON output guidelines: when to use `--json` vs. table mode, parsing patterns, command examples, jq usage.
+
+
+### [desk-mode-orchestration.md](./desk-mode-orchestration.md)
+
+Desk mode orchestration for Admin/Operator agents: summoning background workers, sending work via messages, monitoring
+worker status, coordination patterns, termination procedures.
+
+
+## Architecture & Design
+
+### [architecture.md](./architecture.md)
+
+System architecture overview: layers, core components, database, task management, mission system, agent coordination,
+adapter pattern design.
+
+
+### [tool-adapters.md](./tool-adapters.md)
+
+Tool adapter system guide: what adapters are, how detection works, using adapters, implementing new adapters,
+configuration mapping, environment variable overrides.
+
+
 ## Documentation Standards
 
 ### [markdown-style.md](./markdown-style.md) ⚠️ **REQUIRED**
@@ -71,6 +110,12 @@ Markdown formatting rules: 120-char line wrap, ATX headings, title case, blank l
 | Documenting a design choice         | adr-workflow.md                                               |
 | Editing any markdown file           | markdown-style.md                                             |
 | Fixing an issue                     | troubleshooting.md                                            |
+| Finding other agents to coordinate  | agent-discovery.md                                            |
+| Working on epic-scoped missions     | epic-missions-and-desk-mode.md                                |
+| Using --json vs table output        | json-output-usage.md                                          |
+| Orchestrating background workers    | desk-mode-orchestration.md                                    |
+| Understanding system architecture   | architecture.md                                               |
+| Working with tool adapters          | tool-adapters.md                                              |
 | Learning site-nine's code patterns  | [site-nine-dev/coding-patterns.md](../../site-nine-dev/coding-patterns.md) |
 
 

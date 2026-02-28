@@ -26,6 +26,7 @@ from site_nine.exceptions import SiteNineError
 def doctor_command(
     fix: Annotated[bool, typer.Option("--fix", help="Apply fixes automatically")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show detailed output")] = False,
+    older_than: Annotated[int, typer.Option("--older-than", help="Days threshold for stale missions (default: 7)")] = 7,
 ) -> None:
     """Run health checks and validate data integrity (typically used by: humans)
 
@@ -67,7 +68,7 @@ def doctor_command(
 
     with Database(db_path) as db:
         manager = DoctorManager(db, opencode_dir)
-        report = manager.run_diagnostics(verbose=verbose)
+        report = manager.run_diagnostics(verbose=verbose, stale_days=older_than)
 
         # ── Render infrastructure results ─────────────────────────────────
         for result in report.infra_results:

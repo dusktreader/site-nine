@@ -8,57 +8,26 @@ metadata:
   workflow: task-viewing
 ---
 
-## Important: CLI Tool Usage
-
-**CRITICAL:** This project uses the `s9` CLI executable throughout these instructions.
-- **CLI executable:** `s9` (use in bash commands)
-- **Python module:** `site_nine` (use in Python imports: `from site_nine import ...`)
-
-All commands in this skill use the `s9` executable via bash. You should NOT attempt to import an `s9` module in Python code.
-
 ## What I Do
 
-I generate and display a comprehensive task report showing:
+I generate and display a comprehensive task report using the `task_report` and `task_list` tools, showing:
 - Total task count
 - Tasks by priority (CRITICAL, HIGH, MEDIUM, LOW)
-- Task status (TODO, UNDERWAY, BLOCKED, etc.)
+- Task status (TODO, UNDERWAY, COMPLETE, ABORTED)
 - Agent assignments
 - Creation dates
 - Quick summary of active work
 
 This gives you a bird's-eye view of all project work.
 
-## Task Management Systems
+## Tool Overview
 
-**NEW: Unified PM System (Recommended)**
+This skill uses:
+- **`task_report` tool** - Generate formatted reports
+- **`task_list` tool** - List and filter tasks
+- **`task_show` tool** - View individual task details
 
-The new `pm` script provides unified management:
-
-```bash
-
-# Generate report (active tasks only)
-s9 task report --active-only
-
-# List tasks with filters
-s9 task list --role Engineer --active-only
-s9 task list --status TODO --priority HIGH
-```
-
-**Legacy System (Still Available)**
-
-The original task system is still available:
-
-```bash
-cd .opencode/tasks
-
-# Generate report
-./tasks.py report --active-only
-
-# List tasks
-./tasks.py list --role Engineer --active-only
-```
-
-> **Note:** Both systems work independently. The instructions below apply to both systems as the commands are nearly identical. For the new PM system, use `s9 task` instead of `./tasks.py`.
+All tools return clean JSON results and automatically receive mission context from OpenCode.
 
 ## When to Use Me
 
@@ -69,73 +38,36 @@ Use this skill when:
 - ✅ Starting a session and want to see available work
 - ✅ Planning work and need to understand current state
 
-**Note:** For a comprehensive project overview including active sessions and project stats, use the dashboard instead:
-```bash
-s9 dashboard
-```
-
 Don't use when:
-- ❌ Director wants to claim/update a specific task (use `/claim-task` or `/update-task`)
-- ❌ Director wants to create a new task (use `/create-task`)
-- ❌ Director wants overall project status (use dashboard)
-
-## Prerequisites
-
-- Task database exists at `.opencode/tasks/tasks.db`
-- Python and tasks.py CLI are available
+- ❌ Director wants to claim/update a specific task (use task_claim or task_update tools)
+- ❌ Director wants to create a new task (use task_create tool)
+- ❌ Director wants a single task's details (use task_show tool)
 
 ## Step-by-Step Instructions
 
-### Alternative: Use Dashboard (Recommended for Full Context)
-
-If the Director wants comprehensive project status (not just tasks), use the dashboard:
-
-```bash
-s9 dashboard [--compact] [--role ROLE]
-```
-
-This shows:
-- Active agent sessions
-- Available tasks by priority
-- Blocked/paused tasks
-- Recent completions
-- Project stats
-
-The dashboard is particularly useful when starting a session or planning work.
-
 ### Step 1: Generate the Report
 
-**Option A: New PM System (Recommended)**
+Generate an active-only report using the tool:
 
-```bash
-s9 task report --active-only
-```
-
-**Option B: Legacy System**
-
-```bash
-cd .opencode/tasks
-./tasks.py report --active-only
+```python
+result = task_report(active_only=True)
 ```
 
 **What this does:**
-- Queries the SQLite database for active tasks only
+- Queries the database for active tasks only
 - Excludes COMPLETE and ABORTED tasks
 - Groups tasks by priority (CRITICAL, HIGH, MEDIUM, LOW)
-- Shows status, role, title, agent, and creation date
-- Displays total active task count
+- Returns JSON with status, role, title, agent, and creation date
+- Includes total active task count
 
 **Expected output:**
-A nicely formatted table with box-drawing characters showing:
+JSON array of tasks grouped by priority showing:
 - TODO tasks (available to claim)
 - UNDERWAY tasks (currently being worked on)
-- BLOCKED tasks (need attention)
-- PAUSED tasks (temporarily stopped)
-- REVIEW tasks (awaiting review)
 
-**Note:** If the Director explicitly wants to see all tasks including completed ones, use:
-```bash
-cd .opencode/tasks && ./tasks.py report
+**Note:** If the Director explicitly wants to see all tasks including completed ones:
+```python
+result = task_report(active_only=False)
 ```
 
 ### Step 2: Parse and Summarize
@@ -189,8 +121,8 @@ Based on the report, suggest what the Director might want to do:
 **If TODO tasks exist for their role:**
 ```
 Would you like to:
-1. Claim one of these tasks? (Use `/claim-task`)
-2. See details on a specific task? (Use `cd .opencode/tasks && ./tasks.py show TASK_ID`)
+1. Claim one of these tasks? (I can use task_claim tool)
+2. See details on a specific task? (I can use task_show tool)
 3. Filter tasks? (I can show just TODO, just HIGH priority, etc.)
 ```
 
@@ -198,45 +130,42 @@ Would you like to:
 ```
 No TODO tasks for [Role] right now. You could:
 1. Check other roles for work that needs doing
-2. Work on BLOCKED tasks to unblock them
-3. Create new tasks if you identify work (Use `/create-task`)
+2. Create new tasks if you identify work (I can use task_create tool)
 ```
 
-**If CRITICAL or BLOCKED tasks exist:**
+**If CRITICAL tasks exist:**
 ```
 ⚠️ Attention needed:
 - CRITICAL task C004 requires immediate action
-- BLOCKED task H001 needs to be unblocked
 
-Would you like me to show details on these?
+Would you like me to show details on this task?
 ```
 
 ### Step 5: Filter Options (Optional)
 
-If the Director wants to filter the report, offer these options:
+If the Director wants to filter the report, use these tool calls:
 
 **Filter by status:**
-```bash
-cd .opencode/tasks && ./tasks.py list --status TODO
-cd .opencode/tasks && ./tasks.py list --status UNDERWAY
-cd .opencode/tasks && ./tasks.py list --status BLOCKED
+```python
+task_list(status="TODO")
+task_list(status="UNDERWAY")
 ```
 
 **Filter by role:**
-```bash
-cd .opencode/tasks && ./tasks.py list --role Engineer
-cd .opencode/tasks && ./tasks.py list --role Tester
+```python
+task_list(role="Engineer")
+task_list(role="Tester")
 ```
 
 **Filter by priority:**
-```bash
-cd .opencode/tasks && ./tasks.py list --priority CRITICAL
-cd .opencode/tasks && ./tasks.py list --priority HIGH
+```python
+task_list(priority="CRITICAL")
+task_list(priority="HIGH")
 ```
 
 **Combine filters:**
-```bash
-cd .opencode/tasks && ./tasks.py list --status TODO --role Engineer --priority HIGH
+```python
+task_list(status="TODO", role="Engineer", priority="HIGH")
 ```
 
 Show the filtered results and ask if they want to see more or claim a task.
@@ -248,24 +177,21 @@ Show the filtered results and ask if they want to see more or claim a task.
 - **Live data** - Report shows current database state
 - **Active tasks only** - By default excludes COMPLETE and ABORTED tasks
 - **Sorted by priority** - CRITICAL first, then HIGH, MEDIUM, LOW
-- **Formatted tables** - Uses box-drawing characters for clean display in terminal
+- **JSON format** - Clean structured data from tools
 - **Timestamps** - Created dates help understand task age
-- **All tasks option** - Use `./tasks.py report` (without --active-only) to see completed tasks too
+- **All tasks option** - Use `active_only=False` to see completed tasks too
 
 ### About Task Status
 
 **Active statuses:**
 - `TODO` - Available to claim
 - `UNDERWAY` - Currently being worked on
-- `REVIEW` - Awaiting code review
-
-**Blocked statuses:**
-- `BLOCKED` - Can't proceed, external dependency
-- `PAUSED` - Temporarily stopped
 
 **Terminal statuses:**
 - `COMPLETE` - Successfully finished
 - `ABORTED` - Cancelled or obsolete
+
+**Note:** Per ADR-013, only COMPLETE and ABORTED are supported for closing tasks. BLOCKED, PAUSED, and REVIEW are legacy statuses.
 
 ### About Priority Levels
 
@@ -297,17 +223,17 @@ Show the filtered results and ask if they want to see more or claim a task.
 - Agent name means claimed/in progress
 - Multiple agents means work was handed off
 
-### When to Use Related Commands
+### When to Use Related Tools
 
 **After viewing report:**
-- `/claim-task` - Claim a TODO task you see
-- `/update-task` - Update a task you're working on
-- `/close-task` - Close a task when done
-- `/create-task` - Create new task if work is missing
+- `task_claim` - Claim a TODO task you see
+- `task_update` - Update a task you're working on
+- `task_close` - Close a task when done
+- `task_create` - Create new task if work is missing
 
 **For specific task details:**
-```bash
-cd .opencode/tasks && ./tasks.py show TASK_ID
+```python
+task_show(task_id="TASK_ID")
 ```
 
 This shows full details including description, notes, dependencies.
@@ -322,7 +248,7 @@ This shows full details including description, notes, dependencies.
 ```
 Generating task report...
 
-[Nicely formatted table with box-drawing characters showing active tasks only]
+[Task data from task_report tool]
 
 ---
 
@@ -330,7 +256,6 @@ Generating task report...
 - **Total active tasks:** 7
 - **TODO (available):** 3 tasks
 - **UNDERWAY (active):** 1 task
-- **BLOCKED:** 1 task (H001 needs attention)
 
 **For your role (Tester):**
 - 1 TODO task: H003 - Validate Rate Limiting Functionality
@@ -340,33 +265,32 @@ Generating task report...
 You could claim H003 if you're ready to work on rate limiting validation.
 
 Would you like to:
-1. See details on H003? (`cd .opencode/tasks && ./tasks.py show H003`)
-2. Claim H003? (Use `/claim-task`)
+1. See details on H003? (I can use task_show)
+2. Claim H003? (I can use task_claim)
 ```
 
-### Example 2: Checking for Blocked Tasks
+### Example 2: Checking for Critical Tasks
 
 **User:** `/tasks` 
 
 **Agent:** 
 ```
-[Full report showing active tasks...]
+[Full report from task_report...]
 
 ---
 
 **Summary:**
 - **Total active tasks:** 7
-- **BLOCKED:** 1 task ⚠️
+- **CRITICAL:** 1 task ⚠️
 
 **Attention needed:**
-- H001 (BLOCKED) - Create Slack Bot Setup Guide
-  - Blocked by: External API key needed
-  - Assigned to: Documentarian
+- C001 (TODO) - Fix Security Vulnerability in Auth System
+  - Role: Engineer
+  - Priority: CRITICAL
   
-This task has been blocked for 2 days. Consider:
-- Can the blocker be resolved?
-- Should the task be postponed or aborted?
-- Is documentation available to unblock it?
+This critical task needs immediate attention.
+
+Would you like me to show details or help you claim it?
 ```
 
 ### Example 3: Filtered View
@@ -374,8 +298,8 @@ This task has been blocked for 2 days. Consider:
 **User:** `/tasks` then "Show me just TODO high priority tasks"
 
 **Agent:**
-```bash
-cd .opencode/tasks && ./tasks.py list --status TODO --priority HIGH
+```python
+task_list(status="TODO", priority="HIGH")
 ```
 
 Result:
@@ -393,77 +317,66 @@ Would you like details on either of these?
 ## Troubleshooting
 
 ### "Database not found"
-- Ensure you're in the project root
-- Check `.opencode/tasks/tasks.db` exists
-- Run: `cd .opencode/tasks && ls tasks.db`
-
-### "tasks.py not found"
-- Ensure you're in project root or specify full path
-- Run: `cd .opencode/tasks && ./tasks.py report --format markdown`
+- Database should exist at `project.db`
+- Contact system administrator if missing
 
 ### "No tasks shown"
 - Database might be empty
-- Check: `cd .opencode/tasks && ./tasks.py list`
-- If truly empty, tasks need to be created
+- Check: `task_list()` to see all tasks
+- If truly empty, tasks need to be created using `task_create`
 
 ### Report is very long
-- With --active-only, should only show active work (much shorter)
+- With `active_only=True`, should only show active work (much shorter)
 - If still too long, offer more specific filters
-- Use `./tasks.py list --status TODO` to see only available tasks
+- Use `task_list(status="TODO")` to see only available tasks
 - Focus summary on actionable work
 
 ## Quick Reference
 
 **Full report:**
-```bash
+```python
 # Active tasks only (default - recommended)
-cd .opencode/tasks && ./tasks.py report --active-only
+task_report(active_only=True)
 
 # All tasks including completed (if explicitly requested)
-cd .opencode/tasks && ./tasks.py report
+task_report(active_only=False)
 ```
 
 **Filtered reports:**
-```bash
-# Active tasks only (TODO, UNDERWAY, BLOCKED)
-./tasks.py list --active-only
+```python
+# Active tasks only (TODO, UNDERWAY)
+task_list(active_only=True)
 
 # By status
-./tasks.py list --status TODO
-./tasks.py list --status UNDERWAY
+task_list(status="TODO")
+task_list(status="UNDERWAY")
 
 # By role
-./tasks.py list --role Engineer
-./tasks.py list --role Tester
+task_list(role="Engineer")
+task_list(role="Tester")
 
 # By priority  
-./tasks.py list --priority HIGH
-./tasks.py list --priority CRITICAL
+task_list(priority="HIGH")
+task_list(priority="CRITICAL")
 
 # Combined filters
-./tasks.py list --status TODO --role Engineer --priority HIGH
+task_list(status="TODO", role="Engineer", priority="HIGH")
 ```
 
 **Task details:**
-```bash
-./tasks.py show TASK_ID
+```python
+task_show(task_id="TASK_ID")
 ```
 
 ## See Also
 
-**s9 CLI:**
-- `.opencode/data/README.md` - Complete s9 system reference (includes dashboard documentation)
-- `.opencode/commands/tasks.md` - `/tasks` command
+**Related Skills:**
+- `task-create` - Creating new tasks
+- `task-query` - Querying and listing tasks
+- `task-claim` - Claiming tasks to work on
+- `task-update` - Updating task progress
+- `task-close` - Closing completed tasks
 
-**Dashboard Command:**
-- Use `s9 dashboard` for comprehensive project overview
-- Includes active sessions, task queue, blockers, and stats
-- Better for starting sessions or getting full context
-
-**Legacy Task System:**
-- `.opencode/tasks/README.md` - Task system documentation
-- `.opencode/skills/task-management/SKILL.md` - Task lifecycle management
-
-**Related Commands:**
-- `/claim-task` - Claim a task from the report
-- `/create-task` - Create new tasks
+**Documentation:**
+- `.opencode/data/README.md` - Complete s9 system reference
+- `ADR-013` - Site-nine as OpenCode Integration Platform (tool-based architecture)

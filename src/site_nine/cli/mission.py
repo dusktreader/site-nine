@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from typing import Annotated
 
 import typer
@@ -11,6 +12,7 @@ from site_nine.cli.json_utils import format_json_error, format_json_response, ou
 from site_nine.cli.utils import CLIError, require_db_path, require_opencode_dir
 from site_nine.core.database import Database
 from site_nine.core.roles import Role
+from site_nine.core.settings import SiteNineSettings
 from site_nine.exceptions import SiteNineError
 from site_nine.missions import MissionManager
 from site_nine.missions.models import Mission
@@ -23,8 +25,8 @@ app = typer.Typer(help="Manage missions")
 @app.command()
 @handle_errors("Failed to start mission", handle_exc_class=SiteNineError)
 def start(
-    name: Annotated[str, typer.Argument(help="Daemon name")],
     role: Annotated[str, typer.Option("--role", "-r", help="Agent role")],
+    name: Annotated[str | None, typer.Option("--name", "-n", help="Persona name (auto-selects if omitted)")] = None,
     task: Annotated[str, typer.Option("--task", "-t", help="Task summary")] = "",
     epic: Annotated[str | None, typer.Option("--epic", "-e", help="Epic ID for epic-scoped mission")] = None,
 ) -> None:
@@ -34,6 +36,8 @@ def start(
     - Task-scoped: --task flag (existing behavior)
     - Epic-scoped: --epic flag (work through multiple tasks in an epic)
     - General: no flags (flexible coordination work)
+
+    If --name is omitted, automatically selects the least-used persona for the role.
 
     Note: --task and --epic are mutually exclusive.
     """
@@ -63,7 +67,12 @@ def start(
                 bool(epic_result), f"Epic {epic} not found. Use 's9 epic list' to see available epics."
             )
 
-        mission_id = manager.start_mission(persona_name=name, role=role, objective=task, epic_id=epic)
+        mission_id = manager.start_mission(role=role, objective=task, persona_name=name, epic_id=epic)
+
+        # Get the persona name if it was auto-assigned
+        if name is None:
+            mission = manager.get_mission(mission_id)
+            name = mission.persona_name if mission else "unknown"
 
     lines = [
         f"Started mission #{mission_id}",
@@ -370,6 +379,156 @@ def end(
         subject="Done",
         subject_color="green",
     )
+
+
+@app.command()
+@handle_errors("Failed to suspend mission", handle_exc_class=SiteNineError)
+def suspend(
+    mission_id: Annotated[int, typer.Argument(help="Mission ID")],
+    reason: Annotated[str | None, typer.Option("--reason", "-r", help="Reason for suspension")] = None,
+) -> None:
+    """Suspend a mission (ADR-013)
+
+    Transitions mission to SUSPENDED status. Typically used when a session closes
+    unexpectedly or when manually pausing work. Suspended missions can be resumed
+    later with 's9 mission resume'.
+    """
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        manager = MissionManager(db)
+        mission = CLIError.enforce_defined(manager.get_mission(mission_id), f"Mission #{mission_id} not found.")
+
+        # Check mission status
+        if mission.status == MissionStatus.ENDED:
+            terminal_message(
+                f"Mission #{mission_id} has already ended and cannot be suspended.",
+                subject="Error",
+                subject_color="red",
+            )
+            raise typer.Exit(code=1)
+
+        if mission.status == MissionStatus.SUSPENDED:
+            terminal_message(
+                f"Mission #{mission_id} is already suspended.",
+                subject="Warning",
+                subject_color="yellow",
+            )
+            raise typer.Exit(code=0)
+
+        manager.suspend_mission(mission_id, reason=reason)
+
+    reason_text = f"\nReason: {reason}" if reason else ""
+    terminal_message(
+        f"Suspended mission #{mission_id} ({mission.codename}){reason_text}",
+        subject="Done",
+        subject_color="green",
+    )
+
+
+@app.command()
+@handle_errors("Failed to resume mission", handle_exc_class=SiteNineError)
+def resume(
+    mission_identifier: Annotated[str, typer.Argument(help="Mission ID or codename")],
+    model: Annotated[str | None, typer.Option("--model", "-m", help="Model to use (provider/model format)")] = None,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", "-d", help="Show command that would be run without executing")
+    ] = False,
+) -> None:
+    """Resume a suspended mission (ADR-013)
+
+    Transitions mission from SUSPENDED to ACTIVE status and launches OpenCode
+    with a context message summarizing the resumed mission state. Use this to
+    continue work on a mission that was previously suspended.
+
+    You can specify either a mission ID (e.g., 126) or codename (e.g., bold-comet).
+    """
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        manager = MissionManager(db)
+
+        # Try to parse as integer ID first, otherwise treat as codename
+        mission = None
+        try:
+            mission_id = int(mission_identifier)
+            mission = manager.get_mission(mission_id)
+        except ValueError:
+            # Not an integer, try as codename
+            mission = manager.get_mission_by_codename(mission_identifier)
+
+        mission = CLIError.enforce_defined(
+            mission, f"Mission '{mission_identifier}' not found. Use 's9 mission list' to see available missions."
+        )
+
+        # Check mission status
+        if mission.status != MissionStatus.SUSPENDED:
+            terminal_message(
+                f"Mission #{mission.id} ({mission.codename}) is not suspended (current status: {mission.status}).\n"
+                f"Only suspended missions can be resumed.",
+                subject="Error",
+                subject_color="red",
+            )
+            raise typer.Exit(code=1)
+
+        # Get task information for context
+        task_rows = db.execute_query(
+            "SELECT id, title, status FROM tasks WHERE current_mission_id = :mission_id",
+            {"mission_id": mission.id},
+        )
+
+        # Resume the mission in the database (skip if dry run)
+        if not dry_run:
+            manager.resume_mission(mission.id or 0)
+
+    # Get model from config if not specified
+    if model is None:
+        settings = SiteNineSettings()
+        model = settings.default_model or "github-copilot/claude-sonnet-4.5"
+
+    # Build context message for resumed mission
+    context_lines = [
+        f"Resuming mission #{mission.id} ({mission.codename})",
+        f"Persona: {mission.persona_name}",
+        f"Role: {mission.role}",
+    ]
+    if mission.objective:
+        context_lines.append(f"Objective: {mission.objective}")
+    if mission.epic_id:
+        context_lines.append(f"Epic: {mission.epic_id}")
+
+    if task_rows:
+        context_lines.append("")
+        context_lines.append("Your tasks:")
+        for task in task_rows:
+            status_icon = {"COMPLETE": "✓", "UNDERWAY": "→", "TODO": "○"}.get(task["status"], "?")
+            context_lines.append(f"  {status_icon} {task['id']}: {task['title']}")
+
+    context_lines.append("")
+    context_lines.append("Continue working on your mission.")
+
+    context_message = "\n".join(context_lines)
+
+    if dry_run:
+        terminal_message(
+            f'Dry run - would execute: opencode --model {model} --prompt "{context_message}"',
+            subject="Dry Run",
+            subject_color="yellow",
+        )
+        return
+
+    terminal_message(
+        f"Resuming mission #{mission.id} ({mission.codename})\nLaunching OpenCode...",
+        subject="Resume",
+    )
+
+    # Launch OpenCode with context message
+    try:
+        subprocess.run(["opencode", "--model", model, "--prompt", context_message], check=True)
+    except subprocess.CalledProcessError as e:
+        raise CLIError(f"Error launching OpenCode: {e}")
+    except FileNotFoundError:
+        raise CLIError("'opencode' command not found. Is OpenCode installed?")
 
 
 @app.command()

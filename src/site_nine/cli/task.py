@@ -220,21 +220,44 @@ def claim(
 @handle_errors("Failed to update task", handle_exc_class=SiteNineError)
 def update(
     task_id: Annotated[str, typer.Argument(help="Task ID")],
-    status: Annotated[str, typer.Option("--status", "-s", help="New status")],
+    status: Annotated[str | None, typer.Option("--status", "-s", help="New status")] = None,
     notes: Annotated[str | None, typer.Option("--notes", "-n", help="Progress notes")] = None,
+    title: Annotated[str | None, typer.Option("--title", help="New title")] = None,
+    description: Annotated[str | None, typer.Option("--description", "-d", help="New description")] = None,
+    priority: Annotated[
+        str | None, typer.Option("--priority", help="New priority (LOW, MEDIUM, HIGH, CRITICAL)")
+    ] = None,
+    category: Annotated[str | None, typer.Option("--category", help="New category")] = None,
 ) -> None:
-    """Update task status (typically used by: agents)"""
+    """Update task fields or status (typically used by: agents)"""
+    field_updates = {
+        k: v
+        for k, v in {"title": title, "description": description, "priority": priority, "category": category}.items()
+        if v is not None
+    }
+    if notes is not None and status is None:
+        field_updates["notes"] = notes
+
+    CLIError.require_condition(
+        status is not None or notes is not None or bool(field_updates),
+        "No updates provided. Use --status, --notes, --title, --description, --priority, or --category.",
+    )
+
     db_path = require_db_path()
 
     with Database(db_path) as db:
         manager = TaskManager(db)
         CLIError.enforce_defined(manager.get_task(task_id), f"Task '{task_id}' not found.")
 
-        status_upper = status.upper()
-        manager.update_status(task_id, status_upper, notes)
+        if status is not None:
+            status_upper = status.upper()
+            manager.update_status(task_id, status_upper, notes)
+
+        if field_updates:
+            manager.update_task(task_id, **field_updates)
 
     terminal_message(
-        f"Task {task_id} updated to {status_upper}",
+        f"Task {task_id} updated",
         subject="Done",
         subject_color="green",
     )

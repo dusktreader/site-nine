@@ -39,12 +39,16 @@ class Epic:
     status: str | None = None
     subtask_count: int | None = None
     completed_count: int | None = None
+    locked: bool = False
+    locked_at: pendulum.DateTime | None = None
 
     @classmethod
     def from_db_row(cls, row: dict) -> Self:
         """Create Epic from database row"""
         created_at = parse_timestamp(row["created_at"])
         updated_at = parse_timestamp(row["updated_at"])
+        locked_at_raw = row.get("locked_at")
+        locked_at = parse_timestamp(locked_at_raw) if locked_at_raw else None
 
         return cls(
             id=row["id"],
@@ -58,6 +62,8 @@ class Epic:
             status=row.get("status"),
             subtask_count=row.get("subtask_count"),
             completed_count=row.get("completed_count"),
+            locked=bool(row.get("locked", 0)),
+            locked_at=locked_at,
         )
 
     @property

@@ -14,6 +14,7 @@ from site_nine.core.utils import utc_now
 from site_nine.missions.exceptions import MissionError
 from site_nine.missions.models import FileChange, Mission, MissionSummary, TaskSummary
 from site_nine.missions.types import MissionStatus
+from site_nine.personas.manager import PersonaManager
 
 GIT_STATUS_MAP = {"M": "modified", "A": "added", "D": "deleted", "R": "renamed"}
 
@@ -113,20 +114,35 @@ class MissionManager:
         self.db = db
 
     def start_mission(
-        self, persona_name: str, role: str, objective: str, mission_file: str | None = None, epic_id: str | None = None
+        self,
+        role: str,
+        objective: str,
+        persona_name: str | None = None,
+        mission_file: str | None = None,
+        epic_id: str | None = None,
     ) -> int:
         """Start a new mission
 
         Args:
-            persona_name: Name of the persona to use
             role: Role for the mission
             objective: Mission objective/task summary
+            persona_name: Name of the persona to use (if None, atomically claims least-used persona)
             mission_file: Optional custom mission file path
             epic_id: Optional epic ID for epic-scoped missions
 
         Returns:
             Mission ID
         """
+        # Auto-claim persona if not provided
+        if persona_name is None:
+            persona_manager = PersonaManager(self.db)
+            claimed_persona = persona_manager.claim_persona(role)
+            persona_name = claimed_persona.name
+            persona_auto_claimed = True
+            logger.info("persona_auto_claimed_for_mission", role=role, persona=persona_name)
+        else:
+            persona_auto_claimed = False
+
         if not mission_file:
             now = pendulum.now("UTC")
             date_str = now.format("YYYY-MM-DD")
@@ -144,7 +160,7 @@ class MissionManager:
                     created_at, updated_at
                 )
                 VALUES (
-                    :persona_name, :role, '', :mission_file,
+                    :persona_name, :role, NULL, :mission_file,
                     :start_date, :start_time, :objective, :epic_id,
                     :status, :now,
                     :now, :now
@@ -179,16 +195,18 @@ class MissionManager:
             raise_exc_class=MissionError,
         )
 
-        self.db.execute_query(
-            """
-            UPDATE personas
-            SET mission_count = mission_count + 1,
-                last_mission_at = :now
-            WHERE name = :persona_name
-            RETURNING *
-            """,
-            {"persona_name": persona_name, "now": now_str},
-        )
+        # Only update persona stats if it was manually selected (auto-claim already did this)
+        if not persona_auto_claimed:
+            self.db.execute_query(
+                """
+                UPDATE personas
+                SET mission_count = mission_count + 1,
+                    last_mission_at = :now
+                WHERE name = :persona_name
+                RETURNING *
+                """,
+                {"persona_name": persona_name, "now": now_str},
+            )
 
         self._create_mission_file(
             mission_file=mission_file,
@@ -311,6 +329,18 @@ class MissionManager:
     def get_mission(self, mission_id: int) -> Mission | None:
         """Get mission by ID"""
         rows = self.db.execute_query("SELECT * FROM missions WHERE id = :id", {"id": mission_id})
+        return Mission.from_db_row(rows[0]) if rows else None
+
+    def get_mission_by_codename(self, codename: str) -> Mission | None:
+        """Get mission by codename.
+
+        Args:
+            codename: Mission codename (e.g., 'bold-comet')
+
+        Returns:
+            Mission object or None if not found
+        """
+        rows = self.db.execute_query("SELECT * FROM missions WHERE codename = :codename", {"codename": codename})
         return Mission.from_db_row(rows[0]) if rows else None
 
     def get_active_codename(self, persona_name: str) -> str | None:
@@ -445,6 +475,92 @@ class MissionManager:
             WHERE id = :mission_id
             """,
             {"mission_id": mission_id, "status": status.value, "now": utc_now()},
+        )
+
+    def suspend_mission(self, mission_id: int, reason: str | None = None) -> None:
+        """Suspend a mission (ADR-013).
+
+        Transitions mission to SUSPENDED status and records suspension time and reason.
+        Typically called by the OpenCode plugin when a session closes unexpectedly,
+        or manually by the Director.
+
+        Args:
+            mission_id: Mission ID.
+            reason: Optional reason for suspension (e.g., "Session closed unexpectedly").
+
+        Raises:
+            MissionError: If mission not found or already ended.
+        """
+        mission = enforce_defined(
+            self.get_mission(mission_id),
+            f"Mission {mission_id} not found",
+            raise_exc_class=MissionError,
+        )
+
+        require_condition(
+            mission.status != MissionStatus.ENDED,
+            f"Cannot suspend mission {mission_id}: already ended",
+            raise_exc_class=MissionError,
+        )
+
+        now_str = utc_now()
+        self.db.execute_update(
+            """
+            UPDATE missions
+            SET status = :status,
+                suspension_time = :suspension_time,
+                suspension_reason = :suspension_reason,
+                updated_at = :now
+            WHERE id = :mission_id
+            """,
+            {
+                "mission_id": mission_id,
+                "status": MissionStatus.SUSPENDED.value,
+                "suspension_time": now_str,
+                "suspension_reason": reason or "Suspended by user",
+                "now": now_str,
+            },
+        )
+
+    def resume_mission(self, mission_id: int) -> None:
+        """Resume a suspended mission (ADR-013).
+
+        Transitions mission from SUSPENDED to ACTIVE status and clears suspension data.
+        Typically called manually by the Director via s9 mission resume.
+
+        Args:
+            mission_id: Mission ID.
+
+        Raises:
+            MissionError: If mission not found or not suspended.
+        """
+        mission = enforce_defined(
+            self.get_mission(mission_id),
+            f"Mission {mission_id} not found",
+            raise_exc_class=MissionError,
+        )
+
+        require_condition(
+            mission.status == MissionStatus.SUSPENDED,
+            f"Cannot resume mission {mission_id}: not suspended (current status: {mission.status})",
+            raise_exc_class=MissionError,
+        )
+
+        now_str = utc_now()
+        self.db.execute_update(
+            """
+            UPDATE missions
+            SET status = :status,
+                suspension_time = NULL,
+                suspension_reason = NULL,
+                updated_at = :now
+            WHERE id = :mission_id
+            """,
+            {
+                "mission_id": mission_id,
+                "status": MissionStatus.ACTIVE.value,
+                "now": now_str,
+            },
         )
 
     def generate_summary(self, mission_id: int) -> MissionSummary:

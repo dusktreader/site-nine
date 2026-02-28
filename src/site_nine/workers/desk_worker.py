@@ -1,0 +1,545 @@
+#!/usr/bin/env python3
+"""
+Desk Mode Worker Polling Script
+
+Manages desk agent lifecycle outside agent context. Polls for unread messages,
+invokes 'opencode run' for each message, and preserves session context across
+invocations.
+
+Usage:
+    desk-worker.py <role> [--persona NAME] [--model MODEL] [--poll-interval SECONDS]
+
+Example:
+    desk-worker.py engineer --persona hephaestus
+    desk-worker.py architect --poll-interval 15
+"""
+
+import argparse
+import json
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Optional
+
+# Imports from site_nine package
+# (No path manipulation needed - this module is now properly in src/site_nine/)
+from site_nine.core.database import Database
+from site_nine.core.paths import get_db_path
+from site_nine.messaging.manager import MessageManager
+from site_nine.missions.manager import MissionManager
+
+
+class DeskWorker:
+    """External polling loop for desk mode workers."""
+
+    # Default model to use for opencode run
+    DEFAULT_MODEL = "github-copilot/claude-sonnet-4-5"
+
+    # Default polling interval (seconds)
+    DEFAULT_POLL_INTERVAL = 30
+
+    # Priority ordering for message processing
+    PRIORITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+
+    def __init__(
+        self,
+        role: str,
+        persona: Optional[str] = None,
+        model: Optional[str] = None,
+        poll_interval: int = DEFAULT_POLL_INTERVAL,
+    ):
+        """
+        Initialize desk worker.
+
+        Args:
+            role: Worker role (e.g., 'Engineer', 'Architect', 'Tester')
+            persona: Optional specific persona name (if None, auto-selected)
+            model: OpenCode model to use (defaults to claude-sonnet-4-5)
+            poll_interval: Seconds between message checks (default: 30)
+        """
+        self.role = role
+        self.persona = persona
+        self.model = model or self.DEFAULT_MODEL
+        self.poll_interval = poll_interval
+        self.session_id: Optional[str] = None
+        self.mission_id: Optional[int] = None
+        self.running = True
+
+    def initialize(self) -> None:
+        """
+        Initialize worker mission via opencode run.
+
+        Launches initial session, waits for mission creation, and retrieves
+        session ID from database.
+
+        Raises:
+            RuntimeError: If mission initialization fails
+        """
+        print(f"Initializing {self.role} worker...", flush=True)
+
+        # Build initialization message
+        init_parts = [f"Your role is {self.role}."]
+
+        if self.persona:
+            init_parts.append(f"Your persona is {self.persona}.")
+
+        init_parts.append(
+            "Initialize your mission with the mission-start skill. Mode: desk. "
+            "As a desk worker, you will receive work assignments via messages. "
+            "Send status updates as you work. The desk-worker wrapper handles message polling."
+        )
+
+        init_message = " ".join(init_parts)
+
+        # Launch initial session with JSON format to extract session ID
+        cmd = ["opencode", "run", "--format", "json", "--model", self.model, init_message]
+
+        try:
+            # Use Popen for non-blocking execution
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+
+            # Wait for process with 60-minute timeout
+            try:
+                stdout, stderr = process.communicate(timeout=3600)
+
+                # Extract session ID from first JSON line
+                session_id = None
+                for line in stdout.splitlines():
+                    if line.strip():
+                        try:
+                            event = json.loads(line)
+                            if "sessionID" in event:
+                                session_id = event["sessionID"]
+                                break
+                        except json.JSONDecodeError:
+                            continue
+
+                if not session_id:
+                    raise RuntimeError("Failed to extract session ID from opencode run output")
+
+                self.session_id = session_id
+                print(f"Extracted session ID: {session_id}", flush=True)
+
+                if process.returncode != 0:
+                    print(f"Warning: opencode run exited with code {process.returncode}", file=sys.stderr)
+                    if stderr:
+                        print(f"Error output: {stderr}", file=sys.stderr)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.communicate()
+                raise RuntimeError("Mission initialization timed out after 60 minutes")
+
+        except FileNotFoundError:
+            raise RuntimeError("opencode command not found. Is OpenCode installed and in PATH?")
+
+        # Wait for mission to be created in database
+        print("Waiting for mission to be created...", flush=True)
+        time.sleep(5)
+
+        # Find mission ID from database - first try by session ID (in case it was bound)
+        db = Database(get_db_path())
+        rows = db.execute_query(
+            """
+            SELECT id, persona_name FROM missions
+            WHERE opencode_session_id = :session_id
+              AND status IN ('ACTIVE', 'SUSPENDED')
+              AND end_time IS NULL
+            ORDER BY created_at DESC 
+            LIMIT 1
+            """,
+            {"session_id": self.session_id},
+        )
+
+        # If not found by session ID, find by role and bind it manually
+        if not rows:
+            print(f"Mission not found by session ID, searching by role...", flush=True)
+            rows = db.execute_query(
+                """
+                SELECT id, persona_name FROM missions
+                WHERE role = :role
+                  AND opencode_session_id IS NULL
+                  AND status IN ('ACTIVE', 'SUSPENDED')
+                  AND end_time IS NULL
+                ORDER BY created_at DESC 
+                LIMIT 1
+                """,
+                {"role": self.role},
+            )
+
+            if not rows:
+                raise RuntimeError(
+                    f"Failed to find initialized mission for role {self.role}. "
+                    "Check that mission-start completed successfully."
+                )
+
+            # Bind the session ID to this mission
+            self.mission_id = rows[0]["id"]
+            persona_used = rows[0]["persona_name"]
+
+            print(f"Binding session {self.session_id} to mission #{self.mission_id}...", flush=True)
+            db.execute_update(
+                """
+                UPDATE missions 
+                SET opencode_session_id = :session_id
+                WHERE id = :mission_id
+                """,
+                {"session_id": self.session_id, "mission_id": self.mission_id},
+            )
+        else:
+            self.mission_id = rows[0]["id"]
+            persona_used = rows[0]["persona_name"]
+
+        if not self.session_id:
+            raise RuntimeError(f"Mission #{self.mission_id} has no OpenCode session ID. Session binding failed.")
+
+        print(
+            f"Mission initialized successfully:\n"
+            f"  Mission ID: {self.mission_id}\n"
+            f"  Session ID: {self.session_id}\n"
+            f"  Persona: {persona_used}",
+            flush=True,
+        )
+
+    def enable_desk_mode(self) -> None:
+        """
+        Enable desk mode in database.
+
+        Sets desk_mode_active=1 for this worker's mission.
+
+        Raises:
+            RuntimeError: If mission_id is not set
+        """
+        if self.mission_id is None:
+            raise RuntimeError("Cannot enable desk mode: mission_id is not set")
+
+        db = Database(get_db_path())
+        mgr = MissionManager(db)
+        mgr.set_desk_mode(self.mission_id, active=True)
+        print(f"Desk mode enabled for mission #{self.mission_id}", flush=True)
+
+    def check_for_messages(self) -> list:
+        """
+        Check for unread messages addressed to this worker.
+
+        Returns:
+            List of unread messages, sorted by priority (highest first)
+
+        Raises:
+            RuntimeError: If mission_id is not set
+        """
+        if self.mission_id is None:
+            raise RuntimeError("Cannot check messages: mission_id not set")
+
+        db = Database(get_db_path())
+        msg_mgr = MessageManager(db)
+
+        # Get unread conversations
+        conversations = msg_mgr.get_unread_conversations(self.mission_id)
+
+        # Collect unread messages from others
+        messages = []
+        for conv in conversations:
+            unread = msg_mgr.get_unread_messages(conv.id, self.mission_id)
+            for msg in unread:
+                # Exclude own messages (only process messages from others)
+                if msg.from_mission_id != self.mission_id:
+                    messages.append(msg)
+
+        # Sort by priority (CRITICAL > HIGH > MEDIUM > LOW)
+        messages.sort(key=lambda m: self.PRIORITY_ORDER.get(m.priority, 99))
+
+        return messages
+
+    def process_message(self, message) -> bool:
+        """
+        Process a single message via opencode run.
+
+        Args:
+            message: Message object to process
+
+        Returns:
+            True if processing succeeded, False otherwise
+        """
+        # Resume session with message as prompt
+        cmd = [
+            "opencode",
+            "run",
+            "--session",
+            self.session_id,
+            "--model",
+            self.model,
+            message.body,
+        ]
+
+        print(f"\nProcessing message {message.id} ({message.priority})...", flush=True)
+        print(f"  Subject: {message.subject}", flush=True)
+        print(f"  From: Mission #{message.from_mission_id}", flush=True)
+
+        try:
+            # Use Popen for non-blocking execution
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+
+            # Wait for process with 60-minute timeout
+            try:
+                stdout, stderr = process.communicate(timeout=3600)
+
+                # Mark conversation as viewed (read)
+                db = Database(get_db_path())
+                msg_mgr = MessageManager(db)
+                msg_mgr.update_conversation_view(message.conversation_id, self.mission_id)
+
+                if process.returncode == 0:
+                    print(f"  ✓ Processed {message.id} successfully", flush=True)
+                    return True
+                else:
+                    print(
+                        f"  ✗ Processing failed with exit code {process.returncode}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    if stderr:
+                        print(f"  Error: {stderr}", file=sys.stderr, flush=True)
+                    return False
+
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.communicate()
+                print(
+                    f"  ✗ Processing timed out after 60 minutes",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                return False
+
+        except Exception as e:
+            print(f"  ✗ Processing failed: {e}", file=sys.stderr, flush=True)
+            return False
+
+    def handle_shutdown(self, signum: int, frame) -> None:
+        """
+        Gracefully shutdown on SIGTERM/SIGINT.
+
+        Disables desk mode, ends mission, and exits.
+
+        Args:
+            signum: Signal number
+            frame: Current stack frame (unused)
+        """
+        signal_name = "SIGTERM" if signum == signal.SIGTERM else "SIGINT"
+        print(f"\n\nReceived {signal_name}, shutting down gracefully...", flush=True)
+        self.running = False
+
+        # Disable desk mode
+        try:
+            db = Database(get_db_path())
+            mgr = MissionManager(db)
+            mgr.set_desk_mode(self.mission_id, active=False)
+            print("Desk mode disabled", flush=True)
+        except Exception as e:
+            print(f"Warning: Failed to disable desk mode: {e}", file=sys.stderr)
+
+        # End mission via opencode run
+        try:
+            print("Ending mission...", flush=True)
+            cmd = [
+                "opencode",
+                "run",
+                "--session",
+                self.session_id,
+                "--model",
+                self.model,
+                "You are being dismissed. End your mission using the mission-end skill.",
+            ]
+            subprocess.run(cmd, check=False, timeout=600)  # 10 minute timeout for shutdown
+            print("Mission ended successfully", flush=True)
+        except Exception as e:
+            print(
+                f"Warning: Failed to end mission cleanly: {e}",
+                file=sys.stderr,
+                flush=True,
+            )
+
+        print("Shutdown complete", flush=True)
+        raise SystemExit(0)
+
+    def run(self) -> None:
+        """
+        Main polling loop.
+
+        Sets up signal handlers, initializes worker, enables desk mode,
+        and polls for messages at configured interval.
+        """
+        # Set up signal handlers for graceful shutdown
+        signal.signal(signal.SIGTERM, self.handle_shutdown)
+        signal.signal(signal.SIGINT, self.handle_shutdown)
+
+        try:
+            # Initialize worker
+            self.initialize()
+            self.enable_desk_mode()
+
+            print(
+                f"\nDesk worker started successfully!\n"
+                f"  Role: {self.role}\n"
+                f"  Mission: #{self.mission_id}\n"
+                f"  Session: {self.session_id}\n"
+                f"  Poll interval: {self.poll_interval}s\n",
+                flush=True,
+            )
+            print("Polling for messages...\n", flush=True)
+
+            # Main polling loop
+            while self.running:
+                time.sleep(self.poll_interval)
+
+                try:
+                    messages = self.check_for_messages()
+
+                    if messages:
+                        print(
+                            f"\n{'=' * 60}\nFound {len(messages)} new message(s)!\n{'=' * 60}",
+                            flush=True,
+                        )
+
+                        for msg in messages:
+                            success = self.process_message(msg)
+
+                            if not success:
+                                # Continue processing other messages even if one fails
+                                print(
+                                    f"  Continuing despite failure...",
+                                    file=sys.stderr,
+                                    flush=True,
+                                )
+
+                        print(f"{'=' * 60}\n", flush=True)
+                    else:
+                        print(
+                            f"[{time.strftime('%H:%M:%S')}] Checking comms... No new messages. (0 unread)",
+                            flush=True,
+                        )
+
+                except KeyboardInterrupt:
+                    # Let signal handler take care of it
+                    raise
+                except Exception as e:
+                    print(
+                        f"Error during polling cycle: {e}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    # Continue polling despite errors
+                    continue
+
+        except KeyboardInterrupt:
+            # Signal handler will take care of shutdown
+            pass
+        except Exception as e:
+            print(f"\nFatal error: {e}", file=sys.stderr, flush=True)
+
+            # Try to clean up
+            if self.mission_id:
+                try:
+                    db = Database(get_db_path())
+                    mgr = MissionManager(db)
+                    mgr.set_desk_mode(self.mission_id, active=False)
+                except Exception:
+                    pass
+
+            raise SystemExit(1)
+
+
+def main() -> None:
+    """Parse arguments and start desk worker."""
+    parser = argparse.ArgumentParser(
+        description="Desk mode worker for site-nine agents",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Start engineer worker with auto-selected persona
+  desk-worker.py Engineer
+  
+  # Start architect worker with specific persona
+  desk-worker.py Architect --persona athena
+  
+  # Use custom polling interval
+  desk-worker.py Tester --poll-interval 15
+  
+  # Use different model
+  desk-worker.py Operator --model github-copilot/claude-opus-4
+        """,
+    )
+
+    parser.add_argument(
+        "role",
+        help="Worker role (e.g., Engineer, Architect, Tester, Operator)",
+    )
+
+    parser.add_argument(
+        "--persona",
+        help="Specific persona name (if not provided, auto-selected by mission-start)",
+    )
+
+    parser.add_argument(
+        "--model",
+        default=DeskWorker.DEFAULT_MODEL,
+        help=f"OpenCode model to use (default: {DeskWorker.DEFAULT_MODEL})",
+    )
+
+    parser.add_argument(
+        "--poll-interval",
+        type=int,
+        default=DeskWorker.DEFAULT_POLL_INTERVAL,
+        help=f"Seconds between message checks (default: {DeskWorker.DEFAULT_POLL_INTERVAL})",
+    )
+
+    args = parser.parse_args()
+
+    # Validate role capitalization
+    valid_roles = [
+        "Administrator",
+        "Architect",
+        "Engineer",
+        "Tester",
+        "Documentarian",
+        "Designer",
+        "Inspector",
+        "Operator",
+        "Historian",
+    ]
+
+    # Auto-capitalize first letter if user provided lowercase
+    role = args.role.capitalize()
+
+    if role not in valid_roles:
+        print(
+            f"Error: Invalid role '{args.role}'. Valid roles are:\n  {', '.join(valid_roles)}",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
+    # Start worker
+    worker = DeskWorker(
+        role=role,
+        persona=args.persona,
+        model=args.model,
+        poll_interval=args.poll_interval,
+    )
+
+    worker.run()
+
+
+if __name__ == "__main__":
+    main()

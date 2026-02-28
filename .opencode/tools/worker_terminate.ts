@@ -1,0 +1,26 @@
+import { tool } from "@opencode-ai/plugin"
+import path from "path"
+
+export default tool({
+  description:
+    "Signal a desk-mode worker mission to terminate gracefully. " +
+    "Sends a high-priority termination message to the target mission, requesting it end its session and close the mission cleanly.",
+  args: {
+    from_mission_id: tool.schema.number().describe("The mission ID sending the termination signal (typically Admin/Director)"),
+    to_mission_id: tool.schema.number().describe("The mission ID of the worker to terminate"),
+    reason: tool.schema
+      .string()
+      .optional()
+      .describe("Optional reason for termination (included in the message body)"),
+  },
+  async execute(args, context) {
+    const script = path.join(context.worktree, ".opencode/tools/worker_terminate.py")
+    const input = JSON.stringify({
+      from_mission_id: args.from_mission_id,
+      to_mission_id: args.to_mission_id,
+      reason: args.reason ?? null,
+    })
+    const result = await Bun.$`cd ${context.worktree} && echo ${input} | uv run python3 ${script}`.text()
+    return result.trim()
+  },
+})

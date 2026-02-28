@@ -17,7 +17,7 @@ from site_nine.messaging.exceptions import (
     MessagingError,
 )
 from site_nine.messaging.message_ids import format_message_id, get_next_message_number
-from site_nine.messaging.models import Conversation, ConversationView, Message
+from site_nine.messaging.models import Conversation, ConversationView, Message, MessageAcknowledgement
 
 
 class MessageManager:
@@ -912,6 +912,155 @@ class MessageManager:
             }
             for row in rows
         ]
+
+    # ============================================================================
+    # Message Acknowledgement Tracking
+    # ============================================================================
+
+    def acknowledge_message(self, message_id: str, mission_id: int) -> None:
+        """
+        Acknowledge/mark a message as processed by a mission.
+
+        This records that the mission has read and processed the message,
+        improving accountability and workflow coordination.
+
+        Args:
+            message_id: Message ID to acknowledge
+            mission_id: Mission ID acknowledging the message
+
+        Raises:
+            MessageNotFoundError: If message not found
+        """
+        # Verify message exists
+        message = self.get_message(message_id)
+        enforce_defined(
+            message,
+            f"Message {message_id} not found",
+            raise_exc_class=MessageNotFoundError,
+        )
+
+        logger.debug(
+            "acknowledging_message",
+            message_id=message_id,
+            mission_id=mission_id,
+        )
+
+        self.db.execute_update(
+            """
+            INSERT INTO message_acknowledgements (message_id, mission_id, acknowledged_at)
+            VALUES (:message_id, :mission_id, :now)
+            ON CONFLICT(message_id, mission_id)
+            DO UPDATE SET acknowledged_at = :now
+            """,
+            {"message_id": message_id, "mission_id": mission_id, "now": utc_now()},
+        )
+
+    def get_message_acknowledgements(self, message_id: str) -> list[dict]:
+        """
+        Get all acknowledgements for a message.
+
+        Args:
+            message_id: Message ID
+
+        Returns:
+            List of dicts with mission_id, persona_name, role, acknowledged_at
+        """
+        from site_nine.messaging.models import MessageAcknowledgement
+
+        rows = self.db.execute_query(
+            """
+            SELECT ma.*, m.persona_name, m.role
+            FROM message_acknowledgements ma
+            JOIN missions m ON m.id = ma.mission_id
+            WHERE ma.message_id = :message_id
+            ORDER BY ma.acknowledged_at DESC
+            """,
+            {"message_id": message_id},
+        )
+        return [
+            {
+                "mission_id": row["mission_id"],
+                "persona_name": row["persona_name"],
+                "role": row["role"],
+                "acknowledged_at": row["acknowledged_at"],
+            }
+            for row in rows
+        ]
+
+    def is_message_acknowledged_by(self, message_id: str, mission_id: int) -> bool:
+        """
+        Check if a message has been acknowledged by a specific mission.
+
+        Args:
+            message_id: Message ID
+            mission_id: Mission ID
+
+        Returns:
+            True if acknowledged, False otherwise
+        """
+        rows = self.db.execute_query(
+            """
+            SELECT 1 FROM message_acknowledgements
+            WHERE message_id = :message_id
+            AND mission_id = :mission_id
+            """,
+            {"message_id": message_id, "mission_id": mission_id},
+        )
+        return len(rows) > 0
+
+    def get_unacknowledged_messages(self, mission_id: int) -> list[Message]:
+        """
+        Get messages sent to a mission that have not been acknowledged.
+
+        Returns messages in open conversations where:
+        - The mission is a recipient (not the sender)
+        - The mission has not acknowledged the message
+
+        Args:
+            mission_id: Mission ID
+
+        Returns:
+            List of unacknowledged messages
+        """
+        rows = self.db.execute_query(
+            """
+            SELECT DISTINCT m.*
+            FROM messages m
+            JOIN conversations c ON c.id = m.conversation_id
+            WHERE c.status = 'open'
+            AND m.from_mission_id != :mission_id
+            AND NOT EXISTS (
+                SELECT 1 FROM message_acknowledgements ma
+                WHERE ma.message_id = m.id
+                AND ma.mission_id = :mission_id
+            )
+            AND (
+                -- For conversations: mission is a participant
+                (c.type = 'conversation' AND (
+                    c.participant_1_id = :mission_id OR c.participant_2_id = :mission_id
+                ))
+                OR
+                -- For discussions: mission is in scope (check dynamically)
+                (c.type = 'discussion' AND (
+                    (c.scope_type = 'all') OR
+                    (c.scope_type = 'role' AND EXISTS (
+                        SELECT 1 FROM missions mis
+                        WHERE mis.id = :mission_id
+                        AND mis.role = c.scope_role
+                        AND mis.end_time IS NULL
+                    )) OR
+                    (c.scope_type = 'epic' AND EXISTS (
+                        SELECT 1 FROM tasks t
+                        WHERE t.epic_id = c.scope_epic_id
+                        AND t.current_mission_id = :mission_id
+                    ))
+                ))
+            )
+            ORDER BY m.created_at ASC
+            """,
+            {"mission_id": mission_id},
+        )
+        return [Message.from_db_row(row) for row in rows]
 
     # ============================================================================
     # Discussion Participant Computation

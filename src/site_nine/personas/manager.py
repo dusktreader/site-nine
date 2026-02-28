@@ -3,6 +3,7 @@ from typing import Any
 
 from site_nine.core.database import Database
 from site_nine.core.roles import Role
+from site_nine.core.utils import utc_now
 from site_nine.personas.exceptions import PersonaError
 from site_nine.personas.models import Persona
 
@@ -232,4 +233,51 @@ class PersonaManager:
             {"name": name, "bio": bio},
         )
         PersonaError.require_condition(len(rows) > 0, f"Persona '{name}' not found")
+        return Persona.from_db_row(rows[0])
+
+    def claim_persona(self, role: str) -> Persona:
+        """
+        Atomically claim the least-used persona for a role.
+
+        This method eliminates the race condition in concurrent mission starts by
+        combining the select-and-increment operations into a single atomic transaction.
+
+        The persona is selected using LRU (Least Recently Used) ordering:
+        1. Personas with mission_count = 0 (unused) are prioritized
+        2. Among used personas, those with lowest mission_count come first
+        3. Ties are broken by last_mission_at (oldest first), then by name
+
+        Args:
+            role: Role to claim persona for (validated, case-insensitive)
+
+        Returns:
+            The claimed Persona with updated mission_count and last_mission_at
+
+        Raises:
+            PersonaError: If no personas exist for the role or database error occurs
+        """
+        role = self.validate_role(role)
+        now = utc_now()
+
+        rows = self.db.execute_query(
+            """
+            UPDATE personas
+            SET mission_count = mission_count + 1,
+                last_mission_at = :now
+            WHERE name = (
+                SELECT name
+                FROM personas
+                WHERE role = :role
+                ORDER BY 
+                    mission_count ASC,
+                    last_mission_at ASC NULLS FIRST,
+                    name ASC
+                LIMIT 1
+            )
+            RETURNING *
+            """,
+            {"role": role, "now": now},
+        )
+
+        PersonaError.require_condition(len(rows) > 0, f"No personas available for role '{role}'")
         return Persona.from_db_row(rows[0])

@@ -131,7 +131,7 @@ Permanent utility scripts used repeatedly.
 
 Clean up `.opencode/work/` files when mission/task ends or scripts are promoted.
 
-**Keep:** Mission logs (history), task files (system-managed), epics (until complete), handoffs (until accepted).
+**Keep:** Mission logs (history), task files (system-managed), epics (until complete).
 
 
 ### Permanent Files

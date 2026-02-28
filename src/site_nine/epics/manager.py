@@ -335,6 +335,108 @@ class EpicManager:
             raise_exc_class=EpicError,
         )
 
+    def lock_epic(self, epic_id: str) -> Epic:
+        """
+        Lock an epic to prevent agents from claiming its tasks.
+
+        This is a Director-only operation. Agents cannot lock or unlock epics.
+
+        Args:
+            epic_id: Epic ID to lock
+
+        Returns:
+            Updated Epic instance
+
+        Raises:
+            EpicError: If epic not found or already locked
+        """
+        epic = self.get_epic(epic_id)
+        require_condition(
+            epic is not None,
+            f"Epic {epic_id} not found",
+            raise_exc_class=EpicError,
+        )
+        require_condition(
+            not epic.locked,
+            f"Epic {epic_id} is already locked",
+            raise_exc_class=EpicError,
+        )
+
+        now_str = utc_now()
+        rows = enforce_defined(
+            self.db.execute_query(
+                """
+                UPDATE epics
+                SET locked = 1,
+                    locked_at = :now,
+                    updated_at = :now
+                WHERE id = :epic_id
+                RETURNING *
+                """,
+                {"epic_id": epic_id, "now": now_str},
+            ),
+            f"Failed to lock epic {epic_id}",
+            raise_exc_class=EpicError,
+        )
+
+        epic_data = dict(rows[0])
+        epic_data["status"] = compute_epic_status(self.db, epic_id)
+        progress = self._compute_progress(epic_id)
+        epic_data["subtask_count"] = progress["subtask_count"]
+        epic_data["completed_count"] = progress["completed_count"]
+        return Epic.from_db_row(epic_data)
+
+    def unlock_epic(self, epic_id: str) -> Epic:
+        """
+        Unlock an epic to allow agents to claim its tasks again.
+
+        This is a Director-only operation. Agents cannot lock or unlock epics.
+
+        Args:
+            epic_id: Epic ID to unlock
+
+        Returns:
+            Updated Epic instance
+
+        Raises:
+            EpicError: If epic not found or not currently locked
+        """
+        epic = self.get_epic(epic_id)
+        require_condition(
+            epic is not None,
+            f"Epic {epic_id} not found",
+            raise_exc_class=EpicError,
+        )
+        require_condition(
+            epic.locked,
+            f"Epic {epic_id} is not locked",
+            raise_exc_class=EpicError,
+        )
+
+        now_str = utc_now()
+        rows = enforce_defined(
+            self.db.execute_query(
+                """
+                UPDATE epics
+                SET locked = 0,
+                    locked_at = NULL,
+                    updated_at = :now
+                WHERE id = :epic_id
+                RETURNING *
+                """,
+                {"epic_id": epic_id, "now": now_str},
+            ),
+            f"Failed to unlock epic {epic_id}",
+            raise_exc_class=EpicError,
+        )
+
+        epic_data = dict(rows[0])
+        epic_data["status"] = compute_epic_status(self.db, epic_id)
+        progress = self._compute_progress(epic_id)
+        epic_data["subtask_count"] = progress["subtask_count"]
+        epic_data["completed_count"] = progress["completed_count"]
+        return Epic.from_db_row(epic_data)
+
     def unlink_task(self, task_id: str) -> None:
         """
         Remove task from its epic.

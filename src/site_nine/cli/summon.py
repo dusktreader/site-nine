@@ -1,22 +1,57 @@
-"""Summon command to launch OpenCode with /summon slash command"""
+"""Summon command to launch OpenCode with mission-start instruction message"""
 
+import os
 import subprocess
+from pathlib import Path
 from typing import Annotated
 
 import typer
 from snick import conjoin
-from typerdrive import attach_settings, handle_errors, terminal_message
+from typerdrive import handle_errors, terminal_message
 
 from site_nine.cli.utils import CLIError
+from site_nine.core.paths import get_opencode_dir
 from site_nine.core.settings import SiteNineSettings
 from site_nine.exceptions import SiteNineError
 
 
+def _build_instruction_message(
+    role: str,
+    persona: str | None,
+    auto_assign: bool,
+    task: str | None,
+    desk: bool,
+) -> str:
+    """Construct the ADR-013 instruction message to inject into OpenCode on summon.
+
+    Per ADR-013, the instruction message format is:
+    - role + persona: "Your role is {role}, your persona is {persona}. Initialize your mission with the mission-start skill."
+    - role only:      "Your role is {role}. Initialize your mission with the mission-start skill."
+    - neither:        "Initialize your mission with the mission-start skill."
+
+    Additional flag instructions are appended as needed.
+    """
+    if role and persona:
+        base = f"Your role is {role}, your persona is {persona}. Initialize your mission with the mission-start skill."
+    elif role:
+        base = f"Your role is {role}. Initialize your mission with the mission-start skill."
+    else:
+        base = "Initialize your mission with the mission-start skill."
+
+    parts = [base]
+
+    if auto_assign:
+        parts.append("Automatically claim and start work on the top priority task for your role (--auto-assign).")
+    if task:
+        parts.append(f"Claim and start work on task {task} (--task {task}).")
+    if desk:
+        parts.append("Mode: desk (headless background worker).")
+
+    return " ".join(parts)
+
+
 @handle_errors("Failed to summon agent", handle_exc_class=SiteNineError)
-@attach_settings(SiteNineSettings)
 def summon_command(
-    ctx: typer.Context,
-    settings: SiteNineSettings,
     role: Annotated[str, typer.Argument(help="Agent role to summon (e.g., operator, architect)")],
     persona: Annotated[str | None, typer.Option("--persona", "-p", help="Specific persona name to use")] = None,
     auto_assign: Annotated[
@@ -24,11 +59,17 @@ def summon_command(
     ] = False,
     task: Annotated[str | None, typer.Option("--task", "-t", help="Specific task ID to claim and start")] = None,
     model: Annotated[str | None, typer.Option("--model", "-m", help="Model to use (provider/model format)")] = None,
+    desk: Annotated[
+        bool, typer.Option("--desk", help="Spawn a background (headless) desk-mode worker via opencode run")
+    ] = False,
     dry_run: Annotated[
         bool, typer.Option("--dry-run", "-d", help="Show command that would be run without executing")
     ] = False,
 ) -> None:
-    """Launch OpenCode and automatically run /summon with specified role and flags (typically used by: humans)
+    """Launch OpenCode with a mission-start instruction message (typically used by: humans)
+
+    Constructs an instruction message and either execs into OpenCode (interactive)
+    or spawns a background headless worker (--desk mode).
 
     Examples:
         s9 summon operator
@@ -36,6 +77,7 @@ def summon_command(
         s9 summon operator --auto-assign
         s9 summon operator --task OPR-H-0065
         s9 summon operator --model github-copilot/gpt-5
+        s9 summon engineer --desk
     """
     CLIError.require_condition(
         not (auto_assign and task),
@@ -49,37 +91,76 @@ def summon_command(
         ),
     )
 
+    CLIError.require_condition(
+        not (desk and (auto_assign or task)),
+        conjoin(
+            "Cannot use --task or --auto-assign with --desk mode.",
+            "",
+            "Desk mode workers initialize and wait for messages.",
+            "To assign work to a desk worker, send a message via 's9 comms send'",
+            "or use an orchestrator pattern after the worker is initialized.",
+        ),
+    )
+
     # Get model from config if not specified
     if model is None:
-        model = settings.default_model
+        settings = SiteNineSettings()
+        model = settings.default_model or "github-copilot/claude-sonnet-4-5"
 
-    # Build the /summon command
-    summon_cmd = f"/summon {role}"
+    # Build the instruction message
+    instruction = _build_instruction_message(
+        role=role,
+        persona=persona,
+        auto_assign=auto_assign,
+        task=task,
+        desk=desk,
+    )
 
-    if persona:
-        summon_cmd += f" --persona {persona}"
+    if desk:
+        # Desk mode: spawn persistent polling worker via desk_worker.py module
+        # Get repo root (parent of .opencode directory)
+        opencode_dir = get_opencode_dir()
+        repo_root = opencode_dir.parent
+        desk_worker_script = repo_root / "src" / "site_nine" / "workers" / "desk_worker.py"
 
-    if auto_assign:
-        summon_cmd += " --auto-assign"
+        # Build command for desk_worker.py with appropriate arguments
+        cmd = ["uv", "run", "python", str(desk_worker_script), role]
+        if persona:
+            cmd.extend(["--persona", persona])
+        if model:
+            cmd.extend(["--model", model])
 
-    if task:
-        summon_cmd += f" --task {task}"
-
-    # Show what would be executed
-    terminal_message(f"Launching OpenCode TUI with: {summon_cmd}", subject="Summon")
-
-    if dry_run:
         terminal_message(
-            f'Dry run - would execute: opencode --model {model} --prompt "{summon_cmd}"',
-            subject="Dry Run",
-            subject_color="yellow",
+            f"Spawning desk-mode worker for role '{role}'...\n"
+            f"Worker will poll for messages and stay alive for continuous work.",
+            subject="Summon",
         )
-        return
-
-    # Launch OpenCode TUI with the /summon command
-    try:
-        subprocess.run(["opencode", "--model", model, "--prompt", summon_cmd], check=True)
-    except subprocess.CalledProcessError as e:
-        raise CLIError(f"Error launching OpenCode: {e}")
-    except FileNotFoundError:
-        raise CLIError("'opencode' command not found. Is OpenCode installed?")
+        if dry_run:
+            terminal_message(
+                f"Dry run - would execute: {' '.join(cmd)}",
+                subject="Dry Run",
+                subject_color="yellow",
+            )
+            return
+        try:
+            subprocess.Popen(cmd, cwd=str(repo_root))
+        except FileNotFoundError:
+            raise CLIError(f"desk_worker.py module not found at {desk_worker_script}")
+    else:
+        # Interactive mode: exec into OpenCode, replacing the s9 process
+        cmd = ["opencode", "--model", model, "--prompt", instruction]
+        terminal_message(
+            f"Launching OpenCode for role '{role}'...\nInstruction: {instruction}",
+            subject="Summon",
+        )
+        if dry_run:
+            terminal_message(
+                f"Dry run - would execute: {' '.join(cmd)}",
+                subject="Dry Run",
+                subject_color="yellow",
+            )
+            return
+        try:
+            os.execvp("opencode", cmd)
+        except FileNotFoundError:
+            raise CLIError("'opencode' command not found. Is OpenCode installed?")

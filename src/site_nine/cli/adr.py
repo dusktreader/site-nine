@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -8,7 +9,7 @@ from snick import conjoin
 from typerdrive import handle_errors, terminal_message
 
 from site_nine.adrs import ADRError, ADRManager, ADRStatus, parse_adr_id, parse_adr_status, parse_adr_title
-from site_nine.cli.utils import CLIError, require_db_path
+from site_nine.cli.utils import CLIError, open_in_editor, require_db_path, require_opencode_dir
 from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
 from site_nine.exceptions import SiteNineError
@@ -189,4 +190,88 @@ def sync() -> None:
             f"Skipped: {skipped_count}",
         ),
         subject="Sync complete",
+    )
+
+
+@app.command()
+@handle_errors("Failed to edit ADR", handle_exc_class=SiteNineError)
+def edit(adr_id: Annotated[str, typer.Argument(help="ADR ID (e.g., ADR-001)")]) -> None:
+    """Open ADR file in $EDITOR for editing (typically used by: both)"""
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        manager = ADRManager(db)
+        adr = CLIError.enforce_defined(manager.get_adr(adr_id), f"ADR {adr_id} not found")
+
+    opencode_dir = require_opencode_dir()
+    adr_file = Path(adr.file_path)
+    if not adr_file.is_absolute():
+        adr_file = opencode_dir / adr_file
+
+    open_in_editor(f"ADR {adr_id}", adr_file)
+    terminal_message(
+        f"Run 's9 adr sync' to update the database from the edited file.",
+        subject="Tip",
+        subject_color="cyan",
+    )
+
+
+@app.command()
+@handle_errors("Failed to accept ADR", handle_exc_class=SiteNineError)
+def accept(adr_id: Annotated[str, typer.Argument(help="ADR ID (e.g., ADR-001)")]) -> None:
+    """Mark ADR as accepted (typically used by: both)"""
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        manager = ADRManager(db)
+        CLIError.enforce_defined(manager.get_adr(adr_id), f"ADR {adr_id} not found")
+        manager.update_adr(adr_id, status=ADRStatus.ACCEPTED.value)
+
+    terminal_message(
+        f"ADR {adr_id} has been accepted.",
+        subject=f"Accepted ADR {adr_id}",
+        subject_color="green",
+    )
+
+
+@app.command()
+@handle_errors("Failed to reject ADR", handle_exc_class=SiteNineError)
+def reject(
+    adr_id: Annotated[str, typer.Argument(help="ADR ID (e.g., ADR-001)")],
+    reason: Annotated[str | None, typer.Option("--reason", "-r", help="Reason for rejection")] = None,
+) -> None:
+    """Mark ADR as rejected (typically used by: both)"""
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        manager = ADRManager(db)
+        CLIError.enforce_defined(manager.get_adr(adr_id), f"ADR {adr_id} not found")
+        manager.update_adr(adr_id, status=ADRStatus.REJECTED.value)
+
+    msg = f"ADR {adr_id} has been rejected."
+    if reason:
+        msg += f"\nReason: {reason}"
+
+    terminal_message(msg, subject=f"Rejected ADR {adr_id}", subject_color="red")
+
+
+@app.command()
+@handle_errors("Failed to supersede ADR", handle_exc_class=SiteNineError)
+def supersede(
+    adr_id: Annotated[str, typer.Argument(help="ADR ID to supersede (e.g., ADR-001)")],
+    by: Annotated[str, typer.Option("--by", help="ID of the new ADR that supersedes this one")],
+) -> None:
+    """Mark ADR as superseded by a newer decision (typically used by: both)"""
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        manager = ADRManager(db)
+        CLIError.enforce_defined(manager.get_adr(adr_id), f"ADR {adr_id} not found")
+        CLIError.enforce_defined(manager.get_adr(by), f"Superseding ADR {by} not found")
+        manager.update_adr(adr_id, status=ADRStatus.SUPERSEDED.value)
+
+    terminal_message(
+        f"ADR {adr_id} has been superseded by {by}.",
+        subject=f"Superseded ADR {adr_id}",
+        subject_color="yellow",
     )

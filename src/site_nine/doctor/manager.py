@@ -42,7 +42,7 @@ _PASS_MESSAGES: dict[str, str] = {
     "9b. Last Mission Dates": "All last_mission_at timestamps are correct",
     "10a. Abandoned Tasks": "No tasks abandoned by ended missions",
     "10b. Orphaned Tasks": "No orphaned UNDERWAY tasks",
-    "10c. Stale Missions": "No stale IDLE missions",
+    "10c. Stale Missions": "No stale SUSPENDED or ACTIVE missions",
     "11. Task Files": "All task files exist",
 }
 
@@ -59,7 +59,7 @@ _FAIL_SUMMARIES: dict[str, str] = {
     "9b. Last Mission Dates": "Found {n} incorrect last_mission_at timestamps",
     "10a. Abandoned Tasks": "Found {n} tasks abandoned by ended missions",
     "10b. Orphaned Tasks": "Found {n} orphaned UNDERWAY tasks",
-    "10c. Stale Missions": "Found {n} stale IDLE missions (>24 hours with no UNDERWAY tasks)",
+    "10c. Stale Missions": "Found {n} stale missions (SUSPENDED >7d or ACTIVE with no recent activity)",
     "11. Task Files": "Found {n} missing task files",
 }
 
@@ -67,7 +67,9 @@ _FAIL_SUMMARIES: dict[str, str] = {
 _FAIL_HINTS: dict[str, list[str]] = {
     "10a. Abandoned Tasks": ["These tasks should be manually reviewed and marked COMPLETE or TODO."],
     "10b. Orphaned Tasks": ["These tasks should be manually reviewed and released or completed."],
-    "10c. Stale Missions": ["Run with --fix to auto-close, or use 's9 mission end <id>' manually."],
+    "10c. Stale Missions": [
+        "Suspended missions can be resumed with 's9 mission resume <id>' or ended with 's9 mission end <id>'."
+    ],
     "11. Task Files": ["Run 's9 task sync' to regenerate missing files."],
 }
 
@@ -80,11 +82,12 @@ class DoctorManager:
         self.opencode_dir = opencode_dir
         self.db_path = opencode_dir / "data" / "project.db"
 
-    def run_diagnostics(self, *, verbose: bool = False) -> DiagnosticReport:
+    def run_diagnostics(self, *, verbose: bool = False, stale_days: int = 7) -> DiagnosticReport:
         """Run all infrastructure and data integrity checks.
 
         Args:
             verbose: Include detailed output in check results.
+            stale_days: Number of days after which a mission is considered stale (default: 7)
 
         Returns:
             A DiagnosticReport with all results aggregated.
@@ -114,7 +117,7 @@ class DoctorManager:
             check_last_mission_dates(self.db, verbose=verbose),
             check_abandoned_tasks(self.db, verbose=verbose),
             check_orphaned_underway(self.db, verbose=verbose),
-            check_stale_missions(self.db, self.opencode_dir, verbose=verbose),
+            check_stale_missions(self.db, self.opencode_dir, verbose=verbose, stale_days=stale_days),
             check_task_files(self.db, self.opencode_dir, verbose=verbose),
         ]
 

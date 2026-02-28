@@ -38,7 +38,7 @@ def test_mission_manager_start_mission(test_db):
     """Test starting a new mission"""
     manager = MissionManager(test_db)
 
-    mission_id = manager.start_mission(persona_name="test-persona", role="Engineer", objective="Test mission")
+    mission_id = manager.start_mission(role="Engineer", objective="Test mission", persona_name="test-persona")
 
     assert mission_id > 0
 
@@ -58,7 +58,7 @@ def test_mission_manager_start_mission_with_file(test_db, tmp_path):
     mission_file = str(tmp_path / "custom-mission.md")
 
     mission_id = manager.start_mission(
-        persona_name="test-persona", role="Engineer", objective="Test mission", mission_file=mission_file
+        role="Engineer", objective="Test mission", persona_name="test-persona", mission_file=mission_file
     )
 
     assert mission_id > 0
@@ -72,7 +72,7 @@ def test_mission_manager_get_mission(test_db):
     """Test retrieving a mission"""
     manager = MissionManager(test_db)
 
-    mission_id = manager.start_mission(persona_name="test-persona", role="Engineer", objective="Test mission")
+    mission_id = manager.start_mission(role="Engineer", objective="Test mission", persona_name="test-persona")
 
     mission = manager.get_mission(mission_id)
 
@@ -106,8 +106,8 @@ def test_mission_manager_list_missions(test_db):
     manager = MissionManager(test_db)
 
     # Create multiple missions
-    id1 = manager.start_mission("persona1", "Engineer", "Objective 1")
-    id2 = manager.start_mission("persona2", "Tester", "Objective 2")
+    id1 = manager.start_mission(role="Engineer", objective="Objective 1", persona_name="persona1")
+    id2 = manager.start_mission(role="Tester", objective="Objective 2", persona_name="persona2")
 
     missions = manager.list_missions()
 
@@ -118,9 +118,9 @@ def test_mission_manager_list_missions_by_role(test_db):
     """Test filtering missions by role"""
     manager = MissionManager(test_db)
 
-    manager.start_mission("persona1", "Engineer", "Objective 1")
-    manager.start_mission("persona2", "Tester", "Objective 2")
-    manager.start_mission("persona3", "Engineer", "Objective 3")
+    manager.start_mission(role="Engineer", objective="Objective 1", persona_name="persona1")
+    manager.start_mission(role="Tester", objective="Objective 2", persona_name="persona2")
+    manager.start_mission(role="Engineer", objective="Objective 3", persona_name="persona3")
 
     engineer_missions = manager.list_missions(role="Engineer")
 
@@ -132,7 +132,7 @@ def test_mission_manager_end_mission(test_db):
     """Test ending a mission"""
     manager = MissionManager(test_db)
 
-    mission_id = manager.start_mission("test-persona", "Engineer", "Test")
+    mission_id = manager.start_mission(role="Engineer", objective="Test", persona_name="test-persona")
 
     manager.end_mission(mission_id)
 
@@ -144,7 +144,7 @@ def test_mission_manager_update_mission(test_db):
     """Test updating mission objective"""
     manager = MissionManager(test_db)
 
-    mission_id = manager.start_mission("test-persona", "Engineer", "Old objective")
+    mission_id = manager.start_mission(role="Engineer", objective="Old objective", persona_name="test-persona")
 
     manager.update_mission(mission_id, objective="New objective")
 
@@ -156,8 +156,8 @@ def test_mission_manager_codename_generation(test_db):
     """Test missions get unique codenames"""
     manager = MissionManager(test_db)
 
-    id1 = manager.start_mission("persona1", "Engineer", "Test")
-    id2 = manager.start_mission("persona2", "Tester", "Test")
+    id1 = manager.start_mission(role="Engineer", objective="Test", persona_name="persona1")
+    id2 = manager.start_mission(role="Tester", objective="Test", persona_name="persona2")
 
     mission1 = manager.get_mission(id1)
     mission2 = manager.get_mission(id2)
@@ -198,7 +198,7 @@ def test_mission_manager_start_mission_without_epic(test_db):
     """Test starting a mission without epic_id sets NULL"""
     manager = MissionManager(test_db)
 
-    mission_id = manager.start_mission(persona_name="test-persona", role="Engineer", objective="Test mission")
+    mission_id = manager.start_mission(role="Engineer", objective="Test mission", persona_name="test-persona")
 
     assert mission_id > 0
 
@@ -226,10 +226,10 @@ def test_mission_manager_list_missions_by_epic(test_db):
     manager = MissionManager(test_db)
 
     # Create missions with different epic scopes
-    manager.start_mission("persona1", "Engineer", "Objective 1", epic_id="EPC-M-0010")
-    manager.start_mission("persona2", "Tester", "Objective 2", epic_id="EPC-H-0011")
-    manager.start_mission("persona3", "Engineer", "Objective 3", epic_id="EPC-M-0010")
-    manager.start_mission("persona4", "Operator", "Objective 4")  # No epic
+    manager.start_mission(role="Engineer", objective="Objective 1", persona_name="persona1", epic_id="EPC-M-0010")
+    manager.start_mission(role="Tester", objective="Objective 2", persona_name="persona2", epic_id="EPC-H-0011")
+    manager.start_mission(role="Engineer", objective="Objective 3", persona_name="persona3", epic_id="EPC-M-0010")
+    manager.start_mission(role="Operator", objective="Objective 4", persona_name="persona4")  # No epic
 
     # Filter by epic
     epic10_missions = manager.list_missions(epic_id="EPC-M-0010")
@@ -247,9 +247,150 @@ def test_mission_manager_get_mission_includes_epic(test_db):
     epic_manager.create_epic(epic_id="EPC-C-0020", title="Epic 20", description="Description 20", priority="CRITICAL")
 
     manager = MissionManager(test_db)
-    mission_id = manager.start_mission("test-persona", "Engineer", "Test", epic_id="EPC-C-0020")
+    mission_id = manager.start_mission(role="Engineer", objective="Test", persona_name="test-persona", epic_id="EPC-C-0020")
 
     mission = manager.get_mission(mission_id)
 
     assert mission is not None
     assert mission.epic_id == "EPC-C-0020"
+
+
+# ---- Suspend / Resume manager tests ----
+
+
+def test_mission_manager_suspend_mission(test_db):
+    """Test suspending an active mission transitions status to SUSPENDED."""
+    manager = MissionManager(test_db)
+    mission_id = manager.start_mission(role="Engineer", objective="Test suspend", persona_name="test-persona")
+
+    manager.suspend_mission(mission_id)
+
+    mission = manager.get_mission(mission_id)
+    assert mission is not None
+    from site_nine.missions.types import MissionStatus
+
+    assert mission.status == MissionStatus.SUSPENDED
+
+
+def test_mission_manager_suspend_mission_with_reason(test_db):
+    """Test that suspend_mission stores the provided suspension reason in the DB."""
+    manager = MissionManager(test_db)
+    mission_id = manager.start_mission(role="Engineer", objective="Test suspend reason", persona_name="test-persona")
+
+    manager.suspend_mission(mission_id, reason="Session closed unexpectedly")
+
+    rows = test_db.execute_query("SELECT suspension_reason FROM missions WHERE id = :id", {"id": mission_id})
+    assert rows[0]["suspension_reason"] == "Session closed unexpectedly"
+
+
+def test_mission_manager_suspend_default_reason(test_db):
+    """Test that suspend_mission falls back to default reason when none provided."""
+    manager = MissionManager(test_db)
+    mission_id = manager.start_mission(role="Engineer", objective="Test default reason", persona_name="test-persona")
+
+    manager.suspend_mission(mission_id)
+
+    rows = test_db.execute_query("SELECT suspension_reason FROM missions WHERE id = :id", {"id": mission_id})
+    assert rows[0]["suspension_reason"] == "Suspended by user"
+
+
+def test_mission_manager_suspend_records_suspension_time(test_db):
+    """Test that suspend_mission sets suspension_time in the DB."""
+    manager = MissionManager(test_db)
+    mission_id = manager.start_mission(role="Engineer", objective="Test suspension time", persona_name="test-persona")
+
+    manager.suspend_mission(mission_id)
+
+    rows = test_db.execute_query("SELECT suspension_time FROM missions WHERE id = :id", {"id": mission_id})
+    assert rows[0]["suspension_time"] is not None
+
+
+def test_mission_manager_suspend_ended_mission_raises(test_db):
+    """Test that suspending an already-ended mission raises MissionError."""
+    manager = MissionManager(test_db)
+    mission_id = manager.start_mission(role="Engineer", objective="Test ended suspend", persona_name="test-persona")
+    manager.end_mission(mission_id)
+
+    with pytest.raises(MissionError):
+        manager.suspend_mission(mission_id)
+
+
+def test_mission_manager_suspend_not_found_raises(test_db):
+    """Test that suspending a non-existent mission raises MissionError."""
+    manager = MissionManager(test_db)
+
+    with pytest.raises(MissionError):
+        manager.suspend_mission(99999)
+
+
+def test_mission_manager_resume_mission(test_db):
+    """Test resuming a suspended mission transitions status back to ACTIVE."""
+    manager = MissionManager(test_db)
+    mission_id = manager.start_mission(role="Engineer", objective="Test resume", persona_name="test-persona")
+    manager.suspend_mission(mission_id)
+
+    manager.resume_mission(mission_id)
+
+    mission = manager.get_mission(mission_id)
+    assert mission is not None
+    from site_nine.missions.types import MissionStatus
+
+    assert mission.status == MissionStatus.ACTIVE
+
+
+def test_mission_manager_resume_clears_suspension_fields(test_db):
+    """Test that resume_mission NULLs out suspension_time and suspension_reason."""
+    manager = MissionManager(test_db)
+    mission_id = manager.start_mission(role="Engineer", objective="Test clear fields", persona_name="test-persona")
+    manager.suspend_mission(mission_id, reason="Test reason")
+
+    # Confirm fields are set before resume
+    rows_before = test_db.execute_query(
+        "SELECT suspension_time, suspension_reason FROM missions WHERE id = :id", {"id": mission_id}
+    )
+    assert rows_before[0]["suspension_time"] is not None
+    assert rows_before[0]["suspension_reason"] is not None
+
+    manager.resume_mission(mission_id)
+
+    rows_after = test_db.execute_query(
+        "SELECT suspension_time, suspension_reason FROM missions WHERE id = :id", {"id": mission_id}
+    )
+    assert rows_after[0]["suspension_time"] is None
+    assert rows_after[0]["suspension_reason"] is None
+
+
+def test_mission_manager_resume_not_suspended_raises(test_db):
+    """Test that resuming an ACTIVE (non-suspended) mission raises MissionError."""
+    manager = MissionManager(test_db)
+    mission_id = manager.start_mission(role="Engineer", objective="Test resume active", persona_name="test-persona")
+
+    with pytest.raises(MissionError):
+        manager.resume_mission(mission_id)
+
+
+def test_mission_manager_resume_not_found_raises(test_db):
+    """Test that resuming a non-existent mission raises MissionError."""
+    manager = MissionManager(test_db)
+
+    with pytest.raises(MissionError):
+        manager.resume_mission(99999)
+
+
+def test_mission_manager_suspend_then_resume_cycle(test_db):
+    """Integration: full ACTIVE → SUSPENDED → ACTIVE state cycle."""
+    from site_nine.missions.types import MissionStatus
+
+    manager = MissionManager(test_db)
+    mission_id = manager.start_mission(role="Engineer", objective="Test full cycle", persona_name="test-persona")
+
+    mission = manager.get_mission(mission_id)
+    assert mission.status == MissionStatus.ACTIVE
+
+    manager.suspend_mission(mission_id)
+    mission = manager.get_mission(mission_id)
+    assert mission.status == MissionStatus.SUSPENDED
+
+    manager.resume_mission(mission_id)
+    mission = manager.get_mission(mission_id)
+    assert mission.status == MissionStatus.ACTIVE
