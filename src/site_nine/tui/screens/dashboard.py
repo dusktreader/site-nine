@@ -213,6 +213,37 @@ class DashboardScreen(Screen):
             lines.append(f"  [red]Error loading epics: {exc}[/red]")
 
         lines.append("")
+
+        # ---- Recent activity -----------------------------------------
+        try:
+            from site_nine.tasks.manager import TaskManager
+
+            tm2 = TaskManager(self._db)
+            # Get recently-updated tasks (status changes, new claims, completions)
+            all_tasks2 = tm2.list_tasks()
+            # Sort by updated_at descending; fall back gracefully if field missing
+            recent_tasks = sorted(
+                all_tasks2,
+                key=lambda t: getattr(t, "updated_at", "") or "",
+                reverse=True,
+            )[:5]
+
+            lines.append("[bold underline]Recent Activity[/bold underline]")
+            if recent_tasks:
+                for t in recent_tasks:
+                    status_col = STATUS_COLOURS.get(
+                        t.status.value if hasattr(t.status, "value") else str(t.status), "white"
+                    )
+                    sym = STATUS_SYMBOLS.get(t.status.value if hasattr(t.status, "value") else str(t.status), "●")
+                    lines.append(
+                        f"  [{status_col}]{sym}[/{status_col}] [bold]{t.id}[/bold] {truncate(t.title or '', 55)}"
+                    )
+            else:
+                lines.append("  [dim]No recent task activity.[/dim]")
+        except Exception as exc:  # noqa: BLE001
+            lines.append(f"  [red]Error loading activity: {exc}[/red]")
+
+        lines.append("")
         lines.append("[dim]Auto-refreshes every 30s — press [bold]r[/bold] to refresh now.[/dim]")
 
         return "\n".join(lines)
