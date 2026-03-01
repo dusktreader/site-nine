@@ -1,0 +1,70 @@
+/* app.tcss — Site-nine TUI global stylesheet
+ *
+ * Uses Textual CSS (TCSS) with built-in theme tokens so the TUI respects
+ * the user's terminal colour scheme.
+ *
+ * Phase 1: Minimal styles for skeleton.
+ * Phase 4 (ENG-M-0244) will add full polish and theme consistency.
+ */
+
+/* -----------------------------------------------------------------------
+ * Priority colour classes — consistent with existing Rich rendering
+ * ----------------------------------------------------------------------- */
+
+.priority-critical {
+    color: $error;
+}
+
+.priority-high {
+    color: $warning;
+}
+
+.priority-medium {
+    color: $text;
+}
+
+.priority-low {
+    color: $text-muted;
+}
+
+/* -----------------------------------------------------------------------
+ * Status colour classes
+ * ----------------------------------------------------------------------- */
+
+.status-todo {
+    color: $text-muted;
+}
+
+.status-underway {
+    color: $accent;
+}
+
+.status-complete {
+    color: $success;
+}
+
+.status-aborted {
+    color: $error;
+}
+
+/* -----------------------------------------------------------------------
+ * 2-pane layout (used by all list+preview screens in Phase 3)
+ * ----------------------------------------------------------------------- */
+
+SelectableListPane {
+    width: 40%;
+    border-right: solid $panel;
+}
+
+MarkdownPreviewPane {
+    width: 60%;
+    padding: 0 1;
+}
+
+/* -----------------------------------------------------------------------
+ * Screen containers
+ * ----------------------------------------------------------------------- */
+
+Screen {
+    background: $surface;
+}

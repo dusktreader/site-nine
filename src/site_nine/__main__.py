@@ -1,3 +1,4 @@
+import sys
 from importlib.metadata import version as get_version
 from typing import Annotated
 
@@ -22,8 +23,31 @@ app = typer.Typer(
     name="site-nine",
     help="The headquarters for AI agent orchestration",
     rich_markup_mode="rich",
-    no_args_is_help=True,
+    invoke_without_command=True,
 )
+
+
+@app.callback()
+def main(
+    ctx: typer.Context,
+    no_tui: Annotated[
+        bool,
+        typer.Option("--no-tui", help="Skip the TUI and show CLI help instead"),
+    ] = False,
+) -> None:
+    """The headquarters for AI agent orchestration"""
+    if ctx.invoked_subcommand is not None:
+        # A subcommand was given — let it run normally
+        return
+    if not no_tui and sys.stdout.isatty():
+        # Bare invocation in a TTY → launch the TUI
+        from site_nine.tui.app import SiteNineApp
+
+        SiteNineApp().run()
+    else:
+        # Non-TTY or --no-tui → show help
+        print(ctx.get_help())
+
 
 set_typerdrive_config(app_name="site-nine")
 add_settings_subcommand(app, SiteNineSettings)
