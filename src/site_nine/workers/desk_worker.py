@@ -35,7 +35,7 @@ class DeskWorker:
     """External polling loop for desk mode workers."""
 
     # Default model to use for opencode run
-    DEFAULT_MODEL = "github-copilot/claude-sonnet-4-5"
+    DEFAULT_MODEL = "github-copilot/claude-sonnet-4.6"
 
     # Default polling interval (seconds)
     DEFAULT_POLL_INTERVAL = 30
@@ -56,7 +56,7 @@ class DeskWorker:
         Args:
             role: Worker role (e.g., 'Engineer', 'Architect', 'Tester')
             persona: Optional specific persona name (if None, auto-selected)
-            model: OpenCode model to use (defaults to claude-sonnet-4-5)
+            model: OpenCode model to use (defaults to claude-sonnet-4.6)
             poll_interval: Seconds between message checks (default: 30)
         """
         self.role = role
@@ -87,8 +87,13 @@ class DeskWorker:
 
         init_parts.append(
             "Initialize your mission with the mission-start skill. Mode: desk. "
-            "As a desk worker, you will receive work assignments via messages. "
-            "Send status updates as you work. The desk-worker wrapper handles message polling."
+            "DO NOT claim any tasks. DO NOT do any work yet. "
+            "After your mission is initialized and you have a mission ID, stop immediately. "
+            "The desk-worker wrapper handles message polling and will send you work assignments. "
+            "IMPORTANT: When you receive a work assignment message, you MUST use the worker_message "
+            "tool to send status updates back to the sender (use their mission ID as to_mission_id). "
+            "Send a message when you: (1) start a task, (2) complete a task, (3) hit a blocker, "
+            "(4) make significant progress. Never work silently — always report back."
         )
 
         init_message = " ".join(init_parts)
@@ -105,11 +110,11 @@ class DeskWorker:
                 text=True,
             )
 
-            # Wait for process with 60-minute timeout
+            # Wait for process with a 10-minute timeout for initialization
             try:
-                stdout, stderr = process.communicate(timeout=3600)
+                stdout, stderr = process.communicate(timeout=600)
 
-                # Extract session ID from first JSON line
+                # Extract session ID from JSON output lines
                 session_id = None
                 for line in stdout.splitlines():
                     if line.strip():
@@ -122,19 +127,32 @@ class DeskWorker:
                             continue
 
                 if not session_id:
-                    raise RuntimeError("Failed to extract session ID from opencode run output")
+                    raise RuntimeError(
+                        f"Failed to extract session ID from opencode run output.\n"
+                        f"Exit code: {process.returncode}\n"
+                        f"Stderr: {stderr[:1000] if stderr else '(empty)'}\n"
+                        f"Stdout (last 500 chars): {stdout[-500:] if stdout else '(empty)'}"
+                    )
 
                 self.session_id = session_id
                 print(f"Extracted session ID: {session_id}", flush=True)
 
                 if process.returncode != 0:
-                    print(f"Warning: opencode run exited with code {process.returncode}", file=sys.stderr)
+                    # Non-zero exit is a warning, not fatal — the agent may have exited
+                    # after completing init. As long as we got a session ID and the mission
+                    # was created in the DB, we can continue.
+                    print(
+                        f"Warning: opencode run exited with code {process.returncode} (may be normal after init)",
+                        file=sys.stderr,
+                        flush=True,
+                    )
                     if stderr:
-                        print(f"Error output: {stderr}", file=sys.stderr)
+                        print(f"Stderr: {stderr[:500]}", file=sys.stderr, flush=True)
+
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.communicate()
-                raise RuntimeError("Mission initialization timed out after 60 minutes")
+                raise RuntimeError("Mission initialization timed out after 10 minutes")
 
         except FileNotFoundError:
             raise RuntimeError("opencode command not found. Is OpenCode installed and in PATH?")
@@ -143,58 +161,74 @@ class DeskWorker:
         print("Waiting for mission to be created...", flush=True)
         time.sleep(5)
 
-        # Find mission ID from database - first try by session ID (in case it was bound)
+        # Find mission ID from database.
+        # Mission goes through ROLE_PENDING -> PERSONA_PENDING -> ACTIVE via OpenCode tools.
+        # Poll until ACTIVE status appears, first by session ID then by role.
         db = Database(get_db_path())
-        rows = db.execute_query(
-            """
-            SELECT id, persona_name FROM missions
-            WHERE opencode_session_id = :session_id
-              AND status IN ('ACTIVE', 'SUSPENDED')
-              AND end_time IS NULL
-            ORDER BY created_at DESC 
-            LIMIT 1
-            """,
-            {"session_id": self.session_id},
-        )
+        mission_row: dict | None = None
 
-        # If not found by session ID, find by role and bind it manually
-        if not rows:
-            print(f"Mission not found by session ID, searching by role...", flush=True)
+        # Phase 1: look up by session ID (preferred — agent bound the session via mission_init)
+        for _ in range(30):  # up to 30s
             rows = db.execute_query(
                 """
                 SELECT id, persona_name FROM missions
-                WHERE role = :role
-                  AND opencode_session_id IS NULL
-                  AND status IN ('ACTIVE', 'SUSPENDED')
+                WHERE opencode_session_id = :session_id
+                  AND status = 'ACTIVE'
                   AND end_time IS NULL
-                ORDER BY created_at DESC 
+                ORDER BY created_at DESC
                 LIMIT 1
                 """,
-                {"role": self.role},
+                {"session_id": self.session_id},
+            )
+            if rows:
+                mission_row = rows[0]
+                break
+            time.sleep(1)
+
+        # Phase 2: fall back to role-based lookup (session may not have been bound)
+        if mission_row is None:
+            print("Mission not found by session ID, searching by role...", flush=True)
+            for _ in range(15):  # up to 15s
+                rows = db.execute_query(
+                    """
+                    SELECT id, persona_name FROM missions
+                    WHERE role = :role
+                      AND opencode_session_id IS NULL
+                      AND status = 'ACTIVE'
+                      AND end_time IS NULL
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                    """,
+                    {"role": self.role},
+                )
+                if rows:
+                    mission_row = rows[0]
+                    break
+                time.sleep(1)
+
+        if mission_row is None:
+            raise RuntimeError(
+                f"Failed to find initialized mission for role {self.role}. "
+                "Check that mission-start completed successfully."
             )
 
-            if not rows:
-                raise RuntimeError(
-                    f"Failed to find initialized mission for role {self.role}. "
-                    "Check that mission-start completed successfully."
-                )
+        self.mission_id = mission_row["id"]
+        persona_used = mission_row["persona_name"]
 
-            # Bind the session ID to this mission
-            self.mission_id = rows[0]["id"]
-            persona_used = rows[0]["persona_name"]
-
+        # If found by role (no session binding), bind now
+        if not db.execute_query(
+            "SELECT id FROM missions WHERE id = :id AND opencode_session_id IS NOT NULL",
+            {"id": self.mission_id},
+        ):
             print(f"Binding session {self.session_id} to mission #{self.mission_id}...", flush=True)
             db.execute_update(
                 """
-                UPDATE missions 
+                UPDATE missions
                 SET opencode_session_id = :session_id
                 WHERE id = :mission_id
                 """,
                 {"session_id": self.session_id, "mission_id": self.mission_id},
             )
-        else:
-            self.mission_id = rows[0]["id"]
-            persona_used = rows[0]["persona_name"]
 
         if not self.session_id:
             raise RuntimeError(f"Mission #{self.mission_id} has no OpenCode session ID. Session binding failed.")
@@ -291,14 +325,15 @@ class DeskWorker:
                 text=True,
             )
 
-            # Wait for process with 60-minute timeout
+            # Wait for process with 20-minute timeout
             try:
-                stdout, stderr = process.communicate(timeout=3600)
+                stdout, stderr = process.communicate(timeout=1200)
 
                 # Mark conversation as viewed (read)
                 db = Database(get_db_path())
                 msg_mgr = MessageManager(db)
-                msg_mgr.update_conversation_view(message.conversation_id, self.mission_id)
+                if self.mission_id is not None:
+                    msg_mgr.update_conversation_view(message.conversation_id, self.mission_id)
 
                 if process.returncode == 0:
                     print(f"  ✓ Processed {message.id} successfully", flush=True)
@@ -317,7 +352,7 @@ class DeskWorker:
                 process.kill()
                 process.communicate()
                 print(
-                    f"  ✗ Processing timed out after 60 minutes",
+                    f"  ✗ Processing timed out after 20 minutes",
                     file=sys.stderr,
                     flush=True,
                 )
@@ -345,7 +380,8 @@ class DeskWorker:
         try:
             db = Database(get_db_path())
             mgr = MissionManager(db)
-            mgr.set_desk_mode(self.mission_id, active=False)
+            if self.mission_id is not None:
+                mgr.set_desk_mode(self.mission_id, active=False)
             print("Desk mode disabled", flush=True)
         except Exception as e:
             print(f"Warning: Failed to disable desk mode: {e}", file=sys.stderr)

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-DEFAULT_MODEL = "github-copilot/claude-sonnet-4.5"
+DEFAULT_MODEL = "github-copilot/claude-sonnet-4.6"
 
 
 class SiteNineSettings(BaseModel):

@@ -20,6 +20,7 @@ dependencies = [
     "auto-name-enum @ git+https://github.com/dusktreader/auto-name-enum.git@v4.0.0",
     "py-buzz>=7.3.0",
     "pendulum>=3.2.0",
+    "textual>=0.80.0",
 ]
 
 [project.scripts]

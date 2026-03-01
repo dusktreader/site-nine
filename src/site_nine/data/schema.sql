@@ -575,3 +575,17 @@ CREATE TABLE message_acknowledgements (
 
 CREATE INDEX idx_message_acks_message ON message_acknowledgements(message_id);
 CREATE INDEX idx_message_acks_mission ON message_acknowledgements(mission_id);
+
+-- Status queue for worker-to-director toast notifications.
+-- Workers push short status messages here; the OpenCode plugin pops and toasts
+-- them in the interactive (non-desk-mode) session. Cleared on s9 summon.
+CREATE TABLE status_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mission_id INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+
+    FOREIGN KEY (mission_id) REFERENCES missions(id)
+);
+
+CREATE INDEX idx_status_queue_created ON status_queue(created_at);

@@ -1,6 +1,7 @@
 """Summon command to launch OpenCode with mission-start instruction message"""
 
 import os
+import sqlite3
 import subprocess
 from pathlib import Path
 from typing import Annotated
@@ -10,7 +11,7 @@ from snick import conjoin
 from typerdrive import handle_errors, terminal_message
 
 from site_nine.cli.utils import CLIError
-from site_nine.core.paths import get_opencode_dir
+from site_nine.core.paths import get_db_path, get_opencode_dir
 from site_nine.core.settings import SiteNineSettings
 from site_nine.exceptions import SiteNineError
 
@@ -105,7 +106,7 @@ def summon_command(
     # Get model from config if not specified
     if model is None:
         settings = SiteNineSettings()
-        model = settings.default_model or "github-copilot/claude-sonnet-4-5"
+        model = settings.default_model or "github-copilot/claude-sonnet-4.6"
 
     # Build the instruction message
     instruction = _build_instruction_message(
@@ -160,6 +161,16 @@ def summon_command(
                 subject_color="yellow",
             )
             return
+        # Flush any stale status_queue entries before launching to avoid flooding
+        # the new session with toasts from previous sessions.
+        try:
+            db_path = get_db_path()
+            conn = sqlite3.connect(str(db_path))
+            conn.execute("DELETE FROM status_queue")
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass  # Non-fatal — proceed even if flush fails
         try:
             os.execvp("opencode", cmd)
         except FileNotFoundError:

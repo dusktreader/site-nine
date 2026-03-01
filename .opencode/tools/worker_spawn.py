@@ -28,7 +28,7 @@ def main():
 
         role = args.get("role")
         persona = args.get("persona")
-        model = args.get("model") or "github-copilot/claude-sonnet-4-5"
+        model = args.get("model") or "github-copilot/claude-sonnet-4.6"
         poll_interval = args.get("poll_interval") or 30
 
         if not role:
@@ -92,17 +92,19 @@ def main():
             text=True,
         )
 
-        # Wait for worker to initialize and create mission (give it up to 60 seconds)
+        # Wait for worker to initialize and create mission (give it up to 120 seconds)
+        # The desk_worker.py itself runs opencode for init (which may take a while),
+        # then starts its polling loop. We just need a mission to appear in the DB.
         logger.debug("worker_spawn_waiting_for_init", role=role)
 
         mission_id = None
         persona_name = None
-        max_attempts = 60  # 60 seconds max
+        max_attempts = 120  # 120 seconds max
         for attempt in range(max_attempts):
             time.sleep(1)
 
-            # Check if process died
-            if process.poll() is not None:
+            # Check if process died unexpectedly (only treat as error after 10s grace period)
+            if attempt > 10 and process.poll() is not None:
                 stdout, stderr = process.communicate()
                 return json.dumps(
                     {
@@ -113,13 +115,13 @@ def main():
                     }
                 )
 
-            # Check database for newly created mission
+            # Check database for newly created ACTIVE mission for this role
             db = Database(get_db_path())
             rows = db.execute_query(
                 """
                 SELECT id, persona_name FROM missions
                 WHERE role = :role
-                  AND status IN ('ACTIVE', 'SUSPENDED')
+                  AND status = 'ACTIVE'
                   AND end_time IS NULL
                 ORDER BY created_at DESC
                 LIMIT 1
