@@ -1,70 +1,177 @@
-/* app.tcss — Site-nine TUI global stylesheet
+/* Site-Nine TUI — Global TCSS Stylesheet
  *
- * Uses Textual CSS (TCSS) with built-in theme tokens so the TUI respects
- * the user's terminal colour scheme.
- *
- * Phase 1: Minimal styles for skeleton.
- * Phase 4 (ENG-M-0244) will add full polish and theme consistency.
+ * Layout:
+ *   #content-body / #*-body   — full-height horizontal container
+ *   #sidebar                  — narrow left navigation panel
+ *   #main-area / #content-area / #dashboard-scroll — main content area
+ *   #list-table / #*-table    — DataTable for list pane
+ *   #preview-pane             — scrollable preview pane below the list
+ *   #fullpage-scroll          — scrollable container in full-page views
+ *   #filter-input             — filter input bar
  */
 
-/* -----------------------------------------------------------------------
- * Priority colour classes — consistent with existing Rich rendering
- * ----------------------------------------------------------------------- */
-
-.priority-critical {
-    color: $error;
-}
-
-.priority-high {
-    color: $warning;
-}
-
-.priority-medium {
-    color: $text;
-}
-
-.priority-low {
-    color: $text-muted;
-}
-
-/* -----------------------------------------------------------------------
- * Status colour classes
- * ----------------------------------------------------------------------- */
-
-.status-todo {
-    color: $text-muted;
-}
-
-.status-underway {
-    color: $accent;
-}
-
-.status-complete {
-    color: $success;
-}
-
-.status-aborted {
-    color: $error;
-}
-
-/* -----------------------------------------------------------------------
- * 2-pane layout (used by all list+preview screens in Phase 3)
- * ----------------------------------------------------------------------- */
-
-SelectableListPane {
-    width: 40%;
-    border-right: solid $panel;
-}
-
-MarkdownPreviewPane {
-    width: 60%;
-    padding: 0 1;
-}
-
-/* -----------------------------------------------------------------------
- * Screen containers
- * ----------------------------------------------------------------------- */
+/* =========================================================================
+   Global / App
+   ========================================================================= */
 
 Screen {
     background: $surface;
+}
+
+/* =========================================================================
+   Header & Footer
+   ========================================================================= */
+
+Header {
+    height: 1;
+    background: $primary;
+    color: $text;
+}
+
+Footer {
+    height: 1;
+    background: $panel;
+}
+
+/* =========================================================================
+   3-pane layout container
+   ========================================================================= */
+
+#content-body,
+#epics-body,
+#messages-body,
+#missions-body,
+#tasks-body,
+#adrs-body,
+#histories-body {
+    height: 1fr;
+    width: 100%;
+}
+
+/* =========================================================================
+   Sidebar
+   ========================================================================= */
+
+#sidebar {
+    width: 16;
+    height: 100%;
+    background: $panel;
+    padding: 1 1;
+}
+
+.sidebar-item {
+    color: $text-muted;
+    padding: 0 1;
+}
+
+.sidebar-active {
+    color: $accent;
+    text-style: bold;
+    padding: 0 1;
+    background: $surface;
+}
+
+/* =========================================================================
+   Main area (right of sidebar)
+   ========================================================================= */
+
+#main-area,
+#content-area {
+    height: 100%;
+    width: 1fr;
+}
+
+/* =========================================================================
+   List pane (DataTable)
+   ========================================================================= */
+
+#list-table,
+#epics-table,
+#messages-table,
+#missions-table,
+#tasks-table,
+#adrs-table,
+#histories-table {
+    height: 1fr;
+    width: 100%;
+    min-height: 8;
+}
+
+/* =========================================================================
+   Preview pane
+   ========================================================================= */
+
+.preview-pane {
+    height: 10;
+    width: 100%;
+    border-top: solid $primary;
+    padding: 0 1;
+    background: $panel;
+}
+
+/* =========================================================================
+   Full-page view
+   ========================================================================= */
+
+.fullpage-title {
+    height: 1;
+    width: 100%;
+    padding: 0 1;
+    background: $primary;
+    color: $text;
+}
+
+#fullpage-scroll {
+    height: 1fr;
+    width: 100%;
+    padding: 1 2;
+}
+
+/* =========================================================================
+   Filter input bar
+   ========================================================================= */
+
+#filter-input {
+    height: 3;
+    width: 100%;
+    dock: top;
+}
+
+/* =========================================================================
+   Dashboard
+   ========================================================================= */
+
+#dashboard-scroll {
+    height: 1fr;
+    width: 1fr;
+    padding: 1 2;
+}
+
+/* =========================================================================
+   Help modal
+   ========================================================================= */
+
+HelpScreen {
+    align: center middle;
+}
+
+#help-scroll {
+    width: 70;
+    height: 40;
+    max-width: 80%;
+    max-height: 80%;
+    background: $surface;
+    border: solid $primary;
+    padding: 1 2;
+}
+
+/* =========================================================================
+   Subview label (Messages screen)
+   ========================================================================= */
+
+.subview-label {
+    height: 1;
+    width: 100%;
+    padding: 0 1;
+    background: $panel;
 }

@@ -1,180 +1,117 @@
-"""SiteNineApp — root Textual application for the site-nine TUI.
+"""SiteNineApp — Root Textual application for the Site-Nine TUI.
 
-Launches when `s9` is invoked with no arguments (and stdout is a TTY).
-All existing CLI subcommands continue to work via TTY detection + --no-tui flag.
-
-Architecture: ARC-H-0239 (Mission #167, rogue-typhoon)
-Implementation: ENG-H-0240 (Mission #170, shadow-blaze)
+Provides:
+  - Global keybindings: 1-7 switch screens, q quit, ? help
+  - Sidebar navigation shared across all content screens
+  - Database connection shared to all screens at mount time
+  - Graceful degradation when DB is unavailable (error screen shown instead)
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-from importlib.resources import files as _pkg_files
-
 from textual.app import App, ComposeResult
-from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Label
+from textual.binding import Binding, BindingType
+from textual.widgets import Footer, Header, Static
 
-from site_nine.tui.data.loader import DataLoader
-from site_nine.tui.screens.adrs import ADRsScreen
-from site_nine.tui.screens.dashboard import DashboardScreen
-from site_nine.tui.screens.histories import HistoriesScreen
-from site_nine.tui.screens.messages import MessagesScreen
-from site_nine.tui.screens.missions import MissionsScreen
-from site_nine.tui.screens.tasks import TasksScreen
-from site_nine.tui.widgets.footer import KeybindingFooter
-from site_nine.tui.widgets.header import AppHeader
+from site_nine.core.database import Database
+from site_nine.core.paths import get_db_path
 
-# Screen registry: name → (class, title, key)
-_SCREENS: list[tuple[str, type[Screen], str, str]] = [
-    ("dashboard", DashboardScreen, "Dashboard", "1"),
-    ("missions", MissionsScreen, "Missions", "2"),
-    ("messages", MessagesScreen, "Messages", "3"),
-    ("tasks", TasksScreen, "Tasks", "4"),
-    ("adrs", ADRsScreen, "ADRs", "5"),
-    ("histories", HistoriesScreen, "Histories", "6"),
+# Screen name constants used for switch_screen
+SCREEN_DASHBOARD = "dashboard"
+SCREEN_MISSIONS = "missions"
+SCREEN_TASKS = "tasks"
+SCREEN_MESSAGES = "messages"
+SCREEN_ADRS = "adrs"
+SCREEN_HISTORIES = "histories"
+SCREEN_EPICS = "epics"
+SCREEN_ERROR = "error"
+
+# Ordered list of (number, name, label) tuples used in the sidebar and key bindings
+SCREEN_ORDER: list[tuple[str, str, str]] = [
+    ("1", SCREEN_DASHBOARD, "Dashboard"),
+    ("2", SCREEN_MISSIONS, "Missions"),
+    ("3", SCREEN_TASKS, "Tasks"),
+    ("4", SCREEN_MESSAGES, "Messages"),
+    ("5", SCREEN_ADRS, "ADRs"),
+    ("6", SCREEN_HISTORIES, "Histories"),
+    ("7", SCREEN_EPICS, "Epics"),
 ]
-
-# Resolve stylesheet path from package resources
-_CSS_PATH = Path(str(_pkg_files("site_nine").joinpath("tui/styles/app.tcss")))
 
 
 class SiteNineApp(App):
-    """
-    Root Textual application for the site-nine TUI.
+    """Root application — registers screens and handles global keybindings."""
 
-    CSS_PATH points to the bundled styles/app.tcss stylesheet.
+    CSS_PATH = "styles/app.tcss"
 
-    Global keybindings:
-        1–6     Switch to numbered screen
-        d       Dashboard
-        m       Missions
-        g       Messages (comms/telegrams)
-        t       Tasks
-        a       ADRs
-        h       Histories
-        ?       Help (Phase 4)
-        r       Refresh current screen
-        q       Quit
-    """
+    TITLE = "Site-Nine"
+    SUB_TITLE = "AI Agent Orchestration HQ"
 
-    CSS_PATH = _CSS_PATH
-
-    SCREENS = {name: cls for name, cls, _title, _key in _SCREENS}
-
-    BINDINGS = [
+    BINDINGS: list[BindingType] = [
+        Binding("q", "quit", "Quit", priority=True),
+        Binding("question_mark", "help", "Help", show=True),
         Binding("1", "switch_screen('dashboard')", "Dashboard", show=False),
         Binding("2", "switch_screen('missions')", "Missions", show=False),
-        Binding("3", "switch_screen('messages')", "Messages", show=False),
-        Binding("4", "switch_screen('tasks')", "Tasks", show=False),
+        Binding("3", "switch_screen('tasks')", "Tasks", show=False),
+        Binding("4", "switch_screen('messages')", "Messages", show=False),
         Binding("5", "switch_screen('adrs')", "ADRs", show=False),
         Binding("6", "switch_screen('histories')", "Histories", show=False),
-        Binding("d", "switch_screen('dashboard')", "Dashboard", show=False),
-        Binding("m", "switch_screen('missions')", "Missions", show=False),
-        Binding("g", "switch_screen('messages')", "Messages", show=False),
-        Binding("t", "switch_screen('tasks')", "Tasks", show=False),
-        Binding("a", "switch_screen('adrs')", "ADRs", show=False),
-        Binding("h", "switch_screen('histories')", "Histories", show=False),
-        Binding("q", "quit", "Quit", show=False),
-        Binding("r", "refresh_screen", "Refresh", show=False),
-        Binding("?", "show_help", "Help", show=False),
+        Binding("7", "switch_screen('epics')", "Epics", show=False),
     ]
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._data_loader: DataLoader | None = None
-        self._active_screen_name: str = "dashboard"
 
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
 
     def on_mount(self) -> None:
-        """Initialise DataLoader on mount, then push the dashboard screen."""
-        self._init_data_loader()
-        # Install all screens
-        for name, cls, _title, _key in _SCREENS:
-            self.install_screen(cls(), name=name)
-        self.push_screen("dashboard")
-
-    def _init_data_loader(self) -> None:
-        """
-        Try to connect to the project database and create a DataLoader.
-        If the .opencode dir or DB is missing, set loader to None — screens
-        will handle the missing-loader case gracefully.
-        """
+        """Open DB connection and register all screens."""
+        db: Database | None = None
         try:
-            from site_nine.core.database import Database
-            from site_nine.core.paths import get_db_path
-
             db_path = get_db_path()
-            self._db = Database(db_path)
-            self._data_loader = DataLoader(self._db)
+            db = Database(db_path)
         except FileNotFoundError:
-            self._data_loader = None
+            db = None
+
+        if db is None:
+            self._register_error_screen()
+            self.push_screen(SCREEN_ERROR)
+        else:
+            self._register_screens(db)
+            self.push_screen(SCREEN_DASHBOARD)
+
+    def _register_error_screen(self) -> None:
+        """Show a simple error screen when DB is unavailable."""
+        from site_nine.tui.screens.error import ErrorScreen
+
+        self.install_screen(
+            ErrorScreen("Database unavailable. Run 's9 init' to initialise the project."),
+            name=SCREEN_ERROR,
+        )
+
+    def _register_screens(self, db: Database) -> None:
+        """Lazy-import and install all content screens."""
+        # Import here to avoid circular imports and keep startup fast
+        from site_nine.tui.screens.dashboard import DashboardScreen
+        from site_nine.tui.screens.missions import MissionsScreen
+        from site_nine.tui.screens.tasks import TasksScreen
+        from site_nine.tui.screens.messages import MessagesScreen
+        from site_nine.tui.screens.adrs import ADRsScreen
+        from site_nine.tui.screens.histories import HistoriesScreen
+        from site_nine.tui.screens.epics import EpicsScreen
+
+        self.install_screen(DashboardScreen(db), name=SCREEN_DASHBOARD)
+        self.install_screen(MissionsScreen(db), name=SCREEN_MISSIONS)
+        self.install_screen(TasksScreen(db), name=SCREEN_TASKS)
+        self.install_screen(MessagesScreen(db), name=SCREEN_MESSAGES)
+        self.install_screen(ADRsScreen(db), name=SCREEN_ADRS)
+        self.install_screen(HistoriesScreen(db), name=SCREEN_HISTORIES)
+        self.install_screen(EpicsScreen(db), name=SCREEN_EPICS)
 
     # ------------------------------------------------------------------
-    # Layout
+    # Actions
     # ------------------------------------------------------------------
 
-    def compose(self) -> ComposeResult:
-        """Mount the persistent header and footer; the main content area is
-        filled by the active screen."""
-        yield AppHeader()
-        yield KeybindingFooter()
+    def action_help(self) -> None:
+        """Show a help overlay."""
+        from site_nine.tui.screens.help import HelpScreen
 
-    # ------------------------------------------------------------------
-    # Screen switching
-    # ------------------------------------------------------------------
-
-    def action_switch_screen(self, screen_name: str) -> None:
-        """Switch to the named screen and update the header title."""
-        # Find the human-readable title for this screen
-        title = screen_name.title()
-        for name, _cls, t, _key in _SCREENS:
-            if name == screen_name:
-                title = t
-                break
-
-        self._active_screen_name = screen_name
-        self._update_header_title(title)
-        self._update_footer_active(screen_name)
-        self.switch_screen(screen_name)
-
-    def _update_header_title(self, title: str) -> None:
-        try:
-            header = self.query_one(AppHeader)
-            header.screen_title = title
-        except Exception:
-            pass
-
-    def _update_footer_active(self, screen_name: str) -> None:
-        try:
-            footer = self.query_one(KeybindingFooter)
-            footer.active_screen = screen_name
-        except Exception:
-            pass
-
-    # ------------------------------------------------------------------
-    # Other global actions
-    # ------------------------------------------------------------------
-
-    def action_refresh_screen(self) -> None:
-        """Trigger a data refresh on the current screen."""
-        if hasattr(self.screen, "refresh_data"):
-            self.call_later(self.screen.refresh_data)  # type: ignore[attr-defined]
-
-    def action_show_help(self) -> None:
-        """Show help overlay. Implemented in Phase 4 (ENG-M-0244)."""
-        self.notify("Help overlay — coming in Phase 4!", severity="information")
-
-    # ------------------------------------------------------------------
-    # DataLoader access
-    # ------------------------------------------------------------------
-
-    @property
-    def data_loader(self) -> DataLoader | None:
-        """Return the shared DataLoader, or None if DB is unavailable."""
-        return self._data_loader
+        self.push_screen(HelpScreen())
