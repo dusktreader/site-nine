@@ -287,7 +287,7 @@ class MessagesScreen(Screen):
     # Event handlers
     # ------------------------------------------------------------------
 
-    def on_data_table_cursor_moved(self, event: DataTable.CursorMoved) -> None:  # noqa: ARG002
+    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:  # noqa: ARG002
         self._refresh_preview()
 
     # ------------------------------------------------------------------
@@ -339,10 +339,10 @@ class MessagesScreen(Screen):
     # ------------------------------------------------------------------
 
     def action_cursor_down(self) -> None:
-        self.query_one("#messages-table", DataTable).action_scroll_cursor_down()
+        self.query_one("#messages-table", DataTable).action_cursor_down()
 
     def action_cursor_up(self) -> None:
-        self.query_one("#messages-table", DataTable).action_scroll_cursor_up()
+        self.query_one("#messages-table", DataTable).action_cursor_up()
 
     def action_toggle_subview(self) -> None:
         self.active_subview = 1 - self.active_subview
