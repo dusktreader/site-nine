@@ -1,1 +1,1 @@
-"""Site-nine TUI — interactive terminal interface for agent orchestration management."""
+"""Site-Nine TUI package — Textual-based terminal user interface."""

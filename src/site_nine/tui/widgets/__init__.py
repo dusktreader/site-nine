@@ -1,1 +1,1 @@
-"""TUI widgets package."""
+"""TUI widget modules."""
