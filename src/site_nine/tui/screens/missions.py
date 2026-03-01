@@ -48,8 +48,10 @@ _STATUS_SYMBOLS: dict[str, str] = {
 }
 
 
-def _truncate(text: str, width: int) -> str:
+def _truncate(text: str | None, width: int) -> str:
     """Truncate string to *width* characters, appending '…' if needed."""
+    if text is None:
+        return ""
     if len(text) <= width:
         return text
     return text[: width - 1] + "…"
@@ -93,8 +95,8 @@ class MissionFullPage(Screen):
 
     def __init__(self, mission: Mission, db: Database) -> None:
         super().__init__()
-        self._mission = mission
-        self._db = db
+        self._site_mission = mission
+        self._site_db = db
 
     # ------------------------------------------------------------------
     # Compose
@@ -102,13 +104,13 @@ class MissionFullPage(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
-        status = _status_value(self._mission)
+        status = _status_value(self._site_mission)
         status_col = _STATUS_COLOURS.get(status, "white")
         sym = _STATUS_SYMBOLS.get(status, "●")
         title = (
-            f"[ESC]  Mission #{self._mission.id}  "
-            f"[bold]{self._mission.codename}[/bold]  "
-            f"({self._mission.persona_name})  "
+            f"[ESC]  Mission #{self._site_mission.id}  "
+            f"[bold]{self._site_mission.codename}[/bold]  "
+            f"({self._site_mission.persona_name})  "
             f"[{status_col}]{sym} {status}[/{status_col}]"
         )
         yield Static(title, id="fullpage-title", classes="fullpage-title", markup=True)
@@ -117,7 +119,7 @@ class MissionFullPage(Screen):
         yield Footer()
 
     def _build_content(self) -> str:
-        mission = self._mission
+        mission = self._site_mission
         status = _status_value(mission)
         status_col = _STATUS_COLOURS.get(status, "white")
         lines: list[str] = []
@@ -208,13 +210,13 @@ class MissionsScreen(Screen):
     """
 
     BINDINGS: ClassVar[list[Binding]] = [
-        Binding("j", "cursor_down", "Down", show=False),
-        Binding("k", "cursor_up", "Up", show=False),
-        Binding("down", "cursor_down", "Down", show=False),
-        Binding("up", "cursor_up", "Up", show=False),
-        Binding("enter", "open_fullpage", "Open"),
-        Binding("escape", "app.pop_screen", "Back"),
-        Binding("/", "focus_filter", "Filter", show=True),
+        Binding("j", "cursor_down", "Down", show=False, priority=True),
+        Binding("k", "cursor_up", "Up", show=False, priority=True),
+        Binding("down", "cursor_down", "Down", show=False, priority=True),
+        Binding("up", "cursor_up", "Up", show=False, priority=True),
+        Binding("enter", "open_fullpage", "Open", priority=True),
+        Binding("escape", "app.pop_screen", "Back", priority=True),
+        Binding("/", "focus_filter", "Filter", show=True, priority=True),
         Binding("2", "app.switch_screen('missions')", "Missions", show=False),
     ]
 

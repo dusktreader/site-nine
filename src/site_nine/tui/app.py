@@ -49,13 +49,13 @@ class SiteNineApp(App):
     BINDINGS: list[BindingType] = [
         Binding("q", "quit", "Quit", priority=True),
         Binding("question_mark", "help", "Help", show=True),
-        Binding("1", "switch_screen('dashboard')", "Dashboard", show=False),
-        Binding("2", "switch_screen('missions')", "Missions", show=False),
-        Binding("3", "switch_screen('tasks')", "Tasks", show=False),
-        Binding("4", "switch_screen('messages')", "Messages", show=False),
-        Binding("5", "switch_screen('adrs')", "ADRs", show=False),
-        Binding("6", "switch_screen('histories')", "Histories", show=False),
-        Binding("7", "switch_screen('epics')", "Epics", show=False),
+        Binding("1", "switch_screen('dashboard')", "Dashboard", show=False, priority=True),
+        Binding("2", "switch_screen('missions')", "Missions", show=False, priority=True),
+        Binding("3", "switch_screen('tasks')", "Tasks", show=False, priority=True),
+        Binding("4", "switch_screen('messages')", "Messages", show=False, priority=True),
+        Binding("5", "switch_screen('adrs')", "ADRs", show=False, priority=True),
+        Binding("6", "switch_screen('histories')", "Histories", show=False, priority=True),
+        Binding("7", "switch_screen('epics')", "Epics", show=False, priority=True),
     ]
 
     # ------------------------------------------------------------------

@@ -101,8 +101,8 @@ class TaskFullPage(Screen):
 
     def __init__(self, task: Task, db: Database) -> None:
         super().__init__()
-        self._task = task
-        self._db = db
+        self._site_task = task
+        self._site_db = db
 
     # ------------------------------------------------------------------
     # Compose
@@ -110,7 +110,7 @@ class TaskFullPage(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
-        task = self._task
+        task = self._site_task
         status_col = _STATUS_COLOURS.get(task.status.value, "white")
         priority_col = _PRIORITY_COLOURS.get(task.priority, "white")
         title = (
@@ -125,7 +125,7 @@ class TaskFullPage(Screen):
         yield Footer()
 
     def _build_content(self) -> str:
-        task = self._task
+        task = self._site_task
         lines: list[str] = []
 
         # Metadata block
@@ -221,16 +221,16 @@ class TasksScreen(Screen):
     """
 
     BINDINGS: ClassVar[list[Binding]] = [
-        Binding("j", "cursor_down", "Down", show=False),
-        Binding("k", "cursor_up", "Up", show=False),
-        Binding("down", "cursor_down", "Down", show=False),
-        Binding("up", "cursor_up", "Up", show=False),
-        Binding("enter", "open_fullpage", "Open"),
-        Binding("escape", "app.pop_screen", "Back"),
-        Binding("/", "focus_filter", "Filter", show=True),
-        Binding("s", "cycle_status", "Status filter", show=False),
-        Binding("p", "cycle_priority", "Priority filter", show=False),
-        Binding("r", "reset_filters", "Reset", show=False),
+        Binding("j", "cursor_down", "Down", show=False, priority=True),
+        Binding("k", "cursor_up", "Up", show=False, priority=True),
+        Binding("down", "cursor_down", "Down", show=False, priority=True),
+        Binding("up", "cursor_up", "Up", show=False, priority=True),
+        Binding("enter", "open_fullpage", "Open", priority=True),
+        Binding("escape", "app.pop_screen", "Back", priority=True),
+        Binding("/", "focus_filter", "Filter", show=True, priority=True),
+        Binding("s", "cycle_status", "Status filter", show=False, priority=True),
+        Binding("p", "cycle_priority", "Priority filter", show=False, priority=True),
+        Binding("r", "reset_filters", "Reset", show=False, priority=True),
         Binding("3", "app.switch_screen('tasks')", "Tasks", show=False),
     ]
 
@@ -299,6 +299,10 @@ class TasksScreen(Screen):
 
     def _populate_table(self) -> None:
         """Populate the DataTable with filtered task data."""
+        # Guard: DOM may not be composed yet (reactive watchers fire early)
+        tables = self.query("#tasks-table")
+        if not tables:
+            return
         self._filtered_tasks = self._apply_filters()
         table = self.query_one("#tasks-table", DataTable)
         table.clear(columns=True)
@@ -359,10 +363,12 @@ class TasksScreen(Screen):
     # ------------------------------------------------------------------
 
     def watch_filter_status(self, _: str) -> None:
-        self._populate_table()
+        if self.is_attached:
+            self._populate_table()
 
     def watch_filter_priority(self, _: str) -> None:
-        self._populate_table()
+        if self.is_attached:
+            self._populate_table()
 
     # ------------------------------------------------------------------
     # Preview

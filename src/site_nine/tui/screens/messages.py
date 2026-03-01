@@ -279,7 +279,11 @@ class MessagesScreen(Screen):
     # ------------------------------------------------------------------
 
     def watch_active_subview(self, _: int) -> None:
-        label = self.query_one("#subview-label", Static)
+        try:
+            label = self.query_one("#subview-label", Static)
+        except Exception:  # noqa: BLE001
+            # DOM not yet ready (reactive initialized before compose finishes)
+            return
         label.update(self._subview_label())
         self._populate_table()
 
