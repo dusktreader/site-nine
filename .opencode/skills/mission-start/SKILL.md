@@ -519,7 +519,51 @@ worker_terminate({
 })
 ```
 
-**See:** `.opencode/docs/guides/desk-mode-orchestration.md` for full coordination patterns.
+### Admin Responsibility: You Own the Worker Lifecycle
+
+**⚠️ CRITICAL ADMIN RULE ⚠️**
+
+Workers **never dismiss themselves**. The `mission-start` skill explicitly prohibits self-dismissal. This means:
+
+> **As the admin (or operator) who spawned a worker, YOU are responsible for dismissing them once their assigned task is complete.**
+
+Workers will keep polling indefinitely until you send a termination signal. This is by design — a worker finishing a task does not mean they should disappear. They report back and wait for your next instruction or dismissal.
+
+**Your obligations as admin:**
+
+1. **Monitor for completion** — use `watch_inbox` to block until the worker reports in, or check `worker_status` periodically
+2. **Decide what happens next** — assign more work, or dismiss the worker
+3. **Always dismiss when done** — every worker you spawn must eventually be terminated by you
+
+**When to dismiss a worker:**
+- The worker reports their assigned task is complete and you have no further work for them
+- You completed the task yourself before the worker could start — dismiss them immediately, don't wait for them to check in
+- The worker is blocked and the task has been re-assigned elsewhere
+- You are ending your own mission — all spawned workers must be dismissed first
+
+### Dismissing Workers When Their Task Is Complete
+
+**Dismissal protocol:**
+
+1. **Send a termination signal** using `worker_terminate`:
+   ```typescript
+   worker_terminate({
+     from_mission_id: <your-mission-id>,
+     to_mission_id: <worker-mission-id>,
+     reason: "Task ENG-H-0042 is complete. No further work needed — please end your mission and terminate."
+   })
+   ```
+
+2. **Verify the worker ends** — after a short wait, confirm the mission status transitions to `ENDED`:
+   ```typescript
+   task_show({ mission_id: <worker-mission-id> })
+   ```
+
+**Why this matters:**
+- Workers left running consume resources and clutter the active missions list
+- Zombie workers will be flagged by `s9 doctor` after 8h with no heartbeat
+- Each spawned worker should have a matching termination before you end your own mission
+
 
 ## Important Notes
 
