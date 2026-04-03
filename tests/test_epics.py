@@ -228,8 +228,8 @@ class TestEpicManager:
         # Verify epic aborted
         aborted_epic = manager.get_epic(epic.id)
         assert aborted_epic.status == "ABORTED"
-        assert "Test abort reason" in aborted_epic.status_details
-        assert aborted_epic.status_details is not None
+        assert "Test abort reason" in aborted_epic.aborted_reason
+        assert aborted_epic.aborted_reason is not None
 
         # Verify all tasks aborted
         subtasks = manager.get_subtasks(epic.id)
@@ -403,7 +403,7 @@ class TestEpicModel:
             title="Test",
             description=None,
             status="UNDERWAY",
-            status_details=None,
+            aborted_reason=None,
             priority="HIGH",
             created_at="2026-02-03",
             updated_at="2026-02-03",
@@ -421,7 +421,7 @@ class TestEpicModel:
             title="Test",
             description=None,
             status="TODO",
-            status_details=None,
+            aborted_reason=None,
             priority="HIGH",
             created_at="2026-02-03",
             updated_at="2026-02-03",
@@ -439,7 +439,7 @@ class TestEpicModel:
             title="Test",
             description=None,
             status="TODO",
-            status_details=None,
+            aborted_reason=None,
             priority="HIGH",
             created_at="2026-02-03",
             updated_at="2026-02-03",
@@ -452,7 +452,7 @@ class TestEpicModel:
             title="Test",
             description=None,
             status="UNDERWAY",
-            status_details=None,
+            aborted_reason=None,
             priority="HIGH",
             created_at="2026-02-03",
             updated_at="2026-02-03",
@@ -467,7 +467,7 @@ class TestEpicModel:
             title="Test",
             description=None,
             status="COMPLETE",
-            status_details=None,
+            aborted_reason=None,
             priority="HIGH",
             created_at="2026-02-03",
             updated_at="2026-02-03",
@@ -480,7 +480,7 @@ class TestEpicModel:
             title="Test",
             description=None,
             status="ABORTED",
-            status_details="Test abort reason",
+            aborted_reason="Test abort reason",
             priority="HIGH",
             created_at="2026-02-03",
             updated_at="2026-02-03",

@@ -6,20 +6,18 @@ from site_nine.messaging.manager import MessageManager
 
 
 def _create_missions(db, count=2):
-    """Create test missions for messaging tests."""
+    """Create test possessions for messaging tests."""
     for i in range(1, count + 1):
         db.execute_update(
             """
-            INSERT INTO missions (id, persona_name, role, codename, mission_file, start_date, start_time, objective, created_at, updated_at)
-            VALUES (:id, :persona, :role, :codename, :file, date('now'), time('now'), :obj, datetime('now'), datetime('now'))
+            INSERT INTO possessions (id, daemon_name, role, possession_log, created_at, updated_at)
+            VALUES (:id, :daemon, :role, :log, datetime('now'), datetime('now'))
             """,
             {
                 "id": i,
-                "persona": "test-persona",
+                "daemon": "test-persona",
                 "role": "Engineer",
-                "codename": f"test-mission-{i}",
-                "file": f".opencode/work/missions/test-{i}.md",
-                "obj": f"Test mission {i}",
+                "log": f".opencode/work/possessions/test-{i}.md",
             },
         )
 
@@ -40,17 +38,17 @@ def _create_conversation(db, conv_id, participant_1, participant_2, subject="Tes
     )
 
 
-def _create_message(db, msg_id, conv_id, from_mission, subject="Test message", body="Test body", priority="MEDIUM"):
+def _create_message(db, msg_id, conv_id, from_possession, subject="Test message", body="Test body", priority="MEDIUM"):
     """Create a test message."""
     db.execute_update(
         """
-        INSERT INTO messages (id, conversation_id, from_mission_id, subject, body, priority)
-        VALUES (:id, :conv_id, :from_mission, :subject, :body, :priority)
+        INSERT INTO messages (id, conversation_id, from_possession_id, subject, body, priority)
+        VALUES (:id, :conv_id, :from_possession, :subject, :body, :priority)
         """,
         {
             "id": msg_id,
             "conv_id": conv_id,
-            "from_mission": from_mission,
+            "from_possession": from_possession,
             "subject": subject,
             "body": body,
             "priority": priority,
@@ -58,7 +56,7 @@ def _create_message(db, msg_id, conv_id, from_mission, subject="Test message", b
     )
 
 
-def _set_conversation_view(db, conv_id, mission_id, viewed_at=None):
+def _set_conversation_view(db, conv_id, possession_id, viewed_at=None):
     """Set a conversation view timestamp."""
     if viewed_at is None:
         viewed_at_sql = "strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')"
@@ -67,12 +65,12 @@ def _set_conversation_view(db, conv_id, mission_id, viewed_at=None):
 
     db.execute_update(
         f"""
-        INSERT INTO conversation_views (conversation_id, mission_id, last_viewed_at)
-        VALUES (:conv_id, :mission_id, {viewed_at_sql})
-        ON CONFLICT(conversation_id, mission_id)
+        INSERT INTO conversation_views (conversation_id, possession_id, last_viewed_at)
+        VALUES (:conv_id, :possession_id, {viewed_at_sql})
+        ON CONFLICT(conversation_id, possession_id)
         DO UPDATE SET last_viewed_at = {viewed_at_sql}
         """,
-        {"conv_id": conv_id, "mission_id": mission_id},
+        {"conv_id": conv_id, "possession_id": possession_id},
     )
 
 
@@ -115,7 +113,7 @@ class TestGetUnreadMessages:
         # First message with explicit early timestamp
         test_db.execute_update(
             """
-            INSERT INTO messages (id, conversation_id, from_mission_id, subject, body, priority, created_at)
+            INSERT INTO messages (id, conversation_id, from_possession_id, subject, body, priority, created_at)
             VALUES ('MSG-M-0001', 'CONV-0001', 1, 'First', 'body', 'MEDIUM', '2026-02-14T10:00:00+00:00')
             """
         )
@@ -128,7 +126,7 @@ class TestGetUnreadMessages:
         # New message arrives AFTER the view timestamp
         test_db.execute_update(
             """
-            INSERT INTO messages (id, conversation_id, from_mission_id, subject, body, priority, created_at)
+            INSERT INTO messages (id, conversation_id, from_possession_id, subject, body, priority, created_at)
             VALUES ('MSG-M-0002', 'CONV-0001', 1, 'Second', 'body', 'MEDIUM', '2026-02-14T10:01:00+00:00')
             """
         )
@@ -167,7 +165,7 @@ class TestGetUnreadMessages:
         assert len(unread) == 1
         msg = unread[0]
         assert msg.id == "MSG-H-0001"
-        assert msg.from_mission_id == 1
+        assert msg.from_possession_id == 1
         assert msg.subject == "Urgent question"
         assert msg.priority == "HIGH"
         assert msg.body == "Need help with design"
@@ -180,7 +178,7 @@ class TestGetUnreadMessages:
         # Insert with explicit timestamps to ensure order
         test_db.execute_update(
             """
-            INSERT INTO messages (id, conversation_id, from_mission_id, subject, body, priority, created_at)
+            INSERT INTO messages (id, conversation_id, from_possession_id, subject, body, priority, created_at)
             VALUES
                 ('MSG-M-0003', 'CONV-0001', 1, 'Third', 'body', 'MEDIUM', '2026-02-14T10:03:00+00:00'),
                 ('MSG-M-0001', 'CONV-0001', 1, 'First', 'body', 'MEDIUM', '2026-02-14T10:01:00+00:00'),
@@ -254,7 +252,7 @@ class TestDeskModeInboxIntegration:
 
         # Verify display-relevant attributes
         for conv_id, msg in all_unread:
-            assert msg.from_mission_id in (1, 3)
+            assert msg.from_possession_id in (1, 3)
             assert msg.subject in ("Question about design", "Need clarification")
 
     def test_desk_mode_shows_nothing_when_all_read(self, test_db):
@@ -357,8 +355,8 @@ class TestMessageAcknowledgement:
         acks = mgr.get_message_acknowledgements("MSG-M-0001")
         assert len(acks) == 2
 
-        mission_ids = {ack["mission_id"] for ack in acks}
-        assert mission_ids == {2, 3}
+        possession_ids = {ack["possession_id"] for ack in acks}
+        assert possession_ids == {2, 3}
 
     def test_is_message_acknowledged_by(self, test_db):
         """Test checking if specific mission acknowledged a message."""

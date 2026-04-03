@@ -314,14 +314,14 @@ def test_task_claim_success(initialized_project: Path):
     assert match
     task_id = match.group(1)
 
-    # Start a mission so we can claim
+    # Start a possession so we can claim
     from site_nine.core.database import Database
-    from site_nine.missions import MissionManager
+    from site_nine.possessions import PossessionManager
 
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        mm = MissionManager(db)
-        mission_id = mm.start_mission("atlas", "Engineer", "Claim test mission")
+        pm = PossessionManager(db)
+        mission_id = pm.start_possession("Engineer")
 
     # Claim it with --mission and --role
     result = runner.invoke(app, ["task", "claim", task_id, "--mission", str(mission_id), "--role", "Engineer"])
@@ -756,10 +756,13 @@ def test_task_complete_workflow(initialized_project: Path):
     import re
 
     # Create persona and mission first
-    runner.invoke(
-        app, ["persona", "add", "task-worker", "--role", "Engineer", "--mythology", "greek", "--description", "Test"]
-    )
-    runner.invoke(app, ["mission", "start", "task-worker", "--role", "Engineer"])
+    runner.invoke(app, ["persona", "add", "task-worker", "--role", "Engineer"])
+    mission_result = runner.invoke(app, ["mission", "start", "--name", "task-worker", "--role", "Engineer"])
+    import re as _re
+
+    mission_match = _re.search(r"Started mission #(\d+)", mission_result.output)
+    assert mission_match, f"Could not find mission ID in output: {mission_result.output}"
+    test_mission_id = mission_match.group(1)
 
     # Create task
     create_result = runner.invoke(
@@ -785,7 +788,7 @@ def test_task_complete_workflow(initialized_project: Path):
     task_id = match.group(1)
 
     # Claim task
-    claim_result = runner.invoke(app, ["task", "claim", task_id, "--mission", "1", "--role", "Engineer"])
+    claim_result = runner.invoke(app, ["task", "claim", task_id, "--mission", test_mission_id, "--role", "Engineer"])
     assert claim_result.exit_code == 0
 
     # Update status to IN_PROGRESS
@@ -1046,12 +1049,12 @@ def test_task_create_invalid_priority(initialized_project: Path):
     assert "invalid priority" in result.output.lower() or "error" in result.output.lower()
 
 
-# 13. create with free-form category
+# 13. create with category
 def test_task_create_freeform_category(initialized_project: Path):
-    """task create --title T --role Engineer --priority HIGH --category custom-label, verify success"""
+    """task create --title T --role Engineer --priority HIGH --category feature, verify success"""
     result = runner.invoke(
         app,
-        ["task", "create", "--title", "T", "--role", "Engineer", "--priority", "HIGH", "--category", "custom-label"],
+        ["task", "create", "--title", "T", "--role", "Engineer", "--priority", "HIGH", "--category", "feature"],
     )
     assert result.exit_code == 0
 

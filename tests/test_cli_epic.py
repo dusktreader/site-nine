@@ -960,15 +960,20 @@ def test_epic_show_json_no_subtasks(initialized_project: Path):
 
 
 def test_epic_show_status_details(initialized_project: Path):
-    """Test that show command displays status_details when present.
+    """Test that show command displays aborted_reason when present.
 
     Covers line 290.
     """
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
         manager = EpicManager(db)
+        task_manager = TaskManager(db)
         epic = manager.create_epic("Status Detail Epic", "HIGH")
-        manager.update_epic(epic.id, status_details="Waiting on design review")
+        # Add a task and abort it so computed status is ABORTED, then abort epic
+        task_id = task_manager.generate_task_id("Engineer", "HIGH")
+        task_manager.create_task(task_id, "Subtask", "Engineer", "HIGH")
+        manager.link_task(task_id, epic.id)
+        manager.abort_epic(epic.id, "Waiting on design review")
         epic_id = epic.id
 
     result = runner.invoke(app, ["epic", "show", epic_id])

@@ -75,12 +75,12 @@ def test_list_tasks_filter_by_role(test_db):
 
 
 def test_list_tasks_filter_by_mission(test_db_with_data):
-    """Test filtering tasks by mission ID"""
-    # Update one task to have a mission
-    test_db_with_data.execute_update("UPDATE tasks SET current_mission_id = 1 WHERE id = 'ENG-M-0001'")
+    """Test filtering tasks by possession ID"""
+    # Update one task to have a possession
+    test_db_with_data.execute_update("UPDATE tasks SET current_possession_id = 1 WHERE id = 'ENG-M-0001'")
 
     manager = TaskManager(test_db_with_data)
-    tasks = manager.list_tasks(mission_id=1)
+    tasks = manager.list_tasks(possession_id=1)
 
     assert len(tasks) == 1
     assert tasks[0].id == "ENG-M-0001"
@@ -123,60 +123,16 @@ def test_get_task_not_found(test_db):
 
 
 def test_claim_task_basic(test_db_with_data):
-    """Test claiming a task for a mission"""
+    """Test claiming a task for a possession"""
     manager = TaskManager(test_db_with_data)
 
     # ENG-M-0001 exists in fixture with status TODO
-    manager.claim_task("ENG-M-0001", mission_id=1, current_role="Engineer")
+    manager.claim_task("ENG-M-0001", possession_id=1, current_role="Engineer")
 
     task = manager.get_task("ENG-M-0001")
-    assert task.current_mission_id == 1
+    assert task.current_possession_id == 1
     assert task.status == TaskStatus.UNDERWAY.value
     assert task.claimed_at is not None
-
-
-def test_claim_task_with_pending_handoff(test_db_with_data):
-    """Test claiming task automatically accepts pending handoff"""
-    # Create a handoff targeting Engineer role
-    test_db_with_data.execute_update(
-        """
-        INSERT INTO handoffs (task_id, from_mission_id, to_role, summary)
-        VALUES ('ENG-M-0001', 2, 'Engineer', 'Please take this task')
-        """
-    )
-
-    manager = TaskManager(test_db_with_data)
-    manager.claim_task("ENG-M-0001", mission_id=1, current_role="Engineer")
-
-    # Task should be claimed
-    task = manager.get_task("ENG-M-0001")
-    assert task.current_mission_id == 1
-
-    # Handoff should be deleted
-    handoffs = test_db_with_data.execute_query(
-        "SELECT * FROM handoffs WHERE task_id = 'ENG-M-0001' AND deleted_at IS NULL"
-    )
-    assert len(handoffs) == 0
-
-
-def test_claim_task_ignores_handoff_to_different_role(test_db_with_data):
-    """Test claiming task doesn't affect handoffs for other roles"""
-    # Create handoff for Tester role
-    test_db_with_data.execute_update(
-        """
-        INSERT INTO handoffs (task_id, from_mission_id, to_role, summary)
-        VALUES ('ENG-M-0001', 2, 'Tester', 'For tester')
-        """
-    )
-
-    manager = TaskManager(test_db_with_data)
-    manager.claim_task("ENG-M-0001", mission_id=1, current_role="Engineer")
-
-    # Handoff for Tester should still exist
-    handoffs = test_db_with_data.execute_query(
-        "SELECT * FROM handoffs WHERE task_id = 'ENG-M-0001' AND to_role = 'Tester' AND deleted_at IS NULL"
-    )
-    assert len(handoffs) == 1
 
 
 def test_release_task(test_db_with_data):
@@ -185,7 +141,7 @@ def test_release_task(test_db_with_data):
     test_db_with_data.execute_update(
         """
         UPDATE tasks 
-        SET current_mission_id = 1, claimed_at = datetime('now'), status = 'UNDERWAY'
+        SET current_possession_id = 1, claimed_at = datetime('now'), status = 'UNDERWAY'
         WHERE id = 'ENG-M-0001'
         """
     )
@@ -194,7 +150,7 @@ def test_release_task(test_db_with_data):
     manager.release_task("ENG-M-0001")
 
     task = manager.get_task("ENG-M-0001")
-    assert task.current_mission_id is None
+    assert task.current_possession_id is None
     assert task.claimed_at is None
     assert task.status == "TODO"
 
@@ -413,7 +369,7 @@ def test_list_tasks_with_invalid_task_id_format(test_db):
 
 
 def test_claim_task_with_epic_scoping_success(test_db_with_data):
-    """Test claiming task succeeds when mission and task are in same epic"""
+    """Test claiming task succeeds when possession and task are in same epic"""
     # Create test epic
     test_db_with_data.execute_update(
         """
@@ -421,21 +377,21 @@ def test_claim_task_with_epic_scoping_success(test_db_with_data):
         VALUES ('EPC-H-0001', 'Test Epic', 'Description', 'HIGH', '.opencode/work/epics/EPC-H-0001.md', datetime('now'), datetime('now'))
         """
     )
-    # Update mission 1 to be epic-scoped
-    test_db_with_data.execute_update("UPDATE missions SET epic_id = 'EPC-H-0001' WHERE id = 1")
+    # Update possession 1 to be epic-scoped
+    test_db_with_data.execute_update("UPDATE possessions SET epic_id = 'EPC-H-0001' WHERE id = 1")
     # Update task to belong to same epic
     test_db_with_data.execute_update("UPDATE tasks SET epic_id = 'EPC-H-0001' WHERE id = 'ENG-M-0001'")
 
     manager = TaskManager(test_db_with_data)
-    manager.claim_task("ENG-M-0001", mission_id=1, current_role="Engineer")
+    manager.claim_task("ENG-M-0001", possession_id=1, current_role="Engineer")
 
     task = manager.get_task("ENG-M-0001")
-    assert task.current_mission_id == 1
+    assert task.current_possession_id == 1
     assert task.status == TaskStatus.UNDERWAY.value
 
 
 def test_claim_task_with_epic_scoping_mismatch(test_db_with_data):
-    """Test claiming task fails when mission and task are in different epics"""
+    """Test claiming task fails when possession and task are in different epics"""
     # Create test epics
     test_db_with_data.execute_update(
         """
@@ -445,33 +401,34 @@ def test_claim_task_with_epic_scoping_mismatch(test_db_with_data):
             ('EPC-H-0002', 'Test Epic 2', 'Description', 'HIGH', '.opencode/work/epics/EPC-H-0002.md', datetime('now'), datetime('now'))
         """
     )
-    # Update mission 1 to be scoped to EPC-H-0001
-    test_db_with_data.execute_update("UPDATE missions SET epic_id = 'EPC-H-0001' WHERE id = 1")
+    # Update possession 1 to be scoped to EPC-H-0001
+    test_db_with_data.execute_update("UPDATE possessions SET epic_id = 'EPC-H-0001' WHERE id = 1")
     # Update task to belong to different epic
     test_db_with_data.execute_update("UPDATE tasks SET epic_id = 'EPC-H-0002' WHERE id = 'ENG-M-0001'")
 
     manager = TaskManager(test_db_with_data)
     with pytest.raises(
-        TaskError, match="Cannot claim task ENG-M-0001 from epic EPC-H-0002 when mission is scoped to epic EPC-H-0001"
+        TaskError,
+        match="Cannot claim task ENG-M-0001 from epic EPC-H-0002 when possession is scoped to epic EPC-H-0001",
     ):
-        manager.claim_task("ENG-M-0001", mission_id=1, current_role="Engineer")
+        manager.claim_task("ENG-M-0001", possession_id=1, current_role="Engineer")
 
 
 def test_claim_task_without_epic_scoping(test_db_with_data):
-    """Test claiming task succeeds when mission has no epic_id (general mission)"""
-    # Mission 1 has no epic_id by default
+    """Test claiming task succeeds when possession has no epic_id (general possession)"""
+    # Possession 1 has no epic_id by default
     # Task also has no epic_id by default
 
     manager = TaskManager(test_db_with_data)
-    manager.claim_task("ENG-M-0001", mission_id=1, current_role="Engineer")
+    manager.claim_task("ENG-M-0001", possession_id=1, current_role="Engineer")
 
     task = manager.get_task("ENG-M-0001")
-    assert task.current_mission_id == 1
+    assert task.current_possession_id == 1
     assert task.status == TaskStatus.UNDERWAY.value
 
 
 def test_claim_task_epic_scoped_mission_can_claim_task_in_epic(test_db_with_data):
-    """Test epic-scoped mission can claim any task in that epic"""
+    """Test epic-scoped possession can claim any task in that epic"""
     # Create test epic
     test_db_with_data.execute_update(
         """
@@ -479,20 +436,20 @@ def test_claim_task_epic_scoped_mission_can_claim_task_in_epic(test_db_with_data
         VALUES ('EPC-H-0001', 'Test Epic', 'Description', 'HIGH', '.opencode/work/epics/EPC-H-0001.md', datetime('now'), datetime('now'))
         """
     )
-    # Update mission 1 to be epic-scoped
-    test_db_with_data.execute_update("UPDATE missions SET epic_id = 'EPC-H-0001' WHERE id = 1")
+    # Update possession 1 to be epic-scoped
+    test_db_with_data.execute_update("UPDATE possessions SET epic_id = 'EPC-H-0001' WHERE id = 1")
     # Update multiple tasks to belong to same epic
     test_db_with_data.execute_update("UPDATE tasks SET epic_id = 'EPC-H-0001' WHERE id IN ('ENG-M-0001', 'ENG-M-0002')")
 
     manager = TaskManager(test_db_with_data)
 
     # Claim first task
-    manager.claim_task("ENG-M-0001", mission_id=1, current_role="Engineer")
+    manager.claim_task("ENG-M-0001", possession_id=1, current_role="Engineer")
     task1 = manager.get_task("ENG-M-0001")
-    assert task1.current_mission_id == 1
+    assert task1.current_possession_id == 1
 
     # Release and claim second task
     manager.release_task("ENG-M-0001")
-    manager.claim_task("ENG-M-0002", mission_id=1, current_role="Tester")
+    manager.claim_task("ENG-M-0002", possession_id=1, current_role="Tester")
     task2 = manager.get_task("ENG-M-0002")
-    assert task2.current_mission_id == 1
+    assert task2.current_possession_id == 1

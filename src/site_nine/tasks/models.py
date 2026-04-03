@@ -19,7 +19,7 @@ class Task:
         priority: Priority level (LOW, MEDIUM, HIGH, CRITICAL)
         role: Role responsible for task
         category: Optional category
-        current_mission_id: ID of mission that claimed this task
+        current_possession_id: ID of possession that claimed this task
         claimed_at: Timestamp when task was claimed
         closed_at: Timestamp when task was closed
         actual_hours: Hours spent on task
@@ -37,7 +37,7 @@ class Task:
     priority: str
     role: str
     category: str | None
-    current_mission_id: int | None
+    current_possession_id: int | None
     claimed_at: pendulum.DateTime | None
     closed_at: pendulum.DateTime | None
     actual_hours: float | None
@@ -78,7 +78,7 @@ class Task:
             priority=row["priority"],
             role=row["role"],
             category=row["category"],
-            current_mission_id=row["current_mission_id"],
+            current_possession_id=row["current_possession_id"],
             claimed_at=claimed_at,
             closed_at=closed_at,
             actual_hours=row["actual_hours"],

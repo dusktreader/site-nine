@@ -3,10 +3,10 @@
 worker_spawn tool - Spawn a desk-mode worker for a given role.
 
 This tool:
-1. Receives role, optional persona, model, and poll_interval
+1. Receives role, optional daemon, model, and poll_interval
 2. Spawns desk-worker.py as a background process via subprocess.Popen
-3. Waits for the worker to initialize and create its mission
-4. Returns the spawned mission ID for subsequent worker_message coordination
+3. Waits for the worker to initialize and create its possession
+4. Returns the spawned possession ID for subsequent worker_message coordination
 
 This is the ONLY way for Admin agents to spawn workers. Never use 's9 summon' CLI directly.
 """
@@ -16,7 +16,7 @@ import json
 import subprocess
 import time
 from pathlib import Path
-from loguru import logger
+from tool_logging import logger
 
 from site_nine.core.database import Database
 from site_nine.core.paths import get_db_path
@@ -27,7 +27,7 @@ def main():
         args = json.loads(sys.stdin.read())
 
         role = args.get("role")
-        persona = args.get("persona")
+        daemon = args.get("daemon") or args.get("persona")  # backward compat with old 'persona' param
         model = args.get("model") or "github-copilot/claude-sonnet-4.6"
         poll_interval = args.get("poll_interval") or 30
 
@@ -58,7 +58,7 @@ def main():
                 }
             )
 
-        logger.debug("worker_spawn_called", role=role, persona=persona, model=model, poll_interval=poll_interval)
+        logger.debug("worker_spawn_called", role=role, daemon=daemon, model=model, poll_interval=poll_interval)
 
         # Find desk_worker.py module
         # We're running from .opencode/tools/, repo root is 2 levels up
@@ -76,12 +76,12 @@ def main():
 
         # Build command
         cmd = ["uv", "run", "python", str(desk_worker_script), role]
-        if persona:
-            cmd.extend(["--persona", persona])
+        if daemon:
+            cmd.extend(["--daemon", daemon])
         cmd.extend(["--model", model])
         cmd.extend(["--poll-interval", str(poll_interval)])
 
-        logger.info("worker_spawn_starting", role=role, persona=persona, command=" ".join(cmd))
+        logger.info("worker_spawn_starting", role=role, daemon=daemon, command=" ".join(cmd))
 
         # Spawn worker as background process (non-blocking)
         process = subprocess.Popen(
@@ -92,13 +92,13 @@ def main():
             text=True,
         )
 
-        # Wait for worker to initialize and create mission (give it up to 120 seconds)
+        # Wait for worker to initialize and create possession (give it up to 120 seconds)
         # The desk_worker.py itself runs opencode for init (which may take a while),
-        # then starts its polling loop. We just need a mission to appear in the DB.
+        # then starts its polling loop. We just need a possession to appear in the DB.
         logger.debug("worker_spawn_waiting_for_init", role=role)
 
-        mission_id = None
-        persona_name = None
+        possession_id = None
+        daemon_name = None
         max_attempts = 120  # 120 seconds max
         for attempt in range(max_attempts):
             time.sleep(1)
@@ -115,11 +115,11 @@ def main():
                     }
                 )
 
-            # Check database for newly created ACTIVE mission for this role
+            # Check database for newly created ACTIVE possession for this role
             db = Database(get_db_path())
             rows = db.execute_query(
                 """
-                SELECT id, persona_name FROM missions
+                SELECT id, daemon_name FROM possessions
                 WHERE role = :role
                   AND status = 'ACTIVE'
                   AND end_time IS NULL
@@ -130,31 +130,31 @@ def main():
             )
 
             if rows:
-                mission_id = rows[0]["id"]
-                persona_name = rows[0]["persona_name"]
-                logger.info("worker_spawn_success", mission_id=mission_id, role=role, persona=persona_name)
+                possession_id = rows[0]["id"]
+                daemon_name = rows[0]["daemon_name"]
+                logger.info("worker_spawn_success", possession_id=possession_id, role=role, daemon=daemon_name)
                 break
 
-        if mission_id is None:
+        if possession_id is None:
             # Timeout - kill the process
             process.terminate()
             process.wait(timeout=5)
             return json.dumps(
                 {
                     "error": "init_timeout",
-                    "message": f"Worker initialization timed out after {max_attempts} seconds. Mission not created.",
+                    "message": f"Worker initialization timed out after {max_attempts} seconds. Possession not created.",
                 }
             )
 
         return json.dumps(
             {
-                "mission_id": mission_id,
+                "possession_id": possession_id,
                 "role": role,
-                "persona": persona_name,
+                "daemon": daemon_name,
                 "model": model,
                 "poll_interval": poll_interval,
                 "status": "spawned",
-                "message": f"Worker spawned successfully. Mission #{mission_id} ({persona_name}, {role}) is now polling for messages.",
+                "message": f"Worker spawned successfully. Possession #{possession_id} ({daemon_name}, {role}) is now polling for messages.",
             }
         )
 

@@ -7,10 +7,10 @@ invokes 'opencode run' for each message, and preserves session context across
 invocations.
 
 Usage:
-    desk-worker.py <role> [--persona NAME] [--model MODEL] [--poll-interval SECONDS]
+    desk-worker.py <role> [--daemon NAME] [--model MODEL] [--poll-interval SECONDS]
 
 Example:
-    desk-worker.py engineer --persona hephaestus
+    desk-worker.py engineer --daemon halphas
     desk-worker.py architect --poll-interval 15
 """
 
@@ -28,7 +28,7 @@ from typing import Optional
 from site_nine.core.database import Database
 from site_nine.core.paths import get_db_path
 from site_nine.messaging.manager import MessageManager
-from site_nine.missions.manager import MissionManager
+from site_nine.possessions.manager import PossessionManager
 
 
 class DeskWorker:
@@ -46,7 +46,7 @@ class DeskWorker:
     def __init__(
         self,
         role: str,
-        persona: Optional[str] = None,
+        daemon: Optional[str] = None,
         model: Optional[str] = None,
         poll_interval: int = DEFAULT_POLL_INTERVAL,
     ):
@@ -55,43 +55,43 @@ class DeskWorker:
 
         Args:
             role: Worker role (e.g., 'Engineer', 'Architect', 'Tester')
-            persona: Optional specific persona name (if None, auto-selected)
+            daemon: Optional specific daemon name (if None, auto-selected)
             model: OpenCode model to use (defaults to claude-sonnet-4.6)
             poll_interval: Seconds between message checks (default: 30)
         """
         self.role = role
-        self.persona = persona
+        self.daemon = daemon
         self.model = model or self.DEFAULT_MODEL
         self.poll_interval = poll_interval
         self.session_id: Optional[str] = None
-        self.mission_id: Optional[int] = None
+        self.possession_id: Optional[int] = None
         self.running = True
 
     def initialize(self) -> None:
         """
-        Initialize worker mission via opencode run.
+        Initialize worker possession via opencode run.
 
-        Launches initial session, waits for mission creation, and retrieves
+        Launches initial session, waits for possession creation, and retrieves
         session ID from database.
 
         Raises:
-            RuntimeError: If mission initialization fails
+            RuntimeError: If possession initialization fails
         """
         print(f"Initializing {self.role} worker...", flush=True)
 
         # Build initialization message
         init_parts = [f"Your role is {self.role}."]
 
-        if self.persona:
-            init_parts.append(f"Your persona is {self.persona}.")
+        if self.daemon:
+            init_parts.append(f"Your daemon is {self.daemon}.")
 
         init_parts.append(
-            "Initialize your mission with the mission-start skill. Mode: desk. "
+            "Initialize your possession with the possession-start skill. Mode: desk. "
             "DO NOT claim any tasks. DO NOT do any work yet. "
-            "After your mission is initialized and you have a mission ID, stop immediately. "
+            "After your possession is initialized and you have a possession ID, stop immediately. "
             "The desk-worker wrapper handles message polling and will send you work assignments. "
             "IMPORTANT: When you receive a work assignment message, you MUST use the worker_message "
-            "tool to send status updates back to the sender (use their mission ID as to_mission_id). "
+            "tool to send status updates back to the sender (use their possession ID as to_possession_id). "
             "Send a message when you: (1) start a task, (2) complete a task, (3) hit a blocker, "
             "(4) make significant progress. Never work silently — always report back."
         )
@@ -139,7 +139,7 @@ class DeskWorker:
 
                 if process.returncode != 0:
                     # Non-zero exit is a warning, not fatal — the agent may have exited
-                    # after completing init. As long as we got a session ID and the mission
+                    # after completing init. As long as we got a session ID and the possession
                     # was created in the DB, we can continue.
                     print(
                         f"Warning: opencode run exited with code {process.returncode} (may be normal after init)",
@@ -152,92 +152,90 @@ class DeskWorker:
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.communicate()
-                raise RuntimeError("Mission initialization timed out after 10 minutes")
+                raise RuntimeError("Possession initialization timed out after 10 minutes")
 
         except FileNotFoundError:
             raise RuntimeError("opencode command not found. Is OpenCode installed and in PATH?")
 
-        # Wait for mission to be created in database
-        print("Waiting for mission to be created...", flush=True)
+        # Wait for possession to be created in database
+        print("Waiting for possession to be created...", flush=True)
         time.sleep(5)
 
-        # Find mission ID from database.
-        # Mission goes through ROLE_PENDING -> PERSONA_PENDING -> ACTIVE via OpenCode tools.
+        # Find possession ID from database.
+        # Possession goes through ROLE_PENDING -> DAEMON_PENDING -> ACTIVE via OpenCode tools.
         # Poll until ACTIVE status appears, first by session ID then by role.
         db = Database(get_db_path())
-        mission_row: dict | None = None
+        possession_row: dict | None = None
 
-        # Phase 1: look up by session ID (preferred — agent bound the session via mission_init)
+        # Phase 1: look up by session ID (preferred — agent bound the session via possession_init)
         for _ in range(30):  # up to 30s
             rows = db.execute_query(
                 """
-                SELECT id, persona_name FROM missions
+                SELECT id, daemon_name FROM possessions
                 WHERE opencode_session_id = :session_id
                   AND status = 'ACTIVE'
-                  AND end_time IS NULL
                 ORDER BY created_at DESC
                 LIMIT 1
                 """,
                 {"session_id": self.session_id},
             )
             if rows:
-                mission_row = rows[0]
+                possession_row = rows[0]
                 break
             time.sleep(1)
 
         # Phase 2: fall back to role-based lookup (session may not have been bound)
-        if mission_row is None:
-            print("Mission not found by session ID, searching by role...", flush=True)
+        if possession_row is None:
+            print("Possession not found by session ID, searching by role...", flush=True)
             for _ in range(15):  # up to 15s
                 rows = db.execute_query(
                     """
-                    SELECT id, persona_name FROM missions
+                    SELECT id, daemon_name FROM possessions
                     WHERE role = :role
                       AND opencode_session_id IS NULL
                       AND status = 'ACTIVE'
-                      AND end_time IS NULL
                     ORDER BY created_at DESC
                     LIMIT 1
                     """,
                     {"role": self.role},
                 )
                 if rows:
-                    mission_row = rows[0]
+                    possession_row = rows[0]
                     break
                 time.sleep(1)
 
-        if mission_row is None:
+        if possession_row is None:
             raise RuntimeError(
-                f"Failed to find initialized mission for role {self.role}. "
-                "Check that mission-start completed successfully."
+                f"Failed to find initialized possession for role {self.role}. "
+                "Check that possession-start completed successfully."
             )
 
-        self.mission_id = mission_row["id"]
-        persona_used = mission_row["persona_name"]
+        self.possession_id = possession_row["id"]
+        daemon_used = possession_row["daemon_name"]
 
         # If found by role (no session binding), bind now
         if not db.execute_query(
-            "SELECT id FROM missions WHERE id = :id AND opencode_session_id IS NOT NULL",
-            {"id": self.mission_id},
+            "SELECT id FROM possessions WHERE id = :id AND opencode_session_id IS NOT NULL",
+            {"id": self.possession_id},
         ):
-            print(f"Binding session {self.session_id} to mission #{self.mission_id}...", flush=True)
+            print(f"Binding session {self.session_id} to possession #{self.possession_id}...", flush=True)
             db.execute_update(
                 """
-                UPDATE missions
+                UPDATE possessions
                 SET opencode_session_id = :session_id
-                WHERE id = :mission_id
+                WHERE id = :possession_id
                 """,
-                {"session_id": self.session_id, "mission_id": self.mission_id},
+                {"session_id": self.session_id, "possession_id": self.possession_id},
             )
 
         if not self.session_id:
-            raise RuntimeError(f"Mission #{self.mission_id} has no OpenCode session ID. Session binding failed.")
+            raise RuntimeError(f"Possession #{self.possession_id} has no OpenCode session ID. Session binding failed.")
 
         print(
-            f"Mission initialized successfully:\n"
-            f"  Mission ID: {self.mission_id}\n"
+            f"Possession initialized successfully:\n"
+            f"  Possession ID: {self.possession_id}\n"
             f"  Session ID: {self.session_id}\n"
-            f"  Persona: {persona_used}",
+            f"  Daemon: {daemon_used}",
             flush=True,
         )
 
@@ -245,18 +243,18 @@ class DeskWorker:
         """
         Enable desk mode in database.
 
-        Sets desk_mode_active=1 for this worker's mission.
+        Sets desk_mode_active=1 for this worker's possession.
 
         Raises:
-            RuntimeError: If mission_id is not set
+            RuntimeError: If possession_id is not set
         """
-        if self.mission_id is None:
-            raise RuntimeError("Cannot enable desk mode: mission_id is not set")
+        if self.possession_id is None:
+            raise RuntimeError("Cannot enable desk mode: possession_id is not set")
 
         db = Database(get_db_path())
-        mgr = MissionManager(db)
-        mgr.set_desk_mode(self.mission_id, active=True)
-        print(f"Desk mode enabled for mission #{self.mission_id}", flush=True)
+        mgr = PossessionManager(db)
+        mgr.set_desk_mode(self.possession_id, active=True)
+        print(f"Desk mode enabled for possession #{self.possession_id}", flush=True)
 
     def check_for_messages(self) -> list:
         """
@@ -266,24 +264,24 @@ class DeskWorker:
             List of unread messages, sorted by priority (highest first)
 
         Raises:
-            RuntimeError: If mission_id is not set
+            RuntimeError: If possession_id is not set
         """
-        if self.mission_id is None:
-            raise RuntimeError("Cannot check messages: mission_id not set")
+        if self.possession_id is None:
+            raise RuntimeError("Cannot check messages: possession_id not set")
 
         db = Database(get_db_path())
         msg_mgr = MessageManager(db)
 
         # Get unread conversations
-        conversations = msg_mgr.get_unread_conversations(self.mission_id)
+        conversations = msg_mgr.get_unread_conversations(self.possession_id)
 
         # Collect unread messages from others
         messages = []
         for conv in conversations:
-            unread = msg_mgr.get_unread_messages(conv.id, self.mission_id)
+            unread = msg_mgr.get_unread_messages(conv.id, self.possession_id)
             for msg in unread:
                 # Exclude own messages (only process messages from others)
-                if msg.from_mission_id != self.mission_id:
+                if msg.from_possession_id != self.possession_id:
                     messages.append(msg)
 
         # Sort by priority (CRITICAL > HIGH > MEDIUM > LOW)
@@ -314,7 +312,7 @@ class DeskWorker:
 
         print(f"\nProcessing message {message.id} ({message.priority})...", flush=True)
         print(f"  Subject: {message.subject}", flush=True)
-        print(f"  From: Mission #{message.from_mission_id}", flush=True)
+        print(f"  From: Possession #{message.from_possession_id}", flush=True)
 
         try:
             # Use Popen for non-blocking execution
@@ -332,8 +330,8 @@ class DeskWorker:
                 # Mark conversation as viewed (read)
                 db = Database(get_db_path())
                 msg_mgr = MessageManager(db)
-                if self.mission_id is not None:
-                    msg_mgr.update_conversation_view(message.conversation_id, self.mission_id)
+                if self.possession_id is not None:
+                    msg_mgr.update_conversation_view(message.conversation_id, self.possession_id)
 
                 if process.returncode == 0:
                     print(f"  ✓ Processed {message.id} successfully", flush=True)
@@ -366,7 +364,7 @@ class DeskWorker:
         """
         Gracefully shutdown on SIGTERM/SIGINT.
 
-        Disables desk mode, ends mission, and exits.
+        Disables desk mode, ends possession, and exits.
 
         Args:
             signum: Signal number
@@ -379,16 +377,16 @@ class DeskWorker:
         # Disable desk mode
         try:
             db = Database(get_db_path())
-            mgr = MissionManager(db)
-            if self.mission_id is not None:
-                mgr.set_desk_mode(self.mission_id, active=False)
+            mgr = PossessionManager(db)
+            if self.possession_id is not None:
+                mgr.set_desk_mode(self.possession_id, active=False)
             print("Desk mode disabled", flush=True)
         except Exception as e:
             print(f"Warning: Failed to disable desk mode: {e}", file=sys.stderr)
 
-        # End mission via opencode run
+        # End possession via opencode run
         try:
-            print("Ending mission...", flush=True)
+            print("Ending possession...", flush=True)
             cmd = [
                 "opencode",
                 "run",
@@ -396,13 +394,13 @@ class DeskWorker:
                 self.session_id,
                 "--model",
                 self.model,
-                "You are being dismissed. End your mission using the mission-end skill.",
+                "You are being dismissed. End your possession using the possession-end skill.",
             ]
             subprocess.run(cmd, check=False, timeout=600)  # 10 minute timeout for shutdown
-            print("Mission ended successfully", flush=True)
+            print("Possession ended successfully", flush=True)
         except Exception as e:
             print(
-                f"Warning: Failed to end mission cleanly: {e}",
+                f"Warning: Failed to end possession cleanly: {e}",
                 file=sys.stderr,
                 flush=True,
             )
@@ -429,7 +427,7 @@ class DeskWorker:
             print(
                 f"\nDesk worker started successfully!\n"
                 f"  Role: {self.role}\n"
-                f"  Mission: #{self.mission_id}\n"
+                f"  Possession: #{self.possession_id}\n"
                 f"  Session: {self.session_id}\n"
                 f"  Poll interval: {self.poll_interval}s\n",
                 flush=True,
@@ -486,11 +484,11 @@ class DeskWorker:
             print(f"\nFatal error: {e}", file=sys.stderr, flush=True)
 
             # Try to clean up
-            if self.mission_id:
+            if self.possession_id:
                 try:
                     db = Database(get_db_path())
-                    mgr = MissionManager(db)
-                    mgr.set_desk_mode(self.mission_id, active=False)
+                    mgr = PossessionManager(db)
+                    mgr.set_desk_mode(self.possession_id, active=False)
                 except Exception:
                     pass
 
@@ -504,15 +502,15 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Start engineer worker with auto-selected persona
+  # Start engineer worker with auto-selected daemon
   desk-worker.py Engineer
-  
-  # Start architect worker with specific persona
-  desk-worker.py Architect --persona athena
-  
+
+  # Start architect worker with specific daemon
+  desk-worker.py Architect --daemon andromalius
+
   # Use custom polling interval
   desk-worker.py Tester --poll-interval 15
-  
+
   # Use different model
   desk-worker.py Operator --model github-copilot/claude-opus-4
         """,
@@ -524,8 +522,8 @@ Examples:
     )
 
     parser.add_argument(
-        "--persona",
-        help="Specific persona name (if not provided, auto-selected by mission-start)",
+        "--daemon",
+        help="Specific daemon name (if not provided, auto-selected by possession-start)",
     )
 
     parser.add_argument(
@@ -569,7 +567,7 @@ Examples:
     # Start worker
     worker = DeskWorker(
         role=role,
-        persona=args.persona,
+        daemon=args.daemon,
         model=args.model,
         poll_interval=args.poll_interval,
     )

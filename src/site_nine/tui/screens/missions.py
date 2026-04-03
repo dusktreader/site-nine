@@ -1,10 +1,10 @@
-"""MissionsScreen — Active missions viewer for the Site-Nine TUI.
+"""PossessionsScreen — Active possessions viewer for the Site-Nine TUI.
 
 Layout:
-  - List pane: sortable table of missions (id, persona, role, status, codename, age, objective)
-  - Preview pane: mission fields + first portion of mission file markdown
-  - Full-page view: scrollable rendered mission file content
-  - Filter bar: by status (ACTIVE/IDLE/ENDED), by role
+  - List pane: sortable table of possessions (id, daemon, role, status, age)
+  - Preview pane: possession fields + first portion of possession log markdown
+  - Full-page view: scrollable rendered possession log content
+  - Filter bar: by status (ACTIVE/EXORCISED), by role
   - Keybindings: j/k or up/down, Enter for full page, Escape to close, / to filter
 """
 
@@ -21,9 +21,9 @@ from textual.screen import Screen
 from textual.widgets import DataTable, Footer, Header, Input, Static
 
 from site_nine.core.database import Database
-from site_nine.missions.manager import MissionManager
-from site_nine.missions.models import Mission
-from site_nine.missions.types import MissionStatus
+from site_nine.possessions.manager import PossessionManager
+from site_nine.possessions.models import Possession
+from site_nine.possessions.types import PossessionStatus
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -31,20 +31,18 @@ from site_nine.missions.types import MissionStatus
 
 _STATUS_COLOURS: dict[str, str] = {
     "ACTIVE": "green",
-    "IDLE": "yellow",
     "SUSPENDED": "magenta",
-    "ENDED": "dim",
+    "EXORCISED": "dim",
     "ROLE_PENDING": "cyan",
-    "PERSONA_PENDING": "cyan",
+    "DAEMON_PENDING": "cyan",
 }
 
 _STATUS_SYMBOLS: dict[str, str] = {
     "ACTIVE": "●",
-    "IDLE": "◌",
     "SUSPENDED": "⏸",
-    "ENDED": "○",
+    "EXORCISED": "○",
     "ROLE_PENDING": "?",
-    "PERSONA_PENDING": "?",
+    "DAEMON_PENDING": "?",
 }
 
 
@@ -70,9 +68,9 @@ def _age(dt: pendulum.DateTime) -> str:
     return f"{diff.in_days()}d"
 
 
-def _status_value(mission: Mission) -> str:
-    """Return the plain status string from a Mission."""
-    return mission.status.value if isinstance(mission.status, MissionStatus) else str(mission.status)
+def _status_value(possession: Possession) -> str:
+    """Return the plain status string from a Possession."""
+    return possession.status.value if isinstance(possession.status, PossessionStatus) else str(possession.status)
 
 
 # ---------------------------------------------------------------------------
@@ -80,8 +78,8 @@ def _status_value(mission: Mission) -> str:
 # ---------------------------------------------------------------------------
 
 
-class MissionFullPage(Screen):
-    """Full scrollable view of a mission's file content."""
+class PossessionFullPage(Screen):
+    """Full scrollable view of a possession's log content."""
 
     BINDINGS: ClassVar[list[Binding]] = [
         Binding("escape", "app.pop_screen", "Back"),
@@ -93,9 +91,9 @@ class MissionFullPage(Screen):
         Binding("G", "scroll_end", "Bottom", show=False),
     ]
 
-    def __init__(self, mission: Mission, db: Database) -> None:
+    def __init__(self, possession: Possession, db: Database) -> None:
         super().__init__()
-        self._site_mission = mission
+        self._site_possession = possession
         self._site_db = db
 
     # ------------------------------------------------------------------
@@ -104,13 +102,12 @@ class MissionFullPage(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
-        status = _status_value(self._site_mission)
+        status = _status_value(self._site_possession)
         status_col = _STATUS_COLOURS.get(status, "white")
         sym = _STATUS_SYMBOLS.get(status, "●")
         title = (
-            f"[ESC]  Mission #{self._site_mission.id}  "
-            f"[bold]{self._site_mission.codename}[/bold]  "
-            f"({self._site_mission.persona_name})  "
+            f"[ESC]  Possession #{self._site_possession.id}  "
+            f"({self._site_possession.daemon_name})  "
             f"[{status_col}]{sym} {status}[/{status_col}]"
         )
         yield Static(title, id="fullpage-title", classes="fullpage-title", markup=True)
@@ -119,44 +116,43 @@ class MissionFullPage(Screen):
         yield Footer()
 
     def _build_content(self) -> str:
-        mission = self._site_mission
-        status = _status_value(mission)
+        possession = self._site_possession
+        status = _status_value(possession)
         status_col = _STATUS_COLOURS.get(status, "white")
         lines: list[str] = []
 
         # Metadata block
-        lines.append(f"[bold]Mission:[/bold]   #{mission.id}  {mission.codename}")
-        lines.append(f"[bold]Persona:[/bold]   {mission.persona_name}")
-        lines.append(f"[bold]Role:[/bold]      {mission.role}")
-        lines.append(f"[bold]Status:[/bold]    [{status_col}]{status}[/{status_col}]")
-        lines.append(f"[bold]Objective:[/bold] {mission.objective}")
-        lines.append(f"[bold]Started:[/bold]   {mission.start_date} {mission.start_time}")
-        if mission.end_time:
-            lines.append(f"[bold]Ended:[/bold]     {mission.end_time}")
-        if mission.epic_id:
-            lines.append(f"[bold]Epic:[/bold]      {mission.epic_id}")
-        if mission.desk_mode_active:
+        lines.append(f"[bold]Possession:[/bold] #{possession.id}")
+        lines.append(f"[bold]Daemon:[/bold]     {possession.daemon_name}")
+        lines.append(f"[bold]Role:[/bold]       {possession.role}")
+        lines.append(f"[bold]Status:[/bold]     [{status_col}]{status}[/{status_col}]")
+        lines.append(f"[bold]Started:[/bold]    {possession.start_time}")
+        if possession.end_time:
+            lines.append(f"[bold]Ended:[/bold]      {possession.end_time}")
+        if possession.epic_id:
+            lines.append(f"[bold]Epic:[/bold]       {possession.epic_id}")
+        if possession.desk_mode_active:
             lines.append("[bold]Desk Mode:[/bold] [green]active[/green]")
         lines.append(
-            f"[dim]Created: {mission.created_at.format('YYYY-MM-DD HH:mm')}  "
-            f"Updated: {mission.updated_at.format('YYYY-MM-DD HH:mm')}[/dim]"
+            f"[dim]Created: {possession.created_at.format('YYYY-MM-DD HH:mm')}  "
+            f"Updated: {possession.updated_at.format('YYYY-MM-DD HH:mm')}[/dim]"
         )
         lines.append("")
 
-        # Mission file content
-        mission_file = Path(mission.mission_file)
-        if mission_file.exists():
+        # Possession log content
+        possession_log = Path(possession.possession_log)
+        if possession_log.exists():
             try:
-                content = mission_file.read_text()
-                lines.append("[bold]Mission File:[/bold]")
+                content = possession_log.read_text()
+                lines.append("[bold]Possession Log:[/bold]")
                 lines.append("")
                 for line in content.splitlines():
                     # Escape markup characters to avoid injection
                     lines.append(line.replace("[", "\\["))
             except OSError as exc:
-                lines.append(f"[red]Error reading mission file: {exc}[/red]")
+                lines.append(f"[red]Error reading possession log: {exc}[/red]")
         else:
-            lines.append(f"[dim]Mission file not found: {mission.mission_file}[/dim]")
+            lines.append(f"[dim]Possession log not found: {possession.possession_log}[/dim]")
 
         return "\n".join(lines)
 
@@ -186,19 +182,19 @@ class MissionFullPage(Screen):
 
 
 # ---------------------------------------------------------------------------
-# Missions screen
+# Possessions screen (retains internal name 'missions' for TUI routing)
 # ---------------------------------------------------------------------------
 
 
 class MissionsScreen(Screen):
     """
-    Missions screen — active missions list with preview and full-page view.
+    Possessions screen — active possessions list with preview and full-page view.
 
-    List view columns: ID, Persona, Role, Status, Codename, Age, Objective
-    Preview pane: mission metadata + first portion of mission file
-    Full-page view: full mission file content scrollable
+    List view columns: ID, Daemon, Role, Status, Age
+    Preview pane: possession metadata + first portion of possession log
+    Full-page view: full possession log content scrollable
 
-    Filter: by status (ACTIVE/IDLE/ENDED) using / key
+    Filter: by status (ACTIVE/EXORCISED) using / key
 
     Keybindings:
         j / down    Move selection down
@@ -223,9 +219,9 @@ class MissionsScreen(Screen):
     def __init__(self, db: Database) -> None:
         super().__init__()
         self._db = db
-        self._manager = MissionManager(db)
-        self._missions: list[Mission] = []
-        self._filtered: list[Mission] = []
+        self._manager = PossessionManager(db)
+        self._possessions: list[Possession] = []
+        self._filtered: list[Possession] = []
         self._filter_text: str = ""
 
     # ------------------------------------------------------------------
@@ -236,7 +232,7 @@ class MissionsScreen(Screen):
         yield Header(show_clock=False)
         with Horizontal(id="missions-body"):
             with Vertical(id="sidebar", classes="sidebar"):
-                yield Static("2 Missions", classes="sidebar-active")
+                yield Static("2 Possessions", classes="sidebar-active")
             with Vertical(id="content-area"):
                 yield Input(
                     placeholder="Filter by status or role (e.g. ACTIVE, Engineer)…",
@@ -259,26 +255,23 @@ class MissionsScreen(Screen):
         self._populate_table()
 
     def _load_data(self) -> None:
-        """Load all missions from the database."""
+        """Load all possessions from the database."""
         try:
-            self._missions = self._manager.list_missions()
+            self._possessions = self._manager.list_possessions()
         except Exception as exc:  # noqa: BLE001
-            self._missions = []
-            self._set_preview(f"[red]Error loading missions: {exc}[/red]")
+            self._possessions = []
+            self._set_preview(f"[red]Error loading possessions: {exc}[/red]")
 
     def _apply_filter(self) -> None:
-        """Apply the current filter text to the full mission list."""
+        """Apply the current filter text to the full possession list."""
         text = self._filter_text.strip().upper()
         if not text:
-            self._filtered = list(self._missions)
+            self._filtered = list(self._possessions)
         else:
             self._filtered = [
-                m
-                for m in self._missions
-                if text in _status_value(m).upper()
-                or text in m.role.upper()
-                or text in m.persona_name.upper()
-                or text in m.codename.upper()
+                p
+                for p in self._possessions
+                if text in _status_value(p).upper() or text in p.role.upper() or text in p.daemon_name.upper()
             ]
 
     def _populate_table(self) -> None:
@@ -286,27 +279,25 @@ class MissionsScreen(Screen):
         self._apply_filter()
         table = self.query_one("#missions-table", DataTable)
         table.clear(columns=True)
-        table.add_columns("ID", "Persona", "Role", "Status", "Codename", "Age", "Objective")
+        table.add_columns("ID", "Daemon", "Role", "Status", "Age")
 
-        for mission in self._filtered:
-            status = _status_value(mission)
+        for possession in self._filtered:
+            status = _status_value(possession)
             status_col = _STATUS_COLOURS.get(status, "white")
             sym = _STATUS_SYMBOLS.get(status, "●")
-            age = _age(mission.created_at)
+            age = _age(possession.created_at)
 
             table.add_row(
-                str(mission.id),
-                mission.persona_name,
-                mission.role,
+                str(possession.id),
+                possession.daemon_name,
+                possession.role,
                 f"[{status_col}]{sym} {status}[/{status_col}]",
-                mission.codename,
                 age,
-                _truncate(mission.objective, 45),
-                key=str(mission.id),
+                key=str(possession.id),
             )
 
         if not self._filtered:
-            self._set_preview("[dim]No missions match the current filter.[/dim]")
+            self._set_preview("[dim]No possessions match the current filter.[/dim]")
         else:
             table.move_cursor(row=0)
             self._refresh_preview()
@@ -334,65 +325,64 @@ class MissionsScreen(Screen):
     # ------------------------------------------------------------------
 
     def _refresh_preview(self) -> None:
-        """Update preview pane with details of the selected mission."""
+        """Update preview pane with details of the selected possession."""
         table = self.query_one("#missions-table", DataTable)
         if table.row_count == 0:
             return
         try:
-            mission_id_str = str(table.get_row_at(table.cursor_row)[0])
+            possession_id_str = str(table.get_row_at(table.cursor_row)[0])
         except Exception:  # noqa: BLE001
             return
-        self._show_preview_for(mission_id_str)
+        self._show_preview_for(possession_id_str)
 
-    def _show_preview_for(self, mission_id_str: str) -> None:
-        """Render a preview for the selected mission."""
+    def _show_preview_for(self, possession_id_str: str) -> None:
+        """Render a preview for the selected possession."""
         try:
-            mission_id = int(mission_id_str)
+            possession_id = int(possession_id_str)
         except ValueError:
             return
-        mission = next((m for m in self._filtered if m.id == mission_id), None)
-        if mission is None:
-            self._set_preview(f"[dim]Mission #{mission_id_str} not found.[/dim]")
+        possession = next((p for p in self._filtered if p.id == possession_id), None)
+        if possession is None:
+            self._set_preview(f"[dim]Possession #{possession_id_str} not found.[/dim]")
             return
 
-        status = _status_value(mission)
+        status = _status_value(possession)
         status_col = _STATUS_COLOURS.get(status, "white")
         sym = _STATUS_SYMBOLS.get(status, "●")
 
         lines: list[str] = [
-            f"[bold]Mission #{mission.id}[/bold]  [{status_col}]{sym} {status}[/{status_col}]",
-            f"[bold]{mission.codename}[/bold]  ({mission.persona_name} — {mission.role})",
+            f"[bold]Possession #{possession.id}[/bold]  [{status_col}]{sym} {status}[/{status_col}]",
+            f"[bold]{possession.daemon_name}[/bold]  ({possession.role})",
             "",
-            f"[bold]Objective:[/bold] {mission.objective}",
+            f"[bold]Started:[/bold]   {possession.start_time}",
         ]
 
-        if mission.epic_id:
-            lines.append(f"[bold]Epic:[/bold]      {mission.epic_id}")
+        if possession.end_time:
+            lines.append(f"[bold]Ended:[/bold]     {possession.end_time}")
 
-        lines.append(f"[bold]Started:[/bold]   {mission.start_date} {mission.start_time}")
-        if mission.end_time:
-            lines.append(f"[bold]Ended:[/bold]     {mission.end_time}")
+        if possession.epic_id:
+            lines.append(f"[bold]Epic:[/bold]      {possession.epic_id}")
 
-        if mission.desk_mode_active:
+        if possession.desk_mode_active:
             lines.append("[green]● desk mode active[/green]")
 
         lines.append("")
 
-        # Preview first ~15 lines of the mission file
-        mission_file = Path(mission.mission_file)
-        if mission_file.exists():
+        # Preview first ~15 lines of the possession log
+        possession_log = Path(possession.possession_log)
+        if possession_log.exists():
             try:
-                file_lines = mission_file.read_text().splitlines()
+                file_lines = possession_log.read_text().splitlines()
                 preview_lines = file_lines[:15]
-                lines.append("[bold]Mission File (preview):[/bold]")
+                lines.append("[bold]Possession Log (preview):[/bold]")
                 for fl in preview_lines:
                     lines.append(fl.replace("[", "\\["))
                 if len(file_lines) > 15:
                     lines.append(f"[dim]…{len(file_lines) - 15} more lines[/dim]")
             except OSError:
-                lines.append("[dim]Could not read mission file.[/dim]")
+                lines.append("[dim]Could not read possession log.[/dim]")
         else:
-            lines.append(f"[dim]Mission file not found.[/dim]")
+            lines.append("[dim]Possession log not found.[/dim]")
 
         self._set_preview("\n".join(lines))
 
@@ -416,18 +406,18 @@ class MissionsScreen(Screen):
         fi.focus()
 
     def action_open_fullpage(self) -> None:
-        """Push the full-page mission view."""
+        """Push the full-page possession view."""
         table = self.query_one("#missions-table", DataTable)
         if table.row_count == 0:
             return
         try:
-            mission_id_str = str(table.get_row_at(table.cursor_row)[0])
-            mission_id = int(mission_id_str)
+            possession_id_str = str(table.get_row_at(table.cursor_row)[0])
+            possession_id = int(possession_id_str)
         except Exception:  # noqa: BLE001
             return
 
-        mission = next((m for m in self._filtered if m.id == mission_id), None)
-        if mission is None:
+        possession = next((p for p in self._filtered if p.id == possession_id), None)
+        if possession is None:
             return
 
-        self.app.push_screen(MissionFullPage(mission, self._db))
+        self.app.push_screen(PossessionFullPage(possession, self._db))

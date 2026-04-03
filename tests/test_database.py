@@ -19,55 +19,53 @@ def test_initialize_schema(test_db: Database):
     result = test_db.execute_query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
     table_names = [row["name"] for row in result]
 
-    assert "personas" in table_names
-    assert "missions" in table_names
+    assert "daemons" in table_names
+    assert "possessions" in table_names
     assert "tasks" in table_names
     assert "task_dependencies" in table_names
 
 
 def test_execute_query(test_db: Database):
     """Test query execution"""
-    # Insert a persona with valid role
+    # Insert a daemon with valid role
     test_db.execute_update(
         """
-        INSERT INTO personas (name, role, mythology, description)
-        VALUES (:name, :role, :mythology, :description)
+        INSERT INTO daemons (name, role)
+        VALUES (:name, :role)
         """,
         {
-            "name": "test-query-persona",
+            "name": "test-query-daemon",
             "role": "Administrator",
-            "mythology": "test",
-            "description": "Test persona",
         },
     )
 
     # Query it back
     result = test_db.execute_query(
-        "SELECT * FROM personas WHERE name = :name",
-        {"name": "test-query-persona"},
+        "SELECT * FROM daemons WHERE name = :name",
+        {"name": "test-query-daemon"},
     )
 
     assert len(result) == 1
-    assert result[0]["name"] == "test-query-persona"
+    assert result[0]["name"] == "test-query-daemon"
     assert result[0]["role"] == "Administrator"
 
 
 def test_execute_update(test_db: Database):
     """Test update execution"""
-    # Insert a persona with valid role
+    # Insert a daemon with valid role
     test_db.execute_update(
         """
-        INSERT INTO personas (name, role, mythology, description)
-        VALUES ('update-test', 'Architect', 'test', 'Test')
+        INSERT INTO daemons (name, role)
+        VALUES ('update-test', 'Architect')
         """
     )
 
     # Update it
-    test_db.execute_update("UPDATE personas SET description = 'Updated' WHERE name = 'update-test'")
+    test_db.execute_update("UPDATE daemons SET daemonology = 'Updated' WHERE name = 'update-test'")
 
     # Verify update
-    result = test_db.execute_query("SELECT description FROM personas WHERE name = 'update-test'")
-    assert result[0]["description"] == "Updated"
+    result = test_db.execute_query("SELECT daemonology FROM daemons WHERE name = 'update-test'")
+    assert result[0]["daemonology"] == "Updated"
 
 
 def test_get_session(temp_dir):
@@ -89,17 +87,15 @@ def test_get_session(temp_dir):
 
 def test_execute_insert(test_db: Database):
     """Test insert execution with lastrowid return"""
-    # Insert a persona and get the row ID
+    # Insert a daemon and get the row ID
     row_id = test_db.execute_insert(
         """
-        INSERT INTO personas (name, role, mythology, description)
-        VALUES (:name, :role, :mythology, :description)
+        INSERT INTO daemons (name, role)
+        VALUES (:name, :role)
         """,
         {
-            "name": "insert-test-persona",
+            "name": "insert-test-daemon",
             "role": "Engineer",
-            "mythology": "test",
-            "description": "Test insert",
         },
     )
 
@@ -109,8 +105,8 @@ def test_execute_insert(test_db: Database):
 
     # Verify the row was inserted
     result = test_db.execute_query(
-        "SELECT * FROM personas WHERE name = :name",
-        {"name": "insert-test-persona"},
+        "SELECT * FROM daemons WHERE name = :name",
+        {"name": "insert-test-daemon"},
     )
     assert len(result) == 1
-    assert result[0]["name"] == "insert-test-persona"
+    assert result[0]["name"] == "insert-test-daemon"

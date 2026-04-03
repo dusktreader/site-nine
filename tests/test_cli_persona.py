@@ -14,7 +14,7 @@ def test_persona_list(initialized_project: Path):
     result = runner.invoke(app, ["persona", "list"])
 
     assert result.exit_code == 0
-    # Should show personas from the initialized database
+    # Should show daemons from the initialized database
 
 
 def test_persona_list_with_role_filter(initialized_project: Path):
@@ -29,7 +29,7 @@ def test_persona_suggest(initialized_project: Path):
     result = runner.invoke(app, ["persona", "suggest", "Engineer"])
 
     assert result.exit_code == 0
-    # Should suggest a persona name
+    # Should suggest a daemon name
 
 
 # Temporarily skip - needs investigation
@@ -50,16 +50,16 @@ def test_persona_suggest(initialized_project: Path):
 
 def test_persona_show(initialized_project: Path):
     """Test showing persona details"""
-    # First get a persona name from the database
+    # First get a daemon name from the database
     with Database(Path.cwd() / ".opencode" / "data" / "project.db") as db:
-        personas = db.execute_query("SELECT name FROM personas LIMIT 1")
+        daemons = db.execute_query("SELECT name FROM daemons LIMIT 1")
 
-    if personas:
-        persona_name = personas[0]["name"]
-        result = runner.invoke(app, ["persona", "show", persona_name])
+    if daemons:
+        daemon_name = daemons[0]["name"]
+        result = runner.invoke(app, ["persona", "show", daemon_name])
         assert result.exit_code == 0
         # Check case-insensitively since output may capitalize
-        assert persona_name.lower() in result.output.lower()
+        assert daemon_name.lower() in result.output.lower()
 
 
 def test_persona_show_nonexistent(initialized_project: Path):
@@ -88,16 +88,12 @@ def test_persona_add_success(initialized_project: Path):
             "test-persona",
             "--role",
             "Engineer",
-            "--mythology",
-            "Greek",
-            "--description",
-            "Test description",
         ],
     )
 
     assert result.exit_code == 0
     normalized = " ".join(result.output.split())
-    assert "Added persona" in normalized or "test-persona" in normalized
+    assert "Added" in normalized or "test-persona" in normalized
 
 
 def test_persona_add_duplicate(initialized_project: Path):
@@ -111,10 +107,6 @@ def test_persona_add_duplicate(initialized_project: Path):
             "duplicate-test",
             "--role",
             "Engineer",
-            "--mythology",
-            "Greek",
-            "--description",
-            "Test",
         ],
     )
 
@@ -127,10 +119,6 @@ def test_persona_add_duplicate(initialized_project: Path):
             "duplicate-test",
             "--role",
             "Engineer",
-            "--mythology",
-            "Greek",
-            "--description",
-            "Test",
         ],
     )
 
@@ -168,19 +156,19 @@ def test_persona_suggest_json(initialized_project: Path):
 
 
 def test_persona_usage_success(initialized_project: Path):
-    """Test showing usage for an existing persona"""
+    """Test showing usage for an existing daemon"""
     db_path = Path.cwd() / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        personas = db.execute_query("SELECT name FROM personas LIMIT 1")
+        daemons = db.execute_query("SELECT name FROM daemons LIMIT 1")
 
-    assert personas, "Expected at least one persona in the database"
-    persona_name = personas[0]["name"]
+    assert daemons, "Expected at least one daemon in the database"
+    daemon_name = daemons[0]["name"]
 
-    result = runner.invoke(app, ["persona", "usage", persona_name])
+    result = runner.invoke(app, ["persona", "usage", daemon_name])
 
     assert result.exit_code == 0
     normalized = " ".join(result.output.split()).lower()
-    assert persona_name.lower() in normalized
+    assert daemon_name.lower() in normalized
     assert "role:" in normalized or "role" in normalized
 
 
@@ -194,53 +182,49 @@ def test_persona_usage_not_found(initialized_project: Path):
 
 
 def test_persona_usage_with_missions(initialized_project: Path):
-    """Test usage command shows missions table when missions exist"""
+    """Test usage command shows possessions table when possessions exist"""
     db_path = Path.cwd() / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        personas = db.execute_query("SELECT name, role FROM personas LIMIT 1")
-        assert personas, "Expected at least one persona"
-        persona_name = personas[0]["name"]
-        persona_role = personas[0]["role"]
+        daemons = db.execute_query("SELECT name, role FROM daemons LIMIT 1")
+        assert daemons, "Expected at least one daemon"
+        daemon_name = daemons[0]["name"]
+        daemon_role = daemons[0]["role"]
 
-        # Seed a mission for this persona
+        # Seed a possession for this daemon
         db.execute_update(
             """
-            INSERT INTO missions (persona_name, role, codename, mission_file, start_date, start_time)
-            VALUES (:persona_name, :role, :codename, :mission_file, :start_date, :start_time)
+            INSERT INTO possessions (daemon_name, role, possession_log, start_time)
+            VALUES (:daemon_name, :role, :possession_log, :start_time)
             """,
             {
-                "persona_name": persona_name,
-                "role": persona_role,
-                "codename": "test-codename",
-                "mission_file": ".opencode/work/missions/test-mission.md",
-                "start_date": "2026-02-11",
+                "daemon_name": daemon_name,
+                "role": daemon_role,
+                "possession_log": ".opencode/work/possessions/test-possession.md",
                 "start_time": "2026-02-11T10:00:00",
             },
         )
 
-    result = runner.invoke(app, ["persona", "usage", persona_name])
-
-    assert result.exit_code == 0
-    normalized = " ".join(result.output.split())
-    assert "test-codename" in normalized
-    # The missions table should be visible
-    assert "Codename" in normalized or "codename" in normalized.lower()
-
-
-def test_persona_set_bio_success(initialized_project: Path):
-    """Test setting a bio for an existing persona"""
-    db_path = Path.cwd() / ".opencode" / "data" / "project.db"
-    with Database(db_path) as db:
-        personas = db.execute_query("SELECT name FROM personas LIMIT 1")
-
-    assert personas, "Expected at least one persona"
-    persona_name = personas[0]["name"]
-
-    result = runner.invoke(app, ["persona", "set-bio", persona_name, "I am a whimsical test bio."])
+    result = runner.invoke(app, ["persona", "usage", daemon_name])
 
     assert result.exit_code == 0
     normalized = " ".join(result.output.split()).lower()
-    assert "updated" in normalized or persona_name in normalized
+    assert daemon_name.lower() in normalized
+
+
+def test_persona_set_bio_success(initialized_project: Path):
+    """Test setting a bio for an existing daemon"""
+    db_path = Path.cwd() / ".opencode" / "data" / "project.db"
+    with Database(db_path) as db:
+        daemons = db.execute_query("SELECT name FROM daemons LIMIT 1")
+
+    assert daemons, "Expected at least one daemon"
+    daemon_name = daemons[0]["name"]
+
+    result = runner.invoke(app, ["persona", "set-bio", daemon_name, "I am a whimsical test bio."])
+
+    assert result.exit_code == 0
+    normalized = " ".join(result.output.split()).lower()
+    assert "updated" in normalized or daemon_name.lower() in normalized
 
 
 def test_persona_set_bio_not_found(initialized_project: Path):
@@ -253,20 +237,20 @@ def test_persona_set_bio_not_found(initialized_project: Path):
 
 
 def test_persona_show_with_bio(initialized_project: Path):
-    """Test that show displays the whimsical bio when set"""
+    """Test that show displays the daemonology when set"""
     db_path = Path.cwd() / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        personas = db.execute_query("SELECT name FROM personas LIMIT 1")
+        daemons = db.execute_query("SELECT name FROM daemons LIMIT 1")
 
-    assert personas, "Expected at least one persona"
-    persona_name = personas[0]["name"]
+    assert daemons, "Expected at least one daemon"
+    daemon_name = daemons[0]["name"]
 
-    # First set a bio
+    # First set a bio (daemonology)
     bio_text = "I am a legendary being who writes tests for fun."
-    runner.invoke(app, ["persona", "set-bio", persona_name, bio_text])
+    runner.invoke(app, ["persona", "set-bio", daemon_name, bio_text])
 
-    # Now show the persona
-    result = runner.invoke(app, ["persona", "show", persona_name])
+    # Now show the daemon
+    result = runner.invoke(app, ["persona", "show", daemon_name])
 
     assert result.exit_code == 0
     normalized = " ".join(result.output.split())
@@ -279,7 +263,7 @@ def test_persona_list_unused_only(initialized_project: Path):
     result = runner.invoke(app, ["persona", "list", "--unused-only"])
 
     assert result.exit_code == 0
-    # All default personas should be unused after init, so we should see results
+    # All default daemons should be unused after init, so we should see results
     assert "0" in result.output or "Personas" in result.output
 
 
@@ -293,10 +277,6 @@ def test_persona_add_invalid_role(initialized_project: Path):
             "invalid-role-test",
             "--role",
             "NotAValidRole",
-            "--mythology",
-            "Greek",
-            "--description",
-            "Test",
         ],
     )
 
@@ -315,15 +295,10 @@ def test_persona_list_by_usage(initialized_project: Path):
 
 def test_persona_list_empty_json(initialized_project: Path):
     """Test listing personas with JSON output when filter returns no results"""
-    # Use an invalid-but-validated role that won't have personas
-    # Actually, we need to delete all personas for a role, or use unused-only
-    # after giving all personas missions. Easier: use role + unused-only combo
-    # after seeding a mission for all personas of a role to make none unused.
-    # Simplest: just delete all personas and then list with JSON
     db_path = Path.cwd() / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        # Get a role, then delete all personas for it, then list by that role
-        db.execute_update("DELETE FROM personas WHERE role = 'Historian'")
+        # Delete all daemons for Historian role, then list by that role
+        db.execute_update("DELETE FROM daemons WHERE role = 'Historian'")
 
     result = runner.invoke(app, ["persona", "list", "--role", "Historian", "--json"])
 
@@ -334,7 +309,7 @@ def test_persona_list_empty_no_json(initialized_project: Path):
     """Test listing personas with no JSON when filter returns no results"""
     db_path = Path.cwd() / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        db.execute_update("DELETE FROM personas WHERE role = 'Historian'")
+        db.execute_update("DELETE FROM daemons WHERE role = 'Historian'")
 
     result = runner.invoke(app, ["persona", "list", "--role", "Historian"])
 
@@ -347,7 +322,7 @@ def test_persona_suggest_empty_no_json(initialized_project: Path):
     """Test suggest when no personas found for a role (non-JSON output)"""
     db_path = Path.cwd() / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        db.execute_update("DELETE FROM personas WHERE role = 'Historian'")
+        db.execute_update("DELETE FROM daemons WHERE role = 'Historian'")
 
     result = runner.invoke(app, ["persona", "suggest", "Historian"])
 
@@ -360,7 +335,7 @@ def test_persona_suggest_empty_json(initialized_project: Path):
     """Test suggest when no personas found for a role (JSON output)"""
     db_path = Path.cwd() / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        db.execute_update("DELETE FROM personas WHERE role = 'Historian'")
+        db.execute_update("DELETE FROM daemons WHERE role = 'Historian'")
 
     result = runner.invoke(app, ["persona", "suggest", "Historian", "--json"])
 

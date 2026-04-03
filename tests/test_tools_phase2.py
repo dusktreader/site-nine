@@ -35,6 +35,11 @@ from site_nine.core.database import Database
 
 TOOLS_DIR = Path(__file__).parent.parent / ".opencode" / "tools"
 
+# Ensure tool_logging (and any other shared modules in .opencode/tools/) is importable
+# when tool scripts are loaded via importlib in tests.
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+
 
 def load_tool(name: str):
     """Dynamically load a tool module from .opencode/tools/."""
@@ -87,7 +92,7 @@ def call_tool(name: str, payload: dict[str, Any], db_path: Path) -> dict:
 
 @pytest.fixture
 def tool_db(tmp_path):
-    """Initialised database with seed personas and a couple of test tasks.
+    """Initialised database with seed daemons and a couple of test tasks.
 
     The schema.sql in the package does not yet include the ``blocks`` table
     or the ``deleted_at`` column on ``handoffs`` (those live in the application
@@ -126,14 +131,14 @@ def tool_db(tmp_path):
                 pass  # column already exists (idempotent)
             conn.commit()
 
-        # Personas
+        # Daemons (replaces old personas seeding)
         db.execute_update(
             """
-            INSERT INTO personas (name, role, mythology, description)
+            INSERT INTO daemons (name, role, daemonology, personality, incarnations)
             VALUES
-                ('hermes', 'Engineer',  'Greek',    'Messenger god'),
-                ('athena', 'Tester',    'Greek',    'Goddess of wisdom'),
-                ('odin',   'Architect', 'Norse',    'All-father')
+                ('hermes', 'Engineer',  'Greek messenger daemon', 'Swift and clever', 0),
+                ('athena', 'Tester',    'Greek wisdom daemon',    'Methodical',       0),
+                ('odin',   'Architect', 'Norse all-father daemon','Visionary',        0)
             """
         )
 
@@ -160,25 +165,25 @@ def tool_db(tmp_path):
 
 @pytest.fixture
 def tool_db_with_mission(tool_db):
-    """tool_db plus an ACTIVE mission (id=1) and an UNDERWAY task."""
+    """tool_db plus an ACTIVE possession (id=1) and an UNDERWAY task."""
     with Database(tool_db) as db:
         db.execute_update(
             """
-            INSERT INTO missions (id, persona_name, role, codename, status,
-                                  opencode_session_id, mission_file,
-                                  start_date, start_time,
-                                  created_at, updated_at, last_active_at)
-            VALUES (1, 'hermes', 'Engineer', 'iron-falcon', 'ACTIVE',
-                    'sess-abc', '.opencode/work/missions/test.md',
-                    date('now'), time('now'),
+            INSERT INTO possessions (id, daemon_name, role, status,
+                                     opencode_session_id, possession_log,
+                                     start_time,
+                                     created_at, updated_at, last_heartbeat_at)
+            VALUES (1, 'hermes', 'Engineer', 'ACTIVE',
+                    'sess-abc', '.opencode/work/possessions/test.md',
+                    time('now'),
                     datetime('now'), datetime('now'), datetime('now'))
             """
         )
-        # Claim ENG-H-0001 for mission 1
+        # Claim ENG-H-0001 for possession 1
         db.execute_update(
             """
             UPDATE tasks
-            SET status = 'UNDERWAY', current_mission_id = 1,
+            SET status = 'UNDERWAY', current_possession_id = 1,
                 claimed_at = datetime('now'), updated_at = datetime('now')
             WHERE id = 'ENG-H-0001'
             """
@@ -192,12 +197,10 @@ def tool_db_with_mission(tool_db):
 
 
 class TestMissionInit:
-    def test_creates_mission_returns_id_and_codename(self, tool_db):
+    def test_creates_mission_returns_id(self, tool_db):
         result = call_tool("mission_init", {"session_id": "sess-new-001"}, tool_db)
         assert "mission_id" in result
-        assert "codename" in result
         assert isinstance(result["mission_id"], int)
-        assert "-" in result["codename"]
 
     def test_double_binding_returns_error(self, tool_db):
         # First init — binds the session
@@ -212,18 +215,13 @@ class TestMissionInit:
         r2 = call_tool("mission_init", {"session_id": "sess-B"}, tool_db)
         assert r1["mission_id"] != r2["mission_id"]
 
-    def test_codename_format_two_words(self, tool_db):
-        result = call_tool("mission_init", {"session_id": "sess-fmt"}, tool_db)
-        parts = result["codename"].split("-")
-        assert len(parts) == 2
-
 
 class TestMissionRoleRecord:
     def _init_mission(self, tool_db, session_id="sess-role-test") -> int:
         r = call_tool("mission_init", {"session_id": session_id}, tool_db)
         return r["mission_id"]
 
-    def test_records_role_transitions_to_persona_pending(self, tool_db):
+    def test_records_role_transitions_to_daemon_pending(self, tool_db):
         mid = self._init_mission(tool_db)
         result = call_tool(
             "mission_role_record",
@@ -231,7 +229,7 @@ class TestMissionRoleRecord:
             tool_db,
         )
         assert result["role"] == "Engineer"
-        assert result["status"] == "PERSONA_PENDING"
+        assert result["status"] == "DAEMON_PENDING"
         assert result["mission_id"] == mid
 
     def test_invalid_role_returns_error(self, tool_db):
@@ -283,52 +281,48 @@ class TestMissionRoleRecord:
 
 
 class TestMissionPersonaRecord:
-    def _setup_persona_pending(self, tool_db, session_id="sess-pp") -> int:
+    def _setup_daemon_pending(self, tool_db, session_id="sess-pp") -> int:
         r = call_tool("mission_init", {"session_id": session_id}, tool_db)
         mid = r["mission_id"]
         call_tool("mission_role_record", {"mission_id": mid, "role": "Engineer"}, tool_db)
         return mid
 
     def test_records_persona_transitions_to_active(self, tool_db, tmp_path):
-        mid = self._setup_persona_pending(tool_db)
-        # Patch MissionManager._create_mission_file to avoid file I/O
-        with patch("site_nine.missions.manager.MissionManager._create_mission_file"):
-            result = call_tool(
-                "mission_persona_record",
-                {"mission_id": mid, "persona": "hermes"},
-                tool_db,
-            )
+        mid = self._setup_daemon_pending(tool_db)
+        # No file I/O in mission_persona_record — it only writes the path to the DB
+        result = call_tool(
+            "mission_persona_record",
+            {"mission_id": mid, "persona": "hermes"},
+            tool_db,
+        )
         assert result["status"] == "ACTIVE"
         assert result["persona"] == "hermes"
         assert result["role"] == "Engineer"
 
     def test_persona_not_found_returns_error(self, tool_db):
-        mid = self._setup_persona_pending(tool_db, "sess-pp2")
-        with patch("site_nine.missions.manager.MissionManager._create_mission_file"):
-            result = call_tool(
-                "mission_persona_record",
-                {"mission_id": mid, "persona": "nonexistent"},
-                tool_db,
-            )
+        mid = self._setup_daemon_pending(tool_db, "sess-pp2")
+        result = call_tool(
+            "mission_persona_record",
+            {"mission_id": mid, "persona": "nonexistent"},
+            tool_db,
+        )
         assert result.get("error") == "persona_not_found"
 
     def test_wrong_status_returns_error(self, tool_db_with_mission):
-        # Mission 1 is ACTIVE, not PERSONA_PENDING
-        with patch("site_nine.missions.manager.MissionManager._create_mission_file"):
-            result = call_tool(
-                "mission_persona_record",
-                {"mission_id": 1, "persona": "hermes"},
-                tool_db_with_mission,
-            )
+        # Possession 1 is ACTIVE, not DAEMON_PENDING
+        result = call_tool(
+            "mission_persona_record",
+            {"mission_id": 1, "persona": "hermes"},
+            tool_db_with_mission,
+        )
         assert result.get("error") == "invalid_status"
 
     def test_mission_not_found_returns_error(self, tool_db):
-        with patch("site_nine.missions.manager.MissionManager._create_mission_file"):
-            result = call_tool(
-                "mission_persona_record",
-                {"mission_id": 99999, "persona": "hermes"},
-                tool_db,
-            )
+        result = call_tool(
+            "mission_persona_record",
+            {"mission_id": 99999, "persona": "hermes"},
+            tool_db,
+        )
         assert result.get("error") == "mission_not_found"
 
 
@@ -344,7 +338,7 @@ class TestMissionRenameSession:
     def test_renames_session_returns_titles(self, tool_db_with_mission):
         mock_result = MagicMock()
         mock_result.old_title = "Old Title"
-        mock_result.new_title = "Operation iron-falcon: Hermes - Engineer"
+        mock_result.new_title = "Operation Hermes - Engineer"
         mock_result.warning = None
 
         with patch(
@@ -357,7 +351,7 @@ class TestMissionRenameSession:
                 tool_db_with_mission,
             )
 
-        assert result["new_title"] == "Operation iron-falcon: Hermes - Engineer"
+        assert result["new_title"] == "Operation Hermes - Engineer"
         assert result["old_title"] == "Old Title"
         assert result["mission_id"] == 1
 
@@ -431,7 +425,7 @@ class TestMissionEnd:
             {"session_id": "sess-abc"},
             tool_db_with_mission,
         )
-        assert result["status"] == "ENDED"
+        assert result["status"] == "EXORCISED"
         assert result["mission_id"] == 1
 
     def test_ends_mission_by_id_override(self, tool_db_with_mission):
@@ -440,7 +434,7 @@ class TestMissionEnd:
             {"session_id": None, "mission_id": 1},
             tool_db_with_mission,
         )
-        assert result["status"] == "ENDED"
+        assert result["status"] == "EXORCISED"
 
     def test_no_active_mission_returns_error(self, tool_db):
         result = call_tool(
@@ -469,7 +463,7 @@ class TestMissionEnd:
 
 class TestMissionSummary:
     def test_generates_summary_by_session(self, tool_db_with_mission):
-        with patch("site_nine.missions.manager.MissionManager.generate_summary") as mock_summary:
+        with patch("site_nine.possessions.manager.PossessionManager.generate_summary") as mock_summary:
             mock_summary.return_value = MagicMock(
                 files_changed=[],
                 commits=[],
@@ -482,11 +476,11 @@ class TestMissionSummary:
                 tool_db_with_mission,
             )
         assert result["mission_id"] == 1
-        assert result["codename"] == "iron-falcon"
+        assert result["daemon_name"] == "hermes"
         assert "files_changed" in result
 
     def test_generates_summary_by_mission_id(self, tool_db_with_mission):
-        with patch("site_nine.missions.manager.MissionManager.generate_summary") as mock_summary:
+        with patch("site_nine.possessions.manager.PossessionManager.generate_summary") as mock_summary:
             mock_summary.return_value = MagicMock(
                 files_changed=[],
                 commits=[],
@@ -780,132 +774,24 @@ class TestTaskCreate:
 
 
 # ===========================================================================
-# HANDOFF TOOLS (3)
+# HANDOFF TOOLS — REMOVED (ADR-014 Phase 1)
+# handoff_create, handoff_list, handoff_delete tools were removed per ADR-014.
+# Remaining handoff table references are kept for FK integrity but tool tests
+# are not applicable. See ENG-H-0224 for full handoff reference cleanup.
 # ===========================================================================
 
 
 @pytest.fixture
 def tool_db_with_handoff(tool_db_with_mission):
-    """Add a handoff record for testing list/delete."""
+    """Add a handoff record for testing — kept for fixture compatibility."""
     with Database(tool_db_with_mission) as db:
         db.execute_update(
             """
-            INSERT INTO handoffs (task_id, from_mission_id, to_role, summary, created_at)
+            INSERT INTO handoffs (task_id, from_possession_id, to_role, summary, created_at)
             VALUES ('ENG-H-0001', 1, 'Tester', 'Ready for review', datetime('now'))
             """
         )
     return tool_db_with_mission
-
-
-class TestHandoffCreate:
-    def test_creates_handoff_with_required_fields(self, tool_db_with_mission):
-        result = call_tool(
-            "handoff_create",
-            {
-                "task_id": "ENG-H-0001",
-                "from_mission_id": 1,
-                "to_role": "Tester",
-                "summary": "Ready for testing",
-            },
-            tool_db_with_mission,
-        )
-        assert "handoff_id" in result
-        assert result["to_role"] == "Tester"
-        assert result["task_id"] == "ENG-H-0001"
-
-    def test_creates_handoff_with_files(self, tool_db_with_mission):
-        files = ["src/main.py", "tests/test_main.py"]
-        result = call_tool(
-            "handoff_create",
-            {
-                "task_id": "ENG-H-0001",
-                "from_mission_id": 1,
-                "to_role": "Tester",
-                "summary": "With files",
-                "files": json.dumps(files),
-            },
-            tool_db_with_mission,
-        )
-        assert "handoff_id" in result
-
-    def test_invalid_role_returns_error(self, tool_db_with_mission):
-        result = call_tool(
-            "handoff_create",
-            {
-                "task_id": "ENG-H-0001",
-                "from_mission_id": 1,
-                "to_role": "Wizard",
-                "summary": "Bad role",
-            },
-            tool_db_with_mission,
-        )
-        assert result.get("error") == "invalid_role"
-
-    def test_invalid_files_json_returns_error(self, tool_db_with_mission):
-        result = call_tool(
-            "handoff_create",
-            {
-                "task_id": "ENG-H-0001",
-                "from_mission_id": 1,
-                "to_role": "Tester",
-                "summary": "Bad files",
-                "files": "not-valid-json",
-            },
-            tool_db_with_mission,
-        )
-        assert result.get("error") == "invalid_files"
-
-
-class TestHandoffList:
-    def test_lists_all_handoffs(self, tool_db_with_handoff):
-        result = call_tool("handoff_list", {}, tool_db_with_handoff)
-        assert result["count"] >= 1
-
-    def test_filters_by_to_role(self, tool_db_with_handoff):
-        result = call_tool("handoff_list", {"to_role": "Tester"}, tool_db_with_handoff)
-        assert result["count"] >= 1
-        for h in result["data"]:
-            assert h["to_role"] == "Tester"
-
-    def test_filters_by_from_mission(self, tool_db_with_handoff):
-        result = call_tool("handoff_list", {"from_mission_id": 1}, tool_db_with_handoff)
-        assert result["count"] >= 1
-
-    def test_returns_empty_when_no_match(self, tool_db_with_handoff):
-        result = call_tool("handoff_list", {"to_role": "Architect"}, tool_db_with_handoff)
-        assert result["count"] == 0
-
-    def test_empty_db_returns_zero(self, tool_db):
-        result = call_tool("handoff_list", {}, tool_db)
-        assert result["count"] == 0
-
-
-class TestHandoffDelete:
-    def _get_handoff_id(self, tool_db_with_handoff) -> int:
-        result = call_tool("handoff_list", {}, tool_db_with_handoff)
-        return result["data"][0]["id"]
-
-    def test_deletes_existing_handoff(self, tool_db_with_handoff):
-        hid = self._get_handoff_id(tool_db_with_handoff)
-        result = call_tool("handoff_delete", {"handoff_id": hid}, tool_db_with_handoff)
-        assert result["handoff_id"] == hid
-
-    def test_deleted_handoff_not_in_list(self, tool_db_with_handoff):
-        hid = self._get_handoff_id(tool_db_with_handoff)
-        call_tool("handoff_delete", {"handoff_id": hid}, tool_db_with_handoff)
-        result = call_tool("handoff_list", {}, tool_db_with_handoff)
-        ids = [h["id"] for h in result["data"]]
-        assert hid not in ids
-
-    def test_double_delete_returns_error(self, tool_db_with_handoff):
-        hid = self._get_handoff_id(tool_db_with_handoff)
-        call_tool("handoff_delete", {"handoff_id": hid}, tool_db_with_handoff)
-        result = call_tool("handoff_delete", {"handoff_id": hid}, tool_db_with_handoff)
-        assert result.get("error") == "already_deleted"
-
-    def test_not_found_returns_error(self, tool_db):
-        result = call_tool("handoff_delete", {"handoff_id": 99999}, tool_db)
-        assert result.get("error") == "handoff_not_found"
 
 
 # ===========================================================================
@@ -917,7 +803,7 @@ class TestPersonaShow:
     def test_shows_existing_persona(self, tool_db):
         result = call_tool("persona_show", {"name": "hermes"}, tool_db)
         assert result["persona"]["name"] == "hermes"
-        assert result["persona"]["mythology"] == "Greek"
+        assert result["persona"]["daemonology"] == "Greek messenger daemon"
 
     def test_shows_persona_case_insensitive(self, tool_db):
         result = call_tool("persona_show", {"name": "HERMES"}, tool_db)
@@ -931,9 +817,9 @@ class TestPersonaShow:
         result = call_tool("persona_show", {}, tool_db)
         assert result.get("error") == "missing_name"
 
-    def test_bio_is_null_when_not_set(self, tool_db):
+    def test_daemonology_is_set_from_seed(self, tool_db):
         result = call_tool("persona_show", {"name": "hermes"}, tool_db)
-        assert result["persona"]["whimsical_bio"] is None
+        assert result["persona"]["daemonology"] == "Greek messenger daemon"
 
 
 class TestPersonaSuggest:
@@ -954,15 +840,20 @@ class TestPersonaSuggest:
         result = call_tool("persona_suggest", {"role": "Engineer"}, tool_db)
         for p in result["data"]:
             assert "name" in p
-            assert "mythology" in p
-            assert "mission_count" in p
+            assert "daemonology" in p
+            assert "incarnations" in p
             assert "is_unused" in p
 
     def test_unused_personas_suggested_first(self, tool_db):
-        # hermes has mission_count=0, should appear in suggestions
+        # Mark all existing Engineer daemons as used (incarnations > 0)
+        # then hermes (incarnations=0, added in tool_db) should appear first
+        with Database(tool_db) as db:
+            db.execute_update("UPDATE daemons SET incarnations = 10 WHERE role = 'Engineer' AND name != 'hermes'")
         result = call_tool("persona_suggest", {"role": "Engineer"}, tool_db)
         names = [p["name"] for p in result["data"]]
         assert "hermes" in names
+        # hermes should be first (incarnations=0 is lowest)
+        assert names[0] == "hermes"
 
 
 class TestPersonaSetBio:
@@ -973,19 +864,19 @@ class TestPersonaSetBio:
             {"name": "hermes", "bio": bio},
             tool_db,
         )
-        assert result["whimsical_bio"] == bio
+        assert result["daemonology"] == bio
         assert result["name"] == "hermes"
 
     def test_overwrites_existing_bio(self, tool_db):
         call_tool("persona_set_bio", {"name": "hermes", "bio": "First bio."}, tool_db)
         result = call_tool("persona_set_bio", {"name": "hermes", "bio": "Updated bio."}, tool_db)
-        assert result["whimsical_bio"] == "Updated bio."
+        assert result["daemonology"] == "Updated bio."
 
     def test_bio_persists_in_show(self, tool_db):
         bio = "Persistent bio text."
         call_tool("persona_set_bio", {"name": "hermes", "bio": bio}, tool_db)
         show_result = call_tool("persona_show", {"name": "hermes"}, tool_db)
-        assert show_result["persona"]["whimsical_bio"] == bio
+        assert show_result["persona"]["daemonology"] == bio
 
     def test_missing_name_returns_error(self, tool_db):
         result = call_tool("persona_set_bio", {"bio": "Some bio"}, tool_db)

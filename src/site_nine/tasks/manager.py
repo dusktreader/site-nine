@@ -52,7 +52,7 @@ class TaskManager:
         self,
         status: str | None = None,
         role: str | None = None,
-        mission_id: int | None = None,
+        possession_id: int | None = None,
     ) -> list[Task]:
         """
         List tasks with optional filtering.
@@ -73,9 +73,9 @@ class TaskManager:
             query += " AND role = :role"
             params["role"] = role
 
-        if mission_id:
-            query += " AND current_mission_id = :mission_id"
-            params["mission_id"] = mission_id
+        if possession_id:
+            query += " AND current_possession_id = :possession_id"
+            params["possession_id"] = possession_id
 
         query += " ORDER BY id"
 
@@ -100,30 +100,30 @@ class TaskManager:
         rows = self.db.execute_query("SELECT * FROM tasks WHERE id = :id", {"id": task_id})
         return Task.from_db_row(rows[0]) if rows else None
 
-    def get_next_epic_task(self, mission_id: int) -> Task | None:
+    def get_next_epic_task(self, possession_id: int) -> Task | None:
         """
-        Get the next TODO task in the mission's epic matching the mission's role.
+        Get the next TODO task in the possession's epic matching the possession's role.
 
         Used by 's9 task next' command to auto-select the next task for
-        epic-scoped missions.
+        epic-scoped possessions.
 
         Args:
-            mission_id: Mission ID to get next task for
+            possession_id: Possession ID to get next task for
 
         Returns:
             Next available task, or None if no tasks available
 
         Raises:
-            TaskError: If mission has no epic_id (not epic-scoped)
+            TaskError: If possession has no epic_id (not epic-scoped)
         """
-        # Get mission's epic and role
+        # Get possession's epic and role
         mission_rows = self.db.execute_query(
-            "SELECT epic_id, role FROM missions WHERE id = :mission_id",
-            {"mission_id": mission_id},
+            "SELECT epic_id, role FROM possessions WHERE id = :possession_id",
+            {"possession_id": possession_id},
         )
         require_condition(
             mission_rows,
-            f"Mission {mission_id} not found",
+            f"Possession {possession_id} not found",
             raise_exc_class=TaskError,
         )
 
@@ -132,7 +132,7 @@ class TaskManager:
 
         require_condition(
             mission_epic_id is not None,
-            f"Mission {mission_id} is not epic-scoped. Use 's9 mission start --epic EPIC_ID' to create epic-scoped mission.",
+            f"Possession {possession_id} is not epic-scoped. Use 's9 possession start --epic EPIC_ID' to create epic-scoped possession.",
             raise_exc_class=TaskError,
         )
 
@@ -156,29 +156,26 @@ class TaskManager:
 
         return Task.from_db_row(rows[0]) if rows else None
 
-    def claim_task(self, task_id: str, mission_id: int, current_role: str) -> None:
+    def claim_task(self, task_id: str, possession_id: int, current_role: str) -> None:
         """
-        Claim a task for current mission.
-
-        If there's a pending handoff for this task targeting the current role,
-        it will be automatically accepted and then deleted.
+        Claim a task for current possession.
 
         Args:
             task_id: Task to claim
-            mission_id: Mission claiming the task
-            current_role: Role of the current mission (for handoff validation)
+            possession_id: Possession claiming the task
+            current_role: Role of the current possession
 
         Raises:
-            TaskError: If the mission is epic-scoped and the task doesn't belong to that epic
+            TaskError: If the possession is epic-scoped and the task doesn't belong to that epic
         """
-        # Validate epic scoping: if mission has epic_id, task must belong to same epic
+        # Validate epic scoping: if possession has epic_id, task must belong to same epic
         mission_rows = self.db.execute_query(
-            "SELECT epic_id FROM missions WHERE id = :mission_id",
-            {"mission_id": mission_id},
+            "SELECT epic_id FROM possessions WHERE id = :possession_id",
+            {"possession_id": possession_id},
         )
         require_condition(
             mission_rows,
-            f"Mission {mission_id} not found",
+            f"Possession {possession_id} not found",
             raise_exc_class=TaskError,
         )
         mission_epic_id = mission_rows[0]["epic_id"]
@@ -197,7 +194,7 @@ class TaskManager:
 
             require_condition(
                 task_epic_id == mission_epic_id,
-                f"Cannot claim task {task_id} from epic {task_epic_id} when mission is scoped to epic {mission_epic_id}",
+                f"Cannot claim task {task_id} from epic {task_epic_id} when possession is scoped to epic {mission_epic_id}",
                 raise_exc_class=TaskError,
             )
 
@@ -219,47 +216,24 @@ class TaskManager:
                         "Contact the Director to unlock the epic before claiming tasks."
                     )
 
-        handoff_rows = self.db.execute_query(
-            """
-            SELECT id FROM handoffs
-            WHERE task_id = :task_id
-            AND to_role = :role
-            AND deleted_at IS NULL
-            ORDER BY created_at DESC
-            LIMIT 1
-            """,
-            {"task_id": task_id, "role": current_role},
-        )
-
-        if handoff_rows:
-            handoff_id = handoff_rows[0]["id"]
-            enforce_defined(
-                self.db.execute_query(
-                    """
-                    UPDATE handoffs
-                    SET deleted_at = :now
-                    WHERE id = :handoff_id
-                    RETURNING *
-                    """,
-                    {"handoff_id": handoff_id, "now": utc_now()},
-                ),
-                f"Failed to delete handoff {handoff_id}",
-                raise_exc_class=TaskError,
-            )
-
         now_str = utc_now()
         enforce_defined(
             self.db.execute_query(
                 """
                 UPDATE tasks
-                SET current_mission_id = :mission_id,
+                SET current_possession_id = :possession_id,
                     claimed_at = :now,
                     status = :status,
                     updated_at = :now
                 WHERE id = :task_id
                 RETURNING *
                 """,
-                {"task_id": task_id, "mission_id": mission_id, "status": TaskStatus.UNDERWAY.value, "now": now_str},
+                {
+                    "task_id": task_id,
+                    "possession_id": possession_id,
+                    "status": TaskStatus.UNDERWAY.value,
+                    "now": now_str,
+                },
             ),
             f"Failed to claim task {task_id}",
             raise_exc_class=TaskError,
@@ -276,7 +250,7 @@ class TaskManager:
             self.db.execute_query(
                 """
                 UPDATE tasks
-                SET current_mission_id = NULL,
+                SET current_possession_id = NULL,
                     claimed_at = NULL,
                     status = :status,
                     updated_at = :now
@@ -646,7 +620,7 @@ class TaskManager:
                 body = "\n".join(lines[body_start_idx:])
 
         category = task.category or ""
-        mission_id = str(task.current_mission_id) if task.current_mission_id else ""
+        possession_id = str(task.current_possession_id) if task.current_possession_id else ""
         claimed_at = task.claimed_at or ""
         actual_hours = f"~{task.actual_hours} hours" if task.actual_hours else ""
         closed_at = task.closed_at or ""
@@ -668,7 +642,7 @@ class TaskManager:
 **Priority:** {task.priority}
 **Role:** {task.role}
 **Category:** {category}
-**Mission:** {mission_id}
+**Possession:** {possession_id}
 **Claimed:** {claimed_at}
 **Actual Time:** {actual_hours}
 **Closed:** {closed_at}{adr_section}"""

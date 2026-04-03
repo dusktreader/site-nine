@@ -31,35 +31,35 @@ from site_nine.doctor.models import DataCheckResult, DiagnosticReport
 # Pass messages for each data check, keyed by label.
 # These are displayed when a check finds zero issues.
 _PASS_MESSAGES: dict[str, str] = {
-    "6a. Mission Personas": "All mission persona_names are valid",
-    "6b. Task Mission Refs": "All task mission references are valid",
+    "6a. Possession Daemons": "All possession daemon references are valid",
+    "6b. Task Possession Refs": "All task possession references are valid",
     "6c. Task Dependencies": "All task dependencies are valid",
     "7a. Closed Timestamps": "All completed/aborted tasks have closed_at",
     "7b. Claimed Timestamps": "All UNDERWAY tasks have claimed_at",
-    "8a. Mission Data": "All missions have valid data structure",
-    "8b. Mission Files": "All mission files exist",
-    "9a. Mission Counts": "All mission counts are correct",
-    "9b. Last Mission Dates": "All last_mission_at timestamps are correct",
-    "10a. Abandoned Tasks": "No tasks abandoned by ended missions",
+    "8a. Possession Data": "All possessions have valid data structure",
+    "8b. Possession Logs": "All possession log files exist",
+    "9a. Daemon Incarnations": "All daemon incarnation counts are correct",
+    "9b. Last Possession Dates": "All last_possession timestamps are correct",
+    "10a. Abandoned Tasks": "No tasks abandoned by exorcised possessions",
     "10b. Orphaned Tasks": "No orphaned UNDERWAY tasks",
-    "10c. Stale Missions": "No stale SUSPENDED or ACTIVE missions",
+    "10c. Stale Possessions": "No stale SUSPENDED or ACTIVE possessions",
     "11. Task Files": "All task files exist",
 }
 
 # Fail summary messages for checks that include them in the original output.
 _FAIL_SUMMARIES: dict[str, str] = {
-    "6a. Mission Personas": "Found {n} invalid mission references",
-    "6b. Task Mission Refs": "Found {n} orphaned task references",
+    "6a. Possession Daemons": "Found {n} invalid possession references",
+    "6b. Task Possession Refs": "Found {n} orphaned task references",
     "6c. Task Dependencies": "Found {n} invalid dependencies",
     "7a. Closed Timestamps": "Found {n} tasks missing closed_at",
     "7b. Claimed Timestamps": "Found {n} incomplete UNDERWAY tasks",
-    "8a. Mission Data": "Found {n} missions with invalid data",
-    "8b. Mission Files": "Found {n} missing mission files",
-    "9a. Mission Counts": "Found {n} incorrect mission counts",
-    "9b. Last Mission Dates": "Found {n} incorrect last_mission_at timestamps",
-    "10a. Abandoned Tasks": "Found {n} tasks abandoned by ended missions",
+    "8a. Possession Data": "Found {n} possessions with invalid data",
+    "8b. Possession Logs": "Found {n} missing possession log files",
+    "9a. Daemon Incarnations": "Found {n} incorrect daemon incarnation counts",
+    "9b. Last Possession Dates": "Found {n} incorrect last_possession timestamps",
+    "10a. Abandoned Tasks": "Found {n} tasks abandoned by exorcised possessions",
     "10b. Orphaned Tasks": "Found {n} orphaned UNDERWAY tasks",
-    "10c. Stale Missions": "Found {n} stale missions (SUSPENDED >7d or ACTIVE with no recent activity)",
+    "10c. Stale Possessions": "Found {n} stale possessions (SUSPENDED >7d or ACTIVE with no recent heartbeat)",
     "11. Task Files": "Found {n} missing task files",
 }
 
@@ -67,8 +67,8 @@ _FAIL_SUMMARIES: dict[str, str] = {
 _FAIL_HINTS: dict[str, list[str]] = {
     "10a. Abandoned Tasks": ["These tasks should be manually reviewed and marked COMPLETE or TODO."],
     "10b. Orphaned Tasks": ["These tasks should be manually reviewed and released or completed."],
-    "10c. Stale Missions": [
-        "Suspended missions can be resumed with 's9 mission resume <id>' or ended with 's9 mission end <id>'."
+    "10c. Stale Possessions": [
+        "Suspended possessions can be resumed with 's9 possession resume <id>' or exorcised with 's9 possession end <id>'."
     ],
     "11. Task Files": ["Run 's9 task sync' to regenerate missing files."],
 }
@@ -87,7 +87,7 @@ class DoctorManager:
 
         Args:
             verbose: Include detailed output in check results.
-            stale_days: Number of days after which a mission is considered stale (default: 7)
+            stale_days: Number of days after which a possession is considered stale (default: 7)
 
         Returns:
             A DiagnosticReport with all results aggregated.
@@ -95,9 +95,6 @@ class DoctorManager:
         report = DiagnosticReport()
 
         # ── Infrastructure checks ─────────────────────────────────────────
-        # NOTE: The CLI layer guards against missing db_path before calling us,
-        # so check_database_exists will always pass here. We still include it
-        # so the "Database file exists" message appears in the output.
         report.infra_results.append(check_database_exists(self.db_path))
         report.infra_results.append(check_database_integrity(self.db_path))
         report.infra_results.append(check_gitignore(self.opencode_dir, verbose=verbose))

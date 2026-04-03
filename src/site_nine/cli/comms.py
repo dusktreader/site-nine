@@ -15,21 +15,21 @@ from site_nine.cli.utils import CLIError, require_db_path
 from site_nine.core.database import Database
 from site_nine.exceptions import SiteNineError
 from site_nine.messaging import Message, MessageManager
-from site_nine.missions import MissionManager
+from site_nine.possessions import PossessionManager
 
 app = typer.Typer(help="Agent-to-agent messaging and coordination")
 console = Console()
 
 
 def _get_current_mission_id(db: Database) -> int:
-    """Get the current active mission ID from the session."""
-    # For now, get the most recent active mission
+    """Get the current active possession ID from the session."""
+    # For now, get the most recent active possession
     # TODO: In future, this should come from the OpenCode session context
     rows = db.execute_query(
         """
-        SELECT id FROM missions
-        WHERE end_time IS NULL
-        ORDER BY start_time DESC
+        SELECT id FROM possessions
+        WHERE status != 'EXORCISED'
+        ORDER BY start_time DESC, id DESC
         LIMIT 1
         """
     )
@@ -38,6 +38,43 @@ def _get_current_mission_id(db: Database) -> int:
         "No active mission found. Start a mission first with: s9 mission start",
     )
     return rows[0]["id"]
+
+
+def _format_desk_inbox_summary(
+    msg_manager: MessageManager,
+    conversations: list,
+    possession_id: int,
+) -> list[str]:
+    """Format unread messages as inbox-style summary lines for desk mode display.
+
+    Collects unread messages from other possessions across all conversations and formats
+    them per ADR-009 lines 160-171 specification.
+
+    Args:
+        msg_manager: MessageManager instance for querying unread messages
+        conversations: List of unread Conversation objects
+        possession_id: Current possession ID (to exclude own messages)
+
+    Returns:
+        List of formatted output lines. Empty list if no unread messages from others.
+    """
+    inbox_messages: list[Message] = []
+    for conv in conversations:
+        unread_msgs = msg_manager.get_unread_messages(conv.id, possession_id)
+        for msg in unread_msgs:
+            if msg.from_possession_id != possession_id:
+                inbox_messages.append(msg)
+
+    if not inbox_messages:
+        return []
+
+    lines: list[str] = []
+    lines.append(f"Checking comms... {len(inbox_messages)} new message(s)!")
+    for msg in inbox_messages:
+        lines.append(f'- {msg.id} from Mission #{msg.from_possession_id}: "{msg.subject}"')
+    lines.append("")
+    lines.append('Reply with: s9 comms reply <MSG_ID> "your response"')
+    return lines
 
 
 def _format_message_preview(body: str, max_length: int = 60) -> str:
@@ -79,6 +116,7 @@ def send(
     )
 
     # Get message body
+    body = ""
     if body_from_stdin:
         body = sys.stdin.read().strip()
         CLIError.require_condition(bool(body), "Message body from stdin is empty")
@@ -91,8 +129,8 @@ def send(
         from_mission_id = _get_current_mission_id(db)
 
         # Validate recipient exists
-        mission_manager = MissionManager(db)
-        to_mission_obj = mission_manager.get_mission(to_mission)
+        possession_manager = PossessionManager(db)
+        to_mission_obj = possession_manager.get_possession(to_mission)
         CLIError.require_condition(
             to_mission_obj is not None,
             f"Mission {to_mission} not found. Use 's9 mission list' to see available missions.",
@@ -100,8 +138,8 @@ def send(
 
         msg_manager = MessageManager(db)
         conversation, msg = msg_manager.send_conversation_message(
-            from_mission_id=from_mission_id,
-            to_mission_id=to_mission,
+            from_possession_id=from_mission_id,
+            to_possession_id=to_mission,
             body=body,
             priority=priority,
             task_id=task_id,
@@ -170,6 +208,7 @@ def discuss(
     )
 
     # Get message body
+    body = ""
     if body_from_stdin:
         body = sys.stdin.read().strip()
         CLIError.require_condition(bool(body), "Message body from stdin is empty")
@@ -213,7 +252,7 @@ def discuss(
         # Send first message
         msg = msg_manager.create_message(
             conversation_id=discussion.id,
-            from_mission_id=from_mission_id,
+            from_possession_id=from_mission_id,
             subject=subject,
             body=body,
             priority=priority,
@@ -281,6 +320,7 @@ def reply(
     )
 
     # Get message body
+    body = ""
     if body_from_stdin:
         body = sys.stdin.read().strip()
         CLIError.require_condition(bool(body), "Message body from stdin is empty")
@@ -296,10 +336,12 @@ def reply(
         # Get parent message
         parent = msg_manager.get_message(message_id)
         CLIError.require_condition(parent is not None, f"Message {message_id} not found")
+        assert parent is not None
 
         # Get conversation
         conversation = msg_manager.get_conversation(parent.conversation_id)
         CLIError.require_condition(conversation is not None, f"Conversation {parent.conversation_id} not found")
+        assert conversation is not None
 
         # Extract subject
         subject = msg_manager._extract_subject_from_text(body)
@@ -311,7 +353,7 @@ def reply(
         # Create reply
         reply_msg = msg_manager.create_message(
             conversation_id=conversation.id,
-            from_mission_id=from_mission_id,
+            from_possession_id=from_mission_id,
             subject=subject,
             body=body,
             priority=priority,
@@ -370,6 +412,7 @@ def ack(
         # Get message details for output
         message = msg_manager.get_message(message_id)
         CLIError.require_condition(message is not None, f"Message {message_id} not found")
+        assert message is not None
 
     if json_output:
         output_json(
@@ -387,7 +430,7 @@ def ack(
                 f"✅ Acknowledged message {message_id}",
                 "",
                 f'  Subject: "{message.subject}"',
-                f"  From: Mission #{message.from_mission_id}",
+                f"  From: Mission #{message.from_possession_id}",
             ),
             subject="Done",
             subject_color="green",
@@ -408,8 +451,8 @@ def inbox(
         msg_manager = MessageManager(db)
 
         # Check desk mode status
-        mission_mgr = MissionManager(db)
-        mission = mission_mgr.get_mission(mission_id)
+        mission_mgr = PossessionManager(db)
+        mission = mission_mgr.get_possession(mission_id)
         desk_mode = bool(mission and mission.desk_mode_active)
 
         if all_conversations:
@@ -422,7 +465,7 @@ def inbox(
                     if mission_id in [conv.participant_1_id, conv.participant_2_id]:
                         relevant_convs.append(conv)
                 else:  # discussion
-                    if msg_manager.is_mission_in_discussion_scope(conv.id, mission_id):
+                    if msg_manager.is_possession_in_discussion_scope(conv.id, mission_id):
                         relevant_convs.append(conv)
             conversations = relevant_convs
         else:
@@ -440,7 +483,7 @@ def inbox(
                     inbox_messages.append(
                         {
                             "message_id": msg.id,
-                            "from_mission_id": msg.from_mission_id,
+                            "from_mission_id": msg.from_possession_id,
                             "subject": msg.subject,
                             "priority": msg.priority,
                             "conversation_id": conv.id,
@@ -528,6 +571,7 @@ def show(
             # It's a message, get its conversation
             message = msg_manager.get_message(conversation_id)
             CLIError.require_condition(message is not None, f"Message {conversation_id} not found")
+            assert message is not None
             conv_id = message.conversation_id
         else:
             conv_id = conversation_id
@@ -535,6 +579,7 @@ def show(
         # Get conversation
         conversation = msg_manager.get_conversation(conv_id)
         CLIError.require_condition(conversation is not None, f"Conversation {conv_id} not found")
+        assert conversation is not None
 
         # Get all messages in conversation
         messages = msg_manager.list_messages(conversation_id=conv_id)
@@ -561,7 +606,7 @@ def show(
                     "messages": [
                         {
                             "id": msg.id,
-                            "from_mission_id": msg.from_mission_id,
+                            "from_mission_id": msg.from_possession_id,
                             "subject": msg.subject,
                             "body": msg.body,
                             "priority": msg.priority,
@@ -584,14 +629,14 @@ def show(
         # Display messages
         for msg in messages:
             indent = "  " if msg.parent_message_id else ""
-            console.print(f"{indent}[cyan]{msg.id}[/cyan] - [magenta]Mission {msg.from_mission_id}[/magenta]")
+            console.print(f"{indent}[cyan]{msg.id}[/cyan] - [magenta]Mission {msg.from_possession_id}[/magenta]")
             console.print(f"{indent}[yellow]Priority: {msg.priority}[/yellow] | [dim]{msg.created_at}[/dim]")
 
             # Show acknowledgements if any
             acks = message_acks.get(msg.id, [])
             if acks:
                 ack_str = f"{len(acks)} ack" + ("s" if len(acks) > 1 else "")
-                ack_names = ", ".join([f"{a['persona_name']} ({a['role']})" for a in acks[:3]])
+                ack_names = ", ".join([f"{a['daemon_name']} ({a['role']})" for a in acks[:3]])
                 if len(acks) > 3:
                     ack_names += f", +{len(acks) - 3} more"
                 console.print(f"{indent}[green]✓ {ack_str}: {ack_names}[/green]")
@@ -605,9 +650,9 @@ def show(
             console.print()
 
 
-@app.command()
+@app.command("list")
 @handle_errors("Failed to list conversations", handle_exc_class=SiteNineError)
-def list(
+def list_conversations(
     open_only: Annotated[bool, typer.Option("--open", "-o", help="Show only open conversations")] = False,
     conversation_type: Annotated[str | None, typer.Option("--type", "-t", help="Filter by type")] = None,
     json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
@@ -623,7 +668,7 @@ def list(
         conversations = msg_manager.list_conversations(
             conversation_type=conversation_type,
             status=status,
-            mission_id=mission_id if conversation_type == "conversation" else None,
+            possession_id=mission_id if conversation_type == "conversation" else None,
         )
 
         # For discussions, filter by scope
@@ -634,7 +679,7 @@ def list(
                     if mission_id in [conv.participant_1_id, conv.participant_2_id]:
                         filtered.append(conv)
                 else:
-                    if msg_manager.is_mission_in_discussion_scope(conv.id, mission_id):
+                    if msg_manager.is_possession_in_discussion_scope(conv.id, mission_id):
                         filtered.append(conv)
             conversations = filtered
 
@@ -740,17 +785,148 @@ def status(
             return
 
         table = Table(title=f"Viewers of {conversation_id}")
-        table.add_column("Mission", style="cyan")
-        table.add_column("Persona", style="magenta")
+        table.add_column("Possession", style="cyan")
+        table.add_column("Daemon", style="magenta")
         table.add_column("Role", style="yellow")
         table.add_column("Last Viewed", style="dim")
 
         for viewer in viewers:
             table.add_row(
-                str(viewer["mission_id"]),
-                viewer["persona_name"],
+                str(viewer["possession_id"]),
+                viewer["daemon_name"],
                 viewer["role"],
                 viewer["last_viewed_at"][:16] if viewer["last_viewed_at"] else "",
             )
 
         console.print(table)
+
+
+@app.command()
+@handle_errors("Failed to manage desk mode", handle_exc_class=SiteNineError)
+def desk(
+    stop: Annotated[bool, typer.Option("--stop", help="Stop desk mode")] = False,
+    start: Annotated[bool, typer.Option("--start", help="Start desk mode (default)")] = False,
+    mission_id: Annotated[
+        int | None, typer.Option("--mission", "-m", help="Possession ID (defaults to current)")
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
+) -> None:
+    """Enable/disable desk mode for receiving questions from other agents.
+
+    Desk mode advertises your possession as available for questions.
+    When started, it runs a monitoring loop that checks for new messages
+    every 30 seconds and outputs status.
+
+    Usage:
+      s9 comms desk              # Start desk mode (default)
+      s9 comms desk --start      # Explicit start
+      s9 comms desk --stop       # Stop desk mode
+    """
+    import signal
+    import time
+
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        mid = mission_id if mission_id is not None else _get_current_mission_id(db)
+        possession_mgr = PossessionManager(db)
+
+        possession = possession_mgr.get_possession(mid)
+        CLIError.require_condition(possession is not None, f"Possession #{mid} not found")
+        assert possession is not None
+        CLIError.require_condition(
+            possession.end_time is None,
+            f"Possession #{mid} has already ended",
+        )
+
+        if stop:
+            # Stop desk mode
+            possession_mgr.set_desk_mode(mid, active=False)
+            if json_output:
+                output_json(format_json_response({"mission_id": mid, "desk_mode_active": False}))
+            else:
+                terminal_message(
+                    "Desk mode disabled",
+                    subject="Done",
+                    subject_color="green",
+                )
+            return
+
+        # Start desk mode
+        possession_mgr.set_desk_mode(mid, active=True)
+
+        scope_label = f"epic {possession.epic_id}" if possession.epic_id else "all"
+
+    if json_output:
+        # In JSON mode, just enable and report status once (no polling loop)
+        with Database(db_path) as db:
+            msg_manager = MessageManager(db)
+            conversations = msg_manager.get_unread_conversations(mid)
+
+            # Collect unread message summaries for inbox display (exclude own messages)
+            unread_messages = []
+            for conv in conversations:
+                for msg in msg_manager.get_unread_messages(conv.id, mid):
+                    if msg.from_possession_id != mid:
+                        unread_messages.append(
+                            {
+                                "message_id": msg.id,
+                                "from_mission_id": msg.from_possession_id,
+                                "subject": msg.subject,
+                                "priority": msg.priority,
+                                "conversation_id": conv.id,
+                            }
+                        )
+
+        output_json(
+            format_json_response(
+                {
+                    "mission_id": mid,
+                    "desk_mode_active": True,
+                    "scope": scope_label,
+                    "unread_count": len(unread_messages),
+                    "unread_messages": unread_messages,
+                }
+            )
+        )
+        return
+
+    terminal_message(
+        conjoin(
+            f"Desk mode enabled for {scope_label}",
+            "Monitoring for messages (checking every 30s)...",
+            "",
+            "Press Ctrl+C to stop desk mode.",
+        ),
+        subject="Desk Mode",
+        subject_color="green",
+    )
+
+    # Set up signal handler for clean exit
+    def _handle_interrupt(sig: int, frame: object) -> None:
+        console.print()  # newline after ^C
+        with Database(db_path) as db:
+            possession_mgr = PossessionManager(db)
+            possession_mgr.set_desk_mode(mid, active=False)
+        terminal_message("Desk mode disabled", subject="Done", subject_color="green")
+        raise SystemExit(0)
+
+    signal.signal(signal.SIGINT, _handle_interrupt)
+
+    # Polling loop — inbox-style display per ADR-009 lines 160-171
+    while True:
+        time.sleep(30)
+
+        with Database(db_path) as db:
+            msg_manager = MessageManager(db)
+            conversations = msg_manager.get_unread_conversations(mid)
+
+            if conversations:
+                lines = _format_desk_inbox_summary(msg_manager, conversations, mid)
+                if lines:
+                    for line in lines:
+                        console.print(line)
+                else:
+                    console.print("Checking comms... No new messages. (0 unread)")
+            else:
+                console.print("Checking comms... No new messages. (0 unread)")

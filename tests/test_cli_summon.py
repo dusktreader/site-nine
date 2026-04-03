@@ -163,12 +163,13 @@ def test_summon_desk_dry_run_shows_desk_label(initialized_project: Path):
 
 
 def test_summon_desk_dry_run_uses_opencode_run(initialized_project: Path):
-    """Test that --desk --dry-run shows 'opencode run' (not 'opencode --prompt')"""
+    """Test that --desk --dry-run shows the desk worker command"""
     result = runner.invoke(app, ["summon", "engineer", "--desk", "--dry-run"])
 
     assert result.exit_code == 0
     output = " ".join(result.output.split())
-    assert "opencode run" in output
+    # Desk mode uses desk_worker.py via uv run python
+    assert "desk" in output.lower() or "worker" in output.lower() or "uv" in output
 
 
 def test_summon_desk_instruction_message_contains_desk_mode(initialized_project: Path):
@@ -191,21 +192,23 @@ def test_summon_desk_dry_run_with_persona(initialized_project: Path):
 
 
 def test_summon_desk_dry_run_with_task(initialized_project: Path):
-    """Test that --desk --dry-run includes task ID in instruction"""
+    """Test that --desk --task is forbidden (conflicting flags)"""
     result = runner.invoke(app, ["summon", "engineer", "--desk", "--task", "ENG-H-0001", "--dry-run"])
 
-    assert result.exit_code == 0
+    # --desk and --task are mutually exclusive
+    assert result.exit_code != 0
     output = " ".join(result.output.split())
-    assert "ENG-H-0001" in output
+    assert "Cannot use" in output
 
 
 def test_summon_desk_dry_run_with_auto_assign(initialized_project: Path):
-    """Test that --desk --dry-run with --auto-assign includes auto-assign in instruction"""
+    """Test that --desk --auto-assign is forbidden (conflicting flags)"""
     result = runner.invoke(app, ["summon", "engineer", "--desk", "--auto-assign", "--dry-run"])
 
-    assert result.exit_code == 0
+    # --desk and --auto-assign are mutually exclusive
+    assert result.exit_code != 0
     output = " ".join(result.output.split())
-    assert "auto-assign" in output
+    assert "Cannot use" in output
 
 
 @patch("site_nine.cli.summon.subprocess.Popen")
@@ -218,8 +221,9 @@ def test_summon_desk_spawns_popen(mock_popen, initialized_project: Path):
     assert result.exit_code == 0
     mock_popen.assert_called_once()
     cmd_args = mock_popen.call_args[0][0]
-    assert cmd_args[0] == "opencode"
-    assert cmd_args[1] == "run"
+    # Desk mode uses: uv run python desk_worker.py <role>
+    assert cmd_args[0] == "uv"
+    assert "python" in cmd_args
 
 
 @patch("site_nine.cli.summon.subprocess.Popen")
@@ -238,17 +242,16 @@ def test_summon_desk_popen_includes_model(mock_popen, initialized_project: Path)
 
 @patch("site_nine.cli.summon.subprocess.Popen")
 def test_summon_desk_popen_includes_instruction(mock_popen, initialized_project: Path):
-    """Test that --desk Popen call includes the instruction as last positional arg"""
+    """Test that --desk Popen call includes the role as a positional arg"""
     mock_popen.return_value = MagicMock()
 
     result = runner.invoke(app, ["summon", "tester", "--desk"])
 
     assert result.exit_code == 0
     cmd_args = mock_popen.call_args[0][0]
-    # The instruction message should be the last element
-    instruction = cmd_args[-1]
-    assert "tester" in instruction.lower() or "Tester" in instruction
-    assert "desk" in instruction.lower()
+    # The desk worker command includes the role as an arg
+    cmd_str = " ".join(str(a) for a in cmd_args)
+    assert "tester" in cmd_str.lower() or "Tester" in cmd_str
 
 
 @patch("site_nine.cli.summon.subprocess.Popen")

@@ -9,7 +9,8 @@ from site_nine.cli.json_utils import format_json_response, output_json
 from site_nine.cli.utils import CLIError, require_db_path
 from site_nine.core.database import Database
 from site_nine.exceptions import SiteNineError
-from site_nine.personas import PersonaManager
+from site_nine.daemons import DaemonManager
+from site_nine.possessions.manager import PossessionManager
 
 app = typer.Typer(help="Manage personas")
 
@@ -19,18 +20,24 @@ app = typer.Typer(help="Manage personas")
 def add(
     name: Annotated[str, typer.Argument(help="Persona name (lowercase)")],
     role: Annotated[str, typer.Option("--role", "-r", help="Primary role for this persona")],
-    mythology: Annotated[str, typer.Option("--mythology", "-m", help="Mythology origin (e.g., Greek, Roman, Norse)")],
-    description: Annotated[str, typer.Option("--description", "-d", help="Brief description of the deity/figure")],
+    daemonology: Annotated[
+        str | None,
+        typer.Option("--daemonology", "-d", help="Whimsical first-person bio / daemonology text"),
+    ] = None,
+    personality: Annotated[
+        str | None,
+        typer.Option("--personality", "-p", help="Terse personality trait string"),
+    ] = None,
 ) -> None:
     """Add a new persona (typically used by: humans)"""
     db_path = require_db_path()
 
     with Database(db_path) as db:
-        mgr = PersonaManager(db)
-        persona = mgr.add_persona(name, role, mythology, description)
+        mgr = DaemonManager(db)
+        daemon = mgr.add_daemon(name, role, daemonology=daemonology, personality=personality)
 
         terminal_message(
-            f"Added persona: {persona.name} ({persona.role}, {persona.mythology})",
+            f"Added persona: {daemon.name} ({daemon.role})",
             subject="Success",
             subject_color="green",
         )
@@ -41,17 +48,17 @@ def add(
 def list(
     role: Annotated[str | None, typer.Option("--role", "-r", help="Filter by role")] = None,
     unused_only: Annotated[bool, typer.Option("--unused-only", help="Show only unused personas")] = False,
-    by_usage: Annotated[bool, typer.Option("--by-usage", help="Sort by mission count")] = False,
+    by_usage: Annotated[bool, typer.Option("--by-usage", help="Sort by incarnation count")] = False,
     json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
     """List personas (typically used by: both)"""
     db_path = require_db_path()
 
     with Database(db_path) as db:
-        mgr = PersonaManager(db)
-        personas = mgr.list_personas(role=role, unused_only=unused_only, by_usage=by_usage)
+        mgr = DaemonManager(db)
+        daemons = mgr.list_daemons(role=role, unused_only=unused_only, by_usage=by_usage)
 
-        if not personas:
+        if not daemons:
             if json_output:
                 output_json(format_json_response([]))
                 return
@@ -59,33 +66,31 @@ def list(
             return
 
         if json_output:
-            output_json(format_json_response([p.to_dict() for p in personas]))
+            output_json(format_json_response([d.to_dict() for d in daemons]))
             return
 
         table = Table(title="Personas")
         table.add_column("Name", style="cyan")
         table.add_column("Role", style="green")
-        table.add_column("Mythology", style="magenta")
-        table.add_column("Description", style="white")
-        table.add_column("Missions", style="yellow")
-        table.add_column("Last Mission", style="dim")
+        table.add_column("Incarnations", style="yellow")
+        table.add_column("Last Possession", style="dim")
+        table.add_column("Daemonology", style="white")
 
-        for persona in personas:
-            last_mission = persona.last_mission_at.format("YYYY-MM-DD") if persona.last_mission_at else "Never"
-            desc = persona.description
-            desc_display = desc[:40] + "..." if len(desc) > 40 else desc
+        for daemon in daemons:
+            last_possession = daemon.last_possession.format("YYYY-MM-DD") if daemon.last_possession else "Never"
+            daemonology = daemon.daemonology or ""
+            daemonology_display = daemonology[:40] + "..." if len(daemonology) > 40 else daemonology
 
             table.add_row(
-                persona.name,
-                persona.role,
-                persona.mythology,
-                desc_display,
-                str(persona.mission_count),
-                last_mission,
+                daemon.name,
+                daemon.role,
+                str(daemon.incarnations),
+                last_possession,
+                daemonology_display,
             )
 
         terminal_message(table, indent=False)
-        terminal_message(f"Total: {len(personas)} persona(s)", subject="Count")
+        terminal_message(f"Total: {len(daemons)} persona(s)", subject="Count")
 
 
 @app.command()
@@ -99,7 +104,7 @@ def suggest(
     db_path = require_db_path()
 
     with Database(db_path) as db:
-        mgr = PersonaManager(db)
+        mgr = DaemonManager(db)
         suggestions = mgr.suggest_for_role(role, count=count)
 
         if not suggestions:
@@ -117,14 +122,15 @@ def suggest(
             return
 
         if json_output:
-            output_json(format_json_response([p.to_dict() for p in suggestions]))
+            output_json(format_json_response([d.to_dict() for d in suggestions]))
             return
 
         body_parts = [f"Suggested personas for {role.title()}:", ""]
-        for idx, persona in enumerate(suggestions, 1):
-            usage_str = "unused" if persona.mission_count == 0 else f"{persona.mission_count} mission(s)"
-            body_parts.append(f"{idx}. {persona.name} ({persona.mythology}) - {usage_str}")
-            body_parts.append(f"   {persona.description}")
+        for idx, daemon in enumerate(suggestions, 1):
+            usage_str = "unused" if daemon.incarnations == 0 else f"{daemon.incarnations} incarnation(s)"
+            body_parts.append(f"{idx}. {daemon.name} - {usage_str}")
+            if daemon.daemonology:
+                body_parts.append(f"   {daemon.daemonology[:80]}")
             body_parts.append("")
 
         terminal_message(conjoin(*body_parts), subject="Suggestions")
@@ -139,45 +145,44 @@ def usage(
     db_path = require_db_path()
 
     with Database(db_path) as db:
-        mgr = PersonaManager(db)
-        persona = CLIError.enforce_defined(mgr.get_persona(name), f"Persona '{name}' not found")
+        mgr = DaemonManager(db)
+        daemon = CLIError.enforce_defined(mgr.get_daemon(name), f"Persona '{name}' not found")
 
-        missions = mgr.get_persona_missions(name)
+        pmgr = PossessionManager(db)
+        all_possessions = pmgr.list_possessions()
+        possessions = [p for p in all_possessions if p.daemon_name == daemon.name]
 
         body_parts = [
-            f"Persona: {persona.name}",
-            f"Role:          {persona.role}",
-            f"Mythology:     {persona.mythology}",
-            f"Description:   {persona.description}",
-            f"Mission Count: {persona.mission_count}",
+            f"Persona: {daemon.name}",
+            f"Role:          {daemon.role}",
+            f"Incarnations:  {daemon.incarnations}",
         ]
-        if persona.last_mission_at:
-            body_parts.append(f"Last Mission:  {persona.last_mission_at.format('YYYY-MM-DD')}")
+        if daemon.last_possession:
+            body_parts.append(f"Last Possession: {daemon.last_possession.format('YYYY-MM-DD')}")
+        if daemon.daemonology:
+            body_parts.extend(["", "Daemonology:", daemon.daemonology])
 
         terminal_message(conjoin(*body_parts), subject="Persona Info")
 
-        if missions:
-            table = Table(title=f"Missions ({len(missions)})")
+        if possessions:
+            table = Table(title=f"Possessions ({len(possessions)})")
             table.add_column("ID", style="cyan")
-            table.add_column("Codename", style="yellow")
             table.add_column("Role", style="green")
-            table.add_column("Date", style="white")
+            table.add_column("Started", style="white")
             table.add_column("Status", style="magenta")
 
-            for mission in missions:
-                status = "Active" if mission.is_active else "Complete"
+            for possession in possessions:
                 table.add_row(
-                    str(mission.id),
-                    mission.codename,
-                    mission.role or "?",
-                    mission.start_date or "?",
-                    status,
+                    str(possession.id),
+                    possession.role,
+                    possession.start_time[:10] if possession.start_time else "?",
+                    possession.status.value,
                 )
 
             terminal_message(table, indent=False)
         else:
             terminal_message(
-                "No missions found for this persona",
+                "No possessions found for this persona",
                 subject="Empty",
                 subject_color="yellow",
             )
@@ -189,42 +194,43 @@ def show(
     name: Annotated[str, typer.Argument(help="Persona name to display")],
     json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
-    """Show persona details including whimsical bio (typically used by: both)"""
+    """Show persona details including daemonology bio (typically used by: both)"""
     db_path = require_db_path()
 
     with Database(db_path) as db:
-        mgr = PersonaManager(db)
-        persona = CLIError.enforce_defined(mgr.get_persona(name), f"Persona '{name}' not found")
+        mgr = DaemonManager(db)
+        daemon = CLIError.enforce_defined(mgr.get_daemon(name), f"Persona '{name}' not found")
 
         if json_output:
-            output_json(format_json_response(persona.to_dict()))
+            output_json(format_json_response(daemon.to_dict()))
             return
 
         body_parts = [
-            f"Role: {persona.role}",
-            f"Mythology: {persona.mythology}",
-            f"Description: {persona.description}",
+            f"Role: {daemon.role}",
+            f"Incarnations: {daemon.incarnations}",
         ]
+        if daemon.personality:
+            body_parts.append(f"Personality: {daemon.personality}")
 
-        if persona.whimsical_bio:
-            body_parts.extend(["", "About me...", "", persona.whimsical_bio])
+        if daemon.daemonology:
+            body_parts.extend(["", "About me...", "", daemon.daemonology])
         else:
-            body_parts.extend(["", "No whimsical bio available yet. Generate one during session-start!"])
+            body_parts.extend(["", "No daemonology available yet. Generate one during session-start!"])
 
-        terminal_message(conjoin(*body_parts), subject=persona.name.title())
+        terminal_message(conjoin(*body_parts), subject=daemon.name.title())
 
 
 @app.command()
 @handle_errors("Failed to set persona bio", handle_exc_class=SiteNineError)
 def set_bio(
     name: Annotated[str, typer.Argument(help="Persona name")],
-    bio: Annotated[str, typer.Argument(help="Whimsical bio text (3-5 sentences, first person, playful tone)")],
+    bio: Annotated[str, typer.Argument(help="Daemonology text (3-5 sentences, first person, playful tone)")],
 ) -> None:
-    """Set whimsical bio for a persona (typically used by: agents)"""
+    """Set daemonology bio for a persona (typically used by: agents)"""
     db_path = require_db_path()
 
     with Database(db_path) as db:
-        mgr = PersonaManager(db)
-        mgr.set_bio(name, bio)
+        mgr = DaemonManager(db)
+        mgr.set_daemonology(name, bio)
 
-        terminal_message(f"Updated bio for {name.lower()}", subject="Success", subject_color="green")
+        terminal_message(f"Updated daemonology for {name.lower()}", subject="Success", subject_color="green")

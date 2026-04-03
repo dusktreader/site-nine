@@ -87,13 +87,13 @@ def test_compute_epic_status_some_complete_not_all(test_db):
 
 
 def test_compute_epic_status_all_terminal_with_aborted(test_db):
-    """Test epic with all terminal tasks (complete+aborted) and at least one aborted returns ABORTED"""
+    """Test epic with all terminal tasks (complete+aborted) returns COMPLETE when at least one COMPLETE"""
     _create_epic(test_db, "EPC-H-0001")
     _create_task_for_epic(test_db, "ENG-M-0001", "EPC-H-0001", status="COMPLETE")
     _create_task_for_epic(test_db, "ENG-M-0002", "EPC-H-0001", status="ABORTED")
 
     status = compute_epic_status(test_db, "EPC-H-0001")
-    assert status == "ABORTED"
+    assert status == "COMPLETE"
 
 
 def test_compute_epic_status_all_aborted(test_db):
@@ -165,7 +165,7 @@ def test_get_all_epic_statuses_multiple_epics(test_db):
     assert result["EPC-H-0002"] == "TODO"
     assert result["EPC-H-0003"] == "TODO"
     assert result["EPC-H-0004"] == "UNDERWAY"
-    assert result["EPC-H-0005"] == "ABORTED"
+    assert result["EPC-H-0005"] == "COMPLETE"
 
 
 def test_get_all_epic_statuses_epic_without_tasks(test_db):

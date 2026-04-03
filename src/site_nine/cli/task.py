@@ -41,7 +41,7 @@ def list(
 
     with Database(db_path) as db:
         manager = TaskManager(db)
-        tasks = manager.list_tasks(status=status, role=role, mission_id=mission)
+        tasks = manager.list_tasks(status=status, role=role, possession_id=mission)
 
     if not tasks:
         if json_output:
@@ -59,7 +59,7 @@ def list(
                 "priority": task.priority,
                 "role": task.role,
                 "category": task.category,
-                "current_mission_id": task.current_mission_id,
+                "current_possession_id": task.current_possession_id,
                 "created_at": task.created_at,
                 "claimed_at": task.claimed_at,
                 "closed_at": task.closed_at,
@@ -84,7 +84,7 @@ def list(
                 task.status,
                 task.priority,
                 task.role,
-                str(task.current_mission_id) if task.current_mission_id else "",
+                str(task.current_possession_id) if task.current_possession_id else "",
             )
 
         terminal_message(table, indent=False)
@@ -113,11 +113,9 @@ def show(
             "category": task.category,
             "description": task.description,
             "notes": task.notes,
-            "current_mission_id": task.current_mission_id,
+            "current_possession_id": task.current_possession_id,
             "claimed_at": task.claimed_at,
             "closed_at": task.closed_at,
-            "created_at": task.created_at,
-            "file_path": task.file_path,
             "epic_id": task.epic_id,
         }
         output_json(format_json_response(task_data))
@@ -130,8 +128,8 @@ def show(
         ]
         if task.category:
             lines.append(f"Category: {task.category}")
-        if task.current_mission_id:
-            lines.append(f"Mission: {task.current_mission_id}")
+        if task.current_possession_id:
+            lines.append(f"Mission: {task.current_possession_id}")
         if task.claimed_at:
             lines.append(f"Claimed: {task.claimed_at}")
         if task.closed_at:
@@ -403,7 +401,7 @@ def mine(
 
     with Database(db_path) as db:
         manager = TaskManager(db)
-        tasks = manager.list_tasks(mission_id=mission)
+        tasks = manager.list_tasks(possession_id=mission)
 
     if not tasks:
         if json_output:
@@ -426,7 +424,7 @@ def mine(
                 "priority": task.priority,
                 "role": task.role,
                 "category": task.category,
-                "current_mission_id": task.current_mission_id,
+                "current_possession_id": task.current_possession_id,
                 "claimed_at": task.claimed_at,
                 "closed_at": task.closed_at,
             }
@@ -491,7 +489,7 @@ def report(
                 "priority": task.priority,
                 "role": task.role,
                 "category": task.category,
-                "current_mission_id": task.current_mission_id,
+                "current_possession_id": task.current_possession_id,
                 "claimed_at": task.claimed_at,
                 "closed_at": task.closed_at,
                 "actual_hours": task.actual_hours,
@@ -515,7 +513,7 @@ def report(
         if len(title) > 40:
             title = title[:37] + "..."
 
-        mission_str = str(task.current_mission_id) if task.current_mission_id else "-"
+        mission_str = str(task.current_possession_id) if task.current_possession_id else "-"
 
         table.add_row(
             task.id,
@@ -560,7 +558,7 @@ def search(
                 "status": task.status,
                 "priority": task.priority,
                 "role": task.role,
-                "current_mission_id": task.current_mission_id,
+                "current_possession_id": task.current_possession_id,
                 "created_at": task.created_at,
             }
             for task in tasks
@@ -655,7 +653,7 @@ def next(
 
             # Get mission role for claiming
             mission_rows = db.execute_query(
-                "SELECT role FROM missions WHERE id = :mission_id",
+                "SELECT role FROM possessions WHERE id = :mission_id",
                 {"mission_id": mission},
             )
             CLIError.require_condition(mission_rows, f"Mission {mission} not found")

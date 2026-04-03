@@ -7,7 +7,7 @@ from site_nine.dashboard.models import (
     DashboardStats,
     EpicDashboardData,
     FullDashboardData,
-    MissionEntry,
+    PossessionEntry,
     RoleDashboardData,
 )
 
@@ -18,6 +18,6 @@ __all__ = [
     "DashboardStats",
     "EpicDashboardData",
     "FullDashboardData",
-    "MissionEntry",
+    "PossessionEntry",
     "RoleDashboardData",
 ]

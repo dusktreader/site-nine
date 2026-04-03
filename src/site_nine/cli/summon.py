@@ -1,4 +1,4 @@
-"""Summon command to launch OpenCode with mission-start instruction message"""
+"""Summon command to launch OpenCode with possession-start instruction message"""
 
 import os
 import sqlite3
@@ -18,26 +18,28 @@ from site_nine.exceptions import SiteNineError
 
 def _build_instruction_message(
     role: str,
-    persona: str | None,
+    daemon: str | None,
     auto_assign: bool,
     task: str | None,
     desk: bool,
 ) -> str:
-    """Construct the ADR-013 instruction message to inject into OpenCode on summon.
+    """Construct the instruction message to inject into OpenCode on summon.
 
-    Per ADR-013, the instruction message format is:
-    - role + persona: "Your role is {role}, your persona is {persona}. Initialize your mission with the mission-start skill."
-    - role only:      "Your role is {role}. Initialize your mission with the mission-start skill."
-    - neither:        "Initialize your mission with the mission-start skill."
+    Message format:
+    - role + daemon: "Your role is {role}, your daemon is {daemon}. Initialize your possession with the possession-start skill."
+    - role only:     "Your role is {role}. Initialize your possession with the possession-start skill."
+    - neither:       "Initialize your possession with the possession-start skill."
 
     Additional flag instructions are appended as needed.
     """
-    if role and persona:
-        base = f"Your role is {role}, your persona is {persona}. Initialize your mission with the mission-start skill."
+    if role and daemon:
+        base = (
+            f"Your role is {role}, your daemon is {daemon}. Initialize your possession with the possession-start skill."
+        )
     elif role:
-        base = f"Your role is {role}. Initialize your mission with the mission-start skill."
+        base = f"Your role is {role}. Initialize your possession with the possession-start skill."
     else:
-        base = "Initialize your mission with the mission-start skill."
+        base = "Initialize your possession with the possession-start skill."
 
     parts = [base]
 
@@ -54,7 +56,7 @@ def _build_instruction_message(
 @handle_errors("Failed to summon agent", handle_exc_class=SiteNineError)
 def summon_command(
     role: Annotated[str, typer.Argument(help="Agent role to summon (e.g., operator, architect)")],
-    persona: Annotated[str | None, typer.Option("--persona", "-p", help="Specific persona name to use")] = None,
+    daemon: Annotated[str | None, typer.Option("--daemon", "-d", help="Specific daemon name to use")] = None,
     auto_assign: Annotated[
         bool, typer.Option("--auto-assign", "-a", help="Auto-assign top priority task for role")
     ] = False,
@@ -64,17 +66,17 @@ def summon_command(
         bool, typer.Option("--desk", help="Spawn a background (headless) desk-mode worker via opencode run")
     ] = False,
     dry_run: Annotated[
-        bool, typer.Option("--dry-run", "-d", help="Show command that would be run without executing")
+        bool, typer.Option("--dry-run", help="Show command that would be run without executing")
     ] = False,
 ) -> None:
-    """Launch OpenCode with a mission-start instruction message (typically used by: humans)
+    """Launch OpenCode with a possession-start instruction message (typically used by: humans)
 
     Constructs an instruction message and either execs into OpenCode (interactive)
     or spawns a background headless worker (--desk mode).
 
     Examples:
         s9 summon operator
-        s9 summon operator --persona atlas
+        s9 summon operator --daemon atlas
         s9 summon operator --auto-assign
         s9 summon operator --task OPR-H-0065
         s9 summon operator --model github-copilot/gpt-5
@@ -111,7 +113,7 @@ def summon_command(
     # Build the instruction message
     instruction = _build_instruction_message(
         role=role,
-        persona=persona,
+        daemon=daemon,
         auto_assign=auto_assign,
         task=task,
         desk=desk,
@@ -126,8 +128,8 @@ def summon_command(
 
         # Build command for desk_worker.py with appropriate arguments
         cmd = ["uv", "run", "python", str(desk_worker_script), role]
-        if persona:
-            cmd.extend(["--persona", persona])
+        if daemon:
+            cmd.extend(["--daemon", daemon])
         if model:
             cmd.extend(["--model", model])
 
@@ -144,7 +146,20 @@ def summon_command(
             )
             return
         try:
-            subprocess.Popen(cmd, cwd=str(repo_root))
+            # Redirect stdout/stderr to a log file so desk worker output
+            # doesn't pollute the terminal. The log lives alongside the
+            # typerdrive app logs in ~/.local/state/site-nine/logs/.
+            from typerdrive.config import get_typerdrive_config
+
+            log_dir = get_typerdrive_config().log_dir
+            log_dir.mkdir(parents=True, exist_ok=True)
+            log_file = log_dir / f"desk-worker-{role}.log"
+            fh = open(log_file, "a")
+            subprocess.Popen(cmd, cwd=str(repo_root), stdout=fh, stderr=fh)
+            terminal_message(
+                f"Worker output is being logged to: {log_file}",
+                subject="Desk Log",
+            )
         except FileNotFoundError:
             raise CLIError(f"desk_worker.py module not found at {desk_worker_script}")
     else:

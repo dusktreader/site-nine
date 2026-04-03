@@ -12,7 +12,7 @@ This tool:
 
 import sys
 import json
-from loguru import logger
+from tool_logging import logger
 
 from site_nine.core.database import Database
 from site_nine.core.paths import get_db_path
@@ -34,7 +34,7 @@ def task_to_dict(task) -> dict:
         "category": task.category,
         "description": task.description,
         "notes": task.notes,
-        "current_mission_id": task.current_mission_id,
+        "current_mission_id": task.current_possession_id,
         "epic_id": task.epic_id,
     }
 

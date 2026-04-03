@@ -195,12 +195,12 @@ class EpicManager:
 
         Args:
             epic_id: Epic ID
-            **updates: Fields to update (title, description, priority, status_details)
+            **updates: Fields to update (title, description, priority)
 
         Returns:
             Updated Epic instance
         """
-        allowed_fields = {"title", "description", "priority", "status_details"}
+        allowed_fields = {"title", "description", "priority"}
         update_fields = []
         params = {"epic_id": epic_id}
 
@@ -254,19 +254,19 @@ class EpicManager:
             Caller should implement double confirmation (CLI prompt + agent asks user).
             Epic status will automatically become ABORTED after tasks are aborted.
         """
-        # Update epic status_details with abort reason
+        # Update epic aborted_reason with abort reason
         abort_note = f"Aborted on {pendulum.now('UTC').format('YYYY-MM-DD')}: {reason}"
         now_str = utc_now()
         enforce_defined(
             self.db.execute_query(
                 """
                 UPDATE epics
-                SET status_details = :status_details,
+                SET aborted_reason = :aborted_reason,
                     updated_at = :now
                 WHERE id = :epic_id
                 RETURNING *
                 """,
-                {"epic_id": epic_id, "status_details": abort_note, "now": now_str},
+                {"epic_id": epic_id, "aborted_reason": abort_note, "now": now_str},
             ),
             f"Failed to abort epic {epic_id}",
             raise_exc_class=EpicError,
@@ -280,7 +280,7 @@ class EpicManager:
                 notes = COALESCE(notes || '\n\n', '') || :abort_note,
                 closed_at = :now,
                 updated_at = :now,
-                current_mission_id = NULL
+                current_possession_id = NULL
             WHERE epic_id = :epic_id
               AND status NOT IN ('COMPLETE', 'ABORTED')
             RETURNING *
@@ -546,8 +546,8 @@ class EpicManager:
             f"**Updated:** {epic.updated_at}",
         ]
 
-        if epic.status_details:
-            header_parts.append(f"**Status Notes:** {epic.status_details}")
+        if epic.aborted_reason:
+            header_parts.append(f"**Aborted:** {epic.aborted_reason}")
 
         if epic.subtask_count and epic.subtask_count > 0:
             progress_bar = generate_progress_bar(epic.progress_percent)

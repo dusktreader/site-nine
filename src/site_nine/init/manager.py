@@ -15,7 +15,7 @@ PROJECT_TYPES = ["python", "typescript", "go", "rust", "other"]
 WORK_SUBDIRECTORIES = [
     "work/tasks",
     "work/epics",
-    "work/missions",
+    "work/possessions",
     "work/planning",
     "work/scripts",
     "work/sessions",

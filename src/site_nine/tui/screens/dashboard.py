@@ -102,32 +102,30 @@ class DashboardScreen(Screen):
 
         lines: list[str] = []
 
-        # ---- Active missions ------------------------------------------
+        # ---- Active possessions ------------------------------------------
         try:
-            from site_nine.missions.manager import MissionManager
+            from site_nine.possessions.manager import PossessionManager
 
-            mm = MissionManager(self._db)
-            active = mm.list_missions(active_only=True)
+            mm = PossessionManager(self._db)
+            active = mm.list_possessions(active_only=True)
 
-            lines.append("[bold underline]Active Missions[/bold underline]")
+            lines.append("[bold underline]Active Possessions[/bold underline]")
             if active:
-                lines.append(f"  [green]{len(active)} mission(s) running[/green]\n")
+                lines.append(f"  [green]{len(active)} possession(s) running[/green]\n")
                 for m in active[:10]:
                     status_col = STATUS_COLOURS.get(
                         m.status.value if hasattr(m.status, "value") else str(m.status), "white"
                     )
                     sym = STATUS_SYMBOLS.get(m.status.value if hasattr(m.status, "value") else str(m.status), "●")
                     lines.append(
-                        f"  [{status_col}]{sym}[/{status_col}] "
-                        f"[bold]#{m.id}[/bold] {m.persona_name} ({m.role})  "
-                        f"[dim]{truncate(m.objective or '', 60)}[/dim]"
+                        f"  [{status_col}]{sym}[/{status_col}] [bold]#{m.id}[/bold] {m.daemon_name} ({m.role})"
                     )
                 if len(active) > 10:
                     lines.append(f"  [dim]...and {len(active) - 10} more[/dim]")
             else:
-                lines.append("  [dim]No active missions.[/dim]")
+                lines.append("  [dim]No active possessions.[/dim]")
         except Exception as exc:  # noqa: BLE001
-            lines.append(f"  [red]Error loading missions: {exc}[/red]")
+            lines.append(f"  [red]Error loading possessions: {exc}[/red]")
 
         lines.append("")
 

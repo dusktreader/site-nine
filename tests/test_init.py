@@ -152,7 +152,7 @@ def test_init_command_creates_empty_work_dirs(project_dir: Path):
 
     assert (opencode_dir / "work" / "tasks").exists()
     assert (opencode_dir / "work" / "epics").exists()
-    assert (opencode_dir / "work" / "missions").exists()
+    assert (opencode_dir / "work" / "possessions").exists()
     assert (opencode_dir / "work" / "planning").exists()
     assert (opencode_dir / "work" / "scripts").exists()
     assert (opencode_dir / "work" / "sessions").exists()
@@ -171,8 +171,8 @@ def test_init_command_populates_daemon_names(project_dir: Path):
     from site_nine.core.database import Database
 
     with Database(project_dir / ".opencode" / "data" / "project.db") as db:
-        personas = db.execute_query("SELECT COUNT(*) as count FROM personas")
-        assert personas[0]["count"] > 0
+        daemons = db.execute_query("SELECT COUNT(*) as count FROM daemons")
+        assert daemons[0]["count"] > 0
 
 
 def test_init_command_fails_if_opencode_exists(project_dir: Path):

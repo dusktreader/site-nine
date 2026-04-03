@@ -5,8 +5,8 @@ export default tool({
   description:
     "Query site-nine tasks. Modes: " +
     "(1) show a single task by ID — supply task_id; " +
-    "(2) list tasks with optional filters — supply role, status, and/or mission_id without task_id; " +
-    "(3) show tasks owned by a mission — supply mission_id alone; " +
+    "(2) list tasks with optional filters — supply role, status, and/or possession_id without task_id; " +
+    "(3) show tasks owned by a possession — supply possession_id alone; " +
     "(4) generate a summary report — supply report=true.",
   args: {
     task_id: tool.schema
@@ -21,10 +21,10 @@ export default tool({
       .string()
       .optional()
       .describe("Filter by status: TODO, UNDERWAY, COMPLETE, or ABORTED."),
-    mission_id: tool.schema
+    possession_id: tool.schema
       .number()
       .optional()
-      .describe("Filter by mission ID. When used alone (without task_id/role/status) returns tasks owned by that mission."),
+      .describe("Filter by possession ID. When used alone (without task_id/role/status) returns tasks owned by that possession."),
     report: tool.schema
       .boolean()
       .optional()
@@ -40,7 +40,7 @@ export default tool({
       task_id: args.task_id ?? null,
       role: args.role ?? null,
       status: args.status ?? null,
-      mission_id: args.mission_id ?? null,
+      possession_id: args.possession_id ?? null,
       report: args.report ?? false,
       active_only: args.active_only ?? false,
     })

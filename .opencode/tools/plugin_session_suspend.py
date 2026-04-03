@@ -22,13 +22,13 @@ Output (stdout, JSON):
 
 import sys
 import json
-from loguru import logger
+from tool_logging import logger
 
 from site_nine.core.database import Database
 from site_nine.core.paths import get_db_path
 from site_nine.core.utils import utc_now
-from site_nine.missions.manager import MissionManager
-from site_nine.missions.types import MissionStatus
+from site_nine.possessions.manager import PossessionManager
+from site_nine.possessions.types import PossessionStatus
 
 
 def main() -> str:
@@ -42,13 +42,14 @@ def main() -> str:
         db_path = get_db_path()
         db = Database(db_path)
 
-        # Find mission bound to this session in a suspendable state
+        # Find possession bound to this session in a suspendable state
         rows = db.execute_query(
             """
-            SELECT id, codename, status
-            FROM missions
+            SELECT id, status
+            FROM possessions
             WHERE opencode_session_id = :session_id
-              AND status NOT IN ('ENDED', 'SUSPENDED')
+              AND status != 'EXORCISED'
+              AND status != 'SUSPENDED'
             LIMIT 1
             """,
             {"session_id": session_id},
@@ -60,32 +61,29 @@ def main() -> str:
 
         mission = rows[0]
         mission_id = mission["id"]
-        codename = mission["codename"]
         current_status = mission["status"]
 
-        # Skip if already ended
-        if current_status == MissionStatus.ENDED.value:
+        # Skip if already exorcised
+        if current_status == PossessionStatus.EXORCISED.value:
             logger.info(
                 "plugin_session_suspend_skipped_ended",
                 mission_id=mission_id,
-                codename=codename,
             )
             return json.dumps({"status": "skipped", "reason": "already_ended", "mission_id": mission_id})
 
-        # Suspend the mission
-        manager = MissionManager(db)
-        manager.suspend_mission(mission_id, reason=reason)
+        # Suspend the possession
+        manager = PossessionManager(db)
+        manager.suspend_possession(mission_id, reason=reason)
 
         logger.info(
             "plugin_session_suspended",
             mission_id=mission_id,
-            codename=codename,
             session_id=session_id,
             reason=reason,
             previous_status=current_status,
         )
 
-        return json.dumps({"status": "suspended", "mission_id": mission_id, "codename": codename})
+        return json.dumps({"status": "suspended", "mission_id": mission_id})
 
     except Exception as e:
         logger.exception("plugin_session_suspend_error", error=str(e))

@@ -14,9 +14,9 @@ from site_nine.core.database import Database
 from site_nine.core.roles import Role
 from site_nine.core.settings import SiteNineSettings
 from site_nine.exceptions import SiteNineError
-from site_nine.missions import MissionManager
-from site_nine.missions.models import Mission
-from site_nine.missions.types import MissionStatus
+from site_nine.possessions import PossessionManager
+from site_nine.possessions.models import Possession as Mission
+from site_nine.possessions.types import PossessionStatus as MissionStatus
 from site_nine.opencode import OpenCodeSessionManager
 
 app = typer.Typer(help="Manage missions")
@@ -58,7 +58,7 @@ def start(
     role = role.title()
 
     with Database(db_path) as db:
-        manager = MissionManager(db)
+        manager = PossessionManager(db)
 
         # Validate epic exists if provided
         if epic:
@@ -67,12 +67,12 @@ def start(
                 bool(epic_result), f"Epic {epic} not found. Use 's9 epic list' to see available epics."
             )
 
-        mission_id = manager.start_mission(role=role, objective=task, persona_name=name, epic_id=epic)
+        mission_id = manager.start_possession(role=role, daemon_name=name, epic_id=epic)
 
         # Get the persona name if it was auto-assigned
         if name is None:
-            mission = manager.get_mission(mission_id)
-            name = mission.persona_name if mission else "unknown"
+            mission = manager.get_possession(mission_id)
+            name = mission.daemon_name if mission else "unknown"
 
     lines = [
         f"Started mission #{mission_id}",
@@ -101,8 +101,8 @@ def list(
         role = role.title()
 
     with Database(db_path) as db:
-        manager = MissionManager(db)
-        missions = manager.list_missions(active_only=active_only, role=role, epic_id=epic)
+        manager = PossessionManager(db)
+        missions = manager.list_possessions(active_only=active_only, role=role, epic_id=epic)
 
         # Build mapping of mission_id -> current_task_id for active missions
         mission_task_map: dict[int, str | None] = {}
@@ -111,15 +111,15 @@ def list(
             placeholders = ", ".join(f":m{i}" for i in range(len(active_mission_ids)))
             params = {f"m{i}": mid for i, mid in enumerate(active_mission_ids)}
             task_rows = db.execute_query(
-                f"SELECT id, current_mission_id FROM tasks WHERE current_mission_id IN ({placeholders}) AND status = 'UNDERWAY'",
+                f"SELECT id, current_possession_id FROM tasks WHERE current_possession_id IN ({placeholders}) AND status = 'UNDERWAY'",
                 params,
             )
             for row in task_rows:
-                mission_task_map[row["current_mission_id"]] = row["id"]
+                mission_task_map[row["current_possession_id"]] = row["id"]
 
     def _get_availability(mission: Mission) -> str:
         """Compute availability status per ADR-009."""
-        if mission.status == MissionStatus.ENDED:
+        if mission.status == MissionStatus.EXORCISED:
             return "Ended"
         if mission.desk_mode_active:
             if mission.epic_id:
@@ -131,8 +131,6 @@ def list(
             return f"Working ({mission.epic_id})"
         if current_task_id:
             return f"Working ({current_task_id})"
-        if mission.status == MissionStatus.IDLE:
-            return "Idle"
         return "Working"
 
     if not missions:
@@ -146,9 +144,9 @@ def list(
         missions_data = [
             {
                 "id": mission.id,
-                "persona_name": mission.persona_name,
+                "persona_name": mission.daemon_name,
                 "role": mission.role,
-                "codename": mission.codename,
+                "codename": "",
                 "status": mission.status.value,
                 "epic_id": mission.epic_id,
                 "desk_mode_active": mission.desk_mode_active,
@@ -156,9 +154,9 @@ def list(
                 "availability": _get_availability(mission),
                 "start_time": mission.start_time,
                 "end_time": mission.end_time,
-                "start_date": mission.start_date,
-                "objective": mission.objective,
-                "mission_file": mission.mission_file,
+                "start_date": "",
+                "objective": "",
+                "mission_file": mission.possession_log,
             }
             for mission in missions
         ]
@@ -176,9 +174,9 @@ def list(
         for mission in missions:
             table.add_row(
                 str(mission.id),
-                mission.persona_name,
+                mission.daemon_name,
                 mission.role,
-                mission.codename,
+                "",
                 _get_availability(mission),
                 mission.start_time or "",
                 mission.end_time or "",
@@ -197,8 +195,8 @@ def show(
     db_path = require_db_path()
 
     with Database(db_path) as db:
-        manager = MissionManager(db)
-        mission = manager.get_mission(mission_id)
+        manager = PossessionManager(db)
+        mission = manager.get_possession(mission_id)
 
     if not mission:
         if json_output:
@@ -221,7 +219,7 @@ def show(
     else:
         # Check if this mission has a claimed task (task-scoped)
         task_rows = db.execute_query(
-            "SELECT id FROM tasks WHERE current_mission_id = :mission_id LIMIT 1",
+            "SELECT id FROM tasks WHERE current_possession_id = :mission_id LIMIT 1",
             {"mission_id": mission.id},
         )
         if task_rows:
@@ -232,34 +230,30 @@ def show(
     if json_output:
         mission_data = {
             "id": mission.id,
-            "persona_name": mission.persona_name,
-            "codename": mission.codename,
+            "persona_name": mission.daemon_name,
+            "codename": "",
             "role": mission.role,
             "status": status,
-            "start_date": mission.start_date,
+            "start_date": "",
             "start_time": mission.start_time,
             "end_time": mission.end_time,
-            "mission_file": mission.mission_file,
-            "objective": mission.objective,
+            "mission_file": mission.possession_log,
+            "objective": "",
             "epic_id": mission.epic_id,
             "scope": scope_info,
         }
         output_json(format_json_response(mission_data))
     else:
         lines = [
-            f"Persona: {mission.persona_name}",
-            f"Codename: {mission.codename}",
+            f"Persona: {mission.daemon_name}",
             f"Role: {mission.role}",
             f"Status: {status}",
             f"Scope: {scope_info}",
-            f"Start Date: {mission.start_date}",
             f"Start Time: {mission.start_time}",
         ]
         if mission.end_time:
             lines.append(f"End Time: {mission.end_time}")
-        lines.append(f"Mission File: {mission.mission_file}")
-        if mission.objective:
-            lines.append(f"Objective: {mission.objective}")
+        lines.append(f"Mission File: {mission.possession_log}")
         terminal_message(conjoin(*lines), subject=f"Mission #{mission.id}")
 
 
@@ -279,7 +273,7 @@ def summary(
     db_path = require_db_path()
 
     with Database(db_path) as db:
-        manager = MissionManager(db)
+        manager = PossessionManager(db)
 
         try:
             mission_summary = manager.generate_summary(mission_id)
@@ -295,7 +289,7 @@ def summary(
                 raise typer.Exit(code=1)
             raise CLIError(f"Mission #{mission_id} not found.")
 
-    mission = mission_summary.mission
+    mission = mission_summary.possession
 
     if not json_output:
         for warning in mission_summary.warnings:
@@ -304,12 +298,12 @@ def summary(
     if json_output:
         summary_data = {
             "mission_id": mission.id,
-            "persona_name": mission.persona_name,
+            "persona_name": mission.daemon_name,
             "role": mission.role,
-            "codename": mission.codename,
+            "codename": "",
             "start_time": mission.start_time,
             "end_time": mission.end_time,
-            "objective": mission.objective,
+            "objective": "",
             "files_changed": [{"status": f.status, "file": f.file} for f in mission_summary.files_changed],
             "commits": mission_summary.commits,
             "tasks": [{"id": t.id, "title": t.title, "status": t.status} for t in mission_summary.tasks],
@@ -317,15 +311,12 @@ def summary(
         output_json(format_json_response(summary_data))
     else:
         lines = [
-            f"Mission #{mission.id} ({mission.persona_name} - {mission.role})",
+            f"Mission #{mission.id} ({mission.daemon_name} - {mission.role})",
             "",
-            f"Codename: {mission.codename}",
             f"Start: {mission.start_time}",
         ]
         if mission.end_time:
             lines.append(f"End: {mission.end_time}")
-        if mission.objective:
-            lines.append(f"Objective: {mission.objective}")
 
         lines.append("")
         lines.append("Files Changed:")
@@ -369,10 +360,10 @@ def end(
     db_path = require_db_path()
 
     with Database(db_path) as db:
-        manager = MissionManager(db)
-        CLIError.enforce_defined(manager.get_mission(mission_id), f"Mission #{mission_id} not found.")
+        manager = PossessionManager(db)
+        CLIError.enforce_defined(manager.get_possession(mission_id), f"Mission #{mission_id} not found.")
 
-        manager.end_mission(mission_id)
+        manager.exorcise(mission_id)
 
     terminal_message(
         f"Ended mission #{mission_id}",
@@ -396,11 +387,11 @@ def suspend(
     db_path = require_db_path()
 
     with Database(db_path) as db:
-        manager = MissionManager(db)
-        mission = CLIError.enforce_defined(manager.get_mission(mission_id), f"Mission #{mission_id} not found.")
+        manager = PossessionManager(db)
+        mission = CLIError.enforce_defined(manager.get_possession(mission_id), f"Mission #{mission_id} not found.")
 
         # Check mission status
-        if mission.status == MissionStatus.ENDED:
+        if mission.status == MissionStatus.EXORCISED:
             terminal_message(
                 f"Mission #{mission_id} has already ended and cannot be suspended.",
                 subject="Error",
@@ -416,11 +407,11 @@ def suspend(
             )
             raise typer.Exit(code=0)
 
-        manager.suspend_mission(mission_id, reason=reason)
+        manager.suspend_possession(mission_id, reason=reason)
 
     reason_text = f"\nReason: {reason}" if reason else ""
     terminal_message(
-        f"Suspended mission #{mission_id} ({mission.codename}){reason_text}",
+        f"Suspended mission #{mission_id}{reason_text}",
         subject="Done",
         subject_color="green",
     )
@@ -446,16 +437,15 @@ def resume(
     db_path = require_db_path()
 
     with Database(db_path) as db:
-        manager = MissionManager(db)
+        manager = PossessionManager(db)
 
-        # Try to parse as integer ID first, otherwise treat as codename
+        # Try to parse as integer ID first
         mission = None
         try:
             mission_id = int(mission_identifier)
-            mission = manager.get_mission(mission_id)
+            mission = manager.get_possession(mission_id)
         except ValueError:
-            # Not an integer, try as codename
-            mission = manager.get_mission_by_codename(mission_identifier)
+            pass
 
         mission = CLIError.enforce_defined(
             mission, f"Mission '{mission_identifier}' not found. Use 's9 mission list' to see available missions."
@@ -464,7 +454,7 @@ def resume(
         # Check mission status
         if mission.status != MissionStatus.SUSPENDED:
             terminal_message(
-                f"Mission #{mission.id} ({mission.codename}) is not suspended (current status: {mission.status}).\n"
+                f"Mission #{mission.id} is not suspended (current status: {mission.status}).\n"
                 f"Only suspended missions can be resumed.",
                 subject="Error",
                 subject_color="red",
@@ -473,13 +463,13 @@ def resume(
 
         # Get task information for context
         task_rows = db.execute_query(
-            "SELECT id, title, status FROM tasks WHERE current_mission_id = :mission_id",
+            "SELECT id, title, status FROM tasks WHERE current_possession_id = :mission_id",
             {"mission_id": mission.id},
         )
 
         # Resume the mission in the database (skip if dry run)
         if not dry_run:
-            manager.resume_mission(mission.id or 0)
+            manager.resume_possession(mission.id or 0)
 
     # Get model from config if not specified
     if model is None:
@@ -488,12 +478,10 @@ def resume(
 
     # Build context message for resumed mission
     context_lines = [
-        f"Resuming mission #{mission.id} ({mission.codename})",
-        f"Persona: {mission.persona_name}",
+        f"Resuming mission #{mission.id}",
+        f"Persona: {mission.daemon_name}",
         f"Role: {mission.role}",
     ]
-    if mission.objective:
-        context_lines.append(f"Objective: {mission.objective}")
     if mission.epic_id:
         context_lines.append(f"Epic: {mission.epic_id}")
 
@@ -518,7 +506,7 @@ def resume(
         return
 
     terminal_message(
-        f"Resuming mission #{mission.id} ({mission.codename})\nLaunching OpenCode...",
+        f"Resuming mission #{mission.id}\nLaunching OpenCode...",
         subject="Resume",
     )
 
@@ -558,15 +546,15 @@ def update(
         role = role.title()
 
     with Database(db_path) as db:
-        manager = MissionManager(db)
-        mission = CLIError.enforce_defined(manager.get_mission(mission_id), f"Mission #{mission_id} not found.")
+        manager = PossessionManager(db)
+        mission = CLIError.enforce_defined(manager.get_possession(mission_id), f"Mission #{mission_id} not found.")
 
         CLIError.require_condition(
             mission.end_time is None,
             "Cannot update completed mission. Only active missions can be updated.",
         )
 
-        manager.update_mission(mission_id, objective=objective, role=role)
+        manager.update_possession(mission_id, role=role)
 
     lines = [f"Updated mission #{mission_id}"]
     if objective:
@@ -589,7 +577,7 @@ def heartbeat(
     db_path = require_db_path()
 
     with Database(db_path) as db:
-        manager = MissionManager(db)
+        manager = PossessionManager(db)
         manager.heartbeat(mission_id)
 
     terminal_message(
@@ -713,33 +701,27 @@ def rename_tui(
 
     session_id_value = CLIError.enforce_defined(detection.session_id, "Failed to determine session ID.")
 
-    # Get mission codename and current task from database
+    # Get current possession and task from database
     db_path = opencode_dir / "data" / "project.db"
     with Database(db_path) as db:
-        manager = MissionManager(db)
-        codename = manager.get_active_codename(name)
-
-        # Get current mission ID and task
+        # Get current possession ID and task
         mission_result = db.execute_query(
-            "SELECT id FROM missions WHERE persona_name = :persona_name AND end_time IS NULL ORDER BY created_at DESC LIMIT 1",
-            {"persona_name": name.lower()},
+            "SELECT id FROM possessions WHERE daemon_name = :daemon_name AND status != 'EXORCISED' ORDER BY created_at DESC LIMIT 1",
+            {"daemon_name": name.lower()},
         )
 
         current_task = None
         if mission_result:
             mission_id = mission_result[0]["id"]
             task_result = db.execute_query(
-                "SELECT id, title FROM tasks WHERE current_mission_id = :mission_id AND status = 'UNDERWAY' LIMIT 1",
+                "SELECT id, title FROM tasks WHERE current_possession_id = :mission_id AND status = 'UNDERWAY' LIMIT 1",
                 {"mission_id": mission_id},
             )
             if task_result:
                 current_task = task_result[0]
 
-    # Build title with task info if available
-    if codename:
-        new_title = f"Operation {codename}: {name.capitalize()} - {role}"
-    else:
-        new_title = f"{name.capitalize()} - {role}"
+    # Build title
+    new_title = f"{name.capitalize()} - {role}"
 
     if current_task:
         new_title = f"{new_title} | {current_task['id']}"

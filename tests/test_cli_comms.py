@@ -26,49 +26,45 @@ runner = CliRunner()
 
 
 def _setup_missions(project_dir: Path) -> tuple[int, int]:
-    """Set up two active missions in the project database and return their IDs.
+    """Set up two active possessions in the project database and return their IDs.
 
-    m2 gets a later start_time so _get_current_mission_id reliably returns m2
-    as the "current" mission. This means:
-    - Current mission = m2
+    m2 gets a later created_at so _get_current_mission_id reliably returns m2
+    as the "current" possession. This means:
+    - Current possession = m2
     - Send --to-mission m1 = valid (m2 -> m1)
     - Send --to-mission m2 = self-send error
     """
     db_path = project_dir / ".opencode" / "data" / "project.db"
 
     with Database(db_path) as db:
-        # Add personas first
+        # Add daemons first
         db.execute_update(
             """
-            INSERT OR IGNORE INTO personas (name, role, mythology, description)
+            INSERT OR IGNORE INTO daemons (name, role, incarnations)
             VALUES
-                ('cli-alpha', 'Operator', 'Test', 'CLI alpha persona'),
-                ('cli-beta', 'Tester', 'Test', 'CLI beta persona')
+                ('cli-alpha', 'Operator', 0),
+                ('cli-beta', 'Tester', 0)
             """
         )
 
-        # Create two active missions
+        # Create two active possessions
         m1 = db.execute_insert(
             """
-            INSERT INTO missions (
-                persona_name, role, codename, mission_file,
-                start_date, start_time, objective
-            ) VALUES (
-                'cli-alpha', 'Operator', 'cli-one',
-                '.opencode/work/missions/cli-1.md',
-                '2026-02-14', '10:00:00', 'CLI test mission 1'
+            INSERT INTO possessions (daemon_name, role, possession_log, created_at, updated_at)
+            VALUES (
+                'cli-alpha', 'Operator',
+                '.opencode/work/possessions/cli-1.md',
+                datetime('now', '-1 hour'), datetime('now', '-1 hour')
             )
             """
         )
         m2 = db.execute_insert(
             """
-            INSERT INTO missions (
-                persona_name, role, codename, mission_file,
-                start_date, start_time, objective
-            ) VALUES (
-                'cli-beta', 'Tester', 'cli-two',
-                '.opencode/work/missions/cli-2.md',
-                '2026-02-14', '11:00:00', 'CLI test mission 2'
+            INSERT INTO possessions (daemon_name, role, possession_log, created_at, updated_at)
+            VALUES (
+                'cli-beta', 'Tester',
+                '.opencode/work/possessions/cli-2.md',
+                datetime('now'), datetime('now')
             )
             """
         )

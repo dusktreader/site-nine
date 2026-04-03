@@ -8,6 +8,14 @@ metadata:
   workflow: mission-closure
 ---
 
+> **⛔ DEPRECATED SKILL ⛔**
+>
+> This skill references `mission_end` and `mission_rename_dismissed` tools that **no longer exist**. They were
+> removed as part of the possession/daemon refactor (EPC-H-0008).
+>
+> **Use the `possession-end` skill instead.** It is the current replacement and uses `possession_end` and
+> `possession_rename_exorcised` tools.
+
 ## ⚠️ BEFORE YOU PROCEED - VERIFY DISMISSAL ⚠️
 
 **STOP! Read this carefully before executing this skill:**

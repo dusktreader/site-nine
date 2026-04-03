@@ -16,9 +16,9 @@ ScopeType = Literal["role", "epic", "all"]
 @dataclass
 class Conversation:
     """
-    A conversation or discussion between missions.
+    A conversation or discussion between possessions.
 
-    Conversations are 1-on-1 between two missions with flat message structure.
+    Conversations are 1-on-1 between two possessions with flat message structure.
     Discussions are scoped to role/epic/all with threaded messages.
 
     Attributes:
@@ -26,8 +26,8 @@ class Conversation:
         subject: Conversation subject
         type: 'conversation' (1-on-1) or 'discussion' (scoped group)
         status: 'open' or 'closed'
-        participant_1_id: First participant mission ID (NULL for discussions)
-        participant_2_id: Second participant mission ID (NULL for discussions)
+        participant_1_id: First participant possession ID (NULL for discussions)
+        participant_2_id: Second participant possession ID (NULL for discussions)
         scope_type: 'role', 'epic', or 'all' (NULL for conversations)
         scope_role: Role name if scope_type='role'
         scope_epic_id: Epic ID if scope_type='epic'
@@ -85,10 +85,10 @@ class Conversation:
         """Check if this is a scoped discussion."""
         return self.type == "discussion"
 
-    def is_participant(self, mission_id: int) -> bool:
-        """Check if a mission is a participant in this conversation."""
+    def is_participant(self, possession_id: int) -> bool:
+        """Check if a possession is a participant in this conversation."""
         if self.is_conversation():
-            return mission_id in (self.participant_1_id, self.participant_2_id)
+            return possession_id in (self.participant_1_id, self.participant_2_id)
         return False  # Discussions use dynamic scoping
 
 
@@ -100,7 +100,7 @@ class Message:
     Attributes:
         id: Message identifier (MSG-[P]-[NNNN] format, P = priority)
         conversation_id: Parent conversation/discussion ID
-        from_mission_id: Sender mission ID
+        from_possession_id: Sender possession ID
         subject: Message subject
         body: Markdown-formatted body
         priority: CRITICAL, HIGH, MEDIUM, or LOW
@@ -115,7 +115,7 @@ class Message:
 
     id: str
     conversation_id: str
-    from_mission_id: int
+    from_possession_id: int
     subject: str
     body: str
     priority: MessagePriority
@@ -136,7 +136,7 @@ class Message:
         return cls(
             id=row["id"],
             conversation_id=row["conversation_id"],
-            from_mission_id=row["from_mission_id"],
+            from_possession_id=row["from_possession_id"],
             subject=row["subject"],
             body=row["body"],
             priority=row["priority"],
@@ -161,16 +161,16 @@ class Message:
 @dataclass
 class ConversationView:
     """
-    Tracks when a mission last viewed a conversation.
+    Tracks when a possession last viewed a conversation.
 
     Attributes:
         conversation_id: Conversation/discussion ID
-        mission_id: Mission ID
+        possession_id: Possession ID
         last_viewed_at: Last view timestamp
     """
 
     conversation_id: str
-    mission_id: int
+    possession_id: int
     last_viewed_at: pendulum.DateTime
 
     @classmethod
@@ -180,7 +180,7 @@ class ConversationView:
 
         return cls(
             conversation_id=row["conversation_id"],
-            mission_id=row["mission_id"],
+            possession_id=row["possession_id"],
             last_viewed_at=last_viewed_at,
         )
 
@@ -188,16 +188,16 @@ class ConversationView:
 @dataclass
 class MessageAcknowledgement:
     """
-    Tracks when a mission acknowledges/processes a specific message.
+    Tracks when a possession acknowledges/processes a specific message.
 
     Attributes:
         message_id: Message identifier
-        mission_id: Mission ID that acknowledged the message
+        possession_id: Possession ID that acknowledged the message
         acknowledged_at: Acknowledgement timestamp
     """
 
     message_id: str
-    mission_id: int
+    possession_id: int
     acknowledged_at: pendulum.DateTime
 
     @classmethod
@@ -207,6 +207,6 @@ class MessageAcknowledgement:
 
         return cls(
             message_id=row["message_id"],
-            mission_id=row["mission_id"],
+            possession_id=row["possession_id"],
             acknowledged_at=acknowledged_at,
         )

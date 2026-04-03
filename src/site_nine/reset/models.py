@@ -19,7 +19,6 @@ class ResetResult:
     """Summary of what was deleted during reset"""
 
     mission_files: int = 0
-    handoff_files: int = 0
     task_files: int = 0
     mission_records: int = 0
     task_records: int = 0

@@ -11,29 +11,24 @@ class ResetManager:
         self.db = db
 
     def get_counts(self) -> ResetCounts:
-        """Get current record counts for missions, tasks, and dependencies."""
-        mission_count = self.db.execute_query("SELECT COUNT(*) as count FROM missions")[0]["count"]
+        """Get current record counts for possessions, tasks, and dependencies."""
+        possession_count = self.db.execute_query("SELECT COUNT(*) as count FROM possessions")[0]["count"]
         task_count = self.db.execute_query("SELECT COUNT(*) as count FROM tasks")[0]["count"]
         dep_count = self.db.execute_query("SELECT COUNT(*) as count FROM task_dependencies")[0]["count"]
-        return ResetCounts(missions=mission_count, tasks=task_count, dependencies=dep_count)
+        return ResetCounts(missions=possession_count, tasks=task_count, dependencies=dep_count)
 
-    def delete_files(self, opencode_dir: Path) -> tuple[int, int, int, list[str]]:
+    def delete_files(self, opencode_dir: Path) -> tuple[int, int, list[str]]:
         """
-        Delete mission, handoff, and task markdown files.
+        Delete possession and task markdown files.
 
         Returns:
-            Tuple of (mission_files_deleted, handoff_files_deleted, task_files_deleted, warnings)
+            Tuple of (possession_files_deleted, task_files_deleted, warnings)
         """
         warnings: list[str] = []
 
-        mission_files = self._delete_dir_files(
-            opencode_dir / "work" / "missions",
+        possession_files = self._delete_dir_files(
+            opencode_dir / "work" / "possessions",
             skip={"README.md", "TEMPLATE.md"},
-            warnings=warnings,
-        )
-
-        handoff_files = self._delete_dir_files(
-            opencode_dir / "work" / "missions" / "handoffs",
             warnings=warnings,
         )
 
@@ -43,14 +38,14 @@ class ResetManager:
             warnings=warnings,
         )
 
-        return mission_files, handoff_files, task_files, warnings
+        return possession_files, task_files, warnings
 
     def delete_records(self, counts: ResetCounts) -> None:
-        """Delete all mission, task, and dependency records, and reset persona counters."""
+        """Delete all possession, task, and dependency records, and reset daemon counters."""
         self.db.execute_update("DELETE FROM task_dependencies")
         self.db.execute_update("DELETE FROM tasks")
-        self.db.execute_update("DELETE FROM missions")
-        self.db.execute_update("UPDATE personas SET mission_count = 0, last_mission_at = NULL")
+        self.db.execute_update("DELETE FROM possessions")
+        self.db.execute_update("UPDATE daemons SET incarnations = 0, last_possession = NULL")
 
     def vacuum(self) -> str | None:
         """
@@ -77,7 +72,7 @@ class ResetManager:
         """
         counts = self.get_counts()
 
-        mission_files, handoff_files, task_files, warnings = self.delete_files(opencode_dir)
+        possession_files, task_files, warnings = self.delete_files(opencode_dir)
 
         self.delete_records(counts)
 
@@ -86,8 +81,7 @@ class ResetManager:
             warnings.append(vacuum_warning)
 
         return ResetResult(
-            mission_files=mission_files,
-            handoff_files=handoff_files,
+            mission_files=possession_files,
             task_files=task_files,
             mission_records=counts.missions,
             task_records=counts.tasks,

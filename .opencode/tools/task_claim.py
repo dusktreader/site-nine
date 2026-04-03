@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-task_claim tool - Claim a task for the current mission.
+task_claim tool - Claim a task for the current possession.
 
 This tool:
-1. Receives task_id, mission_id, and role
+1. Receives task_id, possession_id, and role
 2. Validates the task exists and role matches
 3. Checks for unresolved external blockers
 4. Checks for incomplete task dependencies
@@ -13,7 +13,7 @@ This tool:
 
 import sys
 import json
-from loguru import logger
+from tool_logging import logger
 
 from site_nine.blocks import BlockManager
 from site_nine.core.database import Database
@@ -27,10 +27,10 @@ def main():
     try:
         context = json.loads(sys.stdin.read())
         task_id = context["task_id"]
-        mission_id = int(context["mission_id"])
+        possession_id = int(context["possession_id"])
         role = context["role"]
 
-        logger.debug("task_claim called", task_id=task_id, mission_id=mission_id, role=role)
+        logger.debug("task_claim called", task_id=task_id, possession_id=possession_id, role=role)
 
         db_path = get_db_path()
         db = Database(db_path)
@@ -84,12 +84,12 @@ def main():
             )
 
         # Claim the task
-        manager.claim_task(task_id, mission_id, role)
+        manager.claim_task(task_id, possession_id, role)
 
         logger.info(
             "task_claimed",
             task_id=task_id,
-            mission_id=mission_id,
+            possession_id=possession_id,
             role=role,
             title=task.title,
         )
@@ -101,7 +101,7 @@ def main():
                 "status": TaskStatus.UNDERWAY.value,
                 "priority": task.priority,
                 "role": task.role,
-                "mission_id": mission_id,
+                "possession_id": possession_id,
             }
         )
 

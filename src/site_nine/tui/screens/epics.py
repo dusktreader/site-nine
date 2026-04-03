@@ -131,8 +131,8 @@ class EpicFullPage(Screen):
             lines.append(epic.description)
             lines.append("")
 
-        if epic.status_details:
-            lines.append(f"[bold]Status Notes:[/bold] {epic.status_details}")
+        if epic.aborted_reason:
+            lines.append(f"[bold]Abort Reason:[/bold] {epic.aborted_reason}")
             lines.append("")
 
         # Timestamps

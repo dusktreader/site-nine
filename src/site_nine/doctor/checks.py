@@ -178,50 +178,35 @@ def check_temp_files(db_path: Path, *, verbose: bool = False) -> InfraResult:
 
 
 def check_mission_personas(db: Database, *, verbose: bool = False) -> tuple[str, list[DiagnosticIssue]]:
-    """Check 6a: missions.persona_name -> personas.name foreign key."""
-    invalid_missions = db.execute_query("""
-        SELECT m.id, m.codename, m.persona_name
-        FROM missions m
-        LEFT JOIN personas p ON m.persona_name = p.name
-        WHERE p.name IS NULL
-    """)
-
-    issues: list[DiagnosticIssue] = []
-    if invalid_missions:
-        for mission in invalid_missions:
-            desc = (
-                f"Mission #{mission['id']} ({mission['codename']}): "
-                f"persona_name '{mission['persona_name']}' not found in personas"
-            )
-            issues.append(DiagnosticIssue(category="foreign_key", severity=Severity.ERROR, description=desc))
-
-    label = "6a. Mission Personas"
-    return label, issues
+    """Check 6a: STUBBED — missions/personas tables replaced by possessions/daemons (ENG-H-0242)."""
+    label = "6a. Possession Daemons"
+    # Full re-implementation is ENG-M-0246
+    return label, []
 
 
 def check_task_mission_refs(db: Database, *, verbose: bool = False) -> tuple[str, list[DiagnosticIssue]]:
-    """Check 6b: tasks.current_mission_id -> missions.id foreign key."""
+    """Check 6b: tasks.current_possession_id -> possessions.id foreign key."""
     orphaned_tasks = db.execute_query("""
-        SELECT t.id, t.title, t.current_mission_id
+        SELECT t.id, t.title, t.current_possession_id
         FROM tasks t
-        WHERE t.current_mission_id IS NOT NULL
-        AND NOT EXISTS (SELECT 1 FROM missions WHERE id = t.current_mission_id)
+        WHERE t.current_possession_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM possessions WHERE id = t.current_possession_id)
     """)
 
     issues: list[DiagnosticIssue] = []
     if orphaned_tasks:
         for task in orphaned_tasks:
-            desc = f"Task {task['id']}: references non-existent mission current_mission_id {task['current_mission_id']}"
+            desc = f"Task {task['id']}: references non-existent possession current_possession_id {task['current_possession_id']}"
             task_id = task["id"]
 
             def make_fix(tid: str = task_id) -> None:
-                db.execute_update("UPDATE tasks SET current_mission_id = NULL WHERE id = :id", {"id": tid})
+                db.execute_update("UPDATE tasks SET current_possession_id = NULL WHERE id = :id", {"id": tid})
 
             issues.append(
                 DiagnosticIssue(category="foreign_key", severity=Severity.FIXABLE, description=desc, fix_fn=make_fix)
             )
 
-    label = "6b. Task Mission Refs"
+    label = "6b. Task Possession Refs"
     return label, issues
 
 
@@ -305,131 +290,53 @@ def check_claimed_timestamps(db: Database, *, verbose: bool = False) -> tuple[st
 
 
 def check_mission_data(db: Database, *, verbose: bool = False) -> tuple[str, list[DiagnosticIssue]]:
-    """Check 8a: All missions should have start_time."""
-    all_missions = db.execute_query("""
-        SELECT id, codename, persona_name, start_time, end_time
-        FROM missions
-    """)
-
-    issues: list[DiagnosticIssue] = []
-    for mission in all_missions:
-        if not mission.get("start_time"):
-            desc = f"Mission #{mission['id']} ({mission.get('codename', 'unknown')}): missing start_time"
-            issues.append(DiagnosticIssue(category="mission_data", severity=Severity.ERROR, description=desc))
-
-    label = "8a. Mission Data"
-    return label, issues
+    """Check 8a: STUBBED — possession data validation (full rewrite is ENG-M-0246)."""
+    label = "8a. Possession Data"
+    return label, []
 
 
 def check_mission_files(
     db: Database, opencode_dir: Path, *, verbose: bool = False
 ) -> tuple[str, list[DiagnosticIssue]]:
-    """Check 8b: Mission files should exist on disk."""
-    all_missions_with_files = db.execute_query("SELECT id, codename, mission_file FROM missions")
-
-    issues: list[DiagnosticIssue] = []
-    for mission in all_missions_with_files:
-        if mission.get("mission_file"):
-            mission_path = opencode_dir / mission["mission_file"]
-            if not mission_path.exists():
-                desc = (
-                    f"Mission #{mission['id']} ({mission['codename']}): "
-                    f"mission file not found: {mission['mission_file']}"
-                )
-                issues.append(DiagnosticIssue(category="mission_data", severity=Severity.ERROR, description=desc))
-
-    label = "8b. Mission Files"
-    return label, issues
+    """Check 8b: STUBBED — possession log validation (full rewrite is ENG-M-0246)."""
+    label = "8b. Possession Logs"
+    return label, []
 
 
 def check_mission_counts(db: Database, *, verbose: bool = False) -> tuple[str, list[DiagnosticIssue]]:
-    """Check 9a: persona mission_count should match actual count."""
-    wrong_counts = db.execute_query("""
-        SELECT p.name, p.mission_count, COUNT(m.id) as actual_count
-        FROM personas p
-        LEFT JOIN missions m ON p.name = m.persona_name
-        GROUP BY p.name
-        HAVING p.mission_count != COUNT(m.id)
-    """)
-
-    issues: list[DiagnosticIssue] = []
-    if wrong_counts:
-        for name_info in wrong_counts:
-            desc = (
-                f"Persona '{name_info['name']}': mission_count is {name_info['mission_count']} "
-                f"but actual count is {name_info['actual_count']}"
-            )
-            name = name_info["name"]
-            count = name_info["actual_count"]
-
-            def make_fix(n: str = name, c: int = count) -> None:
-                db.execute_update(
-                    "UPDATE personas SET mission_count = :count WHERE name = :name",
-                    {"count": c, "name": n},
-                )
-
-            issues.append(
-                DiagnosticIssue(category="mission_count", severity=Severity.FIXABLE, description=desc, fix_fn=make_fix)
-            )
-
-    label = "9a. Mission Counts"
-    return label, issues
+    """Check 9a: STUBBED — daemon incarnation count validation (full rewrite is ENG-M-0246)."""
+    label = "9a. Daemon Incarnations"
+    return label, []
 
 
 def check_last_mission_dates(db: Database, *, verbose: bool = False) -> tuple[str, list[DiagnosticIssue]]:
-    """Check 9b: persona last_mission_at should match actual latest mission."""
-    wrong_dates = db.execute_query("""
-        SELECT p.name, p.last_mission_at, MAX(m.start_time) as actual_last_mission
-        FROM personas p
-        LEFT JOIN missions m ON p.name = m.persona_name
-        GROUP BY p.name
-        HAVING (p.last_mission_at IS NULL AND actual_last_mission IS NOT NULL)
-            OR (p.last_mission_at IS NOT NULL AND p.last_mission_at != actual_last_mission)
-    """)
-
-    issues: list[DiagnosticIssue] = []
-    if wrong_dates:
-        for name_info in wrong_dates:
-            desc = f"Persona '{name_info['name']}': last_mission_at doesn't match actual mission history"
-            name = name_info["name"]
-            date = name_info["actual_last_mission"]
-
-            def make_fix(n: str = name, d: str = date) -> None:
-                db.execute_update(
-                    "UPDATE personas SET last_mission_at = :date WHERE name = :name",
-                    {"date": d, "name": n},
-                )
-
-            issues.append(
-                DiagnosticIssue(category="mission_count", severity=Severity.FIXABLE, description=desc, fix_fn=make_fix)
-            )
-
-    label = "9b. Last Mission Dates"
-    return label, issues
+    """Check 9b: STUBBED — daemon last_possession validation (full rewrite is ENG-M-0246)."""
+    label = "9b. Last Possession Dates"
+    return label, []
 
 
 def check_abandoned_tasks(db: Database, *, verbose: bool = False) -> tuple[str, list[DiagnosticIssue]]:
-    """Check 10a: Tasks UNDERWAY but their mission has ended."""
+    """Check 10a: Tasks UNDERWAY but their possession has been exorcised."""
     abandoned_tasks = db.execute_query("""
-        SELECT t.id, t.title, t.current_mission_id, m.codename, m.persona_name, m.end_time
+        SELECT t.id, t.title, t.current_possession_id, p.daemon_name, p.status
         FROM tasks t
-        JOIN missions m ON t.current_mission_id = m.id
+        JOIN possessions p ON t.current_possession_id = p.id
         WHERE t.status = 'UNDERWAY'
-        AND m.end_time IS NOT NULL
+        AND p.status = 'EXORCISED'
     """)
 
     issues: list[DiagnosticIssue] = []
     if abandoned_tasks:
         for task in abandoned_tasks:
             desc = (
-                f"Task {task['id']} ({task['title']}): status is UNDERWAY but mission "
-                f"#{task['current_mission_id']} ({task['codename']}) has ended"
+                f"Task {task['id']} ({task['title']}): status is UNDERWAY but possession "
+                f"#{task['current_possession_id']} ({task['daemon_name']}) has been exorcised"
             )
             task_id = task["id"]
 
             def make_fix(tid: str = task_id) -> None:
                 db.execute_update(
-                    "UPDATE tasks SET current_mission_id = NULL WHERE id = :id",
+                    "UPDATE tasks SET current_possession_id = NULL WHERE id = :id",
                     {"id": tid},
                 )
 
@@ -442,18 +349,18 @@ def check_abandoned_tasks(db: Database, *, verbose: bool = False) -> tuple[str, 
 
 
 def check_orphaned_underway(db: Database, *, verbose: bool = False) -> tuple[str, list[DiagnosticIssue]]:
-    """Check 10b: UNDERWAY tasks with no mission assignment."""
+    """Check 10b: UNDERWAY tasks with no possession assignment."""
     orphaned_underway = db.execute_query("""
         SELECT id, title, claimed_at
         FROM tasks
         WHERE status = 'UNDERWAY'
-        AND current_mission_id IS NULL
+        AND current_possession_id IS NULL
     """)
 
     issues: list[DiagnosticIssue] = []
     if orphaned_underway:
         for task in orphaned_underway:
-            desc = f"Task {task['id']} ({task['title']}): status is UNDERWAY but not claimed by any mission"
+            desc = f"Task {task['id']} ({task['title']}): status is UNDERWAY but not claimed by any possession"
             issues.append(DiagnosticIssue(category="abandoned_work", severity=Severity.WARNING, description=desc))
 
     label = "10b. Orphaned Tasks"
@@ -463,106 +370,13 @@ def check_orphaned_underway(db: Database, *, verbose: bool = False) -> tuple[str
 def check_stale_missions(
     db: Database, opencode_dir: Path, *, verbose: bool = False, stale_days: int = 7
 ) -> tuple[str, list[DiagnosticIssue]]:
-    """Check 10c: Detect stale missions (SUSPENDED >threshold or ACTIVE with stale last_activity_at).
+    """Check 10c: STUBBED — stale possession detection (full rewrite is ENG-M-0246).
 
-    Args:
-        db: Database connection
-        opencode_dir: Project .opencode directory
-        verbose: Include detailed output
-        stale_days: Number of days after which a mission is considered stale (default: 7)
-
-    Detects two types of stale missions:
-    1. Suspended stale: SUSPENDED status for >threshold days
-    2. Active stale: ACTIVE status but last_activity_at >threshold days
+    The old check referenced missions/last_activity_at/start_date fields that no longer
+    exist. Full re-implementation against possessions/last_heartbeat_at is ENG-M-0246.
     """
-    from site_nine.missions import MissionManager
-
-    mission_manager = MissionManager(db)
-
-    # Check both SUSPENDED and ACTIVE missions
-    missions_to_check = db.execute_query("""
-        SELECT id, codename, persona_name, start_date, start_time, 
-               last_activity_at, last_active_at, status, suspension_time
-        FROM missions
-        WHERE status IN ('ACTIVE', 'IDLE', 'SUSPENDED')
-    """)
-
-    stale_threshold = datetime.now(timezone.utc) - timedelta(days=stale_days)
-    issues: list[DiagnosticIssue] = []
-
-    for mission in missions_to_check:
-        try:
-            mission_id = mission["id"]
-            status = mission.get("status", "ACTIVE")
-
-            # Determine the relevant timestamp based on status
-            if status == "SUSPENDED":
-                # For suspended missions, check suspension_time
-                timestamp_str = mission.get("suspension_time")
-                timestamp_type = "suspended"
-            else:
-                # For ACTIVE/IDLE missions, check last_activity_at (ADR-013 field)
-                # Fall back to last_active_at (legacy field) if last_activity_at is not set
-                timestamp_str = mission.get("last_activity_at") or mission.get("last_active_at")
-                timestamp_type = "last_activity"
-
-            if timestamp_str:
-                timestamp_dt = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
-                if timestamp_dt.tzinfo is None:
-                    timestamp_dt = timestamp_dt.replace(tzinfo=timezone.utc)
-            else:
-                # Fall back to start_date + start_time for missions without activity timestamps
-                start_datetime_str = f"{mission['start_date']}T{mission['start_time']}"
-                timestamp_dt = datetime.fromisoformat(start_datetime_str).replace(tzinfo=timezone.utc)
-                timestamp_type = "started"
-
-            if timestamp_dt < stale_threshold:
-                age_hours = (datetime.now(timezone.utc) - timestamp_dt).total_seconds() / 3600
-                age_days = int(age_hours / 24)
-
-                if age_days > 0:
-                    age_display = f"{age_days} day(s)"
-                else:
-                    age_display = f"{int(age_hours)} hour(s)"
-
-                if status == "SUSPENDED":
-                    desc = (
-                        f"Mission #{mission['id']} ({mission['codename']}, {mission['persona_name']}): "
-                        f"SUSPENDED for {age_display}"
-                    )
-
-                    # SUSPENDED missions are auto-fixable
-                    def make_fix(mid: int = mission_id) -> None:
-                        mission_manager.end_mission(mid)
-
-                    issues.append(
-                        DiagnosticIssue(
-                            category="stale_mission",
-                            severity=Severity.FIXABLE,
-                            description=desc,
-                            fix_fn=make_fix,
-                        )
-                    )
-                else:
-                    desc = (
-                        f"Mission #{mission['id']} ({mission['codename']}, {mission['persona_name']}): "
-                        f"status {status}, no activity for {age_display}"
-                    )
-                    # ACTIVE stale missions are warnings - require manual intervention
-                    issues.append(
-                        DiagnosticIssue(
-                            category="stale_mission",
-                            severity=Severity.WARNING,
-                            description=desc,
-                            fix_fn=None,  # No automatic fix for active stale missions
-                        )
-                    )
-
-        except (ValueError, TypeError):
-            continue
-
-    label = "10c. Stale Missions"
-    return label, issues
+    label = "10c. Stale Possessions"
+    return label, []
 
 
 def check_task_files(db: Database, opencode_dir: Path, *, verbose: bool = False) -> tuple[str, list[DiagnosticIssue]]:

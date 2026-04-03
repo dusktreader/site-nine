@@ -4,26 +4,36 @@ from pathlib import Path
 
 from site_nine.__main__ import app
 from site_nine.core.database import Database
-from site_nine.missions.manager import MissionManager
+from site_nine.possessions.manager import PossessionManager
 from site_nine.tasks.manager import TaskManager
 from typer.testing import CliRunner
 
 runner = CliRunner()
 
 
-def _create_persona(db: Database, name: str, role: str) -> None:
-    """Helper to create a persona for testing"""
+def _create_daemon(db: Database, name: str, role: str) -> None:
+    """Helper to create a daemon for testing"""
     db.execute_update(
         """
-        INSERT INTO personas (name, role, mythology, description)
-        VALUES (:name, :role, :mythology, :description)
+        INSERT INTO daemons (name, role, incarnations)
+        VALUES (:name, :role, 0)
         ON CONFLICT (name) DO NOTHING
         """,
+        {"name": name, "role": role},
+    )
+
+
+def _start_possession(db: Database, daemon_name: str, role: str) -> int:
+    """Helper to start a possession via raw insert (no filesystem)."""
+    return db.execute_insert(
+        """
+        INSERT INTO possessions (daemon_name, role, possession_log, start_time, status, created_at, updated_at)
+        VALUES (:daemon, :role, :log, datetime('now'), 'ACTIVE', datetime('now'), datetime('now'))
+        """,
         {
-            "name": name,
+            "daemon": daemon_name,
             "role": role,
-            "mythology": "Test",
-            "description": f"Test persona {name}",
+            "log": f".opencode/work/possessions/test.{role.lower()}.{daemon_name}.md",
         },
     )
 
@@ -46,9 +56,8 @@ def test_reset_requires_confirmation(initialized_project: Path):
     # Create some data so reset doesn't exit early
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        _create_persona(db, "test-persona", "Engineer")
-        mission_manager = MissionManager(db)
-        mission_manager.start_mission(persona_name="test-persona", role="Engineer", objective="Test mission")
+        _create_daemon(db, "test-daemon", "Engineer")
+        _start_possession(db, "test-daemon", "Engineer")
 
     result = runner.invoke(
         app,
@@ -63,8 +72,8 @@ def test_reset_requires_confirmation(initialized_project: Path):
     # Verify nothing was deleted
     assert db_path.exists()
     with Database(db_path) as db:
-        mission_manager = MissionManager(db)
-        assert len(mission_manager.list_missions()) == 1
+        mgr = PossessionManager(db)
+        assert len(mgr.list_possessions()) == 1
 
 
 def test_reset_requires_exact_text_confirmation(initialized_project: Path):
@@ -72,9 +81,8 @@ def test_reset_requires_exact_text_confirmation(initialized_project: Path):
     # Create some data so reset doesn't exit early
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        _create_persona(db, "test-persona", "Engineer")
-        mission_manager = MissionManager(db)
-        mission_manager.start_mission(persona_name="test-persona", role="Engineer", objective="Test mission")
+        _create_daemon(db, "test-daemon", "Engineer")
+        _start_possession(db, "test-daemon", "Engineer")
 
     result = runner.invoke(
         app,
@@ -90,31 +98,22 @@ def test_reset_requires_exact_text_confirmation(initialized_project: Path):
     # Verify nothing was deleted
     assert db_path.exists()
     with Database(db_path) as db:
-        mission_manager = MissionManager(db)
-        assert len(mission_manager.list_missions()) == 1
+        mgr = PossessionManager(db)
+        assert len(mgr.list_possessions()) == 1
 
 
 def test_reset_deletes_all_data(initialized_project: Path):
-    """Test that reset deletes all mission and task data"""
+    """Test that reset deletes all possession and task data"""
     # Create some data
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        _create_persona(db, "persona1", "Engineer")
-        _create_persona(db, "persona2", "Designer")
-        mission_manager = MissionManager(db)
-        task_manager = TaskManager(db)
+        _create_daemon(db, "daemon1", "Engineer")
+        _create_daemon(db, "daemon2", "Designer")
 
-        # Create missions
-        _ = mission_manager.start_mission(
-            persona_name="persona1",
-            role="Engineer",
-            objective="Task 1",
-        )
-        _ = mission_manager.start_mission(
-            persona_name="persona2",
-            role="Designer",
-            objective="Task 2",
-        )
+        _start_possession(db, "daemon1", "Engineer")
+        _start_possession(db, "daemon2", "Designer")
+
+        task_manager = TaskManager(db)
 
         # Create tasks
         task1_id = task_manager.generate_task_id(role="Engineer", priority="HIGH")
@@ -133,7 +132,8 @@ def test_reset_deletes_all_data(initialized_project: Path):
         )
 
         # Verify data exists
-        assert len(mission_manager.list_missions()) == 2
+        mgr = PossessionManager(db)
+        assert len(mgr.list_possessions()) == 2
         assert len(task_manager.list_tasks()) == 2
 
     # Run reset
@@ -149,9 +149,9 @@ def test_reset_deletes_all_data(initialized_project: Path):
 
     # Verify all data deleted
     with Database(db_path) as db:
-        mission_manager = MissionManager(db)
+        mgr = PossessionManager(db)
         task_manager = TaskManager(db)
-        assert len(mission_manager.list_missions()) == 0
+        assert len(mgr.list_possessions()) == 0
         assert len(task_manager.list_tasks()) == 0
 
     # Verify database still exists
@@ -159,25 +159,20 @@ def test_reset_deletes_all_data(initialized_project: Path):
 
 
 def test_reset_deletes_mission_files(initialized_project: Path):
-    """Test that reset deletes mission files"""
-    # Create a mission
+    """Test that reset deletes possession files"""
+    # Create a possession file in the possessions directory
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        _create_persona(db, "test-persona", "Engineer")
-        manager = MissionManager(db)
+        _create_daemon(db, "test-daemon", "Engineer")
+        _start_possession(db, "test-daemon", "Engineer")
 
-        _mission_id = manager.start_mission(
-            persona_name="test-persona",
-            role="Engineer",
-            objective="test-task",
-        )
+    # Create a possession file manually in the possessions dir
+    possessions_dir = initialized_project / ".opencode" / "work" / "possessions"
+    possessions_dir.mkdir(parents=True, exist_ok=True)
+    possession_file = possessions_dir / "2026-03-04.10-00-00.engineer.test-daemon.md"
+    possession_file.write_text("# Possession Log")
 
-    # Verify mission file exists
-    missions_dir = initialized_project / ".opencode" / "work" / "missions"
-    mission_files = list(missions_dir.glob("*.engineer.test-persona.md"))
-    assert len(mission_files) > 0
-    mission_file = mission_files[0]
-    assert mission_file.exists()
+    assert possession_file.exists()
 
     # Run reset
     result = runner.invoke(
@@ -188,8 +183,8 @@ def test_reset_deletes_mission_files(initialized_project: Path):
 
     assert result.exit_code == 0
 
-    # Verify mission file deleted
-    assert not mission_file.exists()
+    # Verify possession file deleted
+    assert not possession_file.exists()
 
 
 def test_reset_deletes_task_files(initialized_project: Path):
@@ -228,39 +223,28 @@ def test_reset_deletes_task_files(initialized_project: Path):
     assert not task_file.exists()
 
 
-def test_reset_resets_persona_mission_counts(initialized_project: Path):
-    """Test that reset resets persona mission counts"""
-    # Create a persona and mission to increment usage count
+def test_reset_resets_daemon_incarnation_counts(initialized_project: Path):
+    """Test that reset resets daemon incarnation counts"""
+    # Create a daemon and possession to increment incarnation count
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        # Create a persona
         db.execute_update(
             """
-            INSERT INTO personas (name, role, mythology, description)
-            VALUES (:name, :role, :mythology, :description)
+            INSERT INTO daemons (name, role, incarnations, last_possession)
+            VALUES (:name, :role, 3, datetime('now'))
             """,
-            {
-                "name": "test_reset_persona_mission",
-                "role": "Operator",
-                "mythology": "Greek",
-                "description": "Test persona for mission count reset",
-            },
+            {"name": "test_reset_daemon", "role": "Operator"},
         )
 
-        manager = MissionManager(db)
-        _mission_id = manager.start_mission(
-            persona_name="test_reset_persona_mission",
-            role="Operator",
-            objective="test-task",
-        )
+        _start_possession(db, "test_reset_daemon", "Operator")
 
-        # Verify usage count incremented
-        persona = db.execute_query(
-            "SELECT mission_count, last_mission_at FROM personas WHERE name = :name",
-            {"name": "test_reset_persona_mission"},
+        # Verify incarnation count is set
+        daemon = db.execute_query(
+            "SELECT incarnations, last_possession FROM daemons WHERE name = :name",
+            {"name": "test_reset_daemon"},
         )[0]
-        assert persona["mission_count"] > 0
-        assert persona["last_mission_at"] is not None
+        assert daemon["incarnations"] > 0
+        assert daemon["last_possession"] is not None
 
     # Run reset
     result = runner.invoke(
@@ -271,37 +255,32 @@ def test_reset_resets_persona_mission_counts(initialized_project: Path):
 
     assert result.exit_code == 0
 
-    # Verify usage count reset
+    # Verify incarnation count reset
     with Database(db_path) as db:
-        persona = db.execute_query(
-            "SELECT mission_count, last_mission_at FROM personas WHERE name = :name",
-            {"name": "test_reset_persona_mission"},
+        daemon = db.execute_query(
+            "SELECT incarnations, last_possession FROM daemons WHERE name = :name",
+            {"name": "test_reset_daemon"},
         )[0]
-        assert persona["mission_count"] == 0
-        assert persona["last_mission_at"] is None
+        assert daemon["incarnations"] == 0
+        assert daemon["last_possession"] is None
 
 
-def test_reset_preserves_personas_list(initialized_project: Path):
-    """Test that reset preserves the personas list"""
+def test_reset_preserves_daemons_list(initialized_project: Path):
+    """Test that reset preserves the daemons list"""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        # Add a test persona
+        # Add a test daemon
         db.execute_update(
             """
-            INSERT INTO personas (name, role, mythology, description)
-            VALUES (:name, :role, :mythology, :description)
+            INSERT INTO daemons (name, role, incarnations)
+            VALUES (:name, :role, 0)
             """,
-            {
-                "name": "test_reset_preserve_persona",
-                "role": "Engineer",
-                "mythology": "Greek",
-                "description": "Test persona for preserve list",
-            },
+            {"name": "test_reset_preserve_daemon", "role": "Engineer"},
         )
 
-        # Count personas before reset
-        personas_before = db.execute_query("SELECT COUNT(*) as count FROM personas")[0]["count"]
-        assert personas_before > 0
+        # Count daemons before reset
+        daemons_before = db.execute_query("SELECT COUNT(*) as count FROM daemons")[0]["count"]
+        assert daemons_before > 0
 
     # Run reset
     result = runner.invoke(
@@ -312,10 +291,10 @@ def test_reset_preserves_personas_list(initialized_project: Path):
 
     assert result.exit_code == 0
 
-    # Verify personas still exist
+    # Verify daemons still exist
     with Database(db_path) as db:
-        personas_after = db.execute_query("SELECT COUNT(*) as count FROM personas")[0]["count"]
-        assert personas_after == personas_before
+        daemons_after = db.execute_query("SELECT COUNT(*) as count FROM daemons")[0]["count"]
+        assert daemons_after == daemons_before
 
 
 def test_reset_preserves_config_files(initialized_project: Path):
@@ -349,11 +328,10 @@ def test_reset_shows_counts_before_deletion(initialized_project: Path):
     # Create some data
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        _create_persona(db, "persona1", "Engineer")
-        mission_manager = MissionManager(db)
-        task_manager = TaskManager(db)
+        _create_daemon(db, "daemon1", "Engineer")
+        _start_possession(db, "daemon1", "Engineer")
 
-        mission_manager.start_mission(persona_name="persona1", role="Engineer", objective="Task 1")
+        task_manager = TaskManager(db)
         task_id = task_manager.generate_task_id(role="Engineer", priority="HIGH")
         task_manager.create_task(task_id=task_id, title="Test task", priority="HIGH", role="Engineer")
 
@@ -365,7 +343,7 @@ def test_reset_shows_counts_before_deletion(initialized_project: Path):
 
     assert result.exit_code == 0
     output = " ".join(result.output.split())
-    # Should show counts
+    # Should show counts (reset CLI uses "missions" as label for possessions count)
     assert "1 mission" in output
     assert "1 task" in output
 
@@ -375,9 +353,8 @@ def test_reset_with_yes_flag_skips_first_confirmation(initialized_project: Path)
     # Create some data so reset doesn't exit early
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        _create_persona(db, "test", "Engineer")
-        mission_manager = MissionManager(db)
-        mission_manager.start_mission(persona_name="test", role="Engineer", objective="test")
+        _create_daemon(db, "test-daemon", "Engineer")
+        _start_possession(db, "test-daemon", "Engineer")
 
     result = runner.invoke(
         app,
@@ -397,10 +374,8 @@ def test_reset_shows_summary_after_deletion(initialized_project: Path):
     # Create some data
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        _create_persona(db, "persona1", "Engineer")
-        mission_manager = MissionManager(db)
-
-        mission_manager.start_mission(persona_name="persona1", role="Engineer", objective="Task 1")
+        _create_daemon(db, "daemon1", "Engineer")
+        _start_possession(db, "daemon1", "Engineer")
 
     result = runner.invoke(
         app,
@@ -426,34 +401,6 @@ def test_reset_on_empty_project_succeeds(initialized_project: Path):
     output = " ".join(result.output.split())
     # Should exit early since there's nothing to delete
     assert "No data to delete" in output or result.exit_code == 0
-
-
-def test_reset_deletes_handoff_files(initialized_project: Path):
-    """Test that reset deletes handoff files"""
-    # Create database data first so reset doesn't exit early
-    db_path = initialized_project / ".opencode" / "data" / "project.db"
-    with Database(db_path) as db:
-        _create_persona(db, "test", "Engineer")
-        mission_manager = MissionManager(db)
-        mission_manager.start_mission(persona_name="test", role="Engineer", objective="test")
-
-    # Create handoff directory and file
-    handoffs_dir = initialized_project / ".opencode" / "work" / "missions" / "handoffs"
-    handoffs_dir.mkdir(parents=True, exist_ok=True)
-
-    handoff_file = handoffs_dir / "2026-02-02.12:00:00.engineer.tester.pending.md"
-    handoff_file.write_text("# Handoff")
-
-    assert handoff_file.exists()
-
-    result = runner.invoke(
-        app,
-        ["reset"],
-        input="y\nDELETE ALL DATA\n",
-    )
-
-    assert result.exit_code == 0
-    assert not handoff_file.exists()
 
 
 def test_reset_deletes_task_dependencies(initialized_project: Path):

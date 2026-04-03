@@ -108,7 +108,6 @@ def reset_command(
             conjoin(
                 "Deleted:",
                 f"  - {result.mission_files} mission files",
-                f"  - {result.handoff_files} handoff files",
                 f"  - {result.task_files} task files",
                 f"  - {result.mission_records} mission records",
                 f"  - {result.task_records} task records",

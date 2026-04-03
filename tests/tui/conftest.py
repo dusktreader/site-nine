@@ -25,27 +25,26 @@ from site_nine.core.database import Database
 def _seed_tui_data(db: Database) -> None:
     """Insert minimal realistic rows so every TUI screen has something to show."""
 
-    # Personas (foreign-key requirement for missions)
+    # Daemons (foreign-key requirement for possessions)
     db.execute_update("""
-        INSERT OR IGNORE INTO personas (name, role, mythology, description)
+        INSERT OR IGNORE INTO daemons (name, role, daemonology)
         VALUES
-            ('athena',  'Tester',   'Greek', 'Goddess of wisdom'),
-            ('ares',    'Engineer', 'Greek', 'God of war'),
-            ('hermes',  'Operator', 'Greek', 'Messenger god')
+            ('Athena',  'Tester',   'Greek goddess of wisdom'),
+            ('Ares',    'Engineer', 'Greek god of war'),
+            ('Hermes',  'Operator', 'Greek messenger god')
     """)
 
-    # Missions
+    # Possessions
     db.execute_update("""
-        INSERT OR IGNORE INTO missions
-            (id, persona_name, role, codename, mission_file,
-             start_date, start_time, objective, created_at, updated_at)
+        INSERT OR IGNORE INTO possessions
+            (id, daemon_name, role, possession_log, status, created_at, updated_at)
         VALUES
-            (1001, 'athena',  'Tester',   'red-falcon',  '.opencode/work/missions/m1001.md',
-             date('now'), time('now'), 'Run the test suite', datetime('now'), datetime('now')),
-            (1002, 'ares',    'Engineer', 'blue-storm',  '.opencode/work/missions/m1002.md',
-             date('now'), time('now'), 'Build the thing',    datetime('now'), datetime('now')),
-            (1003, 'hermes',  'Operator', 'green-arrow', '.opencode/work/missions/m1003.md',
-             date('now'), time('now'), 'Route the messages', datetime('now'), datetime('now'))
+            (1001, 'Athena',  'Tester',   '.opencode/work/possessions/p1001.md',
+             'ACTIVE', datetime('now'), datetime('now')),
+            (1002, 'Ares',    'Engineer', '.opencode/work/possessions/p1002.md',
+             'ACTIVE', datetime('now'), datetime('now')),
+            (1003, 'Hermes',  'Operator', '.opencode/work/possessions/p1003.md',
+             'ACTIVE', datetime('now'), datetime('now'))
     """)
 
     # Tasks
@@ -60,11 +59,11 @@ def _seed_tui_data(db: Database) -> None:
             ('TST-T-0005', 'Epsilon task', 'Description of epsilon','TODO',     'HIGH',   'Tester',   '.opencode/work/tasks/TST-T-0005.md', datetime('now'), datetime('now'))
     """)
 
-    # Claim one task to a mission so the mission-column is non-trivial
+    # Claim one task to a possession so the possession-column is non-trivial
     # (must also set status=UNDERWAY to satisfy the DB CHECK constraint)
     db.execute_update("""
         UPDATE tasks
-        SET current_mission_id = 1001,
+        SET current_possession_id = 1001,
             claimed_at = datetime('now'),
             status = 'UNDERWAY'
         WHERE id = 'TST-T-0001'

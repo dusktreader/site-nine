@@ -36,7 +36,6 @@ class EffectiveStatus(AutoNameEnum):
         BLOCKED_EXTERNAL: Task blocked by external dependency
         BLOCKED_DEPENDENCY: Task blocked by internal task dependency
         BLOCKED_REVIEW: Task blocked awaiting review approval
-        HANDOFF_PENDING: Task blocked awaiting handoff acceptance
     """
 
     TODO = auto()
@@ -46,7 +45,6 @@ class EffectiveStatus(AutoNameEnum):
     BLOCKED_EXTERNAL = auto()
     BLOCKED_DEPENDENCY = auto()
     BLOCKED_REVIEW = auto()
-    HANDOFF_PENDING = auto()
 
     def __str__(self) -> str:
         return inflection.titleize(self.value)

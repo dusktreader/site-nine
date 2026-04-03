@@ -228,14 +228,14 @@ class TestScreensLoadData:
             assert len(table.columns) == 6
 
     async def test_missions_screen_columns(self, tui_db: Database) -> None:
-        """MissionsScreen DataTable has expected column count (7 columns)."""
+        """MissionsScreen DataTable has expected column count (5 columns)."""
         from textual.widgets import DataTable
 
         async with _run_app(tui_db) as pilot:
             await pilot.press("2")
             await pilot.pause()
             table = pilot.app.screen.query_one("#missions-table", DataTable)
-            assert len(table.columns) == 7
+            assert len(table.columns) == 5
 
     async def test_epics_screen_loads(self, tui_db: Database) -> None:
         """EpicsScreen mounts without error."""
@@ -356,8 +356,8 @@ class TestFullPageView:
             assert isinstance(pilot.app.screen, TasksScreen)
 
     async def test_enter_opens_mission_fullpage(self, tui_db: Database) -> None:
-        """action_open_fullpage() pushes MissionFullPage onto the screen stack."""
-        from site_nine.tui.screens.missions import MissionFullPage, MissionsScreen
+        """action_open_fullpage() pushes PossessionFullPage onto the screen stack."""
+        from site_nine.tui.screens.missions import MissionsScreen, PossessionFullPage
 
         async with _run_app(tui_db) as pilot:
             await pilot.press("2")
@@ -367,7 +367,7 @@ class TestFullPageView:
             pilot.app.screen.action_open_fullpage()  # type: ignore[attr-defined]
             await pilot.pause()
 
-            assert isinstance(pilot.app.screen, MissionFullPage)
+            assert isinstance(pilot.app.screen, PossessionFullPage)
 
     async def test_escape_closes_mission_fullpage(self, tui_db: Database) -> None:
         """Pressing Escape on mission full-page pops back to MissionsScreen."""
@@ -384,12 +384,12 @@ class TestFullPageView:
             assert isinstance(pilot.app.screen, MissionsScreen)
 
     async def test_fullpage_has_escape_binding(self) -> None:
-        """TaskFullPage and MissionFullPage declare escape binding."""
-        from site_nine.tui.screens.missions import MissionFullPage
+        """TaskFullPage and PossessionFullPage declare escape binding."""
+        from site_nine.tui.screens.missions import PossessionFullPage
         from site_nine.tui.screens.tasks import TaskFullPage
 
         task_keys = {b.key for b in TaskFullPage.BINDINGS}
-        mission_keys = {b.key for b in MissionFullPage.BINDINGS}
+        mission_keys = {b.key for b in PossessionFullPage.BINDINGS}
 
         assert "escape" in task_keys
         assert "escape" in mission_keys

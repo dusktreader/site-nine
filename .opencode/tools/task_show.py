@@ -4,14 +4,14 @@ task_show tool - Query site-nine tasks with rich filtering.
 
 Modes (selected by args):
   1. Single task  — task_id provided: return full task details
-  2. List         — role/status/mission_id filters: return matching tasks
-  3. Mine         — mission_id alone: return tasks owned by that mission
+  2. List         — role/status/possession_id filters: return matching tasks
+  3. Mine         — possession_id alone: return tasks owned by that possession
   4. Report       — report=true: return summary report (optionally active_only)
 """
 
 import sys
 import json
-from loguru import logger
+from tool_logging import logger
 
 from site_nine.core.database import Database
 from site_nine.core.paths import get_db_path
@@ -29,7 +29,7 @@ def task_to_dict(task) -> dict:
         "category": task.category,
         "description": task.description,
         "notes": task.notes,
-        "current_mission_id": task.current_mission_id,
+        "current_mission_id": task.current_possession_id,
         "claimed_at": task.claimed_at.isoformat() if task.claimed_at else None,
         "closed_at": task.closed_at.isoformat() if task.closed_at else None,
         "actual_hours": task.actual_hours,
@@ -47,7 +47,7 @@ def main():
         task_id = args.get("task_id")
         role = args.get("role")
         status = args.get("status")
-        mission_id = args.get("mission_id")
+        mission_id = args.get("possession_id") or args.get("mission_id")  # accept both for backward compat
         report = args.get("report", False)
         active_only = args.get("active_only", False)
 
@@ -107,18 +107,18 @@ def main():
                 }
             )
 
-        # ── Mode 3: tasks owned by a mission (mission_id alone) ────────────
+        # ── Mode 3: tasks owned by a possession (possession_id alone) ─────────
         # Mode 3 and Mode 2 both use list_tasks — the distinction is
-        # cosmetic (mine vs list), so we just filter by mission_id.
+        # cosmetic (mine vs list), so we just filter by possession_id.
 
         # ── Mode 2 / 3: list with filters ─────────────────────────────────
         tasks = manager.list_tasks(
             status=status.upper() if status else None,
             role=role,
-            mission_id=mission_id,
+            possession_id=mission_id,
         )
 
-        logger.info("tasks_listed", count=len(tasks), role=role, status=status, mission_id=mission_id)
+        logger.info("tasks_listed", count=len(tasks), role=role, status=status, possession_id=mission_id)
         return json.dumps(
             {
                 "data": [task_to_dict(t) for t in tasks],

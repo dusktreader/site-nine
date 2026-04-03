@@ -53,7 +53,7 @@ class Review:
         return cls(
             id=row["id"],
             type=row["type"],
-            outcome=row["outcome"],
+            outcome=row["status"],
             task_id=row.get("task_id"),
             title=row["title"],
             description=row.get("description"),

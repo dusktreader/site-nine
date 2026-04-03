@@ -16,8 +16,7 @@ from typer.testing import CliRunner
 
 from site_nine.__main__ import app
 from site_nine.core.database import Database
-from site_nine.missions.manager import MissionManager
-from site_nine.missions.types import MissionStatus
+from site_nine.possessions.manager import PossessionManager
 
 runner = CliRunner()
 
@@ -30,13 +29,13 @@ def _set_desk_mode_via_db(initialized_project, mission_id: int | str, active: bo
     db_path = require_db_path()
     with DB(db_path) as db:
         db.execute_update(
-            "UPDATE missions SET desk_mode_active = :active WHERE id = :id",
+            "UPDATE possessions SET desk_mode_active = :active WHERE id = :id",
             {"active": 1 if active else 0, "id": int(mission_id)},
         )
 
 
 # ---------------------------------------------------------------------------
-# Helpers (mirrors test_mission_scoping.py)
+# Helpers
 # ---------------------------------------------------------------------------
 
 
@@ -52,6 +51,17 @@ def _create_epic(db: Database, epic_id: str, title: str = "Test Epic", priority:
     )
 
 
+def _create_daemon(db: Database, name: str = "test-daemon", role: str = "Engineer") -> None:
+    """Insert a daemon row."""
+    db.execute_update(
+        """
+        INSERT OR IGNORE INTO daemons (name, role, incarnations, created_at)
+        VALUES (:name, :role, 0, datetime('now'))
+        """,
+        {"name": name, "role": role},
+    )
+
+
 def _create_task(
     db: Database,
     task_id: str,
@@ -59,15 +69,15 @@ def _create_task(
     priority: str = "MEDIUM",
     status: str = "TODO",
     epic_id: str | None = None,
-    mission_id: int | None = None,
+    possession_id: int | None = None,
 ) -> None:
-    """Insert a task row, optionally assigned to a mission."""
+    """Insert a task row, optionally assigned to a possession."""
     db.execute_update(
         """
         INSERT INTO tasks (id, title, description, status, priority, role, epic_id,
-                           current_mission_id, file_path, created_at, updated_at)
+                           current_possession_id, file_path, created_at, updated_at)
         VALUES (:id, :title, 'Test description', :status, :priority, :role, :epic_id,
-                :mission_id,
+                :possession_id,
                 '.opencode/work/tasks/' || :id || '.md', datetime('now'), datetime('now'))
         """,
         {
@@ -77,36 +87,37 @@ def _create_task(
             "priority": priority,
             "role": role,
             "epic_id": epic_id,
-            "mission_id": mission_id,
+            "possession_id": possession_id,
         },
     )
 
 
-def _create_mission(
+def _create_possession(
     db: Database,
-    persona_name: str = "test-persona",
+    daemon_name: str = "test-daemon",
     role: str = "Engineer",
     epic_id: str | None = None,
     status: str = "ACTIVE",
     desk_mode: bool = False,
     end_time: str | None = None,
 ) -> int:
-    """Insert a mission row and return its ID."""
+    """Insert a possession row and return its ID."""
+    _create_daemon(db, daemon_name, role)
     result = db.execute_query(
         """
-        INSERT INTO missions (
-            persona_name, role, codename, mission_file,
-            start_date, start_time, end_time, objective, epic_id,
+        INSERT INTO possessions (
+            daemon_name, role, possession_log,
+            start_time, end_time, epic_id,
             status, desk_mode_active, created_at, updated_at
         ) VALUES (
-            :persona_name, :role, 'test-codename',
-            '.opencode/work/missions/test.md',
-            date('now'), time('now'), :end_time, 'Test objective', :epic_id,
+            :daemon_name, :role,
+            '.opencode/work/possessions/test.md',
+            datetime('now'), :end_time, :epic_id,
             :status, :desk_mode, datetime('now'), datetime('now')
         ) RETURNING id
         """,
         {
-            "persona_name": persona_name,
+            "daemon_name": daemon_name,
             "role": role,
             "epic_id": epic_id,
             "status": status,
@@ -118,96 +129,97 @@ def _create_mission(
 
 
 # ===========================================================================
-# UNIT TESTS: MissionManager.list_missions epic_id filter
+# UNIT TESTS: PossessionManager.list_possessions epic_id filter
 # ===========================================================================
 
 
 class TestListMissionsEpicFilter:
-    """Test MissionManager.list_missions with epic_id filter."""
+    """Test PossessionManager.list_possessions with epic_id filter."""
 
     def test_filter_by_epic_returns_only_matching(self, test_db):
-        """Filtering by epic_id returns only missions for that epic."""
+        """Filtering by epic_id returns only possessions for that epic."""
         _create_epic(test_db, "EPC-H-0001")
         _create_epic(test_db, "EPC-H-0002")
 
-        _create_mission(test_db, persona_name="persona1", epic_id="EPC-H-0001")
-        _create_mission(test_db, persona_name="persona2", epic_id="EPC-H-0002")
-        _create_mission(test_db, persona_name="persona3", epic_id=None)
+        _create_possession(test_db, daemon_name="persona1", epic_id="EPC-H-0001")
+        _create_possession(test_db, daemon_name="persona2", epic_id="EPC-H-0002")
+        _create_possession(test_db, daemon_name="persona3", epic_id=None)
 
-        manager = MissionManager(test_db)
-        results = manager.list_missions(epic_id="EPC-H-0001")
+        manager = PossessionManager(test_db)
+        results = manager.list_possessions(epic_id="EPC-H-0001")
 
         assert len(results) == 1
         assert results[0].epic_id == "EPC-H-0001"
 
     def test_filter_by_epic_no_missions_returns_empty(self, test_db):
-        """Filtering by an epic with no missions returns empty list."""
+        """Filtering by an epic with no possessions returns empty list."""
         _create_epic(test_db, "EPC-H-0001")
         _create_epic(test_db, "EPC-H-0099")
 
-        # Only create missions for EPC-H-0001
-        _create_mission(test_db, persona_name="persona1", epic_id="EPC-H-0001")
+        _create_possession(test_db, daemon_name="persona1", epic_id="EPC-H-0001")
 
-        manager = MissionManager(test_db)
-        results = manager.list_missions(epic_id="EPC-H-0099")
+        manager = PossessionManager(test_db)
+        results = manager.list_possessions(epic_id="EPC-H-0099")
 
         assert results == []
 
     def test_filter_by_nonexistent_epic_returns_empty(self, test_db):
         """Filtering by an epic ID that doesn't exist returns empty list."""
-        manager = MissionManager(test_db)
-        results = manager.list_missions(epic_id="EPC-H-9999")
+        manager = PossessionManager(test_db)
+        results = manager.list_possessions(epic_id="EPC-H-9999")
 
         assert results == []
 
     def test_filter_by_epic_combined_with_active_only(self, test_db):
-        """Filtering by epic + active_only returns only active missions in that epic."""
+        """Filtering by epic + active_only returns only active possessions in that epic."""
         _create_epic(test_db, "EPC-H-0001")
 
-        _create_mission(test_db, persona_name="persona1", epic_id="EPC-H-0001", status="ACTIVE")
-        _create_mission(test_db, persona_name="persona2", epic_id="EPC-H-0001", status="ENDED", end_time="18:00:00")
+        _create_possession(test_db, daemon_name="persona1", epic_id="EPC-H-0001", status="ACTIVE")
+        _create_possession(
+            test_db, daemon_name="persona2", epic_id="EPC-H-0001", status="EXORCISED", end_time="2026-01-01T18:00:00"
+        )
 
-        manager = MissionManager(test_db)
-        results = manager.list_missions(epic_id="EPC-H-0001", active_only=True)
+        manager = PossessionManager(test_db)
+        results = manager.list_possessions(epic_id="EPC-H-0001", active_only=True)
 
         assert len(results) == 1
         assert results[0].end_time is None
 
     def test_filter_by_epic_combined_with_role(self, test_db):
-        """Filtering by epic + role returns only matching missions."""
+        """Filtering by epic + role returns only matching possessions."""
         _create_epic(test_db, "EPC-H-0001")
 
-        _create_mission(test_db, persona_name="persona1", role="Engineer", epic_id="EPC-H-0001")
-        _create_mission(test_db, persona_name="persona2", role="Tester", epic_id="EPC-H-0001")
+        _create_possession(test_db, daemon_name="persona1", role="Engineer", epic_id="EPC-H-0001")
+        _create_possession(test_db, daemon_name="persona2", role="Tester", epic_id="EPC-H-0001")
 
-        manager = MissionManager(test_db)
-        results = manager.list_missions(epic_id="EPC-H-0001", role="Engineer")
+        manager = PossessionManager(test_db)
+        results = manager.list_possessions(epic_id="EPC-H-0001", role="Engineer")
 
         assert len(results) == 1
         assert results[0].role == "Engineer"
 
     def test_no_filter_returns_all(self, test_db):
-        """No epic filter returns all missions regardless of epic."""
+        """No epic filter returns all possessions regardless of epic."""
         _create_epic(test_db, "EPC-H-0001")
 
-        _create_mission(test_db, persona_name="persona1", epic_id="EPC-H-0001")
-        _create_mission(test_db, persona_name="persona2", epic_id=None)
+        _create_possession(test_db, daemon_name="persona1", epic_id="EPC-H-0001")
+        _create_possession(test_db, daemon_name="persona2", epic_id=None)
 
-        manager = MissionManager(test_db)
-        results = manager.list_missions()
+        manager = PossessionManager(test_db)
+        results = manager.list_possessions()
 
         assert len(results) == 2
 
     def test_multiple_missions_same_epic(self, test_db):
-        """Multiple missions for the same epic are all returned."""
+        """Multiple possessions for the same epic are all returned."""
         _create_epic(test_db, "EPC-H-0001")
 
-        _create_mission(test_db, persona_name="persona1", epic_id="EPC-H-0001")
-        _create_mission(test_db, persona_name="persona2", epic_id="EPC-H-0001")
-        _create_mission(test_db, persona_name="persona3", epic_id="EPC-H-0001")
+        _create_possession(test_db, daemon_name="persona1", epic_id="EPC-H-0001")
+        _create_possession(test_db, daemon_name="persona2", epic_id="EPC-H-0001")
+        _create_possession(test_db, daemon_name="persona3", epic_id="EPC-H-0001")
 
-        manager = MissionManager(test_db)
-        results = manager.list_missions(epic_id="EPC-H-0001")
+        manager = PossessionManager(test_db)
+        results = manager.list_possessions(epic_id="EPC-H-0001")
 
         assert len(results) == 3
 
@@ -222,24 +234,14 @@ class TestCLIMissionListEpicFilter:
 
     def test_list_with_epic_filter(self, initialized_project):
         """CLI --epic filter shows only missions for that epic."""
-        # Create an epic
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         runner.invoke(app, ["epic", "create", "--title", "Filter Epic", "--priority", "HIGH"])
 
-        # Start missions - one in epic, one general
-        runner.invoke(
-            app,
-            ["mission", "start", "atar", "--role", "Engineer", "--epic", "EPC-H-0001"],
-        )
-        runner.invoke(
-            app,
-            ["mission", "start", "atar", "--role", "Engineer", "--task", "General work"],
-        )
+        runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "atar", "--epic", "EPC-H-0001"])
+        runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "General work"])
 
-        # List with epic filter
         result = runner.invoke(app, ["mission", "list", "--epic", "EPC-H-0001"])
         assert result.exit_code == 0
-        # Should show the epic-scoped mission but not the general one
-        # The table should contain mission data
         assert "Agent Sessions" in result.output or "EPC-H-0001" in result.output
 
     def test_list_with_epic_filter_no_missions(self, initialized_project):
@@ -250,17 +252,10 @@ class TestCLIMissionListEpicFilter:
 
     def test_list_with_epic_filter_json(self, initialized_project):
         """CLI --epic filter with --json returns filtered results."""
-        # Create epic and mission
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         runner.invoke(app, ["epic", "create", "--title", "JSON Filter Epic", "--priority", "HIGH"])
-        runner.invoke(
-            app,
-            ["mission", "start", "atar", "--role", "Engineer", "--epic", "EPC-H-0001"],
-        )
-        # Also create a general mission that should NOT appear
-        runner.invoke(
-            app,
-            ["mission", "start", "atar", "--role", "Tester", "--task", "General work"],
-        )
+        runner.invoke(app, ["mission", "start", "--role", "Engineer", "--name", "atar", "--epic", "EPC-H-0001"])
+        runner.invoke(app, ["mission", "start", "--role", "Tester", "--name", "atar", "--task", "General work"])
 
         result = runner.invoke(app, ["mission", "list", "--epic", "EPC-H-0001", "--json"])
         assert result.exit_code == 0
@@ -276,7 +271,7 @@ class TestCLIMissionListEpicFilter:
 
 
 class TestAvailabilityDisplay:
-    """Test all 7 branches of the _get_availability function.
+    """Test all branches of the _get_availability function.
 
     The function is defined locally in the CLI `list` command, so we test it
     indirectly through the CLI --json output which includes the availability field.
@@ -284,21 +279,18 @@ class TestAvailabilityDisplay:
 
     def test_availability_ended(self, initialized_project):
         """Ended mission shows 'Ended' availability."""
-        # Start and end a mission
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
-            app,
-            ["mission", "start", "atar", "--role", "Engineer", "--task", "Work"],
+            app, ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "Work"]
         )
         assert start_result.exit_code == 0
         mid_match = re.search(r"#(\d+)", start_result.output)
         assert mid_match
         mission_id = mid_match.group(1)
 
-        # End the mission
         end_result = runner.invoke(app, ["mission", "end", mission_id])
         assert end_result.exit_code == 0
 
-        # Check availability in JSON
         result = runner.invoke(app, ["mission", "list", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -309,23 +301,20 @@ class TestAvailabilityDisplay:
 
     def test_availability_desk_epic(self, initialized_project):
         """Desk mode + epic_id shows 'Desk (EPC-X-NNNN)' availability."""
-        # Create epic
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         runner.invoke(app, ["epic", "create", "--title", "Desk Epic", "--priority", "HIGH"])
 
-        # Start epic-scoped mission
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--epic", "EPC-H-0001"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--epic", "EPC-H-0001"],
         )
         assert start_result.exit_code == 0
         mid_match = re.search(r"#(\d+)", start_result.output)
         assert mid_match
         mission_id = mid_match.group(1)
 
-        # Enable desk mode via direct DB update (comms desk uses a polling loop)
         _set_desk_mode_via_db(initialized_project, mission_id)
 
-        # Check availability
         result = runner.invoke(app, ["mission", "list", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -336,20 +325,18 @@ class TestAvailabilityDisplay:
 
     def test_availability_desk_all(self, initialized_project):
         """Desk mode without epic_id shows 'Desk (All)' availability."""
-        # Start general mission
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--task", "General work"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "General work"],
         )
         assert start_result.exit_code == 0
         mid_match = re.search(r"#(\d+)", start_result.output)
         assert mid_match
         mission_id = mid_match.group(1)
 
-        # Enable desk mode via direct DB update
         _set_desk_mode_via_db(initialized_project, mission_id)
 
-        # Check availability
         result = runner.invoke(app, ["mission", "list", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -361,20 +348,18 @@ class TestAvailabilityDisplay:
 
     def test_availability_working_epic(self, initialized_project):
         """Active mission with epic_id (no desk mode) shows 'Working (EPC-X-NNNN)'."""
-        # Create epic
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         runner.invoke(app, ["epic", "create", "--title", "Work Epic", "--priority", "HIGH"])
 
-        # Start epic-scoped mission (no desk mode by default)
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--epic", "EPC-H-0001"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--epic", "EPC-H-0001"],
         )
         assert start_result.exit_code == 0
         mid_match = re.search(r"#(\d+)", start_result.output)
         assert mid_match
         mission_id = mid_match.group(1)
 
-        # Check availability
         result = runner.invoke(app, ["mission", "list", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -385,17 +370,16 @@ class TestAvailabilityDisplay:
 
     def test_availability_working_task(self, initialized_project):
         """Active mission with current task shows 'Working (TASK-ID)'."""
-        # Start general mission
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--task", "Work"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "Work"],
         )
         assert start_result.exit_code == 0
         mid_match = re.search(r"#(\d+)", start_result.output)
         assert mid_match
         mission_id = mid_match.group(1)
 
-        # Create and claim a task
         create_result = runner.invoke(
             app,
             ["task", "create", "--title", "Working Task", "--role", "Engineer", "--priority", "HIGH"],
@@ -411,7 +395,6 @@ class TestAvailabilityDisplay:
         )
         assert claim_result.exit_code == 0
 
-        # Check availability
         result = runner.invoke(app, ["mission", "list", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -420,50 +403,18 @@ class TestAvailabilityDisplay:
         assert mission["availability"] == f"Working ({task_id})"
         assert mission["current_task_id"] == task_id
 
-    def test_availability_idle(self, initialized_project):
-        """IDLE mission with no task/epic shows 'Idle'."""
-        # Start a general mission
-        start_result = runner.invoke(
-            app,
-            ["mission", "start", "atar", "--role", "Engineer"],
-        )
-        assert start_result.exit_code == 0
-        mid_match = re.search(r"#(\d+)", start_result.output)
-        assert mid_match
-        mission_id = mid_match.group(1)
-
-        # Set mission status to IDLE via direct DB update
-        from site_nine.cli.utils import require_db_path
-        from site_nine.core.database import Database as DB
-
-        db_path = require_db_path()
-        with DB(db_path) as db:
-            db.execute_update(
-                "UPDATE missions SET status = :status WHERE id = :id",
-                {"status": "IDLE", "id": int(mission_id)},
-            )
-
-        # Check availability
-        result = runner.invoke(app, ["mission", "list", "--json"])
-        assert result.exit_code == 0
-        data = json.loads(result.output)
-
-        mission = next(m for m in data["data"] if m["id"] == int(mission_id))
-        assert mission["availability"] == "Idle"
-
     def test_availability_working_fallback(self, initialized_project):
         """Active general mission with no task shows 'Working' (fallback)."""
-        # Start a general mission with a task objective (so it's task-scoped but no claimed task)
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--task", "Some work"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "Some work"],
         )
         assert start_result.exit_code == 0
         mid_match = re.search(r"#(\d+)", start_result.output)
         assert mid_match
         mission_id = mid_match.group(1)
 
-        # Don't claim any task — ACTIVE status, no epic, no current task
         result = runner.invoke(app, ["mission", "list", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -484,13 +435,12 @@ class TestJSONOutputStructure:
 
     def test_json_output_has_all_fields(self, initialized_project):
         """JSON output includes all expected fields per ADR-009."""
-        # Create epic for a rich test case
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         runner.invoke(app, ["epic", "create", "--title", "JSON Epic", "--priority", "HIGH"])
 
-        # Start an epic-scoped mission
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--epic", "EPC-H-0001"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--epic", "EPC-H-0001"],
         )
         assert start_result.exit_code == 0
 
@@ -525,9 +475,10 @@ class TestJSONOutputStructure:
 
     def test_json_output_types(self, initialized_project):
         """JSON output field types are correct."""
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--task", "Type test"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "Type test"],
         )
 
         result = runner.invoke(app, ["mission", "list", "--json"])
@@ -536,7 +487,6 @@ class TestJSONOutputStructure:
         data = json.loads(result.output)
         mission = data["data"][0]
 
-        # Type assertions
         assert isinstance(mission["id"], int)
         assert isinstance(mission["persona_name"], str)
         assert isinstance(mission["role"], str)
@@ -544,49 +494,46 @@ class TestJSONOutputStructure:
         assert isinstance(mission["status"], str)
         assert isinstance(mission["desk_mode_active"], bool)
         assert isinstance(mission["availability"], str)
-        # Nullable fields
         assert mission["end_time"] is None or isinstance(mission["end_time"], str)
         assert mission["epic_id"] is None or isinstance(mission["epic_id"], str)
         assert mission["current_task_id"] is None or isinstance(mission["current_task_id"], str)
 
     def test_json_output_status_values(self, initialized_project):
         """JSON output status field uses enum values (uppercase)."""
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--task", "Status test"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "Status test"],
         )
         assert start_result.exit_code == 0
         mid_match = re.search(r"#(\d+)", start_result.output)
         assert mid_match
         mission_id = mid_match.group(1)
 
-        # Active mission
         result = runner.invoke(app, ["mission", "list", "--json"])
         data = json.loads(result.output)
         active_mission = next(m for m in data["data"] if m["id"] == int(mission_id))
         assert active_mission["status"] == "ACTIVE"
 
-        # End the mission
         runner.invoke(app, ["mission", "end", mission_id])
 
         result = runner.invoke(app, ["mission", "list", "--json"])
         data = json.loads(result.output)
         ended_mission = next(m for m in data["data"] if m["id"] == int(mission_id))
-        assert ended_mission["status"] == "ENDED"
+        assert ended_mission["status"] == "EXORCISED"
 
     def test_json_output_with_current_task(self, initialized_project):
         """JSON output includes current_task_id when a task is claimed."""
-        # Start mission
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--task", "Task test"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "Task test"],
         )
         assert start_result.exit_code == 0
         mid_match = re.search(r"#(\d+)", start_result.output)
         assert mid_match
         mission_id = mid_match.group(1)
 
-        # Create and claim task
         create_result = runner.invoke(
             app,
             ["task", "create", "--title", "JSON Task", "--role", "Engineer", "--priority", "HIGH"],
@@ -601,7 +548,6 @@ class TestJSONOutputStructure:
             ["task", "claim", task_id, "--mission", mission_id, "--role", "Engineer"],
         )
 
-        # Check JSON output
         result = runner.invoke(app, ["mission", "list", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -620,23 +566,21 @@ class TestJSONOutputStructure:
 
     def test_json_desk_mode_field(self, initialized_project):
         """JSON output includes desk_mode_active field accurately."""
-        # Start mission
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--task", "Desk test"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "Desk test"],
         )
         assert start_result.exit_code == 0
         mid_match = re.search(r"#(\d+)", start_result.output)
         assert mid_match
         mission_id = mid_match.group(1)
 
-        # Initially not in desk mode
         result = runner.invoke(app, ["mission", "list", "--json"])
         data = json.loads(result.output)
         mission = next(m for m in data["data"] if m["id"] == int(mission_id))
         assert mission["desk_mode_active"] is False
 
-        # Enable desk mode via direct DB update
         _set_desk_mode_via_db(initialized_project, mission_id)
 
         result = runner.invoke(app, ["mission", "list", "--json"])
@@ -655,26 +599,25 @@ class TestDeskModeMissionsInList:
 
     def test_multiple_desk_mode_missions(self, initialized_project):
         """Multiple missions can be in desk mode simultaneously."""
-        # Start two missions
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
+
         result1 = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--task", "Desk 1"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "Desk 1"],
         )
         assert result1.exit_code == 0
         mid1 = re.search(r"#(\d+)", result1.output).group(1)
 
         result2 = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Tester", "--task", "Desk 2"],
+            ["mission", "start", "--role", "Tester", "--name", "atar", "--task", "Desk 2"],
         )
         assert result2.exit_code == 0
         mid2 = re.search(r"#(\d+)", result2.output).group(1)
 
-        # Enable desk mode on both via direct DB update
         _set_desk_mode_via_db(initialized_project, mid1)
         _set_desk_mode_via_db(initialized_project, mid2)
 
-        # Both should show desk mode
         result = runner.invoke(app, ["mission", "list", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -684,31 +627,30 @@ class TestDeskModeMissionsInList:
 
     def test_desk_mode_in_table_output(self, initialized_project):
         """Desk mode missions show desk availability in table output."""
-        # Start and desk a mission
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--task", "Desk display"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "Desk display"],
         )
         assert start_result.exit_code == 0
         mid = re.search(r"#(\d+)", start_result.output).group(1)
 
         _set_desk_mode_via_db(initialized_project, mid)
 
-        # Table output should mention Desk
         result = runner.invoke(app, ["mission", "list"])
         assert result.exit_code == 0
         assert "Desk" in result.output
 
     def test_desk_mode_off_changes_availability(self, initialized_project):
         """Turning desk mode off changes availability back."""
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--task", "Toggle desk"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "Toggle desk"],
         )
         assert start_result.exit_code == 0
         mid = re.search(r"#(\d+)", start_result.output).group(1)
 
-        # Enable desk mode
         _set_desk_mode_via_db(initialized_project, mid)
 
         result = runner.invoke(app, ["mission", "list", "--json"])
@@ -716,7 +658,6 @@ class TestDeskModeMissionsInList:
         mission = next(m for m in data["data"] if m["id"] == int(mid))
         assert mission["availability"] == "Desk (All)"
 
-        # Disable desk mode
         _set_desk_mode_via_db(initialized_project, mid, active=False)
 
         result = runner.invoke(app, ["mission", "list", "--json"])
@@ -736,9 +677,10 @@ class TestEdgeCases:
 
     def test_general_availability_no_task_no_epic(self, initialized_project):
         """General mission (no flags) shows 'Working' when ACTIVE, no task."""
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar"],
         )
         assert start_result.exit_code == 0
         mid_match = re.search(r"#(\d+)", start_result.output)
@@ -749,64 +691,60 @@ class TestEdgeCases:
         data = json.loads(result.output)
         mission = next(m for m in data["data"] if m["id"] == int(mission_id))
 
-        # General mission with no task, no epic — but ACTIVE status
-        # _get_availability: not ended, not desk, no epic_id, no current_task
-        # status is ACTIVE (not IDLE), so falls through to "Working" fallback
         assert mission["availability"] == "Working"
 
-    def test_list_missions_ordered_by_created_at_desc(self, test_db):
-        """Missions are returned newest first (by created_at DESC)."""
-        # Use explicit timestamps to ensure deterministic ordering
-        # (datetime('now') in SQLite has second precision; both inserts may get same timestamp)
+    def test_list_possessions_ordered_by_created_at_desc(self, test_db):
+        """Possessions are returned newest first (by created_at DESC)."""
+        _create_daemon(test_db, "persona1", "Engineer")
+        _create_daemon(test_db, "persona2", "Engineer")
         test_db.execute_query(
             """
-            INSERT INTO missions (
-                persona_name, role, codename, mission_file,
-                start_date, start_time, objective, epic_id,
+            INSERT INTO possessions (
+                daemon_name, role, possession_log,
+                start_time, epic_id,
                 status, created_at, updated_at
             ) VALUES (
-                'persona1', 'Engineer', 'codename-1',
-                '.opencode/work/missions/test1.md',
-                date('now'), time('now'), 'Objective 1', NULL,
+                'persona1', 'Engineer',
+                '.opencode/work/possessions/test1.md',
+                datetime('now'), NULL,
                 'ACTIVE', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'
             ) RETURNING id
             """,
         )
         test_db.execute_query(
             """
-            INSERT INTO missions (
-                persona_name, role, codename, mission_file,
-                start_date, start_time, objective, epic_id,
+            INSERT INTO possessions (
+                daemon_name, role, possession_log,
+                start_time, epic_id,
                 status, created_at, updated_at
             ) VALUES (
-                'persona2', 'Engineer', 'codename-2',
-                '.opencode/work/missions/test2.md',
-                date('now'), time('now'), 'Objective 2', NULL,
+                'persona2', 'Engineer',
+                '.opencode/work/possessions/test2.md',
+                datetime('now'), NULL,
                 'ACTIVE', '2026-01-02T00:00:00Z', '2026-01-02T00:00:00Z'
             ) RETURNING id
             """,
         )
 
-        manager = MissionManager(test_db)
-        results = manager.list_missions()
+        manager = PossessionManager(test_db)
+        results = manager.list_possessions()
 
         assert len(results) == 2
         # Most recently created should be first
-        assert results[0].persona_name == "persona2"
-        assert results[1].persona_name == "persona1"
+        assert results[0].daemon_name == "persona2"
+        assert results[1].daemon_name == "persona1"
 
     def test_availability_priority_desk_over_working(self, initialized_project):
         """Desk mode takes priority over working status for availability."""
-        # Create epic and mission
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         runner.invoke(app, ["epic", "create", "--title", "Priority Epic", "--priority", "HIGH"])
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--epic", "EPC-H-0001"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--epic", "EPC-H-0001"],
         )
         assert start_result.exit_code == 0
         mid = re.search(r"#(\d+)", start_result.output).group(1)
 
-        # Create task in epic and claim it
         runner.invoke(
             app,
             [
@@ -823,26 +761,24 @@ class TestEdgeCases:
             ],
         )
 
-        # Even with epic_id, desk mode should take priority
         _set_desk_mode_via_db(initialized_project, mid)
 
         result = runner.invoke(app, ["mission", "list", "--json"])
         data = json.loads(result.output)
         mission = next(m for m in data["data"] if m["id"] == int(mid))
 
-        # Desk mode should show "Desk (EPC-H-0001)", not "Working (EPC-H-0001)"
         assert mission["availability"] == "Desk (EPC-H-0001)"
 
     def test_ended_mission_ignores_desk_mode(self, initialized_project):
         """Ended status takes priority over desk mode for availability."""
+        runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
-            ["mission", "start", "atar", "--role", "Engineer", "--task", "End test"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "End test"],
         )
         assert start_result.exit_code == 0
         mid = re.search(r"#(\d+)", start_result.output).group(1)
 
-        # Enable desk mode then end
         _set_desk_mode_via_db(initialized_project, mid)
         runner.invoke(app, ["mission", "end", mid])
 
@@ -850,5 +786,4 @@ class TestEdgeCases:
         data = json.loads(result.output)
         mission = next(m for m in data["data"] if m["id"] == int(mid))
 
-        # Should show Ended, not Desk
         assert mission["availability"] == "Ended"

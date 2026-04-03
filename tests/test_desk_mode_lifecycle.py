@@ -2,13 +2,13 @@
 Tests for desk mode lifecycle and status output (TST-M-0105).
 
 Tests cover:
-- MissionManager.set_desk_mode() unit tests (enable, disable, validation)
+- PossessionManager.set_desk_mode() unit tests (enable, disable, validation)
 - CLI desk command lifecycle: start, stop, --mission flag, --start/--stop flags
-- Desk mode scope inference: epic-scoped vs general missions
+- Desk mode scope inference: epic-scoped vs general possessions
 - JSON output structure: mission_id, desk_mode_active, scope, unread_count, unread_messages
-- Auto-disable on mission end (both manager and CLI level)
+- Auto-disable on possession exorcism (both manager and CLI level)
 - Ctrl+C / signal handler cleanup
-- Validation: ended mission, nonexistent mission, no active mission
+- Validation: exorcised possession, nonexistent possession, no active possession
 - Status output format during periodic checks
 - Inbox integration during desk mode JSON output
 
@@ -26,9 +26,9 @@ from typer.testing import CliRunner
 from site_nine.__main__ import app
 from site_nine.core.database import Database
 from site_nine.messaging.manager import MessageManager
-from site_nine.missions.exceptions import MissionError
-from site_nine.missions.manager import MissionManager
-from site_nine.missions.types import MissionStatus
+from site_nine.possessions.exceptions import PossessionError
+from site_nine.possessions.manager import PossessionManager
+from site_nine.possessions.types import PossessionStatus
 
 runner = CliRunner()
 
@@ -38,32 +38,39 @@ runner = CliRunner()
 # ---------------------------------------------------------------------------
 
 
-def _create_mission(
+def _create_possession(
     db: Database,
     *,
-    persona: str = "test-persona",
+    daemon: str = "test-daemon",
     role: str = "Engineer",
-    codename: str = "desk-test",
     epic_id: str | None = None,
     start_time: str = "10:00:00",
 ) -> int:
-    """Insert a mission and return its ID."""
+    """Insert a possession and return its ID."""
+    # Ensure daemon exists
+    db.execute_update(
+        "INSERT OR IGNORE INTO daemons (name, role, incarnations) VALUES (:name, :role, 0)",
+        {"name": daemon, "role": role},
+    )
     return db.execute_insert(
         """
-        INSERT INTO missions (
-            persona_name, role, codename, mission_file,
-            start_date, start_time, objective, epic_id
+        INSERT INTO possessions (
+            daemon_name, role, possession_log,
+            start_time, epic_id,
+            status, last_heartbeat_at,
+            created_at, updated_at
         )
         VALUES (
-            :persona, :role, :codename,
-            '.opencode/work/missions/desk-test.md',
-            '2026-02-14', :start_time, 'Desk mode test mission', :epic_id
+            :daemon, :role,
+            '.opencode/work/possessions/desk-test.md',
+            :start_time, :epic_id,
+            'ACTIVE', datetime('now'),
+            datetime('now'), datetime('now')
         )
         """,
         {
-            "persona": persona,
+            "daemon": daemon,
             "role": role,
-            "codename": codename,
             "start_time": start_time,
             "epic_id": epic_id,
         },
@@ -81,33 +88,33 @@ def _create_epic(db: Database, epic_id: str = "EPC-H-0001", title: str = "Test E
     )
 
 
-def _get_desk_mode(db: Database, mission_id: int) -> bool:
+def _get_desk_mode(db: Database, possession_id: int) -> bool:
     """Read desk_mode_active from DB."""
     rows = db.execute_query(
-        "SELECT desk_mode_active FROM missions WHERE id = :mid",
-        {"mid": mission_id},
+        "SELECT desk_mode_active FROM possessions WHERE id = :mid",
+        {"mid": possession_id},
     )
-    assert rows, f"Mission {mission_id} not found"
+    assert rows, f"Possession {possession_id} not found"
     return bool(rows[0]["desk_mode_active"])
 
 
-def _set_desk_mode(db: Database, mission_id: int, active: bool) -> None:
+def _set_desk_mode(db: Database, possession_id: int, active: bool) -> None:
     """Set desk_mode_active directly in DB."""
     db.execute_update(
-        "UPDATE missions SET desk_mode_active = :active WHERE id = :mid",
-        {"mid": mission_id, "active": 1 if active else 0},
+        "UPDATE possessions SET desk_mode_active = :active WHERE id = :mid",
+        {"mid": possession_id, "active": 1 if active else 0},
     )
 
 
-def _end_mission_raw(db: Database, mission_id: int) -> None:
-    """End a mission directly via DB (no file updates)."""
+def _end_possession_raw(db: Database, possession_id: int) -> None:
+    """Exorcise a possession directly via DB (no file updates)."""
     db.execute_update(
         """
-        UPDATE missions
-        SET end_time = '23:59:59', status = 'ENDED', desk_mode_active = 0
+        UPDATE possessions
+        SET end_time = datetime('now'), status = 'EXORCISED', desk_mode_active = 0
         WHERE id = :mid
         """,
-        {"mid": mission_id},
+        {"mid": possession_id},
     )
 
 
@@ -117,19 +124,19 @@ def _end_mission_raw(db: Database, mission_id: int) -> None:
 
 
 def _setup_desk_missions(project_dir: Path, *, epic_id: str | None = None) -> tuple[int, int]:
-    """Create two missions for CLI tests.
+    """Create two possessions for CLI tests.
 
-    m2 has a later start_time so _get_current_mission_id returns m2.
+    m2 has a later start_time so _get_current_possession_id returns m2.
     """
     db_path = project_dir / ".opencode" / "data" / "project.db"
 
     with Database(db_path) as db:
         db.execute_update(
             """
-            INSERT OR IGNORE INTO personas (name, role, mythology, description)
+            INSERT OR IGNORE INTO daemons (name, role, incarnations)
             VALUES
-                ('desk-alpha', 'Operator', 'Test', 'Desk alpha persona'),
-                ('desk-beta', 'Tester', 'Test', 'Desk beta persona')
+                ('desk-alpha', 'Operator', 0),
+                ('desk-beta', 'Tester', 0)
             """
         )
 
@@ -144,26 +151,32 @@ def _setup_desk_missions(project_dir: Path, *, epic_id: str | None = None) -> tu
 
         m1 = db.execute_insert(
             """
-            INSERT INTO missions (
-                persona_name, role, codename, mission_file,
-                start_date, start_time, objective
+            INSERT INTO possessions (
+                daemon_name, role, possession_log,
+                start_time, status, last_heartbeat_at,
+                created_at, updated_at
             ) VALUES (
-                'desk-alpha', 'Operator', 'desk-one',
-                '.opencode/work/missions/desk-1.md',
-                '2026-02-14', '10:00:00', 'Desk CLI test 1'
+                'desk-alpha', 'Operator',
+                '.opencode/work/possessions/desk-1.md',
+                '10:00:00', 'ACTIVE', datetime('now'),
+                datetime('now'), datetime('now')
             )
             """
         )
 
         m2 = db.execute_insert(
             """
-            INSERT INTO missions (
-                persona_name, role, codename, mission_file,
-                start_date, start_time, objective, epic_id
+            INSERT INTO possessions (
+                daemon_name, role, possession_log,
+                start_time, epic_id,
+                status, last_heartbeat_at,
+                created_at, updated_at
             ) VALUES (
-                'desk-beta', 'Tester', 'desk-two',
-                '.opencode/work/missions/desk-2.md',
-                '2026-02-14', '11:00:00', 'Desk CLI test 2', :epic_id
+                'desk-beta', 'Tester',
+                '.opencode/work/possessions/desk-2.md',
+                '11:00:00', :epic_id,
+                'ACTIVE', datetime('now'),
+                datetime('now'), datetime('now')
             )
             """,
             {"epic_id": epic_id},
@@ -172,39 +185,39 @@ def _setup_desk_missions(project_dir: Path, *, epic_id: str | None = None) -> tu
     return m1, m2
 
 
-def _get_desk_mode_in_project(project_dir: Path, mission_id: int) -> bool:
+def _get_desk_mode_in_project(project_dir: Path, possession_id: int) -> bool:
     """Read desk_mode_active from initialized_project DB."""
     db_path = project_dir / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        return _get_desk_mode(db, mission_id)
+        return _get_desk_mode(db, possession_id)
 
 
-def _set_desk_mode_in_project(project_dir: Path, mission_id: int, active: bool) -> None:
+def _set_desk_mode_in_project(project_dir: Path, possession_id: int, active: bool) -> None:
     """Set desk_mode_active in initialized_project DB."""
     db_path = project_dir / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        _set_desk_mode(db, mission_id, active)
+        _set_desk_mode(db, possession_id, active)
 
 
-def _end_mission_in_project(project_dir: Path, mission_id: int) -> None:
-    """End a mission in the initialized_project DB."""
+def _end_possession_in_project(project_dir: Path, possession_id: int) -> None:
+    """Exorcise a possession in the initialized_project DB."""
     db_path = project_dir / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
-        _end_mission_raw(db, mission_id)
+        _end_possession_raw(db, possession_id)
 
 
 # ===========================================================================
-# Unit tests: MissionManager.set_desk_mode()
+# Unit tests: PossessionManager.set_desk_mode()
 # ===========================================================================
 
 
 class TestSetDeskModeManager:
-    """Unit tests for MissionManager.set_desk_mode()."""
+    """Unit tests for PossessionManager.set_desk_mode()."""
 
     def test_enable_desk_mode(self, test_db: Database):
         """set_desk_mode(active=True) sets desk_mode_active to 1."""
-        mid = _create_mission(test_db)
-        mgr = MissionManager(test_db)
+        mid = _create_possession(test_db)
+        mgr = PossessionManager(test_db)
 
         mgr.set_desk_mode(mid, active=True)
 
@@ -212,8 +225,8 @@ class TestSetDeskModeManager:
 
     def test_disable_desk_mode(self, test_db: Database):
         """set_desk_mode(active=False) sets desk_mode_active to 0."""
-        mid = _create_mission(test_db)
-        mgr = MissionManager(test_db)
+        mid = _create_possession(test_db)
+        mgr = PossessionManager(test_db)
 
         mgr.set_desk_mode(mid, active=True)
         assert _get_desk_mode(test_db, mid) is True
@@ -223,8 +236,8 @@ class TestSetDeskModeManager:
 
     def test_enable_idempotent(self, test_db: Database):
         """Enabling when already enabled does not raise."""
-        mid = _create_mission(test_db)
-        mgr = MissionManager(test_db)
+        mid = _create_possession(test_db)
+        mgr = PossessionManager(test_db)
 
         mgr.set_desk_mode(mid, active=True)
         mgr.set_desk_mode(mid, active=True)
@@ -233,101 +246,97 @@ class TestSetDeskModeManager:
 
     def test_disable_idempotent(self, test_db: Database):
         """Disabling when already disabled does not raise."""
-        mid = _create_mission(test_db)
-        mgr = MissionManager(test_db)
+        mid = _create_possession(test_db)
+        mgr = PossessionManager(test_db)
 
         mgr.set_desk_mode(mid, active=False)
 
         assert _get_desk_mode(test_db, mid) is False
 
-    def test_error_on_ended_mission(self, test_db: Database):
-        """Cannot enable desk mode on an ended mission."""
-        mid = _create_mission(test_db)
-        _end_mission_raw(test_db, mid)
-        mgr = MissionManager(test_db)
+    def test_error_on_exorcised_possession(self, test_db: Database):
+        """Cannot enable desk mode on an exorcised possession."""
+        mid = _create_possession(test_db)
+        _end_possession_raw(test_db, mid)
+        mgr = PossessionManager(test_db)
 
-        with pytest.raises(MissionError, match="Cannot change desk mode on an ended mission"):
+        with pytest.raises(PossessionError, match="Cannot change desk mode on an exorcised possession"):
             mgr.set_desk_mode(mid, active=True)
 
-    def test_error_disable_on_ended_mission(self, test_db: Database):
-        """Cannot disable desk mode on an ended mission either."""
-        mid = _create_mission(test_db)
+    def test_error_disable_on_exorcised_possession(self, test_db: Database):
+        """Cannot disable desk mode on an exorcised possession either."""
+        mid = _create_possession(test_db)
         _set_desk_mode(test_db, mid, True)
-        _end_mission_raw(test_db, mid)
-        mgr = MissionManager(test_db)
+        _end_possession_raw(test_db, mid)
+        mgr = PossessionManager(test_db)
 
-        with pytest.raises(MissionError, match="Cannot change desk mode on an ended mission"):
+        with pytest.raises(PossessionError, match="Cannot change desk mode on an exorcised possession"):
             mgr.set_desk_mode(mid, active=False)
 
-    def test_error_on_nonexistent_mission(self, test_db: Database):
-        """Cannot set desk mode on a nonexistent mission ID."""
-        mgr = MissionManager(test_db)
+    def test_error_on_nonexistent_possession(self, test_db: Database):
+        """Cannot set desk mode on a nonexistent possession ID."""
+        mgr = PossessionManager(test_db)
 
-        with pytest.raises(MissionError, match="not found"):
+        with pytest.raises(PossessionError, match="not found"):
             mgr.set_desk_mode(99999, active=True)
 
     def test_default_is_false(self, test_db: Database):
-        """Newly created missions have desk_mode_active=False."""
-        mid = _create_mission(test_db)
+        """Newly created possessions have desk_mode_active=False."""
+        mid = _create_possession(test_db)
 
         assert _get_desk_mode(test_db, mid) is False
 
 
 # ===========================================================================
-# Unit tests: auto-disable on mission end
+# Unit tests: auto-disable on possession exorcism
 # ===========================================================================
 
 
-class TestAutoDisableOnMissionEnd:
-    """Desk mode is automatically disabled when a mission ends."""
+class TestAutoDisableOnPossessionExorcism:
+    """Desk mode is automatically disabled when a possession is exorcised."""
 
-    def test_end_mission_clears_desk_mode(self, test_db: Database):
-        """end_mission() sets desk_mode_active to 0."""
-        mid = _create_mission(test_db)
-        mgr = MissionManager(test_db)
+    def test_exorcise_clears_desk_mode(self, test_db: Database):
+        """exorcise() sets desk_mode_active to 0."""
+        mid = _create_possession(test_db)
+        mgr = PossessionManager(test_db)
 
         mgr.set_desk_mode(mid, active=True)
         assert _get_desk_mode(test_db, mid) is True
 
-        with patch.object(mgr, "_update_mission_file_end_time"):
-            mgr.end_mission(mid)
+        mgr.exorcise(mid)
 
         assert _get_desk_mode(test_db, mid) is False
 
-    def test_end_mission_without_desk_mode(self, test_db: Database):
-        """end_mission() works fine when desk mode was never enabled."""
-        mid = _create_mission(test_db)
-        mgr = MissionManager(test_db)
+    def test_exorcise_without_desk_mode(self, test_db: Database):
+        """exorcise() works fine when desk mode was never enabled."""
+        mid = _create_possession(test_db)
+        mgr = PossessionManager(test_db)
 
-        with patch.object(mgr, "_update_mission_file_end_time"):
-            mgr.end_mission(mid)
+        mgr.exorcise(mid)
 
         assert _get_desk_mode(test_db, mid) is False
 
-    def test_end_mission_sets_ended_status(self, test_db: Database):
-        """After end_mission(), status is ENDED and desk is off."""
-        mid = _create_mission(test_db)
-        mgr = MissionManager(test_db)
+    def test_exorcise_sets_exorcised_status(self, test_db: Database):
+        """After exorcise(), status is EXORCISED and desk is off."""
+        mid = _create_possession(test_db)
+        mgr = PossessionManager(test_db)
         mgr.set_desk_mode(mid, active=True)
 
-        with patch.object(mgr, "_update_mission_file_end_time"):
-            mgr.end_mission(mid)
+        mgr.exorcise(mid)
 
-        mission = mgr.get_mission(mid)
-        assert mission is not None
-        assert mission.status == MissionStatus.ENDED
-        assert mission.desk_mode_active is False
-        assert mission.end_time is not None
+        possession = mgr.get_possession(mid)
+        assert possession is not None
+        assert possession.status == PossessionStatus.EXORCISED
+        assert possession.desk_mode_active is False
+        assert possession.end_time is not None
 
-    def test_cannot_enable_desk_after_end(self, test_db: Database):
-        """After ending, desk mode cannot be re-enabled."""
-        mid = _create_mission(test_db)
-        mgr = MissionManager(test_db)
+    def test_cannot_enable_desk_after_exorcism(self, test_db: Database):
+        """After exorcising, desk mode cannot be re-enabled."""
+        mid = _create_possession(test_db)
+        mgr = PossessionManager(test_db)
 
-        with patch.object(mgr, "_update_mission_file_end_time"):
-            mgr.end_mission(mid)
+        mgr.exorcise(mid)
 
-        with pytest.raises(MissionError, match="Cannot change desk mode on an ended mission"):
+        with pytest.raises(PossessionError, match="Cannot change desk mode on an exorcised possession"):
             mgr.set_desk_mode(mid, active=True)
 
 
@@ -365,7 +374,7 @@ class TestCLIDeskStartJSON:
         assert isinstance(data["unread_messages"], list)
 
     def test_start_json_scope_general(self, initialized_project: Path):
-        """General mission (no epic_id) gets scope='all'."""
+        """General possession (no epic_id) gets scope='all'."""
         _setup_desk_missions(initialized_project, epic_id=None)
 
         result = runner.invoke(app, ["comms", "desk", "--json"])
@@ -375,7 +384,7 @@ class TestCLIDeskStartJSON:
         assert data["scope"] == "all"
 
     def test_start_json_scope_epic(self, initialized_project: Path):
-        """Epic-scoped mission gets scope='epic <id>'."""
+        """Epic-scoped possession gets scope='epic <id>'."""
         _setup_desk_missions(initialized_project, epic_id="EPC-H-0099")
 
         result = runner.invoke(app, ["comms", "desk", "--json"])
@@ -406,7 +415,7 @@ class TestCLIDeskStartJSON:
         assert data["desk_mode_active"] is True
 
     def test_start_json_with_mission_flag(self, initialized_project: Path):
-        """--json --mission <id> targets a specific mission."""
+        """--json --mission <id> targets a specific possession."""
         m1, m2 = _setup_desk_missions(initialized_project)
 
         result = runner.invoke(app, ["comms", "desk", "--json", "--mission", str(m1)])
@@ -417,7 +426,7 @@ class TestCLIDeskStartJSON:
         assert data["mission_id"] == m1
 
     def test_start_json_returns_correct_mission_id(self, initialized_project: Path):
-        """Default mission (latest start_time) has correct mission_id in JSON."""
+        """Default possession (latest start_time) has correct mission_id in JSON."""
         m1, m2 = _setup_desk_missions(initialized_project)
 
         result = runner.invoke(app, ["comms", "desk", "--json"])
@@ -456,7 +465,7 @@ class TestCLIDeskStop:
         assert "disabled" in result.output.lower() or "Desk" in result.output
 
     def test_stop_with_mission_flag(self, initialized_project: Path):
-        """--stop --mission <id> targets a specific mission."""
+        """--stop --mission <id> targets a specific possession."""
         m1, m2 = _setup_desk_missions(initialized_project)
 
         result = runner.invoke(app, ["comms", "desk", "--stop", "--mission", str(m1), "--json"])
@@ -467,7 +476,7 @@ class TestCLIDeskStop:
         assert data["data"]["mission_id"] == m1
 
     def test_stop_returns_correct_mission_id(self, initialized_project: Path):
-        """Default mission (latest start_time) has correct mission_id in stop output."""
+        """Default possession (latest start_time) has correct mission_id in stop output."""
         m1, m2 = _setup_desk_missions(initialized_project)
 
         result = runner.invoke(app, ["comms", "desk", "--stop", "--json"])
@@ -526,31 +535,31 @@ class TestCLIDeskPersistence:
 class TestCLIDeskValidation:
     """Tests for desk command validation and error cases."""
 
-    def test_desk_on_ended_mission_fails(self, initialized_project: Path):
-        """Starting desk mode on an ended mission fails."""
+    def test_desk_on_exorcised_possession_fails(self, initialized_project: Path):
+        """Starting desk mode on an exorcised possession fails."""
         m1, m2 = _setup_desk_missions(initialized_project)
-        _end_mission_in_project(initialized_project, m2)
+        _end_possession_in_project(initialized_project, m2)
 
         result = runner.invoke(app, ["comms", "desk", "--mission", str(m2), "--json"])
         assert result.exit_code != 0
 
-    def test_desk_stop_on_ended_mission_fails(self, initialized_project: Path):
-        """Stopping desk mode on an ended mission fails."""
+    def test_desk_stop_on_exorcised_possession_fails(self, initialized_project: Path):
+        """Stopping desk mode on an exorcised possession fails."""
         m1, m2 = _setup_desk_missions(initialized_project)
-        _end_mission_in_project(initialized_project, m2)
+        _end_possession_in_project(initialized_project, m2)
 
         result = runner.invoke(app, ["comms", "desk", "--stop", "--mission", str(m2)])
         assert result.exit_code != 0
 
-    def test_desk_nonexistent_mission_fails(self, initialized_project: Path):
-        """Targeting a nonexistent mission ID fails."""
+    def test_desk_nonexistent_possession_fails(self, initialized_project: Path):
+        """Targeting a nonexistent possession ID fails."""
         _setup_desk_missions(initialized_project)
 
         result = runner.invoke(app, ["comms", "desk", "--mission", "99999", "--json"])
         assert result.exit_code != 0
 
-    def test_desk_no_active_mission_fails(self, initialized_project: Path):
-        """When no active missions exist, desk fails."""
+    def test_desk_no_active_possession_fails(self, initialized_project: Path):
+        """When no active possessions exist, desk fails."""
         result = runner.invoke(app, ["comms", "desk", "--json"])
         assert result.exit_code != 0
 
@@ -585,8 +594,8 @@ class TestDeskModeSignalHandler:
 
     def test_cleanup_path_disables_desk_mode(self, test_db: Database):
         """The signal handler's cleanup logic (set_desk_mode(False)) works."""
-        mid = _create_mission(test_db)
-        mgr = MissionManager(test_db)
+        mid = _create_possession(test_db)
+        mgr = PossessionManager(test_db)
 
         mgr.set_desk_mode(mid, active=True)
         assert _get_desk_mode(test_db, mid) is True
@@ -626,7 +635,7 @@ class TestPollingLoopOutput:
         assert "Ctrl+C" in result.output
 
     def test_startup_message_epic_scope(self, initialized_project: Path):
-        """Startup message shows epic ID when mission is epic-scoped."""
+        """Startup message shows epic ID when possession is epic-scoped."""
         _setup_desk_missions(initialized_project, epic_id="EPC-H-0077")
 
         with patch("time.sleep", side_effect=SystemExit(0)):
@@ -660,8 +669,8 @@ class TestPollingLoopOutput:
         with Database(db_path) as db:
             msg_mgr = MessageManager(db)
             msg_mgr.send_conversation_message(
-                from_mission_id=m1,
-                to_mission_id=m2,
+                from_possession_id=m1,
+                to_possession_id=m2,
                 body="Urgent question about deployment",
             )
 
@@ -696,8 +705,8 @@ class TestDeskInboxIntegration:
         with Database(db_path) as db:
             msg_mgr = MessageManager(db)
             msg_mgr.send_conversation_message(
-                from_mission_id=m1,
-                to_mission_id=m2,
+                from_possession_id=m1,
+                to_possession_id=m2,
                 body="Integration test message",
             )
 
@@ -719,8 +728,8 @@ class TestDeskInboxIntegration:
         with Database(db_path) as db:
             msg_mgr = MessageManager(db)
             msg_mgr.send_conversation_message(
-                from_mission_id=m2,
-                to_mission_id=m1,
+                from_possession_id=m2,
+                to_possession_id=m1,
                 body="Outgoing message from desk agent",
             )
 
@@ -732,32 +741,34 @@ class TestDeskInboxIntegration:
         assert data["unread_messages"] == []
 
     def test_multiple_senders_all_listed(self, initialized_project: Path):
-        """Unread messages from different missions are all included."""
+        """Unread messages from different possessions are all included."""
         m1, m2 = _setup_desk_missions(initialized_project)
 
         db_path = initialized_project / ".opencode" / "data" / "project.db"
         with Database(db_path) as db:
             db.execute_update(
                 """
-                INSERT OR IGNORE INTO personas (name, role, mythology, description)
-                VALUES ('desk-gamma', 'Engineer', 'Test', 'Desk gamma')
+                INSERT OR IGNORE INTO daemons (name, role, incarnations)
+                VALUES ('desk-gamma', 'Engineer', 0)
                 """
             )
             m3 = db.execute_insert(
                 """
-                INSERT INTO missions (
-                    persona_name, role, codename, mission_file,
-                    start_date, start_time, objective
+                INSERT INTO possessions (
+                    daemon_name, role, possession_log,
+                    start_time, status, last_heartbeat_at,
+                    created_at, updated_at
                 ) VALUES (
-                    'desk-gamma', 'Engineer', 'desk-three',
-                    '.opencode/work/missions/desk-3.md',
-                    '2026-02-14', '09:00:00', 'Desk CLI test 3'
+                    'desk-gamma', 'Engineer',
+                    '.opencode/work/possessions/desk-3.md',
+                    '09:00:00', 'ACTIVE', datetime('now'),
+                    datetime('now'), datetime('now')
                 )
                 """
             )
             msg_mgr = MessageManager(db)
-            msg_mgr.send_conversation_message(from_mission_id=m1, to_mission_id=m2, body="From m1")
-            msg_mgr.send_conversation_message(from_mission_id=m3, to_mission_id=m2, body="From m3")
+            msg_mgr.send_conversation_message(from_possession_id=m1, to_possession_id=m2, body="From m1")
+            msg_mgr.send_conversation_message(from_possession_id=m3, to_possession_id=m2, body="From m3")
 
         result = runner.invoke(app, ["comms", "desk", "--json"])
 
@@ -775,8 +786,8 @@ class TestDeskInboxIntegration:
         with Database(db_path) as db:
             msg_mgr = MessageManager(db)
             msg_mgr.send_conversation_message(
-                from_mission_id=m1,
-                to_mission_id=m2,
+                from_possession_id=m1,
+                to_possession_id=m2,
                 body="Question for desk agent",
             )
 
@@ -795,83 +806,79 @@ class TestDeskInboxIntegration:
 
 
 class TestDeskScopeEdgeCases:
-    """Tests for desk mode scope behavior with various mission configs."""
+    """Tests for desk mode scope behavior with various possession configs."""
 
-    def test_general_mission_desk_mode(self, test_db: Database):
-        """General mission (no epic_id) can enter desk mode."""
-        mid = _create_mission(test_db, epic_id=None)
-        mgr = MissionManager(test_db)
+    def test_general_possession_desk_mode(self, test_db: Database):
+        """General possession (no epic_id) can enter desk mode."""
+        mid = _create_possession(test_db, epic_id=None)
+        mgr = PossessionManager(test_db)
 
         mgr.set_desk_mode(mid, active=True)
-        mission = mgr.get_mission(mid)
-        assert mission is not None
-        assert mission.epic_id is None
-        assert mission.desk_mode_active is True
+        possession = mgr.get_possession(mid)
+        assert possession is not None
+        assert possession.epic_id is None
+        assert possession.desk_mode_active is True
 
-    def test_epic_scoped_mission_desk_mode(self, test_db: Database):
-        """Epic-scoped mission can enter desk mode; epic_id preserved."""
+    def test_epic_scoped_possession_desk_mode(self, test_db: Database):
+        """Epic-scoped possession can enter desk mode; epic_id preserved."""
         _create_epic(test_db, "EPC-H-0042")
-        mid = _create_mission(test_db, epic_id="EPC-H-0042")
-        mgr = MissionManager(test_db)
+        mid = _create_possession(test_db, epic_id="EPC-H-0042")
+        mgr = PossessionManager(test_db)
 
         mgr.set_desk_mode(mid, active=True)
-        mission = mgr.get_mission(mid)
-        assert mission is not None
-        assert mission.epic_id == "EPC-H-0042"
-        assert mission.desk_mode_active is True
+        possession = mgr.get_possession(mid)
+        assert possession is not None
+        assert possession.epic_id == "EPC-H-0042"
+        assert possession.desk_mode_active is True
 
     def test_desk_toggle_does_not_change_epic_id(self, test_db: Database):
         """Toggling desk mode does not alter epic_id."""
         _create_epic(test_db, "EPC-M-0010")
-        mid = _create_mission(test_db, epic_id="EPC-M-0010")
-        mgr = MissionManager(test_db)
+        mid = _create_possession(test_db, epic_id="EPC-M-0010")
+        mgr = PossessionManager(test_db)
 
         mgr.set_desk_mode(mid, active=True)
         mgr.set_desk_mode(mid, active=False)
         mgr.set_desk_mode(mid, active=True)
 
-        mission = mgr.get_mission(mid)
-        assert mission is not None
-        assert mission.epic_id == "EPC-M-0010"
+        possession = mgr.get_possession(mid)
+        assert possession is not None
+        assert possession.epic_id == "EPC-M-0010"
 
-    def test_multiple_missions_independent(self, test_db: Database):
-        """Desk mode on one mission doesn't affect another."""
-        mid1 = _create_mission(test_db, persona="test-persona", codename="desk-a", start_time="10:00:00")
-        mid2 = _create_mission(test_db, persona="persona1", codename="desk-b", start_time="11:00:00")
-        mgr = MissionManager(test_db)
+    def test_multiple_possessions_independent(self, test_db: Database):
+        """Desk mode on one possession doesn't affect another."""
+        mid1 = _create_possession(test_db, daemon="test-daemon-a", start_time="10:00:00")
+        mid2 = _create_possession(test_db, daemon="test-daemon-b", start_time="11:00:00")
+        mgr = PossessionManager(test_db)
 
         mgr.set_desk_mode(mid1, active=True)
 
         assert _get_desk_mode(test_db, mid1) is True
         assert _get_desk_mode(test_db, mid2) is False
 
-    def test_idle_mission_can_enter_desk_mode(self, test_db: Database):
-        """An IDLE mission can enter desk mode."""
-        mid = _create_mission(test_db)
-        test_db.execute_update(
-            "UPDATE missions SET status = :s WHERE id = :mid",
-            {"s": MissionStatus.IDLE.value, "mid": mid},
-        )
-        mgr = MissionManager(test_db)
+    def test_active_possession_can_enter_desk_mode(self, test_db: Database):
+        """An ACTIVE possession can enter desk mode."""
+        mid = _create_possession(test_db)
+        mgr = PossessionManager(test_db)
 
         mgr.set_desk_mode(mid, active=True)
         assert _get_desk_mode(test_db, mid) is True
 
     def test_desk_mode_persists_across_reads(self, test_db: Database):
-        """Desk mode is correctly retrieved on subsequent get_mission() calls."""
-        mid = _create_mission(test_db)
-        mgr = MissionManager(test_db)
+        """Desk mode is correctly retrieved on subsequent get_possession() calls."""
+        mid = _create_possession(test_db)
+        mgr = PossessionManager(test_db)
 
         mgr.set_desk_mode(mid, active=True)
 
-        mission = mgr.get_mission(mid)
-        assert mission is not None
-        assert mission.desk_mode_active is True
+        possession = mgr.get_possession(mid)
+        assert possession is not None
+        assert possession.desk_mode_active is True
 
     def test_heartbeat_preserves_desk_mode(self, test_db: Database):
-        """Heartbeat (updating last_active_at) does not affect desk_mode_active."""
-        mid = _create_mission(test_db)
-        mgr = MissionManager(test_db)
+        """Heartbeat (updating last_heartbeat_at) does not affect desk_mode_active."""
+        mid = _create_possession(test_db)
+        mgr = PossessionManager(test_db)
 
         mgr.set_desk_mode(mid, active=True)
         mgr.heartbeat(mid)
@@ -880,29 +887,29 @@ class TestDeskScopeEdgeCases:
 
 
 # ===========================================================================
-# Auto-disable via CLI (end mission while desk mode active)
+# Auto-disable via CLI (end possession while desk mode active)
 # ===========================================================================
 
 
-class TestAutoDisableOnMissionEndCLI:
-    """Test that ending a mission via CLI clears desk mode."""
+class TestAutoDisableOnPossessionExorcismCLI:
+    """Test that ending a possession via CLI clears desk mode."""
 
-    def test_end_mission_clears_desk_mode(self, initialized_project: Path):
-        """s9 mission end on a desk-active mission clears desk_mode_active."""
+    def test_end_possession_clears_desk_mode(self, initialized_project: Path):
+        """s9 mission end on a desk-active possession clears desk_mode_active."""
         m1, m2 = _setup_desk_missions(initialized_project)
         _set_desk_mode_in_project(initialized_project, m2, True)
 
         result = runner.invoke(app, ["mission", "end", str(m2)])
-        assert result.exit_code == 0, f"End mission failed: {result.output}"
+        assert result.exit_code == 0, f"End possession failed: {result.output}"
 
         assert _get_desk_mode_in_project(initialized_project, m2) is False
 
-    def test_end_mission_without_desk_mode(self, initialized_project: Path):
-        """Ending a mission without desk mode active also works."""
+    def test_end_possession_without_desk_mode(self, initialized_project: Path):
+        """Ending a possession without desk mode active also works."""
         m1, m2 = _setup_desk_missions(initialized_project)
         assert _get_desk_mode_in_project(initialized_project, m2) is False
 
         result = runner.invoke(app, ["mission", "end", str(m2)])
-        assert result.exit_code == 0, f"End mission failed: {result.output}"
+        assert result.exit_code == 0, f"End possession failed: {result.output}"
 
         assert _get_desk_mode_in_project(initialized_project, m2) is False

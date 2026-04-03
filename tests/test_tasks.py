@@ -28,20 +28,20 @@ def test_create_task(test_db: Database):
 
 def test_claim_task(test_db: Database):
     """Test claiming a task"""
-    # Create persona record first (FK constraint)
+    # Create daemon record first (FK constraint)
     test_db.execute_update(
         """
-        INSERT INTO personas (name, role, mythology, description)
-        VALUES ('testdaemon', 'Engineer', 'test', 'Test daemon')
+        INSERT INTO daemons (name, role)
+        VALUES ('testdaemon', 'Engineer')
         """
     )
 
-    # Create a simple mission record for foreign key
+    # Create a simple possession record for foreign key
     test_db.execute_update(
         """
-        INSERT INTO missions (id, persona_name, role, codename, mission_file, start_date, start_time, objective)
-        VALUES (1, 'testdaemon', 'Engineer', 'test-mission', '.opencode/work/missions/test.md', 
-                date('now'), datetime('now'), 'Test objective')
+        INSERT INTO possessions (id, daemon_name, role, possession_log, start_time)
+        VALUES (1, 'testdaemon', 'Engineer', '.opencode/work/possessions/test.md',
+                datetime('now'))
         """
     )
 
@@ -53,28 +53,28 @@ def test_claim_task(test_db: Database):
         priority="MEDIUM",
     )
 
-    manager.claim_task("ENG-M-0001", mission_id=1, current_role="Engineer")
+    manager.claim_task("ENG-M-0001", possession_id=1, current_role="Engineer")
 
     task = manager.get_task("ENG-M-0001")
-    assert task.current_mission_id == 1
+    assert task.current_possession_id == 1
     assert task.status == "UNDERWAY"
     assert task.claimed_at is not None
 
 
 def test_update_status(test_db: Database):
     """Test updating task status"""
-    # Create persona and mission for foreign key
+    # Create daemon and possession for foreign key
     test_db.execute_update(
         """
-        INSERT INTO personas (name, role, mythology, description)
-        VALUES ('testdaemon', 'Tester', 'test', 'Test daemon')
+        INSERT INTO daemons (name, role)
+        VALUES ('testdaemon', 'Tester')
         """
     )
     test_db.execute_update(
         """
-        INSERT INTO missions (id, persona_name, role, codename, mission_file, start_date, start_time, objective)
-        VALUES (1, 'testdaemon', 'Tester', 'test-mission', '.opencode/work/missions/test.md', 
-                date('now'), datetime('now'), 'Test objective')
+        INSERT INTO possessions (id, daemon_name, role, possession_log, start_time)
+        VALUES (1, 'testdaemon', 'Tester', '.opencode/work/possessions/test.md',
+                datetime('now'))
         """
     )
 
@@ -86,7 +86,7 @@ def test_update_status(test_db: Database):
         priority="MEDIUM",
     )
 
-    manager.claim_task("TST-M-0001", mission_id=1, current_role="Tester")
+    manager.claim_task("TST-M-0001", possession_id=1, current_role="Tester")
     manager.update_status("TST-M-0001", "COMPLETE", notes="Task done")
 
     task = manager.get_task("TST-M-0001")
@@ -96,18 +96,18 @@ def test_update_status(test_db: Database):
 
 def test_close_task(test_db: Database):
     """Test closing a task"""
-    # Create persona and mission for foreign key
+    # Create daemon and possession for foreign key
     test_db.execute_update(
         """
-        INSERT INTO personas (name, role, mythology, description)
-        VALUES ('testdaemon2', 'Engineer', 'test', 'Test daemon')
+        INSERT INTO daemons (name, role)
+        VALUES ('testdaemon2', 'Engineer')
         """
     )
     test_db.execute_update(
         """
-        INSERT INTO missions (id, persona_name, role, codename, mission_file, start_date, start_time, objective)
-        VALUES (2, 'testdaemon2', 'Engineer', 'test-mission-2', '.opencode/work/missions/test2.md', 
-                date('now'), datetime('now'), 'Test objective')
+        INSERT INTO possessions (id, daemon_name, role, possession_log, start_time)
+        VALUES (2, 'testdaemon2', 'Engineer', '.opencode/work/possessions/test2.md',
+                datetime('now'))
         """
     )
 
@@ -119,7 +119,7 @@ def test_close_task(test_db: Database):
         priority="MEDIUM",
     )
 
-    manager.claim_task("ENG-M-0002", mission_id=2, current_role="Engineer")
+    manager.claim_task("ENG-M-0002", possession_id=2, current_role="Engineer")
     manager.update_status("ENG-M-0002", "COMPLETE", notes="Task done")
 
     task = manager.get_task("ENG-M-0002")
@@ -129,18 +129,18 @@ def test_close_task(test_db: Database):
 
 def test_list_tasks(test_db: Database):
     """Test listing tasks with filters"""
-    # Create persona and mission for foreign key
+    # Create daemon and possession for foreign key
     test_db.execute_update(
         """
-        INSERT INTO personas (name, role, mythology, description)
-        VALUES ('testdaemon3', 'Engineer', 'test', 'Test daemon')
+        INSERT INTO daemons (name, role)
+        VALUES ('testdaemon3', 'Engineer')
         """
     )
     test_db.execute_update(
         """
-        INSERT INTO missions (id, persona_name, role, codename, mission_file, start_date, start_time, objective)
-        VALUES (3, 'testdaemon3', 'Engineer', 'test-mission-3', '.opencode/work/missions/test3.md', 
-                date('now'), datetime('now'), 'Test objective')
+        INSERT INTO possessions (id, daemon_name, role, possession_log, start_time)
+        VALUES (3, 'testdaemon3', 'Engineer', '.opencode/work/possessions/test3.md',
+                datetime('now'))
         """
     )
 
@@ -152,7 +152,7 @@ def test_list_tasks(test_db: Database):
     manager.create_task("ENG-M-0003", "Task 7", "Engineer", priority="MEDIUM")
 
     # Claim one task
-    manager.claim_task("ENG-H-0002", mission_id=3, current_role="Engineer")
+    manager.claim_task("ENG-H-0002", possession_id=3, current_role="Engineer")
 
     # List all tasks
     all_tasks = manager.list_tasks()
@@ -170,10 +170,10 @@ def test_list_tasks(test_db: Database):
     engineer_tasks = manager.list_tasks(role="Engineer")
     assert len(engineer_tasks) == 2
 
-    # Filter by mission
-    mission_tasks = manager.list_tasks(mission_id=3)
-    assert len(mission_tasks) == 1
-    assert mission_tasks[0].id == "ENG-H-0002"
+    # Filter by possession
+    possession_tasks = manager.list_tasks(possession_id=3)
+    assert len(possession_tasks) == 1
+    assert possession_tasks[0].id == "ENG-H-0002"
 
 
 def test_task_ordering(test_db: Database):
@@ -212,7 +212,7 @@ def test_task_model_status_validator():
         file_path=".opencode/work/tasks/ENG-M-0001.md",
         created_at=now,
         updated_at=now,
-        current_mission_id=None,
+        current_possession_id=None,
         claimed_at=None,
         closed_at=None,
         actual_hours=None,
@@ -232,7 +232,7 @@ def test_task_model_status_validator():
         file_path=".opencode/work/tasks/ENG-M-0002.md",
         created_at=now,
         updated_at=now,
-        current_mission_id=None,
+        current_possession_id=None,
         claimed_at=None,
         closed_at=None,
         actual_hours=None,

@@ -116,7 +116,7 @@ def list(
                 "completed_count": epic.completed_count,
                 "subtask_count": epic.subtask_count,
                 "created_at": epic.created_at,
-                "status_details": epic.status_details,
+                "aborted_reason": epic.aborted_reason,
                 "locked": epic.locked,
                 "locked_at": str(epic.locked_at) if epic.locked_at else None,
                 "file_path": epic.file_path,
@@ -192,7 +192,7 @@ def show(
             "subtask_count": epic.subtask_count,
             "created_at": epic.created_at,
             "updated_at": epic.updated_at,
-            "status_details": epic.status_details,
+            "aborted_reason": epic.aborted_reason,
             "locked": epic.locked,
             "locked_at": str(epic.locked_at) if epic.locked_at else None,
             "file_path": epic.file_path,
@@ -236,8 +236,8 @@ def show(
     if epic.locked and epic.locked_at:
         body_parts.append(f"Locked At:    {epic.locked_at}")
 
-    if epic.status_details:
-        body_parts.append(f"Status Notes: {epic.status_details}")
+    if epic.aborted_reason:
+        body_parts.append(f"Abort Reason: {epic.aborted_reason}")
 
     if epic.description:
         body_parts.extend(["", "Description:", epic.description])

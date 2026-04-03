@@ -97,7 +97,7 @@ class ReviewManager:
         if outcome:
             if isinstance(outcome, ReviewOutcome):
                 outcome = outcome.value
-            query += " AND outcome = :outcome"
+            query += " AND status = :outcome"
             params["outcome"] = outcome
 
         if type:
@@ -133,7 +133,7 @@ class ReviewManager:
             self.db.execute_query(
                 """
                 UPDATE reviews
-                SET outcome = :outcome,
+                SET status = :outcome,
                     reviewed_by = :reviewed_by,
                     reviewed_at = :now,
                     outcome_reason = :reason
@@ -173,7 +173,7 @@ class ReviewManager:
             self.db.execute_query(
                 """
                 UPDATE reviews
-                SET outcome = :outcome,
+                SET status = :outcome,
                     reviewed_by = :reviewed_by,
                     reviewed_at = :now,
                     outcome_reason = :reason

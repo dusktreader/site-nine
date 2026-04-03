@@ -3,11 +3,11 @@ import path from "path"
 
 export default tool({
   description:
-    "Send a message to another active mission (e.g., a desk-mode worker). " +
+    "Send a message to another active possession (e.g., a desk-mode worker). " +
     "Uses the site-nine messaging system to deliver the message via conversation.",
   args: {
-    from_mission_id: tool.schema.number().describe("The mission ID of the sender"),
-    to_mission_id: tool.schema.number().describe("The mission ID of the recipient"),
+    from_possession_id: tool.schema.number().describe("The possession ID of the sender"),
+    to_possession_id: tool.schema.number().describe("The possession ID of the recipient"),
     body: tool.schema.string().describe("Message body (markdown supported)"),
     priority: tool.schema
       .string()
@@ -21,8 +21,8 @@ export default tool({
   async execute(args, context) {
     const script = path.join(context.worktree, ".opencode/tools/worker_message.py")
     const input = JSON.stringify({
-      from_mission_id: args.from_mission_id,
-      to_mission_id: args.to_mission_id,
+      from_possession_id: args.from_possession_id,
+      to_possession_id: args.to_possession_id,
       body: args.body,
       priority: args.priority ?? null,
       task_id: args.task_id ?? null,

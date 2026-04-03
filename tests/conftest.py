@@ -25,14 +25,14 @@ def test_db(temp_dir: Path) -> Generator[Database, None, None]:
     with Database(db_path) as db:
         db.initialize_schema()
 
-        # Add test personas (required for foreign keys)
+        # Add test daemons (required for foreign keys)
         db.execute_update("""
-            INSERT INTO personas (name, role, mythology, description)
+            INSERT INTO daemons (name, role, incarnations)
             VALUES 
-                ('test-persona', 'Engineer', 'Test', 'Test persona'),
-                ('persona1', 'Engineer', 'Test', 'Test persona 1'),
-                ('persona2', 'Tester', 'Test', 'Test persona 2'),
-                ('persona3', 'Engineer', 'Test', 'Test persona 3')
+                ('test-persona', 'Engineer', 0),
+                ('persona1', 'Engineer', 0),
+                ('persona2', 'Tester', 0),
+                ('persona3', 'Engineer', 0)
         """)
 
         yield db
@@ -40,7 +40,7 @@ def test_db(temp_dir: Path) -> Generator[Database, None, None]:
 
 @pytest.fixture
 def test_db_with_data(test_db: Database) -> Generator[Database, None, None]:
-    """Create a test database with tasks and missions for handoff tests"""
+    """Create a test database with tasks and possessions for handoff tests"""
     # Add test tasks for handoff tests
     test_db.execute_update("""
         INSERT INTO tasks (id, title, description, status, priority, role, file_path, created_at)
@@ -50,12 +50,12 @@ def test_db_with_data(test_db: Database) -> Generator[Database, None, None]:
             ('ENG-M-0003', 'Test task 3', 'Description 3', 'TODO', 'MEDIUM', 'Tester', '.opencode/work/tasks/ENG-M-0003.md', datetime('now'))
     """)
 
-    # Add test missions for handoff tests
+    # Add test possessions for handoff tests
     test_db.execute_update("""
-        INSERT INTO missions (id, persona_name, role, codename, mission_file, start_date, start_time, objective, created_at, updated_at)
+        INSERT INTO possessions (id, daemon_name, role, possession_log, start_time, created_at, updated_at)
         VALUES 
-            (1, 'test-persona', 'Engineer', 'test-mission', '.opencode/work/missions/test.md', date('now'), time('now'), 'Test', datetime('now'), datetime('now')),
-            (2, 'persona1', 'Tester', 'test-mission-2', '.opencode/work/missions/test2.md', date('now'), time('now'), 'Test 2', datetime('now'), datetime('now'))
+            (1, 'test-persona', 'Engineer', '.opencode/work/possessions/test.md', datetime('now'), datetime('now'), datetime('now')),
+            (2, 'persona1', 'Tester', '.opencode/work/possessions/test2.md', datetime('now'), datetime('now'), datetime('now'))
     """)
 
     yield test_db
@@ -122,7 +122,7 @@ def _build_initialized_project(target_dir: Path) -> None:
     copy_static_scaffold(renderer.scaffold_static_dir(), opencode_dir)
     render_scaffold_templates(renderer, opencode_dir, context)
 
-    for empty_dir in ["work/tasks", "work/epics", "work/missions"]:
+    for empty_dir in ["work/tasks", "work/epics", "work/possessions"]:
         (opencode_dir / empty_dir).mkdir(parents=True, exist_ok=True)
 
 

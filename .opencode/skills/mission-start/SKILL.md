@@ -10,6 +10,16 @@ metadata:
 
 # Skill: mission-start
 
+> **⛔ DEPRECATED SKILL ⛔**
+>
+> This skill references `mission_init`, `mission_role_record`, `mission_persona_record`, `persona_show`,
+> `persona_suggest`, `persona_set_bio`, and `mission_dashboard` tools that **no longer exist**. They were
+> removed as part of the possession/daemon refactor (EPC-H-0008).
+>
+> **Use the `possession-start` skill instead.** It is the current replacement and uses `possession_init`,
+> `possession_role_record`, `possession_daemon_record`, `daemon_show`, `daemon_set_bio`, and
+> `possession_dashboard` tools.
+
 > **⛔ AGENTS: NEVER USE THE `s9` CLI ⛔**
 >
 > The `s9` command is **for the Director (human) only**. This skill contains `s9` bash blocks that are pending

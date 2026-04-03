@@ -90,8 +90,8 @@ class MessageManager:
 
         Args:
             subject: Conversation subject
-            participant_1_id: First participant mission ID
-            participant_2_id: Second participant mission ID
+            participant_1_id: First participant possession ID
+            participant_2_id: Second participant possession ID
             task_id: Optional related task
             epic_id: Optional related epic
 
@@ -103,7 +103,7 @@ class MessageManager:
         """
         require_condition(
             participant_1_id != participant_2_id,
-            "Participants must be different missions",
+            "Participants must be different possessions",
             raise_exc_class=InvalidParticipantError,
         )
 
@@ -254,16 +254,16 @@ class MessageManager:
         epic_id: str | None = None,
     ) -> Conversation:
         """
-        Get existing open conversation between two missions, or create new one.
+        Get existing open conversation between two possessions, or create new one.
 
         This implements the auto-creation logic from ADR-008:
-        1. Check if open conversation exists between the two missions
+        1. Check if open conversation exists between the two possessions
         2. If closed conversation exists, create NEW conversation (fresh start)
         3. If no conversation exists, create new conversation
 
         Args:
-            participant_1_id: First participant mission ID
-            participant_2_id: Second participant mission ID
+            participant_1_id: First participant possession ID
+            participant_2_id: Second participant possession ID
             subject: Conversation subject (used if creating new)
             task_id: Optional related task
             epic_id: Optional related epic
@@ -317,7 +317,7 @@ class MessageManager:
         self,
         conversation_type: str | None = None,
         status: str | None = None,
-        mission_id: int | None = None,
+        possession_id: int | None = None,
     ) -> list[Conversation]:
         """
         List conversations/discussions with optional filtering.
@@ -325,7 +325,7 @@ class MessageManager:
         Args:
             conversation_type: Filter by 'conversation' or 'discussion'
             status: Filter by 'open' or 'closed'
-            mission_id: Filter by participant mission (conversations only)
+            possession_id: Filter by participant possession (conversations only)
 
         Returns:
             List of matching conversations
@@ -341,14 +341,14 @@ class MessageManager:
             query += " AND status = :status"
             params["status"] = status
 
-        if mission_id:
+        if possession_id:
             query += """
                 AND (
-                    participant_1_id = :mission_id 
-                    OR participant_2_id = :mission_id
+                    participant_1_id = :possession_id 
+                    OR participant_2_id = :possession_id
                 )
             """
-            params["mission_id"] = mission_id
+            params["possession_id"] = possession_id
 
         query += " ORDER BY updated_at DESC"
 
@@ -443,7 +443,7 @@ class MessageManager:
     def create_message(
         self,
         conversation_id: str,
-        from_mission_id: int,
+        from_possession_id: int,
         subject: str,
         body: str,
         priority: str = "MEDIUM",
@@ -457,7 +457,7 @@ class MessageManager:
 
         Args:
             conversation_id: Parent conversation/discussion ID
-            from_mission_id: Sender mission ID
+            from_possession_id: Sender possession ID
             subject: Message subject
             body: Markdown-formatted message body
             priority: CRITICAL, HIGH, MEDIUM, or LOW
@@ -523,19 +523,19 @@ class MessageManager:
             "creating_message",
             message_id=message_id,
             conversation_id=conversation_id,
-            from_mission_id=from_mission_id,
+            from_possession_id=from_possession_id,
             parent_message_id=parent_message_id,
         )
 
         self.db.execute_update(
             """
             INSERT INTO messages (
-                id, conversation_id, from_mission_id,
+                id, conversation_id, from_possession_id,
                 subject, body, priority,
                 parent_message_id, thread_root_id,
                 task_id, epic_id, artifact_path
             ) VALUES (
-                :id, :conversation_id, :from_mission_id,
+                :id, :conversation_id, :from_possession_id,
                 :subject, :body, :priority,
                 :parent_message_id, :thread_root_id,
                 :task_id, :epic_id, :artifact_path
@@ -544,7 +544,7 @@ class MessageManager:
             {
                 "id": message_id,
                 "conversation_id": conversation_id,
-                "from_mission_id": from_mission_id,
+                "from_possession_id": from_possession_id,
                 "subject": subject,
                 "body": body,
                 "priority": priority,
@@ -578,7 +578,7 @@ class MessageManager:
     def list_messages(
         self,
         conversation_id: str | None = None,
-        from_mission_id: int | None = None,
+        from_possession_id: int | None = None,
         priority: str | None = None,
     ) -> list[Message]:
         """
@@ -586,7 +586,7 @@ class MessageManager:
 
         Args:
             conversation_id: Filter by conversation
-            from_mission_id: Filter by sender
+            from_possession_id: Filter by sender
             priority: Filter by priority level
 
         Returns:
@@ -599,9 +599,9 @@ class MessageManager:
             query += " AND conversation_id = :conversation_id"
             params["conversation_id"] = conversation_id
 
-        if from_mission_id:
-            query += " AND from_mission_id = :from_mission_id"
-            params["from_mission_id"] = from_mission_id
+        if from_possession_id:
+            query += " AND from_possession_id = :from_possession_id"
+            params["from_possession_id"] = from_possession_id
 
         if priority:
             query += " AND priority = :priority"
@@ -644,13 +644,13 @@ class MessageManager:
     # Conversation View Tracking
     # ============================================================================
 
-    def update_conversation_view(self, conversation_id: str, mission_id: int) -> ConversationView:
+    def update_conversation_view(self, conversation_id: str, possession_id: int) -> ConversationView:
         """
         Update last viewed timestamp for a conversation.
 
         Args:
             conversation_id: Conversation ID
-            mission_id: Mission ID
+            possession_id: Possession ID
 
         Returns:
             Updated conversation view
@@ -658,29 +658,29 @@ class MessageManager:
         logger.debug(
             "updating_conversation_view",
             conversation_id=conversation_id,
-            mission_id=mission_id,
+            possession_id=possession_id,
         )
 
         self.db.execute_update(
             """
-            INSERT INTO conversation_views (conversation_id, mission_id, last_viewed_at)
-            VALUES (:conversation_id, :mission_id, :now)
-            ON CONFLICT(conversation_id, mission_id)
+            INSERT INTO conversation_views (conversation_id, possession_id, last_viewed_at)
+            VALUES (:conversation_id, :possession_id, :now)
+            ON CONFLICT(conversation_id, possession_id)
             DO UPDATE SET last_viewed_at = :now
             """,
-            {"conversation_id": conversation_id, "mission_id": mission_id, "now": utc_now()},
+            {"conversation_id": conversation_id, "possession_id": possession_id, "now": utc_now()},
         )
 
-        view = self.get_conversation_view(conversation_id, mission_id)
+        view = self.get_conversation_view(conversation_id, possession_id)
         return enforce_defined(view, "Failed to update conversation view")
 
-    def get_conversation_view(self, conversation_id: str, mission_id: int) -> ConversationView | None:
+    def get_conversation_view(self, conversation_id: str, possession_id: int) -> ConversationView | None:
         """
         Get conversation view record.
 
         Args:
             conversation_id: Conversation ID
-            mission_id: Mission ID
+            possession_id: Possession ID
 
         Returns:
             ConversationView or None if never viewed
@@ -689,25 +689,25 @@ class MessageManager:
             """
             SELECT * FROM conversation_views
             WHERE conversation_id = :conversation_id
-            AND mission_id = :mission_id
+            AND possession_id = :possession_id
             """,
-            {"conversation_id": conversation_id, "mission_id": mission_id},
+            {"conversation_id": conversation_id, "possession_id": possession_id},
         )
         return ConversationView.from_db_row(rows[0]) if rows else None
 
-    def get_unread_conversations(self, mission_id: int) -> list[Conversation]:
+    def get_unread_conversations(self, possession_id: int) -> list[Conversation]:
         """
-        Get conversations with unread messages for a mission.
+        Get conversations with unread messages for a possession.
 
         A conversation has unread messages if:
         - It has messages
-        - The mission has never viewed it, OR
+        - The possession has never viewed it, OR
         - The last message is newer than the last view timestamp
 
-        For discussions, properly checks if mission is in scope.
+        For discussions, properly checks if possession is in scope.
 
         Args:
-            mission_id: Mission ID
+            possession_id: Possession ID
 
         Returns:
             List of conversations with unread messages
@@ -719,7 +719,7 @@ class MessageManager:
             JOIN messages m ON c.id = m.conversation_id
             LEFT JOIN conversation_views cv ON (
                 c.id = cv.conversation_id 
-                AND cv.mission_id = :mission_id
+                AND cv.possession_id = :possession_id
             )
             WHERE c.status = 'open'
             AND (
@@ -734,59 +734,59 @@ class MessageManager:
                 )
             )
             AND (
-                -- For conversations: mission is a participant
+                -- For conversations: possession is a participant
                 (c.type = 'conversation' AND (
-                    c.participant_1_id = :mission_id 
-                    OR c.participant_2_id = :mission_id
+                    c.participant_1_id = :possession_id 
+                    OR c.participant_2_id = :possession_id
                 ))
                 OR
                 -- For discussions: check scope dynamically
                 (c.type = 'discussion' AND (
                     -- Role scope
                     (c.scope_type = 'role' AND EXISTS (
-                        SELECT 1 FROM missions m
-                        WHERE m.id = :mission_id
-                        AND m.role = c.scope_role
-                        AND m.end_time IS NULL
-                        AND m.start_time <= c.created_at
+                        SELECT 1 FROM possessions p
+                        WHERE p.id = :possession_id
+                        AND p.role = c.scope_role
+                        AND p.status != 'EXORCISED'
+                        AND p.start_time <= c.created_at
                     ))
                     OR
                     -- Epic scope
                     (c.scope_type = 'epic' AND EXISTS (
-                        SELECT 1 FROM missions m
-                        JOIN tasks t ON t.current_mission_id = m.id
-                        WHERE m.id = :mission_id
+                        SELECT 1 FROM possessions p
+                        JOIN tasks t ON t.current_possession_id = p.id
+                        WHERE p.id = :possession_id
                         AND t.epic_id = c.scope_epic_id
-                        AND m.end_time IS NULL
-                        AND m.start_time <= c.created_at
+                        AND p.status != 'EXORCISED'
+                        AND p.start_time <= c.created_at
                     ))
                     OR
-                    -- All missions scope
+                    -- All possessions scope
                     (c.scope_type = 'all' AND EXISTS (
-                        SELECT 1 FROM missions m
-                        WHERE m.id = :mission_id
-                        AND m.end_time IS NULL
-                        AND m.start_time <= c.created_at
+                        SELECT 1 FROM possessions p
+                        WHERE p.id = :possession_id
+                        AND p.status != 'EXORCISED'
+                        AND p.start_time <= c.created_at
                     ))
                 ))
             )
             ORDER BY c.updated_at DESC
             """,
-            {"mission_id": mission_id},
+            {"possession_id": possession_id},
         )
         return [Conversation.from_db_row(row) for row in rows]
 
-    def get_unread_messages(self, conversation_id: str, mission_id: int) -> list[Message]:
+    def get_unread_messages(self, conversation_id: str, possession_id: int) -> list[Message]:
         """
-        Get unread messages in a conversation for a mission.
+        Get unread messages in a conversation for a possession.
 
         Messages are unread if:
-        - Mission has never viewed the conversation, OR
-        - Message was created after mission's last_viewed_at timestamp
+        - Possession has never viewed the conversation, OR
+        - Message was created after possession's last_viewed_at timestamp
 
         Args:
             conversation_id: Conversation ID
-            mission_id: Mission ID
+            possession_id: Possession ID
 
         Returns:
             List of unread messages ordered by created_at
@@ -797,7 +797,7 @@ class MessageManager:
             FROM messages m
             LEFT JOIN conversation_views cv ON (
                 cv.conversation_id = :conversation_id
-                AND cv.mission_id = :mission_id
+                AND cv.possession_id = :possession_id
             )
             WHERE m.conversation_id = :conversation_id
             AND (
@@ -806,21 +806,17 @@ class MessageManager:
             )
             ORDER BY m.created_at ASC
             """,
-            {"conversation_id": conversation_id, "mission_id": mission_id},
+            {"conversation_id": conversation_id, "possession_id": possession_id},
         )
         return [Message.from_db_row(row) for row in rows]
 
-    def get_unread_message_count(self, conversation_id: str, mission_id: int) -> int:
+    def get_unread_message_count(self, conversation_id: str, possession_id: int) -> int:
         """
-        Get count of unread messages in a conversation for a mission.
-
-        Messages are unread if:
-        - Mission has never viewed the conversation, OR
-        - Message was created after mission's last_viewed_at timestamp
+        Get count of unread messages in a conversation for a possession.
 
         Args:
             conversation_id: Conversation ID
-            mission_id: Mission ID
+            possession_id: Possession ID
 
         Returns:
             Count of unread messages
@@ -831,7 +827,7 @@ class MessageManager:
             FROM messages m
             LEFT JOIN conversation_views cv ON (
                 cv.conversation_id = :conversation_id
-                AND cv.mission_id = :mission_id
+                AND cv.possession_id = :possession_id
             )
             WHERE m.conversation_id = :conversation_id
             AND (
@@ -839,25 +835,25 @@ class MessageManager:
                 OR datetime(m.created_at) > datetime(cv.last_viewed_at)
             )
             """,
-            {"conversation_id": conversation_id, "mission_id": mission_id},
+            {"conversation_id": conversation_id, "possession_id": possession_id},
         )
         return rows[0]["count"] if rows else 0
 
     def get_conversation_viewers(self, conversation_id: str) -> list[dict]:
         """
-        Get list of missions that have viewed a conversation with their last view times.
+        Get list of possessions that have viewed a conversation with their last view times.
 
         Args:
             conversation_id: Conversation ID
 
         Returns:
-            List of dicts with mission_id and last_viewed_at
+            List of dicts with possession_id, daemon_name, role, and last_viewed_at
         """
         rows = self.db.execute_query(
             """
-            SELECT cv.mission_id, cv.last_viewed_at, m.persona_name, m.role
+            SELECT cv.possession_id, cv.last_viewed_at, p.daemon_name, p.role
             FROM conversation_views cv
-            JOIN missions m ON m.id = cv.mission_id
+            JOIN possessions p ON p.id = cv.possession_id
             WHERE cv.conversation_id = :conversation_id
             ORDER BY cv.last_viewed_at DESC
             """,
@@ -865,8 +861,8 @@ class MessageManager:
         )
         return [
             {
-                "mission_id": row["mission_id"],
-                "persona_name": row["persona_name"],
+                "possession_id": row["possession_id"],
+                "daemon_name": row["daemon_name"],
                 "role": row["role"],
                 "last_viewed_at": row["last_viewed_at"],
             }
@@ -875,14 +871,14 @@ class MessageManager:
 
     def get_active_conversation_viewers(self, conversation_id: str, within_minutes: int = 5) -> list[dict]:
         """
-        Get missions actively viewing a conversation (viewed within time window).
+        Get possessions actively viewing a conversation (viewed within time window).
 
         Args:
             conversation_id: Conversation ID
             within_minutes: Consider active if viewed within this many minutes (default 5)
 
         Returns:
-            List of dicts with mission_id, persona_name, role, last_viewed_at
+            List of dicts with possession_id, daemon_name, role, last_viewed_at
         """
         import pendulum
 
@@ -890,11 +886,11 @@ class MessageManager:
 
         rows = self.db.execute_query(
             """
-            SELECT cv.mission_id, cv.last_viewed_at, m.persona_name, m.role
+            SELECT cv.possession_id, cv.last_viewed_at, p.daemon_name, p.role
             FROM conversation_views cv
-            JOIN missions m ON m.id = cv.mission_id
+            JOIN possessions p ON p.id = cv.possession_id
             WHERE cv.conversation_id = :conversation_id
-            AND m.end_time IS NULL
+            AND p.status != 'EXORCISED'
             AND cv.last_viewed_at >= :cutoff
             ORDER BY cv.last_viewed_at DESC
             """,
@@ -905,8 +901,8 @@ class MessageManager:
         )
         return [
             {
-                "mission_id": row["mission_id"],
-                "persona_name": row["persona_name"],
+                "possession_id": row["possession_id"],
+                "daemon_name": row["daemon_name"],
                 "role": row["role"],
                 "last_viewed_at": row["last_viewed_at"],
             }
@@ -917,16 +913,13 @@ class MessageManager:
     # Message Acknowledgement Tracking
     # ============================================================================
 
-    def acknowledge_message(self, message_id: str, mission_id: int) -> None:
+    def acknowledge_message(self, message_id: str, possession_id: int) -> None:
         """
-        Acknowledge/mark a message as processed by a mission.
-
-        This records that the mission has read and processed the message,
-        improving accountability and workflow coordination.
+        Acknowledge/mark a message as processed by a possession.
 
         Args:
             message_id: Message ID to acknowledge
-            mission_id: Mission ID acknowledging the message
+            possession_id: Possession ID acknowledging the message
 
         Raises:
             MessageNotFoundError: If message not found
@@ -942,17 +935,17 @@ class MessageManager:
         logger.debug(
             "acknowledging_message",
             message_id=message_id,
-            mission_id=mission_id,
+            possession_id=possession_id,
         )
 
         self.db.execute_update(
             """
-            INSERT INTO message_acknowledgements (message_id, mission_id, acknowledged_at)
-            VALUES (:message_id, :mission_id, :now)
-            ON CONFLICT(message_id, mission_id)
+            INSERT INTO message_acknowledgements (message_id, possession_id, acknowledged_at)
+            VALUES (:message_id, :possession_id, :now)
+            ON CONFLICT(message_id, possession_id)
             DO UPDATE SET acknowledged_at = :now
             """,
-            {"message_id": message_id, "mission_id": mission_id, "now": utc_now()},
+            {"message_id": message_id, "possession_id": possession_id, "now": utc_now()},
         )
 
     def get_message_acknowledgements(self, message_id: str) -> list[dict]:
@@ -963,15 +956,13 @@ class MessageManager:
             message_id: Message ID
 
         Returns:
-            List of dicts with mission_id, persona_name, role, acknowledged_at
+            List of dicts with possession_id, daemon_name, role, acknowledged_at
         """
-        from site_nine.messaging.models import MessageAcknowledgement
-
         rows = self.db.execute_query(
             """
-            SELECT ma.*, m.persona_name, m.role
+            SELECT ma.*, p.daemon_name, p.role
             FROM message_acknowledgements ma
-            JOIN missions m ON m.id = ma.mission_id
+            JOIN possessions p ON p.id = ma.possession_id
             WHERE ma.message_id = :message_id
             ORDER BY ma.acknowledged_at DESC
             """,
@@ -979,21 +970,21 @@ class MessageManager:
         )
         return [
             {
-                "mission_id": row["mission_id"],
-                "persona_name": row["persona_name"],
+                "possession_id": row["possession_id"],
+                "daemon_name": row["daemon_name"],
                 "role": row["role"],
                 "acknowledged_at": row["acknowledged_at"],
             }
             for row in rows
         ]
 
-    def is_message_acknowledged_by(self, message_id: str, mission_id: int) -> bool:
+    def is_message_acknowledged_by(self, message_id: str, possession_id: int) -> bool:
         """
-        Check if a message has been acknowledged by a specific mission.
+        Check if a message has been acknowledged by a specific possession.
 
         Args:
             message_id: Message ID
-            mission_id: Mission ID
+            possession_id: Possession ID
 
         Returns:
             True if acknowledged, False otherwise
@@ -1002,22 +993,22 @@ class MessageManager:
             """
             SELECT 1 FROM message_acknowledgements
             WHERE message_id = :message_id
-            AND mission_id = :mission_id
+            AND possession_id = :possession_id
             """,
-            {"message_id": message_id, "mission_id": mission_id},
+            {"message_id": message_id, "possession_id": possession_id},
         )
         return len(rows) > 0
 
-    def get_unacknowledged_messages(self, mission_id: int) -> list[Message]:
+    def get_unacknowledged_messages(self, possession_id: int) -> list[Message]:
         """
-        Get messages sent to a mission that have not been acknowledged.
+        Get messages sent to a possession that have not been acknowledged.
 
         Returns messages in open conversations where:
-        - The mission is a recipient (not the sender)
-        - The mission has not acknowledged the message
+        - The possession is a recipient (not the sender)
+        - The possession has not acknowledged the message
 
         Args:
-            mission_id: Mission ID
+            possession_id: Possession ID
 
         Returns:
             List of unacknowledged messages
@@ -1028,37 +1019,37 @@ class MessageManager:
             FROM messages m
             JOIN conversations c ON c.id = m.conversation_id
             WHERE c.status = 'open'
-            AND m.from_mission_id != :mission_id
+            AND m.from_possession_id != :possession_id
             AND NOT EXISTS (
                 SELECT 1 FROM message_acknowledgements ma
                 WHERE ma.message_id = m.id
-                AND ma.mission_id = :mission_id
+                AND ma.possession_id = :possession_id
             )
             AND (
-                -- For conversations: mission is a participant
+                -- For conversations: possession is a participant
                 (c.type = 'conversation' AND (
-                    c.participant_1_id = :mission_id OR c.participant_2_id = :mission_id
+                    c.participant_1_id = :possession_id OR c.participant_2_id = :possession_id
                 ))
                 OR
-                -- For discussions: mission is in scope (check dynamically)
+                -- For discussions: possession is in scope (check dynamically)
                 (c.type = 'discussion' AND (
                     (c.scope_type = 'all') OR
                     (c.scope_type = 'role' AND EXISTS (
-                        SELECT 1 FROM missions mis
-                        WHERE mis.id = :mission_id
-                        AND mis.role = c.scope_role
-                        AND mis.end_time IS NULL
+                        SELECT 1 FROM possessions pos
+                        WHERE pos.id = :possession_id
+                        AND pos.role = c.scope_role
+                        AND pos.status != 'EXORCISED'
                     )) OR
                     (c.scope_type = 'epic' AND EXISTS (
                         SELECT 1 FROM tasks t
                         WHERE t.epic_id = c.scope_epic_id
-                        AND t.current_mission_id = :mission_id
+                        AND t.current_possession_id = :possession_id
                     ))
                 ))
             )
             ORDER BY m.created_at ASC
             """,
-            {"mission_id": mission_id},
+            {"possession_id": possession_id},
         )
         return [Message.from_db_row(row) for row in rows]
 
@@ -1071,15 +1062,15 @@ class MessageManager:
         Get dynamic participant list for a discussion based on scope.
 
         Computes who can see a discussion based on its scope configuration:
-        - role: All active missions with matching role
-        - epic: All active missions working on tasks in that epic
-        - all: All active missions
+        - role: All active possessions with matching role
+        - epic: All active possessions working on tasks in that epic
+        - all: All active possessions
 
         Args:
             conversation_id: Discussion ID
 
         Returns:
-            List of mission IDs that are participants in this discussion
+            List of possession IDs that are participants in this discussion
 
         Raises:
             ConversationNotFoundError: If conversation not found
@@ -1106,8 +1097,8 @@ class MessageManager:
             rows = self.db.execute_query(
                 """
                 SELECT id
-                FROM missions
-                WHERE end_time IS NULL
+                FROM possessions
+                WHERE status != 'EXORCISED'
                 AND role = :role
                 AND start_time <= :created_at
                 ORDER BY id
@@ -1117,13 +1108,13 @@ class MessageManager:
         elif conversation.scope_type == "epic":
             rows = self.db.execute_query(
                 """
-                SELECT DISTINCT m.id
-                FROM missions m
-                JOIN tasks t ON t.current_mission_id = m.id
-                WHERE m.end_time IS NULL
+                SELECT DISTINCT p.id
+                FROM possessions p
+                JOIN tasks t ON t.current_possession_id = p.id
+                WHERE p.status != 'EXORCISED'
                 AND t.epic_id = :epic_id
-                AND m.start_time <= :created_at
-                ORDER BY m.id
+                AND p.start_time <= :created_at
+                ORDER BY p.id
                 """,
                 {"epic_id": conversation.scope_epic_id, "created_at": created_at_str},
             )
@@ -1131,8 +1122,8 @@ class MessageManager:
             rows = self.db.execute_query(
                 """
                 SELECT id
-                FROM missions
-                WHERE end_time IS NULL
+                FROM possessions
+                WHERE status != 'EXORCISED'
                 AND start_time <= :created_at
                 ORDER BY id
                 """,
@@ -1141,23 +1132,23 @@ class MessageManager:
 
         return [row["id"] for row in rows]
 
-    def is_mission_in_discussion_scope(self, conversation_id: str, mission_id: int) -> bool:
+    def is_possession_in_discussion_scope(self, conversation_id: str, possession_id: int) -> bool:
         """
-        Check if a mission is in the scope of a discussion.
+        Check if a possession is in the scope of a discussion.
 
         Args:
             conversation_id: Discussion ID
-            mission_id: Mission ID to check
+            possession_id: Possession ID to check
 
         Returns:
-            True if mission is in scope, False otherwise
+            True if possession is in scope, False otherwise
 
         Raises:
             ConversationNotFoundError: If conversation not found
             InvalidConversationTypeError: If not a discussion
         """
         participants = self.get_discussion_participants(conversation_id)
-        return mission_id in participants
+        return possession_id in participants
 
     # ============================================================================
     # High-Level Workflow Methods
@@ -1191,8 +1182,8 @@ class MessageManager:
 
     def send_conversation_message(
         self,
-        from_mission_id: int,
-        to_mission_id: int,
+        from_possession_id: int,
+        to_possession_id: int,
         body: str,
         priority: str = "MEDIUM",
         task_id: str | None = None,
@@ -1203,7 +1194,7 @@ class MessageManager:
         Send a message in a 1-on-1 conversation with auto-creation logic.
 
         This implements the conversation workflow from ADR-008:
-        1. Check if open conversation exists between the two missions
+        1. Check if open conversation exists between the two possessions
         2. If closed conversation exists, create NEW conversation (fresh start)
         3. If no conversation exists, create new conversation
         4. Extract subject from message text (first line/sentence)
@@ -1211,8 +1202,8 @@ class MessageManager:
         6. Update conversation_views for sender
 
         Args:
-            from_mission_id: Sender mission ID
-            to_mission_id: Recipient mission ID
+            from_possession_id: Sender possession ID
+            to_possession_id: Recipient possession ID
             body: Markdown-formatted message body
             priority: Message priority (CRITICAL, HIGH, MEDIUM, LOW)
             task_id: Optional related task
@@ -1223,10 +1214,10 @@ class MessageManager:
             Tuple of (conversation, message)
 
         Raises:
-            InvalidParticipantError: If mission IDs are invalid or the same
+            InvalidParticipantError: If possession IDs are invalid or the same
         """
         require_condition(
-            from_mission_id != to_mission_id,
+            from_possession_id != to_possession_id,
             "Cannot send message to yourself",
             raise_exc_class=InvalidParticipantError,
         )
@@ -1236,15 +1227,15 @@ class MessageManager:
 
         logger.debug(
             "sending_conversation_message",
-            from_mission_id=from_mission_id,
-            to_mission_id=to_mission_id,
+            from_possession_id=from_possession_id,
+            to_possession_id=to_possession_id,
             subject=subject,
         )
 
         # Get or create conversation (handles closed conversation logic)
         conversation = self.get_or_create_conversation(
-            participant_1_id=from_mission_id,
-            participant_2_id=to_mission_id,
+            participant_1_id=from_possession_id,
+            participant_2_id=to_possession_id,
             subject=subject,
             task_id=task_id,
             epic_id=epic_id,
@@ -1253,7 +1244,7 @@ class MessageManager:
         # Create message in conversation
         message = self.create_message(
             conversation_id=conversation.id,
-            from_mission_id=from_mission_id,
+            from_possession_id=from_possession_id,
             subject=subject,
             body=body,
             priority=priority,
@@ -1264,14 +1255,14 @@ class MessageManager:
         )
 
         # Update conversation view for sender
-        self.update_conversation_view(conversation.id, from_mission_id)
+        self.update_conversation_view(conversation.id, from_possession_id)
 
         logger.info(
             "conversation_message_sent",
             conversation_id=conversation.id,
             message_id=message.id,
-            from_mission_id=from_mission_id,
-            to_mission_id=to_mission_id,
+            from_possession_id=from_possession_id,
+            to_possession_id=to_possession_id,
         )
 
         return conversation, message

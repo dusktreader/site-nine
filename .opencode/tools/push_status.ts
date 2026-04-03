@@ -8,13 +8,13 @@ export default tool({
     "task complete, going to sleep, blocked, etc. Messages appear as toast " +
     "notifications in the TUI. Keep messages under 120 characters.",
   args: {
-    mission_id: tool.schema.number().describe("Your mission ID"),
+    possession_id: tool.schema.number().describe("Your possession ID"),
     message: tool.schema.string().describe("Short status message (under 120 chars)"),
   },
   async execute(args, context) {
     const script = path.join(context.worktree, ".opencode/tools/push_status.py")
     const input = JSON.stringify({
-      mission_id: args.mission_id,
+      possession_id: args.possession_id,
       message: args.message,
     })
     const result = await Bun.$`cd ${context.worktree} && echo ${input} | uv run python3 ${script}`.text()

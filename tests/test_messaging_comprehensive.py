@@ -44,12 +44,12 @@ def missions(test_db: Database) -> dict[str, int]:
     """Create test missions with proper personas and roles."""
     test_db.execute_update(
         """
-        INSERT INTO personas (name, role, mythology, description)
+        INSERT INTO daemons (name, role, incarnations)
         VALUES
-            ('alpha', 'Operator', 'Test', 'Alpha persona'),
-            ('beta', 'Operator', 'Test', 'Beta persona'),
-            ('gamma', 'Architect', 'Test', 'Gamma persona'),
-            ('delta', 'Tester', 'Test', 'Delta persona')
+            ('alpha', 'Operator', 0),
+            ('beta', 'Operator', 0),
+            ('gamma', 'Architect', 0),
+            ('delta', 'Tester', 0)
         """
     )
 
@@ -57,20 +57,15 @@ def missions(test_db: Database) -> dict[str, int]:
     for name, role in [("alpha", "Operator"), ("beta", "Operator"), ("gamma", "Architect"), ("delta", "Tester")]:
         mid = test_db.execute_insert(
             """
-            INSERT INTO missions (
-                persona_name, role, codename, mission_file,
-                start_date, start_time, objective
-            ) VALUES (
-                :name, :role, :codename, :file,
-                '2026-02-14', '10:00:00', :obj
+            INSERT INTO possessions (daemon_name, role, possession_log, start_time, created_at, updated_at)
+            VALUES (
+                :name, :role, :log, datetime('now'), datetime('now'), datetime('now')
             )
             """,
             {
                 "name": name,
                 "role": role,
-                "codename": f"mission-{name}",
-                "file": f".opencode/work/missions/{name}.md",
-                "obj": f"Mission {name}",
+                "log": f".opencode/work/possessions/{name}.md",
             },
         )
         ids[name] = mid
@@ -220,8 +215,8 @@ class TestListConversations:
         mgr.create_conversation("A-G", missions["alpha"], missions["gamma"])
         mgr.create_conversation("B-G", missions["beta"], missions["gamma"])
 
-        alpha_convs = mgr.list_conversations(mission_id=missions["alpha"])
-        gamma_convs = mgr.list_conversations(mission_id=missions["gamma"])
+        alpha_convs = mgr.list_conversations(possession_id=missions["alpha"])
+        gamma_convs = mgr.list_conversations(possession_id=missions["gamma"])
 
         assert len(alpha_convs) == 2
         assert len(gamma_convs) == 2
@@ -403,7 +398,7 @@ class TestDiscussionParticipants:
         # Create a task in the epic assigned to alpha's mission
         test_db.execute_update(
             """
-            INSERT INTO tasks (id, title, status, priority, role, file_path, epic_id, current_mission_id)
+            INSERT INTO tasks (id, title, status, priority, role, file_path, epic_id, current_possession_id)
             VALUES ('OPR-H-0098', 'Epic task', 'UNDERWAY', 'HIGH', 'Operator',
                     '.opencode/work/tasks/OPR-H-0098.md', :epic, :mission)
             """,
@@ -426,9 +421,9 @@ class TestDiscussionParticipants:
 
     def test_ended_mission_excluded_from_scope(self, mgr: MessageManager, missions: dict, test_db: Database):
         """Ended missions are excluded from discussion scope."""
-        # End alpha's mission
+        # Exorcise alpha's possession
         test_db.execute_update(
-            "UPDATE missions SET end_time = time('now') WHERE id = :id",
+            "UPDATE possessions SET status = 'EXORCISED' WHERE id = :id",
             {"id": missions["alpha"]},
         )
 
@@ -441,12 +436,12 @@ class TestDiscussionParticipants:
     def test_is_mission_in_discussion_scope_true(self, mgr: MessageManager, missions: dict):
         """is_mission_in_discussion_scope returns True for in-scope mission."""
         disc = mgr.create_discussion("Operator chat", scope_type="role", scope_role="Operator")
-        assert mgr.is_mission_in_discussion_scope(disc.id, missions["alpha"]) is True
+        assert mgr.is_possession_in_discussion_scope(disc.id, missions["alpha"]) is True
 
     def test_is_mission_in_discussion_scope_false(self, mgr: MessageManager, missions: dict):
-        """is_mission_in_discussion_scope returns False for out-of-scope mission."""
+        """is_possession_in_discussion_scope returns False for out-of-scope mission."""
         disc = mgr.create_discussion("Operator chat", scope_type="role", scope_role="Operator")
-        assert mgr.is_mission_in_discussion_scope(disc.id, missions["gamma"]) is False
+        assert mgr.is_possession_in_discussion_scope(disc.id, missions["gamma"]) is False
 
     def test_participants_for_conversation_raises(self, mgr: MessageManager, missions: dict):
         """Getting participants for a 1-on-1 conversation raises InvalidConversationTypeError."""
@@ -474,7 +469,7 @@ class TestCreateMessage:
         conv = mgr.create_conversation("Test", missions["alpha"], missions["beta"])
         msg = mgr.create_message(
             conversation_id=conv.id,
-            from_mission_id=missions["alpha"],
+            from_possession_id=missions["alpha"],
             subject="Hello",
             body="Hello, world!",
             priority="MEDIUM",
@@ -482,7 +477,7 @@ class TestCreateMessage:
 
         assert msg.id.startswith("MSG-M-")
         assert msg.conversation_id == conv.id
-        assert msg.from_mission_id == missions["alpha"]
+        assert msg.from_possession_id == missions["alpha"]
         assert msg.subject == "Hello"
         assert msg.body == "Hello, world!"
         assert msg.priority == "MEDIUM"
@@ -497,7 +492,7 @@ class TestCreateMessage:
         for priority, code in [("CRITICAL", "C"), ("HIGH", "H"), ("MEDIUM", "M"), ("LOW", "L")]:
             msg = mgr.create_message(
                 conversation_id=conv.id,
-                from_mission_id=missions["alpha"],
+                from_possession_id=missions["alpha"],
                 subject=f"{priority} message",
                 body=f"Body for {priority}",
                 priority=priority,
@@ -518,7 +513,7 @@ class TestCreateMessage:
         conv = mgr.create_conversation("Test", missions["alpha"], missions["beta"])
         msg = mgr.create_message(
             conversation_id=conv.id,
-            from_mission_id=missions["alpha"],
+            from_possession_id=missions["alpha"],
             subject="With context",
             body="Context body",
             task_id="TST-H-0097",
@@ -538,7 +533,7 @@ class TestCreateMessage:
         with pytest.raises(ConversationClosedError):
             mgr.create_message(
                 conversation_id=conv.id,
-                from_mission_id=missions["alpha"],
+                from_possession_id=missions["alpha"],
                 subject="Too late",
                 body="Too late body",
             )
@@ -548,7 +543,7 @@ class TestCreateMessage:
         with pytest.raises(ConversationNotFoundError):
             mgr.create_message(
                 conversation_id="CONV-9999",
-                from_mission_id=missions["alpha"],
+                from_possession_id=missions["alpha"],
                 subject="Nowhere",
                 body="Nowhere body",
             )
@@ -601,7 +596,7 @@ class TestListMessages:
         mgr.create_message(conv.id, missions["alpha"], "From alpha", "B1")
         mgr.create_message(conv.id, missions["beta"], "From beta", "B2")
 
-        alpha_msgs = mgr.list_messages(from_mission_id=missions["alpha"])
+        alpha_msgs = mgr.list_messages(from_possession_id=missions["alpha"])
         assert len(alpha_msgs) == 1
         assert alpha_msgs[0].subject == "From alpha"
 
@@ -646,7 +641,7 @@ class TestThreading:
 
         reply = mgr.create_message(
             conversation_id=disc.id,
-            from_mission_id=missions["beta"],
+            from_possession_id=missions["beta"],
             subject="Reply",
             body="Reply body",
             parent_message_id=root.id,
@@ -685,7 +680,7 @@ class TestThreading:
         with pytest.raises(InvalidThreadingError):
             mgr.create_message(
                 conversation_id=conv.id,
-                from_mission_id=missions["beta"],
+                from_possession_id=missions["beta"],
                 subject="Reply",
                 body="Reply body",
                 parent_message_id=root.id,
@@ -698,7 +693,7 @@ class TestThreading:
         with pytest.raises(MessageNotFoundError):
             mgr.create_message(
                 conversation_id=disc.id,
-                from_mission_id=missions["alpha"],
+                from_possession_id=missions["alpha"],
                 subject="Reply",
                 body="Reply body",
                 parent_message_id="MSG-M-9999",
@@ -714,7 +709,7 @@ class TestThreading:
         with pytest.raises(InvalidThreadingError):
             mgr.create_message(
                 conversation_id=disc2.id,
-                from_mission_id=missions["alpha"],
+                from_possession_id=missions["alpha"],
                 subject="Reply",
                 body="Reply body",
                 parent_message_id=root.id,
@@ -803,7 +798,7 @@ class TestViewTracking:
         view = mgr.update_conversation_view(conv.id, missions["alpha"])
 
         assert view.conversation_id == conv.id
-        assert view.mission_id == missions["alpha"]
+        assert view.possession_id == missions["alpha"]
         assert view.last_viewed_at is not None
 
     def test_update_view_upserts_timestamp(self, mgr: MessageManager, missions: dict):
@@ -815,7 +810,7 @@ class TestViewTracking:
         view2 = mgr.update_conversation_view(conv.id, missions["alpha"])
 
         assert view2.conversation_id == view1.conversation_id
-        assert view2.mission_id == view1.mission_id
+        assert view2.possession_id == view1.possession_id
         # Timestamp should be >= previous (may be equal if fast)
         assert view2.last_viewed_at >= view1.last_viewed_at
 
@@ -832,12 +827,12 @@ class TestViewTracking:
 
         viewers = mgr.get_conversation_viewers(conv.id)
         assert len(viewers) == 2
-        viewer_ids = {v["mission_id"] for v in viewers}
+        viewer_ids = {v["possession_id"] for v in viewers}
         assert missions["alpha"] in viewer_ids
         assert missions["beta"] in viewer_ids
         # Verify viewer dict has expected keys
         for v in viewers:
-            assert "persona_name" in v
+            assert "daemon_name" in v
             assert "role" in v
             assert "last_viewed_at" in v
 
@@ -855,7 +850,7 @@ class TestViewTracking:
 
         active = mgr.get_active_conversation_viewers(conv.id, within_minutes=5)
         assert len(active) == 1
-        assert active[0]["mission_id"] == missions["alpha"]
+        assert active[0]["possession_id"] == missions["alpha"]
 
     def test_get_active_viewers_excludes_ended_missions(self, mgr: MessageManager, missions: dict, test_db: Database):
         """get_active_conversation_viewers excludes ended missions."""
@@ -863,14 +858,14 @@ class TestViewTracking:
         mgr.update_conversation_view(conv.id, missions["alpha"])
         mgr.update_conversation_view(conv.id, missions["beta"])
 
-        # End alpha's mission
+        # Exorcise alpha's possession
         test_db.execute_update(
-            "UPDATE missions SET end_time = time('now') WHERE id = :id",
+            "UPDATE possessions SET status = 'EXORCISED' WHERE id = :id",
             {"id": missions["alpha"]},
         )
 
         active = mgr.get_active_conversation_viewers(conv.id, within_minutes=5)
-        active_ids = {v["mission_id"] for v in active}
+        active_ids = {v["possession_id"] for v in active}
         assert missions["alpha"] not in active_ids
         assert missions["beta"] in active_ids
 
@@ -1031,15 +1026,15 @@ class TestEdgeCases:
     def test_send_conversation_message_to_closed_creates_new(self, mgr: MessageManager, missions: dict):
         """Sending via send_conversation_message after close creates a new conversation."""
         conv1, _ = mgr.send_conversation_message(
-            from_mission_id=missions["alpha"],
-            to_mission_id=missions["beta"],
+            from_possession_id=missions["alpha"],
+            to_possession_id=missions["beta"],
             body="First conversation",
         )
         mgr.close_conversation(conv1.id)
 
         conv2, msg2 = mgr.send_conversation_message(
-            from_mission_id=missions["alpha"],
-            to_mission_id=missions["beta"],
+            from_possession_id=missions["alpha"],
+            to_possession_id=missions["beta"],
             body="New conversation after close",
         )
 
@@ -1050,8 +1045,8 @@ class TestEdgeCases:
     def test_send_conversation_message_updates_sender_view(self, mgr: MessageManager, missions: dict):
         """send_conversation_message updates the sender's view timestamp."""
         conv, msg = mgr.send_conversation_message(
-            from_mission_id=missions["alpha"],
-            to_mission_id=missions["beta"],
+            from_possession_id=missions["alpha"],
+            to_possession_id=missions["beta"],
             body="Test message",
         )
 
@@ -1072,13 +1067,13 @@ class TestEdgeCases:
     def test_conversation_reuse_normalizes_participant_order(self, mgr: MessageManager, missions: dict):
         """Conversation lookup normalizes participant order (lower ID first)."""
         conv1, _ = mgr.send_conversation_message(
-            from_mission_id=missions["beta"],
-            to_mission_id=missions["alpha"],
+            from_possession_id=missions["beta"],
+            to_possession_id=missions["alpha"],
             body="B to A",
         )
         conv2, _ = mgr.send_conversation_message(
-            from_mission_id=missions["alpha"],
-            to_mission_id=missions["beta"],
+            from_possession_id=missions["alpha"],
+            to_possession_id=missions["beta"],
             body="A to B",
         )
 
@@ -1113,8 +1108,8 @@ class TestEdgeCases:
     def test_send_conversation_message_with_priority(self, mgr: MessageManager, missions: dict):
         """send_conversation_message respects the priority parameter."""
         _, msg = mgr.send_conversation_message(
-            from_mission_id=missions["alpha"],
-            to_mission_id=missions["beta"],
+            from_possession_id=missions["alpha"],
+            to_possession_id=missions["beta"],
             body="Urgent!",
             priority="CRITICAL",
         )
@@ -1125,8 +1120,8 @@ class TestEdgeCases:
     def test_unread_messages_exclude_sender_own_messages(self, mgr: MessageManager, missions: dict):
         """Sender's own messages are not counted as unread for themselves (via view tracking)."""
         conv, msg = mgr.send_conversation_message(
-            from_mission_id=missions["alpha"],
-            to_mission_id=missions["beta"],
+            from_possession_id=missions["alpha"],
+            to_possession_id=missions["beta"],
             body="Hello",
         )
 
@@ -1144,5 +1139,5 @@ class TestEdgeCases:
 
         msgs = mgr.list_messages(conversation_id=disc.id)
         assert len(msgs) == 2
-        senders = {m.from_mission_id for m in msgs}
+        senders = {m.from_possession_id for m in msgs}
         assert senders == {missions["alpha"], missions["beta"]}

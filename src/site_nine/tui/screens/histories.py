@@ -1,17 +1,17 @@
-"""HistoriesScreen — All missions as a historical record for the Site-Nine TUI.
+"""HistoriesScreen — All possessions as a historical record for the Site-Nine TUI.
 
 This screen differs from MissionsScreen in intent and sort order:
-  - Shows ALL missions (active AND ended), emphasising historical context
-  - Default sort: most-recent-ended first; active missions are pinned to top
+  - Shows ALL possessions (active AND exorcised), emphasising historical context
+  - Default sort: most-recent-exorcised first; active possessions are pinned to top
   - Focuses on the work-log perspective: what was done, when, by whom
-  - Preview pane: mission metadata + first section of mission file
-  - Full-page view: full mission file rendered and scrollable
+  - Preview pane: possession metadata + first section of possession log
+  - Full-page view: full possession log rendered and scrollable
 
 Layout:
-  - List pane: ID, Codename, Persona, Role, Status, Date range, Objective
-  - Preview pane: metadata + first portion of mission file markdown
-  - Full-page view: full mission file content scrollable
-  - Filter bar: by status, role, or persona using / key
+  - List pane: ID, Daemon, Role, Status, Dates
+  - Preview pane: metadata + first portion of possession log markdown
+  - Full-page view: full possession log content scrollable
+  - Filter bar: by status, role, or daemon using / key
   - Keybindings: j/k or up/down, Enter for full page, Escape to close, / to filter
 """
 
@@ -28,9 +28,9 @@ from textual.screen import Screen
 from textual.widgets import DataTable, Footer, Header, Input, Static
 
 from site_nine.core.database import Database
-from site_nine.missions.manager import MissionManager
-from site_nine.missions.models import Mission
-from site_nine.missions.types import MissionStatus
+from site_nine.possessions.manager import PossessionManager
+from site_nine.possessions.models import Possession
+from site_nine.possessions.types import PossessionStatus
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -38,55 +38,54 @@ from site_nine.missions.types import MissionStatus
 
 _STATUS_COLOURS: dict[str, str] = {
     "ACTIVE": "green",
-    "IDLE": "yellow",
     "SUSPENDED": "magenta",
-    "ENDED": "dim",
+    "EXORCISED": "dim",
     "ROLE_PENDING": "cyan",
-    "PERSONA_PENDING": "cyan",
+    "DAEMON_PENDING": "cyan",
 }
 
 _STATUS_SYMBOLS: dict[str, str] = {
     "ACTIVE": "●",
-    "IDLE": "◌",
     "SUSPENDED": "⏸",
-    "ENDED": "○",
+    "EXORCISED": "○",
     "ROLE_PENDING": "?",
-    "PERSONA_PENDING": "?",
+    "DAEMON_PENDING": "?",
 }
 
 
-def _truncate(text: str, width: int) -> str:
+def _truncate(text: str | None, width: int) -> str:
     """Truncate string to *width* characters, appending '…' if needed."""
+    if text is None:
+        return ""
     if len(text) <= width:
         return text
     return text[: width - 1] + "…"
 
 
-def _status_value(mission: Mission) -> str:
-    """Return the plain status string from a Mission."""
-    return mission.status.value if isinstance(mission.status, MissionStatus) else str(mission.status)
+def _status_value(possession: Possession) -> str:
+    """Return the plain status string from a Possession."""
+    return possession.status.value if isinstance(possession.status, PossessionStatus) else str(possession.status)
 
 
-def _date_range(mission: Mission) -> str:
-    """Return a compact date-range string for the mission."""
-    start = mission.start_date
-    if mission.end_time:
-        # Show just date if ended
+def _date_range(possession: Possession) -> str:
+    """Return a compact date-range string for the possession."""
+    start = possession.start_time[:10] if possession.start_time else "?"
+    if possession.end_time:
         return f"{start} → done"
     return f"{start} → …"
 
 
-def _sort_key(mission: Mission) -> tuple[int, str]:
+def _sort_key(possession: Possession) -> tuple[int, str]:
     """
-    Sort key placing ENDED missions most-recent-first, active/idle at top.
+    Sort key placing EXORCISED possessions most-recent-first, active at top.
 
-    Active missions sort before ended ones. Within each group, most recent first.
+    Active possessions sort before exorcised ones. Within each group, most recent first.
     """
-    status = _status_value(mission)
-    # Group 0 = active/idle/suspended (still running), group 1 = ended
-    group = 1 if status == "ENDED" else 0
+    status = _status_value(possession)
+    # Group 0 = active/suspended (still running), group 1 = exorcised
+    group = 1 if status == "EXORCISED" else 0
     # Within group sort descending by created_at (negate via string trick)
-    ts = mission.created_at.format("YYYY-MM-DDTHH:mm:ss")
+    ts = possession.created_at.format("YYYY-MM-DDTHH:mm:ss")
     return (group, ts)
 
 
@@ -96,7 +95,7 @@ def _sort_key(mission: Mission) -> tuple[int, str]:
 
 
 class HistoryFullPage(Screen):
-    """Full scrollable view of a mission's file content (historical perspective)."""
+    """Full scrollable view of a possession's log content (historical perspective)."""
 
     BINDINGS: ClassVar[list[Binding]] = [
         Binding("escape", "app.pop_screen", "Back"),
@@ -108,9 +107,9 @@ class HistoryFullPage(Screen):
         Binding("G", "scroll_end", "Bottom", show=False),
     ]
 
-    def __init__(self, mission: Mission, db: Database) -> None:
+    def __init__(self, possession: Possession, db: Database) -> None:
         super().__init__()
-        self._mission = mission
+        self._possession = possession
         self._db = db
 
     # ------------------------------------------------------------------
@@ -119,13 +118,12 @@ class HistoryFullPage(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
-        status = _status_value(self._mission)
+        status = _status_value(self._possession)
         status_col = _STATUS_COLOURS.get(status, "white")
         sym = _STATUS_SYMBOLS.get(status, "●")
         title = (
-            f"[ESC]  Mission #{self._mission.id}  "
-            f"[bold]{self._mission.codename}[/bold]  "
-            f"({self._mission.persona_name} — {self._mission.role})  "
+            f"[ESC]  Possession #{self._possession.id}  "
+            f"({self._possession.daemon_name} — {self._possession.role})  "
             f"[{status_col}]{sym} {status}[/{status_col}]"
         )
         yield Static(title, id="fullpage-title", classes="fullpage-title", markup=True)
@@ -134,43 +132,42 @@ class HistoryFullPage(Screen):
         yield Footer()
 
     def _build_content(self) -> str:
-        mission = self._mission
-        status = _status_value(mission)
+        possession = self._possession
+        status = _status_value(possession)
         status_col = _STATUS_COLOURS.get(status, "white")
         lines: list[str] = []
 
         # Metadata block
-        lines.append(f"[bold]Mission:[/bold]   #{mission.id}  {mission.codename}")
-        lines.append(f"[bold]Persona:[/bold]   {mission.persona_name}")
-        lines.append(f"[bold]Role:[/bold]      {mission.role}")
-        lines.append(f"[bold]Status:[/bold]    [{status_col}]{status}[/{status_col}]")
-        lines.append(f"[bold]Objective:[/bold] {mission.objective}")
-        lines.append(f"[bold]Started:[/bold]   {mission.start_date} {mission.start_time}")
-        if mission.end_time:
-            lines.append(f"[bold]Ended:[/bold]     {mission.start_date} {mission.end_time}")
-        if mission.epic_id:
-            lines.append(f"[bold]Epic:[/bold]      {mission.epic_id}")
-        if mission.desk_mode_active:
+        lines.append(f"[bold]Possession:[/bold] #{possession.id}")
+        lines.append(f"[bold]Daemon:[/bold]     {possession.daemon_name}")
+        lines.append(f"[bold]Role:[/bold]       {possession.role}")
+        lines.append(f"[bold]Status:[/bold]     [{status_col}]{status}[/{status_col}]")
+        lines.append(f"[bold]Started:[/bold]    {possession.start_time}")
+        if possession.end_time:
+            lines.append(f"[bold]Ended:[/bold]      {possession.end_time}")
+        if possession.epic_id:
+            lines.append(f"[bold]Epic:[/bold]       {possession.epic_id}")
+        if possession.desk_mode_active:
             lines.append("[bold]Desk Mode:[/bold] [green]active[/green]")
         lines.append(
-            f"[dim]Created: {mission.created_at.format('YYYY-MM-DD HH:mm')}  "
-            f"Updated: {mission.updated_at.format('YYYY-MM-DD HH:mm')}[/dim]"
+            f"[dim]Created: {possession.created_at.format('YYYY-MM-DD HH:mm')}  "
+            f"Updated: {possession.updated_at.format('YYYY-MM-DD HH:mm')}[/dim]"
         )
         lines.append("")
 
-        # Mission file content
-        mission_file = Path(mission.mission_file)
-        if mission_file.exists():
+        # Possession log content
+        possession_log = Path(possession.possession_log)
+        if possession_log.exists():
             try:
-                content = mission_file.read_text()
-                lines.append("[bold]Mission File:[/bold]")
+                content = possession_log.read_text()
+                lines.append("[bold]Possession Log:[/bold]")
                 lines.append("")
                 for line in content.splitlines():
                     lines.append(line.replace("[", "\\["))
             except OSError as exc:
-                lines.append(f"[red]Error reading mission file: {exc}[/red]")
+                lines.append(f"[red]Error reading possession log: {exc}[/red]")
         else:
-            lines.append(f"[dim]Mission file not found: {mission.mission_file}[/dim]")
+            lines.append(f"[dim]Possession log not found: {possession.possession_log}[/dim]")
 
         return "\n".join(lines)
 
@@ -206,18 +203,18 @@ class HistoryFullPage(Screen):
 
 class HistoriesScreen(Screen):
     """
-    Histories screen — all missions as a historical record (active + ended).
+    Histories screen — all possessions as a historical record (active + exorcised).
 
     Differs from MissionsScreen:
-      - Shows ALL missions, not just active ones
-      - Default sort: active missions first, then ended missions most-recent-first
+      - Shows ALL possessions, not just active ones
+      - Default sort: active possessions first, then exorcised most-recent-first
       - Focus is on the historical/audit view of work done
 
-    List view columns: ID, Codename, Persona, Role, Status, Date Range, Objective
-    Preview pane: mission metadata + first section of mission file
-    Full-page view: full mission file rendered and scrollable
+    List view columns: ID, Daemon, Role, Status, Dates
+    Preview pane: possession metadata + first section of possession log
+    Full-page view: full possession log rendered and scrollable
 
-    Filter: by status/role/persona using / key
+    Filter: by status/role/daemon using / key
 
     Keybindings:
         j / down    Move selection down
@@ -242,9 +239,9 @@ class HistoriesScreen(Screen):
     def __init__(self, db: Database) -> None:
         super().__init__()
         self._db = db
-        self._manager = MissionManager(db)
-        self._missions: list[Mission] = []
-        self._filtered: list[Mission] = []
+        self._manager = PossessionManager(db)
+        self._possessions: list[Possession] = []
+        self._filtered: list[Possession] = []
         self._filter_text: str = ""
 
     # ------------------------------------------------------------------
@@ -258,7 +255,7 @@ class HistoriesScreen(Screen):
                 yield Static("6 Histories", classes="sidebar-active")
             with Vertical(id="content-area"):
                 yield Input(
-                    placeholder="Filter by status, role, or persona (e.g. ENDED, Engineer)…",
+                    placeholder="Filter by status, role, or daemon (e.g. EXORCISED, Engineer)…",
                     id="filter-input",
                     classes="filter-bar",
                 )
@@ -277,29 +274,26 @@ class HistoriesScreen(Screen):
         self._populate_table()
 
     def _load_data(self) -> None:
-        """Load all missions (active + ended), sorted for historical view."""
+        """Load all possessions (active + exorcised), sorted for historical view."""
         try:
-            # List all missions — active and ended
-            all_missions = self._manager.list_missions()
-            # Sort: active/idle/suspended first (by created_at desc), then ended (by created_at desc)
-            self._missions = sorted(all_missions, key=_sort_key)
+            # List all possessions — active and exorcised
+            all_possessions = self._manager.list_possessions()
+            # Sort: active/suspended first (by created_at desc), then exorcised (by created_at desc)
+            self._possessions = sorted(all_possessions, key=_sort_key)
         except Exception as exc:  # noqa: BLE001
-            self._missions = []
+            self._possessions = []
             self._set_preview(f"[red]Error loading histories: {exc}[/red]")
 
     def _apply_filter(self) -> None:
-        """Apply the current filter text to the full mission list."""
+        """Apply the current filter text to the full possession list."""
         text = self._filter_text.strip().upper()
         if not text:
-            self._filtered = list(self._missions)
+            self._filtered = list(self._possessions)
         else:
             self._filtered = [
-                m
-                for m in self._missions
-                if text in _status_value(m).upper()
-                or text in m.role.upper()
-                or text in m.persona_name.upper()
-                or text in m.codename.upper()
+                p
+                for p in self._possessions
+                if text in _status_value(p).upper() or text in p.role.upper() or text in p.daemon_name.upper()
             ]
 
     def _populate_table(self) -> None:
@@ -307,27 +301,25 @@ class HistoriesScreen(Screen):
         self._apply_filter()
         table = self.query_one("#histories-table", DataTable)
         table.clear(columns=True)
-        table.add_columns("ID", "Codename", "Persona", "Role", "Status", "Dates", "Objective")
+        table.add_columns("ID", "Daemon", "Role", "Status", "Dates")
 
-        for mission in self._filtered:
-            status = _status_value(mission)
+        for possession in self._filtered:
+            status = _status_value(possession)
             status_col = _STATUS_COLOURS.get(status, "white")
             sym = _STATUS_SYMBOLS.get(status, "●")
-            date_range = _date_range(mission)
+            date_range = _date_range(possession)
 
             table.add_row(
-                str(mission.id),
-                mission.codename,
-                mission.persona_name,
-                mission.role,
+                str(possession.id),
+                possession.daemon_name,
+                possession.role,
                 f"[{status_col}]{sym} {status}[/{status_col}]",
                 date_range,
-                _truncate(mission.objective, 40),
-                key=str(mission.id),
+                key=str(possession.id),
             )
 
         if not self._filtered:
-            self._set_preview("[dim]No missions match the current filter.[/dim]")
+            self._set_preview("[dim]No possessions match the current filter.[/dim]")
         else:
             table.move_cursor(row=0)
             self._refresh_preview()
@@ -354,67 +346,65 @@ class HistoriesScreen(Screen):
     # ------------------------------------------------------------------
 
     def _refresh_preview(self) -> None:
-        """Update preview pane with the selected mission's details."""
+        """Update preview pane with the selected possession's details."""
         table = self.query_one("#histories-table", DataTable)
         if table.row_count == 0:
             return
         try:
-            mission_id_str = str(table.get_row_at(table.cursor_row)[0])
+            possession_id_str = str(table.get_row_at(table.cursor_row)[0])
         except Exception:  # noqa: BLE001
             return
-        self._show_preview_for(mission_id_str)
+        self._show_preview_for(possession_id_str)
 
-    def _show_preview_for(self, mission_id_str: str) -> None:
-        """Render a preview for the selected mission."""
+    def _show_preview_for(self, possession_id_str: str) -> None:
+        """Render a preview for the selected possession."""
         try:
-            mission_id = int(mission_id_str)
+            possession_id = int(possession_id_str)
         except ValueError:
             return
-        mission = next((m for m in self._filtered if m.id == mission_id), None)
-        if mission is None:
-            self._set_preview(f"[dim]Mission #{mission_id_str} not found.[/dim]")
+        possession = next((p for p in self._filtered if p.id == possession_id), None)
+        if possession is None:
+            self._set_preview(f"[dim]Possession #{possession_id_str} not found.[/dim]")
             return
 
-        status = _status_value(mission)
+        status = _status_value(possession)
         status_col = _STATUS_COLOURS.get(status, "white")
         sym = _STATUS_SYMBOLS.get(status, "●")
 
         lines: list[str] = [
-            f"[bold]Mission #{mission.id}[/bold]  [{status_col}]{sym} {status}[/{status_col}]",
-            f"[bold]{mission.codename}[/bold]  ({mission.persona_name} — {mission.role})",
+            f"[bold]Possession #{possession.id}[/bold]  [{status_col}]{sym} {status}[/{status_col}]",
+            f"[bold]{possession.daemon_name}[/bold]  ({possession.role})",
             "",
-            f"[bold]Objective:[/bold] {mission.objective}",
-            f"[bold]Started:[/bold]   {mission.start_date} {mission.start_time}",
+            f"[bold]Started:[/bold]   {possession.start_time}",
         ]
 
-        if mission.end_time:
-            lines.append(f"[bold]Ended:[/bold]     {mission.start_date} {mission.end_time}")
+        if possession.end_time:
+            lines.append(f"[bold]Ended:[/bold]     {possession.end_time}")
 
-        if mission.epic_id:
-            lines.append(f"[bold]Epic:[/bold]      {mission.epic_id}")
+        if possession.epic_id:
+            lines.append(f"[bold]Epic:[/bold]      {possession.epic_id}")
 
-        if mission.desk_mode_active:
+        if possession.desk_mode_active:
             lines.append("[green]● desk mode active[/green]")
 
-        lines.append(f"[dim]Updated: {mission.updated_at.format('YYYY-MM-DD HH:mm')}[/dim]")
+        lines.append(f"[dim]Updated: {possession.updated_at.format('YYYY-MM-DD HH:mm')}[/dim]")
         lines.append("")
 
-        # Preview first section of the mission file
-        mission_file = Path(mission.mission_file)
-        if mission_file.exists():
+        # Preview first section of the possession log
+        possession_log = Path(possession.possession_log)
+        if possession_log.exists():
             try:
-                file_lines = mission_file.read_text().splitlines()
-                # Find end of first section (first blank line after ## heading)
+                file_lines = possession_log.read_text().splitlines()
                 preview_lines = file_lines[:20]
-                lines.append("[bold]Mission File (preview):[/bold]")
+                lines.append("[bold]Possession Log (preview):[/bold]")
                 for fl in preview_lines:
                     lines.append(fl.replace("[", "\\["))
                 if len(file_lines) > 20:
                     lines.append(f"[dim]…{len(file_lines) - 20} more lines[/dim]")
             except OSError:
-                lines.append("[dim]Could not read mission file.[/dim]")
+                lines.append("[dim]Could not read possession log.[/dim]")
         else:
-            lines.append("[dim]Mission file not found.[/dim]")
+            lines.append("[dim]Possession log not found.[/dim]")
 
         self._set_preview("\n".join(lines))
 
@@ -443,13 +433,13 @@ class HistoriesScreen(Screen):
         if table.row_count == 0:
             return
         try:
-            mission_id_str = str(table.get_row_at(table.cursor_row)[0])
-            mission_id = int(mission_id_str)
+            possession_id_str = str(table.get_row_at(table.cursor_row)[0])
+            possession_id = int(possession_id_str)
         except Exception:  # noqa: BLE001
             return
 
-        mission = next((m for m in self._filtered if m.id == mission_id), None)
-        if mission is None:
+        possession = next((p for p in self._filtered if p.id == possession_id), None)
+        if possession is None:
             return
 
-        self.app.push_screen(HistoryFullPage(mission, self._db))
+        self.app.push_screen(HistoryFullPage(possession, self._db))

@@ -3,15 +3,15 @@
 worker_terminate tool - Signal a desk-mode worker to terminate gracefully.
 
 This tool:
-1. Receives from_mission_id, to_mission_id, and optional reason
-2. Sends a HIGH priority termination message to the target mission via MessageManager
-3. The message body instructs the worker to end cleanly using the session-end skill
+1. Receives from_possession_id, to_possession_id, and optional reason
+2. Sends a HIGH priority termination message to the target possession via MessageManager
+3. The message body instructs the worker to end cleanly using the possession-end skill
 4. Returns delivery confirmation
 """
 
 import sys
 import json
-from loguru import logger
+from tool_logging import logger
 
 from site_nine.core.database import Database
 from site_nine.core.paths import get_db_path
@@ -24,7 +24,7 @@ TERMINATE_BODY_TEMPLATE = """\
 You are being asked to terminate gracefully.
 
 {reason_clause}Please complete your current task step (if any), then:
-1. Use the `session-end` skill to close your mission cleanly.
+1. Use the `possession-end` skill to close your possession cleanly.
 2. Exit your OpenCode session.
 
 Do not start any new tasks.
@@ -35,25 +35,25 @@ def main():
     try:
         args = json.loads(sys.stdin.read())
 
-        from_mission_id = args.get("from_mission_id")
-        to_mission_id = args.get("to_mission_id")
+        from_possession_id = args.get("from_possession_id") or args.get("from_mission_id")  # backward compat
+        to_possession_id = args.get("to_possession_id") or args.get("to_mission_id")  # backward compat
         reason = args.get("reason")
 
-        if from_mission_id is None:
-            return json.dumps({"error": "missing_from_mission_id", "message": "from_mission_id is required."})
-        if to_mission_id is None:
-            return json.dumps({"error": "missing_to_mission_id", "message": "to_mission_id is required."})
+        if from_possession_id is None:
+            return json.dumps({"error": "missing_from_possession_id", "message": "from_possession_id is required."})
+        if to_possession_id is None:
+            return json.dumps({"error": "missing_to_possession_id", "message": "to_possession_id is required."})
 
-        from_mission_id = int(from_mission_id)
-        to_mission_id = int(to_mission_id)
+        from_possession_id = int(from_possession_id)
+        to_possession_id = int(to_possession_id)
 
         reason_clause = f"Reason: {reason}\n\n" if reason else ""
         body = TERMINATE_BODY_TEMPLATE.format(reason_clause=reason_clause)
 
         logger.debug(
             "worker_terminate_called",
-            from_mission_id=from_mission_id,
-            to_mission_id=to_mission_id,
+            from_possession_id=from_possession_id,
+            to_possession_id=to_possession_id,
             has_reason=bool(reason),
         )
 
@@ -62,8 +62,8 @@ def main():
 
         try:
             conversation, message = manager.send_conversation_message(
-                from_mission_id=from_mission_id,
-                to_mission_id=to_mission_id,
+                from_possession_id=from_possession_id,
+                to_possession_id=to_possession_id,
                 body=body,
                 priority="HIGH",
             )
@@ -78,7 +78,7 @@ def main():
             "worker_terminate_signal_sent",
             conversation_id=conversation.id,
             message_id=message.id,
-            to_mission_id=to_mission_id,
+            to_possession_id=to_possession_id,
         )
 
         return json.dumps(
@@ -86,8 +86,8 @@ def main():
                 "terminated": True,
                 "conversation_id": conversation.id,
                 "message_id": message.id,
-                "from_mission_id": from_mission_id,
-                "to_mission_id": to_mission_id,
+                "from_possession_id": from_possession_id,
+                "to_possession_id": to_possession_id,
                 "reason": reason,
             }
         )

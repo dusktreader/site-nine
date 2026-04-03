@@ -24,57 +24,48 @@ def message_manager(test_db: Database) -> MessageManager:
 
 @pytest.fixture
 def test_missions(test_db: Database) -> dict[str, int]:
-    """Create test missions for conversation testing."""
-    # Create test personas first
+    """Create test possessions for conversation testing."""
+    # Seed daemons first
     test_db.execute_update(
         """
-        INSERT INTO personas (name, role, mythology, description)
+        INSERT INTO daemons (name, role, incarnations)
         VALUES 
-            ('test-persona-1', 'Operator', 'Test', 'Test persona 1'),
-            ('test-persona-2', 'Engineer', 'Test', 'Test persona 2'),
-            ('test-persona-3', 'Architect', 'Test', 'Test persona 3')
+            ('test-persona-1', 'Operator', 0),
+            ('test-persona-2', 'Engineer', 0),
+            ('test-persona-3', 'Architect', 0)
         """
     )
 
-    # Create test missions
+    # Create test possessions
     mission_1_id = test_db.execute_insert(
         """
-        INSERT INTO missions (
-            persona_name, role, codename, mission_file,
-            start_date, start_time, objective
-        )
+        INSERT INTO possessions (daemon_name, role, possession_log, created_at, updated_at)
         VALUES (
-            'test-persona-1', 'Operator', 'test-one', 
-            '.opencode/work/missions/test-1.md',
-            '2026-02-14', '10:00:00', 'Test mission 1'
+            'test-persona-1', 'Operator',
+            '.opencode/work/possessions/test-1.md',
+            datetime('now'), datetime('now')
         )
         """
     )
 
     mission_2_id = test_db.execute_insert(
         """
-        INSERT INTO missions (
-            persona_name, role, codename, mission_file,
-            start_date, start_time, objective
-        )
+        INSERT INTO possessions (daemon_name, role, possession_log, created_at, updated_at)
         VALUES (
-            'test-persona-2', 'Engineer', 'test-two',
-            '.opencode/work/missions/test-2.md',
-            '2026-02-14', '10:00:00', 'Test mission 2'
+            'test-persona-2', 'Engineer',
+            '.opencode/work/possessions/test-2.md',
+            datetime('now'), datetime('now')
         )
         """
     )
 
     mission_3_id = test_db.execute_insert(
         """
-        INSERT INTO missions (
-            persona_name, role, codename, mission_file,
-            start_date, start_time, objective
-        )
+        INSERT INTO possessions (daemon_name, role, possession_log, created_at, updated_at)
         VALUES (
-            'test-persona-3', 'Architect', 'test-three',
-            '.opencode/work/missions/test-3.md',
-            '2026-02-14', '10:00:00', 'Test mission 3'
+            'test-persona-3', 'Architect',
+            '.opencode/work/possessions/test-3.md',
+            datetime('now'), datetime('now')
         )
         """
     )
@@ -131,8 +122,8 @@ class TestConversationAutoCreation:
     def test_auto_create_conversation_on_first_message(self, message_manager: MessageManager, test_missions: dict):
         """Test conversation is auto-created when sending first message."""
         conversation, message = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="Hey, can you help with this task?",
         )
 
@@ -151,7 +142,7 @@ class TestConversationAutoCreation:
         # Verify message created
         assert message is not None
         assert message.conversation_id == conversation.id
-        assert message.from_mission_id == test_missions["mission_1"]
+        assert message.from_possession_id == test_missions["mission_1"]
         assert message.body == "Hey, can you help with this task?"
         assert message.parent_message_id is None  # No threading in conversations
 
@@ -159,15 +150,15 @@ class TestConversationAutoCreation:
         """Test existing open conversation is reused for subsequent messages."""
         # Send first message
         conv1, msg1 = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="First message",
         )
 
         # Send second message
         conv2, msg2 = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="Second message",
         )
 
@@ -184,15 +175,15 @@ class TestConversationAutoCreation:
         """Test only one open conversation exists between two missions."""
         # Send from mission 1 to mission 2
         conv1, _ = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="Message 1",
         )
 
         # Send from mission 2 to mission 1 (reverse direction)
         conv2, _ = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_2"],
-            to_mission_id=test_missions["mission_1"],
+            from_possession_id=test_missions["mission_2"],
+            to_possession_id=test_missions["mission_1"],
             body="Message 2",
         )
 
@@ -203,15 +194,15 @@ class TestConversationAutoCreation:
         """Test different mission pairs get separate conversations."""
         # Mission 1 -> Mission 2
         conv_1_2, _ = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="Message to mission 2",
         )
 
         # Mission 1 -> Mission 3
         conv_1_3, _ = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_3"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_3"],
             body="Message to mission 3",
         )
 
@@ -226,8 +217,8 @@ class TestClosedConversationHandling:
         """Test new conversation created when previous one is closed."""
         # Create first conversation
         conv1, _ = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="First conversation",
         )
 
@@ -236,8 +227,8 @@ class TestClosedConversationHandling:
 
         # Send new message (should create new conversation)
         conv2, _ = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="New conversation after close",
         )
 
@@ -249,16 +240,16 @@ class TestClosedConversationHandling:
         """Test closed conversation is not reopened when new one is created."""
         # Create and close first conversation
         conv1, _ = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="First conversation",
         )
         message_manager.close_conversation(conv1.id)
 
         # Create new conversation
         message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="New conversation",
         )
 
@@ -274,8 +265,8 @@ class TestConversationViewTracking:
     def test_update_conversation_view_on_send(self, message_manager: MessageManager, test_missions: dict):
         """Test conversation view is updated when sending message."""
         conversation, message = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="Test message",
         )
 
@@ -283,7 +274,7 @@ class TestConversationViewTracking:
         view = message_manager.get_conversation_view(conversation.id, test_missions["mission_1"])
         assert view is not None
         assert view.conversation_id == conversation.id
-        assert view.mission_id == test_missions["mission_1"]
+        assert view.possession_id == test_missions["mission_1"]
         assert view.last_viewed_at is not None
 
 
@@ -294,8 +285,8 @@ class TestValidation:
         """Test cannot send conversation message to yourself."""
         with pytest.raises(InvalidParticipantError):
             message_manager.send_conversation_message(
-                from_mission_id=test_missions["mission_1"],
-                to_mission_id=test_missions["mission_1"],  # Same as sender
+                from_possession_id=test_missions["mission_1"],
+                to_possession_id=test_missions["mission_1"],  # Same as sender
                 body="Message to myself",
             )
 
@@ -316,8 +307,8 @@ class TestValidation:
         )
 
         conversation, message = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="Question about TST-H-0001",
             task_id="TST-H-0001",
         )
@@ -334,24 +325,24 @@ class TestIntegrationScenarios:
         """Test complete conversation workflow: create, exchange messages, close."""
         # Mission 1 starts conversation
         conv1, msg1 = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="Can you review my code?",
         )
         assert conv1.status == "open"
 
         # Mission 2 replies
         conv2, msg2 = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_2"],
-            to_mission_id=test_missions["mission_1"],
+            from_possession_id=test_missions["mission_2"],
+            to_possession_id=test_missions["mission_1"],
             body="Sure, send me the PR link",
         )
         assert conv2.id == conv1.id  # Same conversation
 
         # Mission 1 responds
         conv3, msg3 = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="Here's the link: github.com/...",
         )
         assert conv3.id == conv1.id
@@ -362,8 +353,8 @@ class TestIntegrationScenarios:
 
         # New message creates fresh conversation
         conv4, msg4 = message_manager.send_conversation_message(
-            from_mission_id=test_missions["mission_1"],
-            to_mission_id=test_missions["mission_2"],
+            from_possession_id=test_missions["mission_1"],
+            to_possession_id=test_missions["mission_2"],
             body="New question about different task",
         )
         assert conv4.id != conv1.id  # Different conversation

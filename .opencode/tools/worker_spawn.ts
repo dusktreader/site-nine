@@ -4,7 +4,7 @@ import path from "path"
 export default tool({
   description:
     "Spawn a desk-mode worker for a given role. The worker runs in the background, " +
-    "polls for messages, and stays alive for continuous work. Returns the spawned mission ID " +
+    "polls for messages, and stays alive for continuous work. Returns the spawned possession ID " +
     "for subsequent coordination via worker_message. This is the ONLY way for agents to " +
     "spawn workers - never use 's9 summon' CLI directly.",
   args: {
@@ -13,7 +13,7 @@ export default tool({
       .describe(
         "Worker role to spawn: Administrator, Architect, Engineer, Tester, Documentarian, Designer, Inspector, Operator, or Historian"
       ),
-    persona: tool.schema.string().optional().describe("Optional specific persona name. If omitted, auto-selected."),
+    daemon: tool.schema.string().optional().describe("Optional specific daemon name. If omitted, auto-selected."),
     model: tool.schema.string().optional().describe("Optional OpenCode model to use (default: claude-sonnet-4-5)"),
     poll_interval: tool.schema
       .number()
@@ -24,7 +24,7 @@ export default tool({
     const script = path.join(context.worktree, ".opencode/tools/worker_spawn.py")
     const input = JSON.stringify({
       role: args.role,
-      persona: args.persona ?? null,
+      daemon: args.daemon ?? null,
       model: args.model ?? null,
       poll_interval: args.poll_interval ?? null,
     })

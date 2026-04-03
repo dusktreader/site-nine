@@ -19,7 +19,7 @@ Output (stdout, JSON):
 
 import sys
 import json
-from loguru import logger
+from tool_logging import logger
 
 from site_nine.core.database import Database
 from site_nine.core.paths import get_db_path

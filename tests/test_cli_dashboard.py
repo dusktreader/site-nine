@@ -158,7 +158,7 @@ def test_dashboard_tester_role(initialized_project: Path):
 
 
 def _seed_data(initialized_project: Path, *, tasks=True, epic=False, mission=False, underway_task=False):
-    """Seed tasks, epics, and/or missions into the project database.
+    """Seed tasks, epics, and/or possessions into the project database.
 
     Returns a dict with the db_path and any created objects for reference.
     """
@@ -185,24 +185,30 @@ def _seed_data(initialized_project: Path, *, tasks=True, epic=False, mission=Fal
                 em.link_task("ENG-M-0002", "EPC-H-0001")
 
         if mission:
-            # Get a persona name from the DB
-            personas = db.execute_query("SELECT name FROM personas LIMIT 1")
-            persona_name = personas[0]["name"]
-            info["persona_name"] = persona_name
+            # Ensure a daemon exists for Engineer role
+            daemons = db.execute_query("SELECT name FROM daemons WHERE role = 'Engineer' LIMIT 1")
+            if daemons:
+                daemon_name = daemons[0]["name"]
+            else:
+                db.execute_update(
+                    "INSERT INTO daemons (name, role, incarnations) VALUES ('test-daemon', 'Engineer', 0)"
+                )
+                daemon_name = "test-daemon"
+            info["daemon_name"] = daemon_name
 
             db.execute_update(
                 """
-                INSERT INTO missions (persona_name, role, codename, mission_file, start_date, start_time, objective, created_at, updated_at)
-                VALUES (:persona, 'Engineer', 'test-mission', '.opencode/work/missions/test.md', '2026-01-01', '10:00:00', 'Test objective for the dashboard', datetime('now'), datetime('now'))
+                INSERT INTO possessions (daemon_name, role, possession_log, start_time, status, created_at, updated_at)
+                VALUES (:daemon, 'Engineer', '.opencode/work/possessions/test.md', datetime('now'), 'ACTIVE', datetime('now'), datetime('now'))
                 """,
-                {"persona": persona_name},
+                {"daemon": daemon_name},
             )
-            missions = db.execute_query("SELECT id FROM missions ORDER BY id DESC LIMIT 1")
-            info["mission_id"] = missions[0]["id"]
+            possessions = db.execute_query("SELECT id FROM possessions ORDER BY id DESC LIMIT 1")
+            info["mission_id"] = possessions[0]["id"]
 
         if underway_task and tasks and mission:
-            # Claim a task so it becomes UNDERWAY and linked to the mission
-            tm.claim_task("ENG-H-0001", info["mission_id"], "Engineer")
+            # Claim a task so it becomes UNDERWAY and linked to the possession
+            tm.claim_task("ENG-H-0001", possession_id=info["mission_id"], current_role="Engineer")
 
     return info
 
@@ -295,7 +301,7 @@ def test_dashboard_role_json_with_data(initialized_project: Path):
 
 
 def test_dashboard_full_json_with_data(initialized_project: Path):
-    """Test full JSON dashboard with tasks + missions seeded"""
+    """Test full JSON dashboard with tasks + possessions seeded"""
     import json
 
     _seed_data(initialized_project, tasks=True, mission=True)
@@ -306,10 +312,10 @@ def test_dashboard_full_json_with_data(initialized_project: Path):
     response = json.loads(result.stdout)
     data = response["data"]
     assert "available_tasks" in data
-    assert "active_missions" in data
+    assert "active_possessions" in data
     assert "stats" in data
-    assert len(data["active_missions"]) >= 1
-    assert data["stats"]["active_missions"] >= 1
+    assert len(data["active_possessions"]) >= 1
+    assert data["stats"]["active_possessions"] >= 1
     assert data["stats"]["total_tasks"] >= 3
 
 
@@ -373,31 +379,31 @@ def test_dashboard_with_mission_and_tasks(initialized_project: Path):
     result = runner.invoke(app, ["dashboard"])
     assert result.exit_code == 0, f"Command failed: {result.stdout}"
 
-    # Should show the mission in Open Missions table
-    assert "Open Missions" in result.stdout
-    # The mission should be ACTIVE (stored status, default for new missions)
+    # Should show the possession in Active Possessions table
+    assert "Active Possessions" in result.stdout
+    # The possession should be ACTIVE (stored status, default for new possessions)
     assert "ACTIVE" in result.stdout
 
 
 def test_dashboard_with_idle_mission(initialized_project: Path):
-    """Test dashboard with mission set to IDLE shows IDLE status"""
+    """Test dashboard with mission set to SUSPENDED shows SUSPENDED status"""
     info = _seed_data(initialized_project, tasks=True, mission=True, underway_task=False)
 
-    # Explicitly set the mission status to IDLE (stored status model)
+    # Explicitly set the mission status to SUSPENDED
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
         db.execute_update(
-            "UPDATE missions SET status = 'IDLE' WHERE id = :id",
+            "UPDATE possessions SET status = 'SUSPENDED' WHERE id = :id",
             {"id": info["mission_id"]},
         )
 
     result = runner.invoke(app, ["dashboard"])
     assert result.exit_code == 0, f"Command failed: {result.stdout}"
 
-    # Should show the mission in Open Missions table
-    assert "Open Missions" in result.stdout
-    # The mission should be IDLE since we explicitly set it
-    assert "IDLE" in result.stdout
+    # Should show the possession in Active Possessions table
+    assert "Active Possessions" in result.stdout
+    # The possession should be SUSPENDED since we explicitly set it
+    assert "SUSPENDED" in result.stdout
 
 
 def test_dashboard_blocked_by_reviews_stat(initialized_project: Path):
@@ -476,16 +482,16 @@ def test_dashboard_epic_with_progress(initialized_project: Path):
 
 
 def test_dashboard_full_json_with_missions_and_idle(initialized_project: Path):
-    """Test full JSON output includes idle mission detection"""
+    """Test full JSON output includes suspended possession"""
     import json
 
     info = _seed_data(initialized_project, tasks=True, mission=True, underway_task=False)
 
-    # Explicitly set the mission status to IDLE (stored status model)
+    # Explicitly set the possession status to SUSPENDED
     db_path = initialized_project / ".opencode" / "data" / "project.db"
     with Database(db_path) as db:
         db.execute_update(
-            "UPDATE missions SET status = 'IDLE' WHERE id = :id",
+            "UPDATE possessions SET status = 'SUSPENDED' WHERE id = :id",
             {"id": info["mission_id"]},
         )
 
@@ -494,10 +500,11 @@ def test_dashboard_full_json_with_missions_and_idle(initialized_project: Path):
 
     response = json.loads(result.stdout)
     data = response["data"]
-    assert data["stats"]["idle_missions"] >= 1
-    # Mission should be IDLE since we explicitly set it
-    mission_statuses = [m["status"] for m in data["active_missions"]]
-    assert "IDLE" in mission_statuses
+    assert "active_possessions" in data
+    assert "stats" in data
+    # The SUSPENDED possession should be included in active_possessions
+    possession_statuses = [m["status"] for m in data["active_possessions"]]
+    assert "SUSPENDED" in possession_statuses
 
 
 def test_dashboard_epic_json_not_found(initialized_project: Path):

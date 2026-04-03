@@ -18,7 +18,7 @@ class Epic:
         id: Epic ID in EPC-H-0001 format
         title: Epic title
         description: Optional detailed description
-        status_details: Free-form notes about epic progress/status
+        aborted_reason: Reason for aborting (if manually aborted)
         priority: Priority level (CRITICAL, HIGH, MEDIUM, LOW)
         created_at: Creation timestamp
         updated_at: Last update timestamp
@@ -31,7 +31,7 @@ class Epic:
     id: str
     title: str
     description: str | None
-    status_details: str | None
+    aborted_reason: str | None
     priority: str
     created_at: pendulum.DateTime
     updated_at: pendulum.DateTime
@@ -54,7 +54,7 @@ class Epic:
             id=row["id"],
             title=row["title"],
             description=row.get("description"),
-            status_details=row.get("status_details"),
+            aborted_reason=row.get("aborted_reason"),
             priority=row["priority"],
             created_at=created_at,
             updated_at=updated_at,

@@ -7,8 +7,8 @@ message. Status messages appear as toast notifications in the TUI. Keep them
 short and informative.
 
 Input (JSON via stdin):
-    mission_id: int   - Your mission ID
-    message:    str   - Short status message (ideally under 120 chars)
+    possession_id: int - Your possession ID
+    message:       str - Short status message (ideally under 120 chars)
 
 Output (JSON via stdout):
     {"status": "ok", "id": <int>}
@@ -17,7 +17,7 @@ Output (JSON via stdout):
 
 import sys
 import json
-from loguru import logger
+from tool_logging import logger
 
 from site_nine.core.database import Database
 from site_nine.core.paths import get_db_path
@@ -26,7 +26,7 @@ from site_nine.core.paths import get_db_path
 def main() -> str:
     try:
         data = json.loads(sys.stdin.read())
-        mission_id = int(data["mission_id"])
+        possession_id = int(data["possession_id"])
         message = str(data["message"]).strip()
 
         if not message:
@@ -36,11 +36,11 @@ def main() -> str:
         db = Database(db_path)
 
         row_id = db.execute_insert(
-            "INSERT INTO status_queue (mission_id, message) VALUES (:mission_id, :message)",
-            {"mission_id": mission_id, "message": message},
+            "INSERT INTO status_queue (possession_id, message) VALUES (:possession_id, :message)",
+            {"possession_id": possession_id, "message": message},
         )
 
-        logger.info("push_status_ok", mission_id=mission_id, queue_id=row_id, message=message)
+        logger.info("push_status_ok", possession_id=possession_id, queue_id=row_id, message=message)
         return json.dumps({"status": "ok", "id": row_id})
 
     except Exception as e:

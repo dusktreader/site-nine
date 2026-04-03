@@ -140,11 +140,11 @@ class TaskFullPage(Screen):
             lines.append(f"[bold]Category:[/bold] {task.category}")
         if task.epic_id:
             lines.append(f"[bold]Epic:[/bold]     {task.epic_id}")
-        if task.current_mission_id:
+        if task.current_possession_id:
             claimed_str = ""
             if task.claimed_at:
                 claimed_str = f"  (claimed {_age(task.claimed_at)})"
-            lines.append(f"[bold]Mission:[/bold]  #{task.current_mission_id}{claimed_str}")
+            lines.append(f"[bold]Possession:[/bold]  #{task.current_possession_id}{claimed_str}")
         lines.append(
             f"[dim]Created: {task.created_at.format('YYYY-MM-DD HH:mm')}  "
             f"Updated: {task.updated_at.format('YYYY-MM-DD HH:mm')}[/dim]"
@@ -313,7 +313,7 @@ class TasksScreen(Screen):
             status_col = _STATUS_COLOURS.get(status_val, "white")
             priority_col = _PRIORITY_COLOURS.get(task.priority, "white")
             sym = _STATUS_SYMBOLS.get(status_val, "○")
-            mission_cell = f"#{task.current_mission_id}" if task.current_mission_id else "[dim]-[/dim]"
+            mission_cell = f"#{task.current_possession_id}" if task.current_possession_id else "[dim]-[/dim]"
 
             table.add_row(
                 task.id,
@@ -408,11 +408,11 @@ class TasksScreen(Screen):
         if task.epic_id:
             lines.append(f"[dim]Epic:[/dim] {task.epic_id}")
 
-        if task.current_mission_id:
+        if task.current_possession_id:
             claimed_str = ""
             if task.claimed_at:
                 claimed_str = f"  ({_age(task.claimed_at)})"
-            lines.append(f"[dim]Claimed by:[/dim] #{task.current_mission_id}{claimed_str}")
+            lines.append(f"[dim]Claimed by:[/dim] #{task.current_possession_id}{claimed_str}")
 
         if task.category:
             lines.append(f"[dim]Category:[/dim] {task.category}")

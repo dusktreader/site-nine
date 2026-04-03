@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import pytest
 from site_nine.__main__ import app
 from typer.testing import CliRunner
 
@@ -164,15 +165,7 @@ def test_json_structure_consistency(initialized_project: Path):
 
 def test_handoff_list_json(initialized_project: Path):
     """Test handoff list with JSON output"""
-    result = runner.invoke(app, ["handoff", "list", "--json"])
-
-    assert result.exit_code == 0, f"Command failed: {result.stdout}"
-
-    data = json.loads(result.stdout)
-    assert "data" in data
-    assert "count" in data
-    assert "timestamp" in data
-    assert isinstance(data["data"], list)
+    pytest.skip("handoff CLI command removed")
 
 
 def test_handoff_show_json(initialized_project: Path):

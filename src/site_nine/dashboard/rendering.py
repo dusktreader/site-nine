@@ -15,11 +15,11 @@ from site_nine.dashboard.models import (
     DashboardStats,
     EpicDashboardData,
     FullDashboardData,
-    MissionEntry,
+    PossessionEntry,
     RoleDashboardData,
 )
 from site_nine.epics.models import Epic
-from site_nine.missions.types import MissionStatus
+from site_nine.possessions.types import PossessionStatus
 from site_nine.tasks.models import Task
 
 
@@ -95,7 +95,7 @@ def render_epic_subtasks_table(subtasks: list[Task]) -> Table:
     table.add_column("Status", style="yellow")
     table.add_column("Role", style="green")
     table.add_column("Priority", style="red")
-    table.add_column("Mission", style="blue")
+    table.add_column("Possession", style="blue")
 
     for task in subtasks:
         table.add_row(
@@ -104,7 +104,7 @@ def render_epic_subtasks_table(subtasks: list[Task]) -> Table:
             str(task.status),
             task.role,
             task.priority,
-            str(task.current_mission_id) if task.current_mission_id else "",
+            str(task.current_possession_id) if task.current_possession_id else "",
         )
 
     return table
@@ -179,7 +179,7 @@ def render_epic_tables(
         table.add_column("Role", style="green", width=14, no_wrap=True)
         table.add_column("Status", width=10, no_wrap=True)
         table.add_column("Title", style="white", ratio=1)
-        table.add_column("Mission", style="blue", width=8, no_wrap=True)
+        table.add_column("Possession", style="blue", width=8, no_wrap=True)
 
         for task in subtasks[:10]:
             task_status_color = TASK_STATUS_COLORS.get(task.status.value, "white")
@@ -189,7 +189,7 @@ def render_epic_tables(
                 task.role or "",
                 f"[{task_status_color}]{task.status}[/{task_status_color}]",
                 task.title[:60],
-                f"@{task.current_mission_id}" if task.current_mission_id else "",
+                f"@{task.current_possession_id}" if task.current_possession_id else "",
             )
 
         if len(subtasks) > 10:
@@ -236,20 +236,21 @@ def render_available_tasks_table(tasks: list[Task], *, max_rows: int = 10) -> Ta
     return table
 
 
-MISSION_STATUS_COLORS: dict[str, str] = {
+POSSESSION_STATUS_COLORS: dict[str, str] = {
     "ACTIVE": "green",
-    "IDLE": "yellow",
-    "ENDED": "dim",
+    "SUSPENDED": "yellow",
+    "EXORCISED": "dim",
+    "ROLE_PENDING": "cyan",
+    "DAEMON_PENDING": "cyan",
 }
 
 
-def _human_friendly_age(start_time: str | None, start_date: str | None) -> str:
-    """Convert mission start_date + start_time into a human-friendly age string."""
-    if not start_date or not start_time:
+def _human_friendly_age(start_time: str | None) -> str:
+    """Convert possession start_time ISO timestamp into a human-friendly age string."""
+    if not start_time:
         return "unknown"
     try:
-        dt_str = f"{start_date}T{start_time}"
-        start_dt = pendulum.parse(dt_str, tz="UTC")
+        start_dt = pendulum.parse(start_time)
         now = pendulum.now("UTC")
         diff = now - start_dt  # type: ignore[operator]
         total_seconds = int(diff.total_seconds())  # type: ignore[union-attr]
@@ -270,38 +271,33 @@ def _human_friendly_age(start_time: str | None, start_date: str | None) -> str:
         return start_time or "unknown"
 
 
-def render_open_missions_table(mission_entries: list[MissionEntry]) -> Table:
-    """Build the 'Open Missions' table."""
+def render_open_missions_table(possession_entries: list[PossessionEntry]) -> Table:
+    """Build the 'Active Possessions' table."""
     table = Table(
-        title="Open Missions",
+        title="Active Possessions",
         show_header=True,
         title_style="bold green",
         title_justify="left",
     )
-    table.add_column("Name", style="magenta")
+    table.add_column("Daemon", style="magenta")
     table.add_column("Role", style="green")
     table.add_column("Status", style="yellow")
     table.add_column("Age", style="blue")
-    table.add_column("Objective", style="white")
 
-    if mission_entries:
-        for me in mission_entries:
-            m = me.mission
-            objective_display = (
-                m.objective[:50] + "..." if m.objective and len(m.objective) > 50 else (m.objective or "")
-            )
-            status_color = MISSION_STATUS_COLORS.get(m.status.value, "white")
-            status_display = f"[{status_color}]{m.status.value}[/{status_color}]"
-            age_display = _human_friendly_age(m.start_time, m.start_date)
+    if possession_entries:
+        for pe in possession_entries:
+            p = pe.possession
+            status_color = POSSESSION_STATUS_COLORS.get(p.status.value, "white")
+            status_display = f"[{status_color}]{p.status.value}[/{status_color}]"
+            age_display = _human_friendly_age(p.start_time)
             table.add_row(
-                m.persona_name,
-                m.role,
+                p.daemon_name,
+                p.role,
                 status_display,
                 age_display,
-                objective_display,
             )
     else:
-        table.add_row("[dim]No open missions[/dim]", "", "", "", "")
+        table.add_row("[dim]No active possessions[/dim]", "", "", "")
 
     return table
 
@@ -317,9 +313,8 @@ def render_stats_table(stats: DashboardStats) -> Table:
     table.add_column("Metric", style="cyan")
     table.add_column("Count", justify="right", style="bold")
 
-    table.add_row("Active missions", str(stats.active_missions))
-    table.add_row("Idle missions", f"[yellow]{stats.idle_missions}[/yellow]")
-    table.add_row("Active personas", f"[magenta]{stats.active_personas}[/magenta]")
+    table.add_row("Active possessions", str(stats.active_possessions))
+    table.add_row("Active daemons", f"[magenta]{stats.active_daemons}[/magenta]")
     table.add_row("Total tasks", str(stats.total_tasks))
     table.add_row("In progress", f"[yellow]{stats.in_progress}[/yellow]")
     table.add_row("Completed", f"[green]{stats.completed}[/green]")
@@ -330,11 +325,7 @@ def render_stats_table(stats: DashboardStats) -> Table:
 
 
 def render_messaging_stats_table(stats: DashboardStats) -> list[str | Table]:
-    """Build the 'Agent Communication (last 24h)' table and hint line.
-
-    Returns a list containing the Rich Table and a hint string so the
-    caller can append both to the renderable list.
-    """
+    """Build the 'Agent Communication (last 24h)' table and hint line."""
     table = Table(
         title="Agent Communication (last 24h)",
         show_header=True,
@@ -370,7 +361,7 @@ def render_role_tasks_table(role: str, tasks: list[Task], *, max_rows: int = 10)
     table.add_column("Title", style="magenta", max_width=40)
     table.add_column("Status", style="yellow")
     table.add_column("Priority", style="red")
-    table.add_column("Mission", style="blue")
+    table.add_column("Possession", style="blue")
     table.add_column("Epic", style="magenta")
 
     for task in tasks[:max_rows]:
@@ -379,7 +370,7 @@ def render_role_tasks_table(role: str, tasks: list[Task], *, max_rows: int = 10)
             task.title,
             str(task.status),
             task.priority,
-            str(task.current_mission_id) if task.current_mission_id else "",
+            str(task.current_possession_id) if task.current_possession_id else "",
             task.epic_id or "",
         )
 
@@ -416,21 +407,19 @@ def full_dashboard_to_json(data: FullDashboardData) -> dict:
             }
             for t in data.available_tasks
         ],
-        "active_missions": [
+        "active_possessions": [
             {
-                "id": me.mission.id,
-                "persona_name": me.mission.persona_name,
-                "role": me.mission.role,
-                "status": me.mission.status.value,
-                "start_time": me.mission.start_time,
-                "objective": me.mission.objective,
+                "id": pe.possession.id,
+                "daemon_name": pe.possession.daemon_name,
+                "role": pe.possession.role,
+                "status": pe.possession.status.value,
+                "start_time": pe.possession.start_time,
             }
-            for me in data.mission_entries
+            for pe in data.possession_entries
         ],
         "stats": {
-            "active_missions": data.stats.active_missions,
-            "idle_missions": data.stats.idle_missions,
-            "active_personas": data.stats.active_personas,
+            "active_possessions": data.stats.active_possessions,
+            "active_daemons": data.stats.active_daemons,
             "total_tasks": data.stats.total_tasks,
             "in_progress": data.stats.in_progress,
             "completed": data.stats.completed,
@@ -453,7 +442,7 @@ def role_dashboard_to_json(data: RoleDashboardData) -> dict:
                 "title": t.title,
                 "status": str(t.status),
                 "priority": t.priority,
-                "current_mission_id": t.current_mission_id,
+                "current_possession_id": t.current_possession_id,
             }
             for t in data.available_tasks
         ],
@@ -479,7 +468,7 @@ def epic_dashboard_to_json(data: EpicDashboardData) -> dict:
                 "status": str(t.status),
                 "priority": t.priority,
                 "role": t.role,
-                "current_mission_id": t.current_mission_id,
+                "current_possession_id": t.current_possession_id,
             }
             for t in data.subtasks
         ],
@@ -507,9 +496,6 @@ def render_dashboard(
 ) -> list[str | Table | Tree]:
     """
     Render any dashboard data variant into a list of Rich renderables.
-
-    Each item in the returned list should be passed to ``terminal_message``
-    by the CLI layer.
 
     Args:
         data: The dashboard data to render.
@@ -554,7 +540,7 @@ def _render_full_dashboard(
     else:
         items.append("[green]No available tasks - all work complete![/green]")
 
-    items.append(render_open_missions_table(data.mission_entries))
+    items.append(render_open_missions_table(data.possession_entries))
     items.append(render_stats_table(data.stats))
     items.extend(render_messaging_stats_table(data.stats))
 

@@ -1,30 +1,29 @@
 """Dashboard data models.
 
 These are view models for aggregated dashboard data. The dashboard has no
-dedicated database table — it coordinates data from tasks, missions, and epics.
+dedicated database table — it coordinates data from tasks, possessions, and epics.
 """
 
 from dataclasses import dataclass, field
 
 from site_nine.epics.models import Epic
-from site_nine.missions.models import Mission
+from site_nine.possessions.models import Possession
 from site_nine.tasks.models import Task
 
 
 @dataclass
-class MissionEntry:
-    """A mission with its display status for the dashboard."""
+class PossessionEntry:
+    """A possession with its display status for the dashboard."""
 
-    mission: Mission
+    possession: Possession
 
 
 @dataclass
 class DashboardStats:
     """Quick stats for the full dashboard view."""
 
-    active_missions: int
-    idle_missions: int
-    active_personas: int
+    active_possessions: int
+    active_daemons: int
     total_tasks: int
     in_progress: int
     completed: int
@@ -42,12 +41,11 @@ class FullDashboardData:
 
     active_epics: list[Epic] = field(default_factory=list)
     available_tasks: list[Task] = field(default_factory=list)
-    mission_entries: list[MissionEntry] = field(default_factory=list)
+    possession_entries: list[PossessionEntry] = field(default_factory=list)
     stats: DashboardStats = field(
         default_factory=lambda: DashboardStats(
-            active_missions=0,
-            idle_missions=0,
-            active_personas=0,
+            active_possessions=0,
+            active_daemons=0,
             total_tasks=0,
             in_progress=0,
             completed=0,
