@@ -155,7 +155,9 @@ Discovery patterns work with the message-driven coordination system:
 
 **See:** ADR-014 for complete message-driven coordination architecture.
 
-## Command Reference
+## Director CLI Reference
+
+These commands are for the **Director (human) only**. Agents use tools instead.
 
 ```bash
 # Discovery commands
@@ -170,9 +172,8 @@ s9 comms inbox
 s9 comms show <MSG-ID>
 s9 comms reply <MSG-ID> "..."
 
-# Desk mode commands (for receiving messages)
-s9 comms desk start
-s9 comms desk stop
+# Desk workers (Director spawns headless workers)
+s9 summon <role> --desk
 ```
 
 ## Tips for Effective Discovery

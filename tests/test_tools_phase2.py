@@ -195,7 +195,12 @@ def tool_db_with_mission(tool_db):
 # MISSION LIFECYCLE TOOLS (7)
 # ===========================================================================
 
+_SKIP_REMOVED = pytest.mark.skip(
+    reason="Old mission_* and persona_* tools removed (ENG-H-0253/EPC-H-0008). Use possession_* and daemon_* equivalents."
+)
 
+
+@_SKIP_REMOVED
 class TestMissionInit:
     def test_creates_mission_returns_id(self, tool_db):
         result = call_tool("mission_init", {"session_id": "sess-new-001"}, tool_db)
@@ -216,6 +221,7 @@ class TestMissionInit:
         assert r1["mission_id"] != r2["mission_id"]
 
 
+@_SKIP_REMOVED
 class TestMissionRoleRecord:
     def _init_mission(self, tool_db, session_id="sess-role-test") -> int:
         r = call_tool("mission_init", {"session_id": session_id}, tool_db)
@@ -280,6 +286,7 @@ class TestMissionRoleRecord:
             assert "error" not in result, f"Role {role} should be valid"
 
 
+@_SKIP_REMOVED
 class TestMissionPersonaRecord:
     def _setup_daemon_pending(self, tool_db, session_id="sess-pp") -> int:
         r = call_tool("mission_init", {"session_id": session_id}, tool_db)
@@ -326,6 +333,7 @@ class TestMissionPersonaRecord:
         assert result.get("error") == "mission_not_found"
 
 
+@_SKIP_REMOVED
 class TestMissionRenameSession:
     def test_no_active_mission_returns_error(self, tool_db):
         result = call_tool(
@@ -356,6 +364,7 @@ class TestMissionRenameSession:
         assert result["mission_id"] == 1
 
 
+@_SKIP_REMOVED
 class TestMissionRenameDismissed:
     def _make_session_manager_mock(self, current_title: str):
         """Create a mock OpenCodeSessionManager that returns current_title."""
@@ -418,6 +427,7 @@ class TestMissionRenameDismissed:
         assert result.get("error") == "no_opencode_db"
 
 
+@_SKIP_REMOVED
 class TestMissionEnd:
     def test_ends_active_mission(self, tool_db_with_mission):
         result = call_tool(
@@ -461,6 +471,7 @@ class TestMissionEnd:
         assert result.get("error") in ("no_session_id", "no_active_mission", "unexpected_error")
 
 
+@_SKIP_REMOVED
 class TestMissionSummary:
     def test_generates_summary_by_session(self, tool_db_with_mission):
         with patch("site_nine.possessions.manager.PossessionManager.generate_summary") as mock_summary:
@@ -799,6 +810,7 @@ def tool_db_with_handoff(tool_db_with_mission):
 # ===========================================================================
 
 
+@_SKIP_REMOVED
 class TestPersonaShow:
     def test_shows_existing_persona(self, tool_db):
         result = call_tool("persona_show", {"name": "hermes"}, tool_db)
@@ -856,6 +868,7 @@ class TestPersonaSuggest:
         assert names[0] == "hermes"
 
 
+@_SKIP_REMOVED
 class TestPersonaSetBio:
     def test_sets_bio(self, tool_db):
         bio = "I am Hermes, the swift messenger of the gods."
@@ -900,6 +913,7 @@ class TestPersonaSetBio:
 # ===========================================================================
 
 
+@_SKIP_REMOVED
 class TestMissionDashboard:
     def test_returns_todo_and_underway_tasks_for_role(self, tool_db_with_mission):
         # Tester has 2 TODO tasks

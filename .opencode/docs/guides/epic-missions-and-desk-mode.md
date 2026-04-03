@@ -1,73 +1,69 @@
 # Epic Mission Workflows and Desk Mode
 
-This guide explains how to work on epic-scoped missions and use desk mode for agent coordination.
+This guide explains how to work on epic-scoped missions and coordinate through desk
+mode workers.
 
 ## Overview
 
-**Epic missions** are long-running missions where an agent works through multiple tasks within a single epic. Instead of ending the mission after each task, the agent continues claiming tasks until the epic is complete or they choose to end the mission.
+**Epic missions** are long-running missions where an agent works through multiple
+tasks within a single epic. Instead of ending the mission after each task, the agent
+continues claiming tasks until the epic is complete or they choose to end the mission.
 
-**Desk mode** is a state where your mission actively monitors for incoming messages from other agents, enabling async coordination while you work.
+**Desk mode** is a headless background worker mode where an agent runs as an
+asynchronous worker, processing messages from an Admin orchestrator. Desk workers are
+spawned by Admin agents using `worker_spawn` — they don't enter desk mode themselves.
 
 ## Epic Mission Workflow
 
 ### Starting an Epic Mission
 
-When starting a mission for epic work, use the `--epic` flag:
+The Director scopes a mission to an epic at summon time:
 
 ```bash
-s9 mission start <persona-name> --role <Role> --epic <EPIC-ID>
-```
-
-**Example:**
-```bash
-s9 mission start daedalus --role Architect --epic EPC-H-0004
+s9 summon architect --epic EPC-H-0004
 ```
 
 This scopes your mission to the epic and enables:
-- Using `s9 task next` to auto-claim the next task in the epic
-- Desk mode coordination with other agents on the same epic
+
+- Using `task_next` to auto-claim the next task in the epic
 - Mission continuity across multiple related tasks
+- Coordinating with other agents working the same epic
 
 ### Working Through Epic Tasks
 
 #### Option 1: Manual Task Claiming
 
-Claim specific tasks one at a time:
+Claim specific tasks one at a time using tools:
 
-```bash
-# Claim first task
-s9 task claim ARC-H-0057
+```typescript
+// Claim specific task
+task_claim({ task_id: "ARC-H-0057" })
 
-# Work on task...
+// Work on task...
 
-# Close task when done
-s9 task close ARC-H-0057 --status COMPLETE
+// Close task when done
+task_close({ task_id: "ARC-H-0057", status: "COMPLETE" })
 
-# Claim next task manually
-s9 task claim ARC-H-0058
+// Claim next task manually
+task_claim({ task_id: "ARC-H-0058" })
 ```
 
-#### Option 2: Using `s9 task next` (Recommended)
+#### Option 2: Auto-claim with task_next (Recommended)
 
-Let the system auto-claim the next TODO task for your role in your epic:
+After closing a task, call `task_next` to claim the next one automatically:
 
-```bash
-# Claim first task
-s9 task claim ARC-H-0057
+```typescript
+// Close current task
+task_close({ task_id: "ARC-H-0057", status: "COMPLETE" })
 
-# Work and complete...
-s9 task close ARC-H-0057 --status COMPLETE
-
-# Auto-claim next task in the epic
-s9 task next
-# This finds the next TODO task matching:
-# - mission.epic_id (your epic)
-# - mission.role (your role)
-# - status = TODO
+// Auto-claim next task in the epic for your role
+task_next()
+// Finds next TODO task matching: mission.epic_id + mission.role
 ```
 
-**Benefits of `s9 task next`:**
-- No need to look up task IDs
+**Benefits of `task_next`:**
+
+- No need to look up task IDs manually
 - Automatically prioritizes tasks
 - Ensures you stay within your epic scope
 - Faster workflow for sequential work
@@ -76,306 +72,193 @@ s9 task next
 
 End your epic mission when:
 
-1. **Epic is complete** - All tasks for your role in the epic are done
-2. **Context switch needed** - You need to work on a different epic
-3. **Extended break** - You're stopping work for an extended period
-4. **Handoff required** - You need to hand off remaining work to another agent
+1. **Epic is complete** — all tasks for your role in the epic are done
+2. **Context switch needed** — you need to work on a different epic
+3. **Extended break** — you're stopping work for an extended period
+4. Director dismisses you with `/dismiss`
 
-**To end the mission:**
-```bash
-s9 mission end <mission-id>
-```
+**Important:** Don't end the mission between every task. Epic missions are designed
+for continuity.
 
-**Important:** Don't end the mission between every task! Epic missions are designed for continuity.
-
-## Desk Mode Usage
+## Desk Mode Workers
 
 ### What is Desk Mode?
 
-Desk mode is a state where your mission:
-- Actively monitors for incoming messages
-- Displays periodic "Checking comms..." status updates
-- Allows other agents to discover you're available
-- Enables async coordination without blocking your work
+Desk mode is a headless background execution model for agent workers. A desk mode
+worker:
 
-**Think of it as:** "I'm at my desk and available to answer questions while I work"
+- Runs in a background OpenCode session (no UI, no Director interaction)
+- Processes work assignments sent by an Admin orchestrator via `worker_message`
+- Sends status updates back to Admin as it works
+- Stays alive between messages, retaining full conversational context
 
-### When to Use Desk Mode
+**Desk mode workers are spawned by Admin agents using `worker_spawn`** — they don't
+enter desk mode on their own. The Director does not interact with them directly.
 
-**Use desk mode when:**
-- Working on an epic with multiple agents
-- Available to answer questions from other roles
-- Expecting coordination or input from other agents
-- Working asynchronously and can respond to messages periodically
-
-**Don't use desk mode when:**
-- Doing focused, heads-down work requiring no interruption
-- Working on a standalone task with no coordination needs
-- About to end your mission
-- Stepping away for an extended break
-
-### Starting Desk Mode
-
-**For epic-scoped missions (recommended):**
-```bash
-# Your mission is already scoped to an epic
-s9 comms desk start
-```
-
-The system automatically infers the epic from your mission's `epic_id`.
-
-**For general availability (all epics):**
-```bash
-# Mission not scoped to an epic
-s9 comms desk start
-```
-
-This makes you discoverable for questions from any epic.
-
-**Explicit epic specification:**
-```bash
-# Optional: explicitly specify epic (must match mission.epic_id)
-s9 comms desk start --epic EPC-H-0004
-```
-
-### What Happens in Desk Mode
-
-When you start desk mode, you'll see periodic status updates:
+### The Architecture
 
 ```
-Desk mode active. Press Ctrl+C to exit.
-Checking comms... Found 2 new message(s)!
-
-From: Mission #85 (hephaestus - Engineer)
-Subject: Question about ToolAdapter registry
-Preview: Should we use singleton or factory pattern for...
-ID: MSG-M-0341
-
-From: Mission #92 (athena - Operator)  
-Subject: Implementation question
-Preview: I'm implementing the OpenCodeAdapter wrapper...
-ID: MSG-M-0342
-
-[Agent can respond to Director or work between checks]
-
-[30s later]
-Checking comms... No new messages. (0 unread)
-
-[30s later]
-Checking comms... No new messages. (0 unread)
+Director
+  └─ summons → Admin Agent (interactive session)
+                  ├─ spawns → Engineer Worker (desk mode, headless)
+                  ├─ spawns → Tester Worker (desk mode, headless)
+                  └─ coordinates via worker_message / watch_inbox
 ```
 
-**Key features:**
-- Runs in foreground with 30-second check intervals
-- Shows you're actively monitoring (visible to Director)
-- You can still chat with Director between checks
-- Exit with `s9 comms desk stop` or Ctrl+C
-- Automatically disables when mission ends
+### Spawning Desk Mode Workers (Admin)
 
-### Responding to Messages in Desk Mode
+Admin agents use `worker_spawn` to launch background workers:
 
-When you see new messages, you can:
-
-1. **Read the full message:**
-   ```bash
-   s9 comms show MSG-M-0341
-   ```
-
-2. **Reply directly:**
-   ```bash
-   s9 comms reply MSG-M-0341 "Use singleton pattern for thread safety. The registry should be a global instance accessible from any adapter."
-   ```
-
-3. **Continue desk mode:**
-   - Desk mode continues running in the background
-   - Or restart it: `s9 comms desk start`
-
-### Stopping Desk Mode
-
-**Option 1: Ctrl+C** (graceful exit)
-```
-^C
-Desk mode stopped.
+```typescript
+worker_spawn({ role: "engineer", persona: "hephaestus" })
+// Returns: { mission_id: 83, codename: "iron-nexus" }
 ```
 
-**Option 2: Stop command**
-```bash
-s9 comms desk stop
+Workers are invisible to the Director. Admin manages them autonomously.
+
+**See:** `.opencode/docs/guides/desk-mode-orchestration.md` for the complete
+orchestration guide.
+
+### Working as a Desk Mode Worker
+
+If you are running in desk mode (the Director spawned you as a background worker):
+
+- You receive work assignments via `worker_message` from your Admin orchestrator
+- Process each message as a task assignment
+- Send status updates back to Admin using `worker_message`
+- The polling infrastructure handles message delivery automatically — you don't check
+  for messages yourself
+
+**You don't need to manage the polling loop.** The desk-worker infrastructure sends
+messages to your session and invokes your responses.
+
+## Complete Epic Mission Example (Admin Orchestrating Workers)
+
+```typescript
+// 1. Admin spawns workers for the epic
+worker_spawn({ role: "architect", persona: "daedalus" })
+// Returns: { mission_id: 82 }
+
+worker_spawn({ role: "engineer", persona: "hephaestus" })
+// Returns: { mission_id: 83 }
+
+// 2. Assign epic tasks to Architect
+worker_message({
+  to_mission_id: 82,
+  body: "Design the ToolAdapter protocol (ARC-H-0057). Document in ADR format."
+})
+
+// 3. Wait for completion
+watch_inbox()
+// Architect reports: "Design complete, ADR-009 section 4"
+
+// 4. Assign implementation to Engineer
+worker_message({
+  to_mission_id: 83,
+  body: "Implement ToolAdapter wrapper (OPR-H-0066). See ADR-009 section 4."
+})
+
+// 5. Wait for engineering to finish
+watch_inbox()
+// Engineer reports: "Implementation complete"
+
+// 6. Clean up
+worker_terminate({ to_mission_id: 82 })
+worker_terminate({ to_mission_id: 83 })
 ```
 
-**Automatic stop:**
-- Desk mode automatically disables when you end your mission
-- No need to manually stop before `s9 mission end`
+## Discovery: Finding Agents
 
-## Complete Epic Mission Example
+Use `worker_status` to find active desk mode workers for a role:
 
-Here's a complete workflow showing epic missions + desk mode:
-
-```bash
-# 1. Start epic-scoped mission
-s9 mission start daedalus --role Architect --epic EPC-H-0004
-
-# 2. Enable desk mode for coordination
-s9 comms desk start
-
-# 3. Claim first task
-s9 task claim ARC-H-0057
-
-# 4. Work on task while monitoring messages
-#    (desk mode runs, shows "Checking comms..." every 30s)
-
-# 5. See a message, temporarily stop desk mode to respond
-^C
-s9 comms show MSG-M-0341
-s9 comms reply MSG-M-0341 "Use singleton pattern..."
-
-# 6. Resume desk mode
-s9 comms desk start
-
-# 7. Complete first task
-s9 task close ARC-H-0057 --status COMPLETE
-
-# 8. Auto-claim next task
-s9 task next
-# Claimed: ARC-H-0058
-
-# 9. Continue working through tasks...
-
-# 10. When epic work is complete
-^C  # Stop desk mode
-s9 mission end <mission-id>
+```typescript
+worker_status({ role: "Architect" })
 ```
 
-## Discovery: Finding Agents in Desk Mode
+Returns:
 
-Other agents can discover you're available using:
-
-```bash
-# Find all Architects on your epic
-s9 mission list --role Architect --epic EPC-H-0004 --json
-```
-
-**JSON output includes:**
 ```json
 {
-  "missions": [
+  "workers": [
     {
-      "id": 62,
+      "mission_id": 82,
       "persona": "daedalus",
-      "role": "Architect",
-      "desk_mode_active": 1,
-      "epic_id": "EPC-H-0004"
+      "codename": "swift-forge",
+      "status": "ACTIVE",
+      "last_activity": "2026-03-01T00:15:00Z",
+      "current_task": "ARC-H-0057"
     }
   ]
 }
 ```
 
-Agents look for `desk_mode_active: 1` to know you're monitoring messages.
-
-**See:** `agent-discovery.md` for complete discovery patterns.
+**See:** `.opencode/docs/guides/agent-discovery.md` for complete discovery patterns.
 
 ## Best Practices
 
 ### Epic Missions
 
-1. **Start with epic scope** - Use `--epic` flag from the beginning
-2. **Use `s9 task next`** - More efficient than manual claiming
-3. **Don't end between tasks** - Keep mission alive for continuity
-4. **Update mission file** - Document progress as you complete each task
-5. **Send heartbeats** - Run `s9 mission heartbeat` periodically
+1. **Start with epic scope** — Director uses `--epic` flag at summon time
+2. **Use `task_next`** — more efficient than manual claiming
+3. **Don't end between tasks** — keep mission alive for continuity
+4. **Update task artifacts** — document progress as you complete each task
 
-### Desk Mode
+### Desk Mode Workers (Admin)
 
-1. **Enable early** - Start desk mode at beginning of epic work
-2. **Keep it running** - Let it monitor while you work
-3. **Respond promptly** - Check messages when you see notifications
-4. **Use Ctrl+C liberally** - Easy to stop/restart as needed
-5. **Don't forget to stop** - Use Ctrl+C when taking breaks
+1. **Spawn only what you need** — each worker consumes resources
+2. **Give clear work assignments** — include task IDs, context, acceptance criteria
+3. **Wait for responses** — use `watch_inbox` instead of polling continuously
+4. **Terminate when done** — always call `worker_terminate` when work is complete
 
 ### Coordination
 
-1. **Check for agents first** - Use discovery before asking Director
-2. **Be specific in messages** - Include epic ID, task ID, context
-3. **Thread conversations** - Reply to messages to maintain context
-4. **Escalate when needed** - Ask Director if no agents available
-5. **Document decisions** - Record coordination outcomes in mission file
+1. **Use worker_status** — check active workers before spawning duplicates
+2. **Be specific in messages** — include epic ID, task ID, full context
+3. **Escalate when needed** — ask Director if no agents available
+4. **Document decisions** — record coordination outcomes in task artifacts
 
-## Command Reference
+## Tool Reference
 
-### Epic Mission Commands
-
-```bash
-# Start epic-scoped mission
-s9 mission start <persona> --role <Role> --epic <EPIC-ID>
-
-# Auto-claim next task in epic
-s9 task next
-
-# End mission
-s9 mission end <mission-id>
-```
-
-### Desk Mode Commands
-
-```bash
-# Start desk mode (epic inferred from mission)
-s9 comms desk start
-
-# Start with explicit epic
-s9 comms desk start --epic <EPIC-ID>
-
-# Stop desk mode
-s9 comms desk stop
-# Or: Ctrl+C
-```
-
-### Discovery Commands
-
-```bash
-# Find agents by role and epic
-s9 mission list --role <Role> --epic <EPIC-ID> --json
-
-# Check inbox
-s9 comms inbox
-
-# Read message
-s9 comms show <MSG-ID>
-
-# Reply to message
-s9 comms reply <MSG-ID> "response text"
-```
+| Tool | Purpose | Example |
+|------|---------|---------|
+| `task_claim` | Claim a specific task | `task_claim({ task_id: "ARC-H-0057" })` |
+| `task_close` | Close a task when done | `task_close({ task_id: "ARC-H-0057", status: "COMPLETE" })` |
+| `task_next` | Auto-claim next epic task | `task_next()` |
+| `worker_spawn` | Launch a desk mode worker | `worker_spawn({ role: "engineer" })` |
+| `worker_message` | Send work to a worker | `worker_message({ to_mission_id: 83, body: "..." })` |
+| `worker_status` | Check active workers | `worker_status({ role: "engineer" })` |
+| `watch_inbox` | Wait for worker responses | `watch_inbox()` |
+| `worker_terminate` | End a worker's mission | `worker_terminate({ to_mission_id: 83 })` |
 
 ## Troubleshooting
 
-### "Mission not scoped to epic" error
-
-**Problem:** You tried `s9 comms desk --epic EPC-H-0004` but your mission isn't epic-scoped.
-
-**Solution:** 
-- Either use `s9 comms desk` without `--epic` (general availability)
-- Or end mission and restart with `--epic` flag
-
 ### Can't find other agents
 
-**Problem:** `s9 mission list --role X --epic Y` returns no results.
+**Problem:** `worker_status` returns no workers for a role.
 
 **Solution:**
-- Check if agents are active: `s9 mission list --role X`
-- Ask Director to summon an agent if needed
-- Verify epic ID is correct
 
-### Desk mode not showing messages
+- Spawn a new worker with `worker_spawn`
+- Ask Director to investigate if spawn fails
 
-**Problem:** Other agents sent messages but you don't see them.
+### Worker not responding
+
+**Problem:** Sent a message but worker hasn't replied.
 
 **Solution:**
-- Check `s9 comms inbox` manually
-- Verify desk mode is actually running (should see "Checking comms..." output)
-- Restart desk mode: Ctrl+C then `s9 comms desk start`
+
+- Send a status ping: `worker_message({ to_mission_id: 83, body: "Status?" })`
+- Check `worker_status` for last_activity timestamp
+- Terminate and restart if truly unresponsive
+
+### Worker finished but mission still open
+
+This is normal. Desk workers stay alive after finishing a task and wait for the next
+assignment. Send them another task or terminate them when no more work is needed.
 
 ## See Also
 
-- **ADR-009** (lines 99-115, 165-180, 533-554): Epic missions and desk mode design
-- **Agent Discovery**: `agent-discovery.md` for finding available agents
-- **Communication Channels**: session-start skill Step 7.5
-- **Messaging System**: ADR-008 for complete messaging design
+- **Desk Mode Orchestration**: `.opencode/docs/guides/desk-mode-orchestration.md`
+- **Agent Discovery**: `.opencode/docs/guides/agent-discovery.md`
+- **ADR-013**: Site-nine as OpenCode Integration Platform
+- **ADR-014**: Message-Driven Coordination Architecture
