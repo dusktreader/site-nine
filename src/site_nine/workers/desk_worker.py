@@ -93,7 +93,10 @@ class DeskWorker:
             "IMPORTANT: When you receive a work assignment message, you MUST use the worker_message "
             "tool to send status updates back to the sender (use their possession ID as to_possession_id). "
             "Send a message when you: (1) start a task, (2) complete a task, (3) hit a blocker, "
-            "(4) make significant progress. Never work silently — always report back."
+            "(4) make significant progress. Never work silently — always report back. "
+            "ALSO: Use the push_status tool to send short toast notifications to the director "
+            "whenever your status changes (task started, task complete, blocked, going idle). "
+            "Keep push_status messages under 120 characters."
         )
 
         init_message = " ".join(init_parts)
