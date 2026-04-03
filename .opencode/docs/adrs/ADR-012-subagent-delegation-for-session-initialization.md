@@ -454,14 +454,14 @@ Step 10: Auto-Assign (MAIN AGENT)
 - ✅ **Reduced cognitive load**: Agent doesn't carry 600-1,400 tokens of irrelevant details into work
 - ✅ **Targeted optimization**: Only noise-generating steps delegated
 - ✅ **Context pollution eliminated**: Research, operational logs, and formatting noise discarded in subagents
-- ✅ **Parallelization**: Bio generation can run while mission registration happens
+- ✅ **Parallelization**: Bio generation can run while possession registration happens
 - ✅ **Graceful degradation**: If subagent fails, main agent can fall back
 - ✅ **Preserves Director interaction**: Decision points and visibility remain in main agent
 - ✅ **Scalable pattern**: Can extend to other noisy skill steps in future
 
 ### Negative
 
-- ⚠️ **Added complexity**: Session-start skill now coordinates subagents
+- ⚠️ **Added complexity**: Possession-start skill now coordinates subagents
 - ⚠️ **Debugging harder**: Bio generation process not visible in main agent context (but can add --no-subagent flag)
 - ⚠️ **Latency**: Subagent invocation adds overhead (~2-3 seconds per subagent)
 - ⚠️ **Error handling**: Must handle subagent failures gracefully
@@ -475,8 +475,8 @@ Step 10: Auto-Assign (MAIN AGENT)
 | **Subagent fails to generate bio** | Main agent falls back to generating bio directly; Error message to Director |
 | **Subagent returns malformed bio** | Validate bio length/format before saving; Regenerate if invalid |
 | **Parallel execution causes race conditions** | Main agent waits for bio subagent before displaying result; Clear sequencing |
-| **Mission file subagent initializes incorrectly** | Validate epic_id and task list before writing; Main agent can review and correct |
-| **Increased debugging difficulty** | Add `--no-subagent` flag to session-start for debugging; Log subagent prompts/results |
+| **Possession file subagent initializes incorrectly** | Validate epic_id and task list before writing; Main agent can review and correct |
+| **Increased debugging difficulty** | Add `--no-subagent` flag to possession-start for debugging; Log subagent prompts/results |
 | **Context pollution returns if overused** | Only delegate genuinely noisy steps; Monitor context quality over time |
 | **Complexity discourages maintenance** | Document subagent contracts clearly; Provide examples in skill |
 | **Context still polluted despite delegation** | Review and refine what gets delegated; Ensure subagents return minimal results |
@@ -487,7 +487,7 @@ Step 10: Auto-Assign (MAIN AGENT)
 
 **Before (with bio generation in main context):**
 ```
-Main agent context after session-start:
+Main agent context after possession-start:
 - Token 1-400: Dashboard display (useful - project status)
 - Token 401-1000: Bio research & crafting (NOISE - mythology facts never needed again)
 - Token 1001-1200: Operational logs (NOISE - UUID generation, database confirmations)
@@ -496,22 +496,22 @@ Main agent context after session-start:
 
 **After (with bio delegation):**
 ```
-Main agent context after session-start:
+Main agent context after possession-start:
 - Token 1-400: Dashboard display (useful - project status)
-- Token 401-550: Bio result only (useful - compact persona identity)
+- Token 401-550: Bio result only (useful - compact daemon identity)
 - Token 551+: Actual work begins (clean context, no noise)
 ```
 
 **Agent starts work with 600-800 fewer tokens of irrelevant initialization artifacts.**
 
-The agent doesn't need to "remember" how the bio was crafted or what mythology was researched - it just needs the result. Similarly for epic mission files, the agent needs the summary ("5 tasks in this epic"), not the full query results and formatting decisions.
+The agent doesn't need to "remember" how the bio was crafted or what mythology was researched - it just needs the result. Similarly for epic possession files, the agent needs the summary ("5 tasks in this epic"), not the full query results and formatting decisions.
 
 ## Implementation Plan
 
 ### Phase 1: Bio Generation Delegation
 
 **Tasks:**
-1. Update session-start skill Step 3 to detect `bio IS NULL`
+1. Update possession-start skill Step 3 to detect `bio IS NULL`
 2. Implement subagent delegation for bio generation
 3. Handle bio result display
 4. Add fallback for subagent failure
