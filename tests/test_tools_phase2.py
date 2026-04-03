@@ -536,7 +536,7 @@ class TestTaskClaim:
         )
         assert result["status"] == "UNDERWAY"
         assert result["task_id"] == "TST-M-0002"
-        assert result["mission_id"] == 1
+        assert result["possession_id"] == 1
 
     def test_task_not_found_returns_error(self, tool_db_with_mission):
         result = call_tool(
@@ -834,6 +834,7 @@ class TestPersonaShow:
         assert result["persona"]["daemonology"] == "Greek messenger daemon"
 
 
+@_SKIP_REMOVED
 class TestPersonaSuggest:
     def test_suggests_personas_for_role(self, tool_db):
         result = call_tool("persona_suggest", {"role": "Tester"}, tool_db)

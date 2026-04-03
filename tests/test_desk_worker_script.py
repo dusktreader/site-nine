@@ -102,10 +102,10 @@ def mock_time():
 
 def test_desk_worker_initialization():
     """Test DeskWorker constructor sets all fields correctly."""
-    worker = DeskWorker(role="Engineer", persona="hephaestus", model="custom-model", poll_interval=15)
+    worker = DeskWorker(role="Engineer", daemon="hephaestus", model="custom-model", poll_interval=15)
 
     assert worker.role == "Engineer"
-    assert worker.persona == "hephaestus"
+    assert worker.daemon == "hephaestus"
     assert worker.model == "custom-model"
     assert worker.poll_interval == 15
     assert worker.session_id is None
@@ -118,7 +118,7 @@ def test_desk_worker_defaults():
     worker = DeskWorker(role="Architect")
 
     assert worker.role == "Architect"
-    assert worker.persona is None
+    assert worker.daemon is None
     assert worker.model == DeskWorker.DEFAULT_MODEL
     assert worker.poll_interval == DeskWorker.DEFAULT_POLL_INTERVAL
 
@@ -163,7 +163,7 @@ def test_worker_initialize_success(mock_get_db_path, test_db, mock_subprocess, m
         {},
     )
 
-    worker = DeskWorker(role="Engineer", persona="hephaestus")
+    worker = DeskWorker(role="Engineer", daemon="hephaestus")
     worker.initialize()
 
     assert worker.possession_id == possession_id
@@ -639,7 +639,7 @@ def test_handle_shutdown_cleans_up(mock_get_db_path, test_db, mock_subprocess):
     # Verify opencode run was called to end possession
     assert mock_subprocess.mock_run.called
     call_args = mock_subprocess.mock_run.call_args[0][0]
-    assert "mission-end" in " ".join(call_args).lower()
+    assert "possession-end" in " ".join(call_args).lower()
 
 
 # ============================================================================

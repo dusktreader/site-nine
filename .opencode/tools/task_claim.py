@@ -27,7 +27,7 @@ def main():
     try:
         context = json.loads(sys.stdin.read())
         task_id = context["task_id"]
-        possession_id = int(context["possession_id"])
+        possession_id = int(context.get("possession_id") or context.get("mission_id"))
         role = context["role"]
 
         logger.debug("task_claim called", task_id=task_id, possession_id=possession_id, role=role)
