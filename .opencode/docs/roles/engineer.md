@@ -127,9 +127,41 @@ def test_rate_limiter():
     assert not limiter.allow_request()
 ```
 
+## Task Management
+
+Claim your task before starting, update with progress notes, and close when done:
+
+```typescript
+task_claim({ task_id: "ENG-H-0150" })
+
+task_update({
+  task_id: "ENG-H-0150",
+  notes: "RateLimiter class done with tests. Integrating with MCP client now."
+})
+
+task_close({
+  task_id: "ENG-H-0150",
+  status: "COMPLETE",
+  notes: "Implemented token bucket rate limiter. All tests passing. make qa clean."
+})
+```
+
+When you discover a bug or missing test during implementation, create a task rather
+than silently fixing it inline:
+
+```typescript
+task_create({
+  title: "Fix connection pool leak in database.py",
+  role: "Engineer",
+  priority: "HIGH",
+  description: "Found during ENG-H-0150 work. Connection pool not released on timeout..."
+})
+```
+
+
 ## Related Roles
 
-- **Architect** - Provides technical designs to implement
-- **Tester** - Validates implementations
-- **Inspector** - Reviews code for issues
-- **Documentarian** - Documents implemented features
+- **Architect** — Provides technical designs to implement
+- **Tester** — Validates implementations
+- **Inspector** — Reviews code for issues
+- **Documentarian** — Documents implemented features

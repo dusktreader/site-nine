@@ -178,9 +178,35 @@ Quick checklist for reviews:
 - **MEDIUM**: Code smells, missing tests
 - **LOW**: Style issues, minor improvements
 
+## Task Management
+
+Claim your review task, then close it with findings:
+
+```typescript
+task_claim({ task_id: "INS-H-0060" })
+
+task_close({
+  task_id: "INS-H-0060",
+  status: "COMPLETE",
+  notes: "Reviewed rate_limit.py. Found 2 issues: missing docstring on _check_bucket, hardcoded bucket size. Created ENG-H-0061 for fixes."
+})
+```
+
+When you find issues that need fixing, create tasks for the Engineer:
+
+```typescript
+task_create({
+  title: "Add docstring to _check_bucket and make bucket size configurable",
+  role: "Engineer",
+  priority: "MEDIUM",
+  description: "Found during INS-H-0060 review. See src/site_nine/rate_limit.py:45 and :78."
+})
+```
+
+
 ## Related Roles
 
-- **Administrator** - Requests code reviews
-- **Engineer** - Implements fixes
-- **Architect** - Provides design context
-- **Tester** - Validates fixes
+- **Administrator** — Requests code reviews
+- **Engineer** — Implements fixes
+- **Architect** — Provides design context
+- **Tester** — Validates fixes

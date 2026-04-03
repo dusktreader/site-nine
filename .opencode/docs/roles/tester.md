@@ -125,9 +125,35 @@ docker compose up -d
 docker compose logs -f
 ```
 
+## Task Management
+
+Claim your task before starting and close it with findings:
+
+```typescript
+task_claim({ task_id: "TST-H-0042" })
+
+task_close({
+  task_id: "TST-H-0042",
+  status: "COMPLETE",
+  notes: "All tests passing. Verified rate limiting at 5 req/min. Edge case: reset timing off by ~1s — created TST-H-0043."
+})
+```
+
+When you find a bug, create a task for the Engineer:
+
+```typescript
+task_create({
+  title: "Fix rate limit reset timing off by ~1s",
+  role: "Engineer",
+  priority: "MEDIUM",
+  description: "Repro: make 5 calls, wait 59s, next call is still blocked. Expected: unblocked at 60s exactly."
+})
+```
+
+
 ## Related Roles
 
-- **Engineer** - Writes tests and implements fixes
-- **Administrator** - Coordinates testing workflows
-- **Inspector** - Reviews test coverage
-- **Designer** - Tests user experience aspects
+- **Engineer** — Writes tests and implements fixes
+- **Administrator** — Coordinates testing workflows
+- **Inspector** — Reviews test coverage
+- **Designer** — Tests user experience aspects

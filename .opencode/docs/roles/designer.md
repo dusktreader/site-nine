@@ -156,9 +156,35 @@ from rich.syntax import Syntax
 code = Syntax("s9 task list", "bash", theme="monokai")
 ```
 
+## Task Management
+
+Claim your task and close it with a reference to where the design lives:
+
+```typescript
+task_claim({ task_id: "DES-H-0070" })
+
+task_close({
+  task_id: "DES-H-0070",
+  status: "COMPLETE",
+  notes: "Dashboard design complete. Mockup in .opencode/work/tasks/DES-H-0070.md. Ready for Engineer."
+})
+```
+
+When your design reveals work for other roles, create tasks for them:
+
+```typescript
+task_create({
+  title: "Implement dashboard layout per DES-H-0070 design",
+  role: "Engineer",
+  priority: "HIGH",
+  description: "See DES-H-0070 for mockups and Rich component specs."
+})
+```
+
+
 ## Related Roles
 
-- **Administrator** - Coordinates UX work
-- **Engineer** - Implements designs
-- **Documentarian** - Documents UX patterns
-- **Tester** - Tests usability
+- **Administrator** — Coordinates UX work
+- **Engineer** — Implements designs
+- **Documentarian** — Documents UX patterns
+- **Tester** — Tests usability

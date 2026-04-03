@@ -173,9 +173,40 @@ Steps to reproduce:
 })
 ```
 
+## Task Management
+
+Claim your task before starting and close it when done:
+
+```typescript
+task_claim({ task_id: "OPR-H-0080" })
+
+task_update({
+  task_id: "OPR-H-0080",
+  notes: "Created possession-start skill. Testing with actual agent session now."
+})
+
+task_close({
+  task_id: "OPR-H-0080",
+  status: "COMPLETE",
+  notes: "Rewrote possession-start skill. Tested with Documentarian and Engineer sessions. Working correctly."
+})
+```
+
+When you find broken workflows or missing tooling, create tasks proactively:
+
+```typescript
+task_create({
+  title: "Fix task_claim tool: possession_id not being recorded",
+  role: "Operator",
+  priority: "HIGH",
+  description: "task_claim() returns success but possession_id is null in DB. Repro: claim any task, check .opencode/data/project.db."
+})
+```
+
+
 ## Related Roles
 
-- **Administrator** - Coordinates meta-development work
-- **Engineer** - Implements tooling improvements
-- **Documentarian** - Updates documentation
-- **Inspector** - Reviews configuration changes
+- **Administrator** — Coordinates meta-development work
+- **Engineer** — Implements tooling improvements
+- **Documentarian** — Updates documentation
+- **Inspector** — Reviews configuration changes

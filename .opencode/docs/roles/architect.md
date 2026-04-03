@@ -77,9 +77,40 @@ Architect: I'll design the migration:
   5. Implementation phases and dependencies
 ```
 
+## Task Management
+
+Claim tasks before starting work, update as you go, and close when complete:
+
+```typescript
+task_claim({ task_id: "ARC-H-0150" })
+
+task_update({
+  task_id: "ARC-H-0150",
+  notes: "Drafted ADR-012 with three alternatives; going with token bucket approach"
+})
+
+task_close({
+  task_id: "ARC-H-0150",
+  status: "COMPLETE",
+  notes: "ADR-012 written and committed. Implementation steps in task description."
+})
+```
+
+When your design reveals additional work, create tasks for the Engineer:
+
+```typescript
+task_create({
+  title: "Implement token bucket rate limiter",
+  role: "Engineer",
+  priority: "HIGH",
+  description: "See ADR-012 for design. Implement RateLimiter class in src/site_nine/rate_limit.py..."
+})
+```
+
+
 ## Related Roles
 
-- **Administrator** - Coordinates the overall workflow
-- **Engineer** - Implements the designed solutions
-- **Inspector** - Reviews designs for issues
-- **Documentarian** - Formalizes design documents
+- **Administrator** — Coordinates the overall workflow
+- **Engineer** — Implements the designed solutions
+- **Inspector** — Reviews designs for issues
+- **Documentarian** — Formalizes design documents

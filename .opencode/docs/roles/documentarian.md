@@ -47,7 +47,7 @@ The Documentarian is the documentation specialist for site-nine development. Thi
    - Troubleshooting
 4. Update README if needed
 5. Add docstrings to new functions/classes
-6. Follow `.opencode/docs/MARKDOWN_STYLE_GUIDE.md`
+6. Follow `.opencode/docs/guides/markdown-style.md`
 
 ### Updating Existing Docs
 
@@ -132,9 +132,41 @@ Always follow `.opencode/docs/guides/markdown-style.md`:
 - Test examples to ensure they work
 - Remove obsolete information
 
+## Task Management
+
+Claim your task, update with notes as you go, and close when done:
+
+```typescript
+task_claim({ task_id: "DOC-H-0101" })
+
+task_update({
+  task_id: "DOC-H-0101",
+  notes: "Updated rate-limiting.md and README. Working on docstrings now."
+})
+
+task_close({
+  task_id: "DOC-H-0101",
+  status: "COMPLETE",
+  notes: "Updated rate-limiting.md, README, and all docstrings for RateLimiter class."
+})
+```
+
+When you find a doc gap that's out of scope for your current task, create a task
+rather than silently expanding scope:
+
+```typescript
+task_create({
+  title: "Document configuration file format",
+  role: "Documentarian",
+  priority: "MEDIUM",
+  description: "No docs for .s9config.toml format. Users are guessing at valid keys."
+})
+```
+
+
 ## Related Roles
 
-- **Administrator** - Coordinates documentation needs
-- **Engineer** - Provides implementation details
-- **Designer** - Provides UX context for docs
-- **Architect** - Provides technical design context
+- **Administrator** — Coordinates documentation needs
+- **Engineer** — Provides implementation details
+- **Designer** — Provides UX context for docs
+- **Architect** — Provides technical design context
