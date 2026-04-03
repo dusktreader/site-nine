@@ -576,6 +576,7 @@ class TestCommsStatus:
         assert result.exit_code != 0
 
 
+@pytest.mark.skip(reason="s9 comms desk command removed (ENG-H-0212)")
 class TestCommsDesk:
     """Tests for s9 comms desk command."""
 

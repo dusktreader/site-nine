@@ -28,9 +28,9 @@ def test_summon_dry_run_basic(initialized_project: Path):
     assert "opencode" in output
 
 
-def test_summon_dry_run_with_persona(initialized_project: Path):
-    """Test summon with persona flag"""
-    result = runner.invoke(app, ["summon", "operator", "--persona", "atlas", "--dry-run"])
+def test_summon_dry_run_with_daemon(initialized_project: Path):
+    """Test summon with daemon flag"""
+    result = runner.invoke(app, ["summon", "operator", "--daemon", "atlas", "--dry-run"])
 
     assert result.exit_code == 0
     output = " ".join(result.output.split())
@@ -130,7 +130,7 @@ def test_summon_dry_run_tester(initialized_project: Path):
 
 def test_summon_dry_run_all_flags(initialized_project: Path):
     """Test summon with all compatible flags"""
-    result = runner.invoke(app, ["summon", "operator", "--persona", "atlas", "--model", "gpt-4", "--dry-run"])
+    result = runner.invoke(app, ["summon", "operator", "--daemon", "atlas", "--model", "gpt-4", "--dry-run"])
 
     assert result.exit_code == 0
     output = " ".join(result.output.split())
@@ -140,7 +140,7 @@ def test_summon_dry_run_all_flags(initialized_project: Path):
 
 def test_summon_short_flags(initialized_project: Path):
     """Test summon with short flags"""
-    result = runner.invoke(app, ["summon", "operator", "-p", "atlas", "-m", "gpt-4", "-d"])
+    result = runner.invoke(app, ["summon", "operator", "-d", "atlas", "-m", "gpt-4", "--dry-run"])
 
     assert result.exit_code == 0
     output = " ".join(result.output.split())
@@ -181,9 +181,9 @@ def test_summon_desk_instruction_message_contains_desk_mode(initialized_project:
     assert "desk" in output.lower()
 
 
-def test_summon_desk_dry_run_with_persona(initialized_project: Path):
-    """Test that --desk --dry-run includes persona in instruction"""
-    result = runner.invoke(app, ["summon", "engineer", "--desk", "--persona", "atlas", "--dry-run"])
+def test_summon_desk_dry_run_with_daemon(initialized_project: Path):
+    """Test that --desk --dry-run includes daemon in instruction"""
+    result = runner.invoke(app, ["summon", "engineer", "--desk", "--daemon", "atlas", "--dry-run"])
 
     assert result.exit_code == 0
     output = " ".join(result.output.split())
