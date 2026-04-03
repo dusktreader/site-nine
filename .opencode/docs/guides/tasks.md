@@ -1,5 +1,11 @@
 # Task Management Guide
 
+> **⛔ AGENTS: NEVER USE THE `s9` CLI ⛔**
+>
+> The `s9` command is **for the Director (human) only**. The "Command Reference" section below documents
+> the Director's CLI. Agents must use OpenCode tools exclusively: `task_claim`, `task_show`, `task_update`,
+> `task_close`, `task_create`. See `.opencode/docs/AGENTS.md` for the full tool reference.
+
 Reference information for s9 task management.
 
 **For workflows:** Use skills (task-create, task-query, task-claim, task-update, task-close).
@@ -77,7 +83,9 @@ See `.opencode/docs/roles/README.md` for details.
 **Typical flow:** `TODO → UNDERWAY → COMPLETE`
 
 
-## Command Reference
+## Director CLI Reference
+
+> **Agents do not use these commands.** This section documents the `s9` CLI for the Director's reference only.
 
 **Finding work:**
 ```bash

@@ -10,6 +10,11 @@ metadata:
 
 ## What I Do
 
+> **⛔ AGENTS: NEVER USE THE `s9` CLI ⛔**
+>
+> The `s9` command is **for the Director (human) only**. Any `s9` bash snippets in this skill are legacy
+> references. **Do not run them.** Use the designated OpenCode tools: `task_claim`, `task_show`, `task_list`.
+
 I provide comprehensive instructions for claiming tasks in the s9 task database using the `task_claim` tool. Use this skill when you need to take ownership of a task and start working on it.
 
 ## Who Claims Tasks
@@ -46,25 +51,25 @@ The tool automatically determines your mission ID and role from the current Open
 
 Finding and claiming a task:
 
-1. **Find available tasks** (using bash to list tasks):
-   ```bash
-   s9 task list --role Engineer --status TODO
+1. **Find available tasks** using the `task_show` tool:
+   ```
+   task_show({ role: "Engineer", status: "TODO" })
    ```
 
 2. **Invoke the task_claim tool** with the task ID:
    ```
    Invoke task_claim tool with task_id="ENG-H-0037"
    ```
-   
+
    The tool will:
    - Automatically retrieve your mission ID from the current session
    - Automatically retrieve your role from your mission record
    - Claim the task and update its status to UNDERWAY
    - Return confirmation that the task was claimed
 
-3. **Verify the claim** (optional, using bash):
-   ```bash
-   s9 task show ENG-H-0037
+3. **Verify the claim** using the `task_show` tool:
+   ```
+   task_show({ task_id: "ENG-H-0037" })
    ```
    Output will show:
    ```
@@ -91,9 +96,9 @@ Error: Task ENG-H-0037 is already claimed by mission 42
 ```
 
 **What to do:**
-1. Check which mission claimed it (using bash):
-   ```bash
-   s9 task show ENG-H-0037
+1. Check which mission claimed it using the `task_show` tool:
+   ```
+   task_show({ task_id: "ENG-H-0037" })
    ```
 
 2. Coordinate with the other mission/agent if needed
@@ -123,9 +128,10 @@ Invoke task_claim tool with task_id="ENG-H-0038"
 
 ### Check Dependencies
 
-```bash
-s9 task show ENG-H-0038
-# Depends on: ENG-H-0037
+Use the `task_show` tool to check dependencies:
+```
+task_show({ task_id: "ENG-H-0038" })
+# Check the "dependencies" field
 ```
 
 If task has dependencies:
@@ -134,8 +140,9 @@ If task has dependencies:
 
 ### Check Priority
 
-```bash
-s9 task list --priority CRITICAL,HIGH --status TODO
+Use the `task_show` tool to find high-priority work:
+```
+task_show({ priority: "CRITICAL,HIGH", status: "TODO" })
 ```
 
 - Prioritize CRITICAL and HIGH tasks
@@ -154,7 +161,7 @@ Tasks are assigned to specific roles:
 - ✅ Claim one task at a time (stay focused)
 - ✅ Check dependencies before claiming
 - ✅ Use the `task_claim` tool to claim tasks
-- ✅ Verify claim succeeded (check tool output or use `s9 task show`)
+- ✅ Verify claim succeeded by checking tool output or calling `task_show`
 - ✅ Start work on task soon after claiming
 
 ### Don't
@@ -167,12 +174,12 @@ Tasks are assigned to specific roles:
 
 ### "Task not found"
 - Check task ID spelling and case
-- Verify task exists using bash: `s9 task list | grep TASK_ID`
+- Verify task exists using `task_show` tool: `task_show({ task_id: "TASK_ID" })`
 - Make sure you're using the full task ID (e.g., "ENG-H-0037")
 
 ### "Task already claimed"
 - Someone else is working on it
-- Check using bash: `s9 task show TASK_ID`
+- Check using `task_show` tool: `task_show({ task_id: "TASK_ID" })`
 - Choose a different task or coordinate with the other mission
 
 ### "No active mission found"
@@ -182,7 +189,7 @@ Tasks are assigned to specific roles:
 
 ### "Role mismatch"
 - Your role doesn't match the task's assigned role
-- Check task details using bash: `s9 task show TASK_ID`
+- Check task details using `task_show` tool: `task_show({ task_id: "TASK_ID" })`
 - Either claim a task for your role, or coordinate with Administrator
 
 ## After Claiming

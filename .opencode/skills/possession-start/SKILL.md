@@ -1,25 +1,25 @@
 ---
-name: mission-start
-description: Initialize a new mission with role selection and persona naming
+name: possession-start
+description: Initialize a new possession with role selection and daemon naming
 license: MIT
 compatibility: opencode
 metadata:
   audience: all-agents
-  workflow: mission-initialization
+  workflow: possession-initialization
 ---
 
-# Skill: mission-start
+# Skill: possession-start
 
 > **⛔ AGENTS: NEVER USE THE `s9` CLI ⛔**
 >
 > The `s9` command is **for the Director (human) only**. This skill contains `s9` bash blocks that are pending
 > migration to OpenCode tools. **Do not run those blocks yourself.** Use only the OpenCode tools explicitly
-> noted in each step (e.g., `mission_init`, `task_claim`, `persona_show`). Running `s9` commands causes real
+> noted in each step (e.g., `possession_init`, `task_claim`, `daemon_show`). Running `s9` commands causes real
 > side effects — unintended summons, duplicate records, session noise — and is a serious error.
 
 ## Overview
 
-This skill orchestrates mission initialization for site-nine agents. It replaces the older `session-start` skill and is designed to work with both CLI commands (current) and OpenCode custom tools (future).
+This skill orchestrates possession initialization for site-nine agents. It replaces the older `session-start` skill and is designed to work with both CLI commands (current) and OpenCode custom tools (future).
 
 **Current Status:** Uses `s9` CLI commands pending migration to OpenCode tools. Agents must use the designated OpenCode tools for each step — never run `s9` commands directly.
 
@@ -33,7 +33,7 @@ Run the project dashboard:
 s9 dashboard
 ```
 
-The dashboard command will display the current project status including open missions, quick stats, and available tasks.
+The dashboard command will display the current project status including open possessions, quick stats, and available tasks.
 
 **If dashboard command fails or returns no data:**
 - Skip to role selection with note: "Unable to load project status, proceeding with role selection..."
@@ -50,7 +50,7 @@ If the user invoked `/summon <role>` (e.g., `/summon operator`), the role will b
 **If NO role was provided**, display the standardized role selection prompt using the s9 CLI:
 
 ```bash
-s9 mission roles
+s9 daemon roles
 ```
 
 The command will display a consistently formatted list of all available agent roles with their descriptions.
@@ -82,36 +82,36 @@ Example: /summon operator --task OPR-H-0065
 ```
 Stop execution and wait for the Director to restart with correct arguments.
 
-**If validation passes:** Continue to Step 3 (Register Mission)
+**If validation passes:** Continue to Step 3 (Register Possession)
 
-## Step 3: Register Mission
+## Step 3: Register Possession
 
-<!-- TODO: Replace with mission_init tool (ENG-H-0143) -->
+<!-- TODO: Replace with possession_init tool -->
 
-Register the mission in the database:
+Register the possession in the database:
 
 ```bash
-s9 mission start <persona-name> \
+s9 daemon summon <daemon-name> \
   --role <Role> \
   --task "<brief-objective>"
 ```
 
-**Note:** Currently using CLI. Will be replaced by `mission_init`, `mission_role_record`, and `mission_persona_record` tools.
+**Note:** Currently using CLI. Will be replaced by `possession_init`, `possession_role_record`, and `possession_daemon_record` tools.
 
-This creates a mission record, generates a codename, and creates the mission file at `.opencode/work/missions/YYYY-MM-DD.HH:MM:SS.role.persona.codename.md`
+This creates a possession record, generates a codename, and creates the possession file at `.opencode/work/possessions/YYYY-MM-DD.HH:MM:SS.role.daemon.codename.md`
 
-Capture the mission ID from the output for use in later steps.
+Capture the possession ID from the output for use in later steps.
 
-## Step 3.5: Mission File - Your Living Document
+## Step 3.5: Possession File - Your Living Document
 
-**IMPORTANT:** Your mission file is a **LIVING DOCUMENT**, not an end-of-mission summary.
+**IMPORTANT:** Your possession file is a **LIVING DOCUMENT**, not an end-of-possession summary.
 
-The mission file was created at:
+The possession file was created at:
 ```
-.opencode/work/missions/YYYY-MM-DD.HH:MM:SS.role.persona.codename.md
+.opencode/work/possessions/YYYY-MM-DD.HH:MM:SS.role.daemon.codename.md
 ```
 
-**Update your mission file throughout your work:**
+**Update your possession file throughout your work:**
 
 - **Work Log Section:** Document your progress as you complete tasks
   - Files created or modified
@@ -119,98 +119,98 @@ The mission file was created at:
   - Problems solved and approaches used
   - Blockers encountered and how you addressed them
   
-- **Real-time updates:** Write to the mission file immediately after:
+- **Real-time updates:** Write to the possession file immediately after:
   - Completing a significant task or subtask
   - Making an important technical decision
   - Encountering and resolving a blocker
   - Learning something important about the codebase
   
-- **Don't wait until the end:** Mission files maintained in real-time are far more valuable than retroactive summaries written from memory
+- **Don't wait until the end:** Possession files maintained in real-time are far more valuable than retroactive summaries written from memory
 
-**Think of your mission file as your field notes** - other agents and your future self will use it to understand what you did, why you did it, and what you learned.
+**Think of your possession file as your field notes** - other agents and your future self will use it to understand what you did, why you did it, and what you learned.
 
-## Step 4: Persona Selection
+## Step 4: Daemon Selection
 
 **IMPORTANT:** Check if the `--persona` flag was provided to `/summon`.
 
 ### If `--persona <name>` flag was provided:
 
-1. Check if persona exists in database:
+1. Check if daemon exists in database:
    ```bash
-   s9 persona show <persona-name>
+   s9 daemon show <daemon-name>
    ```
 
-2. **If persona exists:**
+2. **If daemon exists:**
    - Display confirmation:
      ```
-     ✅ Using persona: [name] ([mythology])
+     ✅ Using daemon: [name] ([daemonology])
      
      [Brief 1-sentence description]
      ```
    - Proceed directly to Step 5 (Share Mythological Background)
 
-3. **If persona does NOT exist** (command shows "Persona not found"):
+3. **If daemon does NOT exist** (command shows "Daemon not found"):
    - Inform the Director:
      ```
-     📝 Creating new persona: [name]
+     📝 Creating new daemon: [name]
      
-     I'll need some information to add this persona to the database.
+     I'll need some information to add this daemon to the database.
      ```
    - Collaborate with Director to gather:
      - **Mythology type** (e.g., Greek, Norse, Egyptian, Celtic, etc.)
-     - **Brief description** (1-2 sentences about who this persona is)
+     - **Brief description** (1-2 sentences about who this daemon is)
    
-4. **Create the new persona in database:**
+4. **Create the new daemon in database:**
    ```bash
-   s9 persona add <persona-name> --role <Role> --mythology <mythology-type> --description "<description>"
+   s9 daemon add <daemon-name> --role <Role> --mythology <mythology-type> --description "<description>"
    ```
 
 5. **Generate and save bio:**
-   - Research the persona based on provided information
+   - Research the daemon based on provided information
    - Generate a whimsical first-person bio (follow bio guidelines in Step 5c)
    - Display the bio to the Director
    - Save it:
       ```bash
-      s9 persona set-bio <persona-name> "<generated-bio-text>"
+      s9 daemon set-bio <daemon-name> "<generated-bio-text>"
       ```
 
 6. Proceed to Step 5 (Share Mythological Background)
 
 ### If `--persona` flag was NOT provided (default behavior):
 
-The persona is automatically and atomically claimed during mission registration
-(Step 3). The `s9 mission start` command (without --name) uses PersonaManager.claim_persona()
-to SELECT and UPDATE the least-used persona in a single database transaction, eliminating
-race conditions when multiple missions start concurrently.
+The daemon is automatically and atomically claimed during possession registration
+(Step 3). The `s9 daemon summon` command (without --name) uses DaemonManager.claim_daemon()
+to SELECT and UPDATE the least-used daemon in a single database transaction, eliminating
+race conditions when multiple possessions start concurrently.
 
-1. The persona name is already assigned by the time Step 3 completes
-2. Retrieve the auto-assigned persona name from the mission record:
+1. The daemon name is already assigned by the time Step 3 completes
+2. Retrieve the auto-assigned daemon name from the possession record:
    ```bash
-   s9 mission show <mission-id>
+   s9 possession show <possession-id>
    ```
 
 3. Inform the user:
    ```
-   ✅ Auto-selected persona: [name] ([mythology])
+   ✅ Auto-selected daemon: [name] ([daemonology])
    
    [Brief 1-sentence description]
    ```
 
 4. Proceed directly to Step 5 (Share Mythological Background)
 
-**Note:** Personas can be reused across missions. Each mission gets a unique codename.
+**Note:** Daemons can be reused across possessions. Each possession gets a unique codename.
 
 ## Step 5: Share Mythological Background
 
-Display the persona's whimsical bio using lazy generation:
+Display the daemon's whimsical bio using lazy generation:
 
 ### Step 5a: Check for existing bio
 
 ```bash
-s9 persona show <persona-name>
+s9 daemon show <daemon-name>
 ```
 
-<!-- TODO: Replace with persona_show tool (ENG-H-0160) -->
+<!-- TODO: Replace with daemon_show tool -->
 
 ### Step 5b: Display bio if available
 
@@ -226,21 +226,21 @@ s9 persona show <persona-name>
 
 **If bio is NULL** (shows "No whimsical bio available yet"):
 
-1. **Research the persona's mythology** and generate a whimsical first-person bio
+1. **Research the daemon's mythology** and generate a whimsical first-person bio
 2. **Display the generated bio** to the user in the same format
 3. **Save it for future use:**
 
 ```bash
-s9 persona set-bio <persona-name> "<generated-bio-text>"
+s9 daemon set-bio <daemon-name> "<generated-bio-text>"
 ```
 
-<!-- TODO: Replace with persona_set_bio tool (ENG-H-0161) -->
+<!-- TODO: Replace with daemon_set_bio tool -->
 
 **Bio Guidelines:**
 - 3-5 sentences, first person narrative
 - Playful, whimsical tone with personality
 - Include mythological background details
-- Make it relevant to the persona's role
+- Make it relevant to the daemon's role
 - Add humor where appropriate
 
 **Example bio styles:**
@@ -256,7 +256,7 @@ I am Thoth, the ibis-headed god of writing, magic, and wisdom - essentially the 
 ```
 
 **Lazy Generation Benefits:**
-- Bios are created organically as personas are used
+- Bios are created organically as daemons are used
 - Each bio gets AI attention and quality review
 - Future sessions reuse the stored bio (consistent experience)
 - No upfront work to generate 256 bios
@@ -268,7 +268,7 @@ Rename the OpenCode session to match your agent identity (2-step process):
 ### Step 6a: Generate UUID Marker
 
 ```bash
-s9 mission generate-session-uuid
+s9 daemon generate-session-uuid
 ```
 
 Capture the UUID from the output.
@@ -276,14 +276,14 @@ Capture the UUID from the output.
 ### Step 6b: Rename with UUID
 
 ```bash
-s9 mission rename-tui <persona> <Role> --uuid-marker <uuid-from-step-6a>
+s9 daemon rename-tui <daemon> <Role> --uuid-marker <uuid-from-step-6a>
 ```
 
-<!-- TODO: Replace with mission_rename_session tool (ENG-H-0146) -->
+<!-- TODO: Replace with possession_rename_session tool -->
 
 **After successful rename:**
 ```
-✅ I've renamed your OpenCode session to "<Persona> - <Role>" so you can easily find this conversation later!
+✅ I've renamed your OpenCode session to "<Daemon> - <Role>" so you can easily find this conversation later!
 ```
 
 ## Step 7: Check for Pending Reviews (Administrator Only)
@@ -315,7 +315,7 @@ Show the role-filtered dashboard:
 s9 dashboard --role [Role]
 ```
 
-<!-- TODO: Replace with mission_dashboard tool (ENG-H-0162) -->
+<!-- TODO: Replace with possession_dashboard tool -->
 
 **Present summary:**
 
@@ -358,7 +358,7 @@ What would you like me to help you with?
    ```bash
    s9 task show [TASK-ID]
    ```
-   <!-- TODO: Replace with task_show tool (ENG-H-0151) -->
+   <!-- TODO: Replace with task_show tool -->
    
 2. **If task doesn't exist or validation fails:**
    ```
@@ -381,7 +381,7 @@ What would you like me to help you with?
      ```bash
      s9 task claim [TASK-ID]
      ```
-     <!-- TODO: Replace with task_claim tool (ENG-H-0152) -->
+     <!-- TODO: Replace with task_claim tool -->
 
 5. **Inform the Director:**
    ```
@@ -422,7 +422,7 @@ What would you like me to help you with?
      ```bash
      s9 task claim [TASK-ID]
      ```
-     <!-- TODO: Replace with task_claim tool (ENG-H-0152) -->
+     <!-- TODO: Replace with task_claim tool -->
    
 4. **Inform the Director:**
    ```
@@ -445,9 +445,9 @@ What would you like me to help you with?
 Inform the Director:
 
 ```
-✅ Mission initialized!
+✅ Possession initialized!
 
-I'm [Persona], your [Role] agent on mission "[codename]". I'm ready to help!
+I'm [Daemon], your [Role] agent on possession "[codename]". I'm ready to help!
 
 What would you like me to work on?
 ```
@@ -458,16 +458,16 @@ What would you like me to work on?
 
 **Skip if not Administrator or Operator role.**
 
-When the Director asks you to summon workers to handle tasks, use the `worker_spawn` tool. This spawns a desk-mode worker that runs in the background and polls for messages.
+When the Director asks you to summon workers to handle tasks, use the `summon_minion` tool. This spawns a desk-mode worker that runs in the background and polls for messages.
 
 ### Spawning a Desk Worker
 
-Use the `worker_spawn` tool to spawn a background worker:
+Use the `summon_minion` tool to spawn a background worker:
 
 ```typescript
-worker_spawn({
+summon_minion({
   role: "Engineer",
-  persona: "hephaestus",  // optional - auto-selected if omitted
+  persona: "azazel",  // optional - auto-selected if omitted
   model: "github-copilot/claude-sonnet-4-5",  // optional
   poll_interval: 30  // optional - seconds between checks
 })
@@ -476,33 +476,33 @@ worker_spawn({
 **Returns:**
 ```json
 {
-  "mission_id": 42,
+  "possession_id": 42,
   "role": "Engineer",
-  "persona": "hephaestus",
+  "daemon": "azazel",
   "status": "spawned",
-  "message": "Worker spawned successfully. Mission #42 (hephaestus, Engineer) is now polling for messages."
+  "message": "Worker spawned successfully. Possession #42 (azazel, Engineer) is now polling for messages."
 }
 ```
 
 **Examples:**
 
 ```typescript
-// Spawn an Engineer with auto-selected persona
-worker_spawn({ role: "Engineer" })
+// Spawn an Engineer with auto-selected daemon
+summon_minion({ role: "Engineer" })
 
-// Spawn a Documentarian with specific persona
-worker_spawn({ role: "Documentarian", persona: "thoth" })
+// Spawn a Documentarian with specific daemon
+summon_minion({ role: "Documentarian", persona: "thoth" })
 
 // Spawn a Tester with custom poll interval
-worker_spawn({ role: "Tester", poll_interval: 15 })
+summon_minion({ role: "Tester", poll_interval: 15 })
 ```
 
 **Important:**
-- Use `worker_spawn` tool, never `s9 summon` CLI (CLI is for Director only)
+- Use `summon_minion` tool, never `s9 summon` CLI (CLI is for Director only)
 - Each call launches a separate background worker process
 - You can spawn multiple workers in parallel for independent tasks
-- Workers initialize themselves with the `mission-start` skill automatically
-- Save the returned `mission_id` to send messages to the worker
+- Workers initialize themselves with the `possession-start` skill automatically
+- Save the returned `possession_id` to send messages to the worker
 
 ### Coordinating Workers After Spawning
 
@@ -514,15 +514,15 @@ worker_status({ role: "engineer" })
 
 // Send a message/instruction to a worker
 worker_message({
-  from_mission_id: <your-mission-id>,
-  to_mission_id: <worker-mission-id>,
+  from_possession_id: <your-possession-id>,
+  to_possession_id: <worker-possession-id>,
   body: "Please complete task ENG-M-0185 and report back when done."
 })
 
 // Terminate a worker when done
-worker_terminate({
-  from_mission_id: <your-mission-id>,
-  to_mission_id: <worker-mission-id>
+exorcise_minion({
+  from_possession_id: <your-possession-id>,
+  to_possession_id: <worker-possession-id>
 })
 ```
 
@@ -530,7 +530,7 @@ worker_terminate({
 
 **⚠️ CRITICAL ADMIN RULE ⚠️**
 
-Workers **never dismiss themselves**. The `mission-start` skill explicitly prohibits self-dismissal. This means:
+Workers **never dismiss themselves**. The `possession-start` skill explicitly prohibits self-dismissal. This means:
 
 > **As the admin (or operator) who spawned a worker, YOU are responsible for dismissing them once their assigned task is complete.**
 
@@ -546,37 +546,37 @@ Workers will keep polling indefinitely until you send a termination signal. This
 - The worker reports their assigned task is complete and you have no further work for them
 - You completed the task yourself before the worker could start — dismiss them immediately, don't wait for them to check in
 - The worker is blocked and the task has been re-assigned elsewhere
-- You are ending your own mission — all spawned workers must be dismissed first
+- You are ending your own possession — all spawned workers must be dismissed first
 
 ### Dismissing Workers When Their Task Is Complete
 
 **Dismissal protocol:**
 
-1. **Send a termination signal** using `worker_terminate`:
+1. **Send a termination signal** using `exorcise_minion`:
    ```typescript
-   worker_terminate({
-     from_mission_id: <your-mission-id>,
-     to_mission_id: <worker-mission-id>,
-     reason: "Task ENG-H-0042 is complete. No further work needed — please end your mission and terminate."
+   exorcise_minion({
+     from_possession_id: <your-possession-id>,
+     to_possession_id: <worker-possession-id>,
+     reason: "Task ENG-H-0042 is complete. No further work needed — please end your possession and terminate."
    })
    ```
 
-2. **Verify the worker ends** — after a short wait, confirm the mission status transitions to `ENDED`:
+2. **Verify the worker ends** — after a short wait, confirm the possession status transitions to `ENDED`:
    ```typescript
-   task_show({ mission_id: <worker-mission-id> })
+   task_show({ possession_id: <worker-possession-id> })
    ```
 
 **Why this matters:**
-- Workers left running consume resources and clutter the active missions list
-- Zombie workers will be flagged by `s9 doctor` after 8h with no heartbeat
-- Each spawned worker should have a matching termination before you end your own mission
+- Workers left running consume resources and clutter the active possessions list
+- Zombie workers will be flagged by `s9 inquisitor` after 8h with no heartbeat
+- Each spawned worker should have a matching termination before you end your own possession
 
 
 ## Important Notes
 
-- Use persona name in commits: `[Persona: Name - Role]` or `[Mission: codename]`
-- Your mission file is a living document - maintain it throughout the session (see Step 3.5)
-- Use `s9 mission update <mission-id>` to update metadata if scope changes
+- Use daemon name in commits: `[Daemon: Name - Role]` or `[Possession: codename]`
+- Your possession file is a living document - maintain it throughout the session (see Step 3.5)
+- Use `s9 possession update <possession-id>` to update metadata if scope changes
 
 ### File Placement Guidelines
 
@@ -584,7 +584,7 @@ Workers will keep polling indefinitely until you send a termination signal. This
 
 **Golden Rules:**
 - ✅ **DO:** Put all work artifacts in `.opencode/work/`
-- ✅ **DO:** Use your mission file for notes and status
+- ✅ **DO:** Use your possession file for notes and status
 - ✅ **DO:** Follow naming conventions for temporary scripts
 - ❌ **DON'T:** Create files in project root (no `temp.py`, `notes.md`, `STATUS.txt`, etc.)
 - ❌ **DON'T:** Create status files anywhere (use `s9 task update` instead)
@@ -592,52 +592,52 @@ Workers will keep polling indefinitely until you send a termination signal. This
 
 **Where things go:**
 - Temporary scripts → `.opencode/work/scripts/TASK-ID-description.ext`
-- Mission notes → Your mission file (already created)
+- Possession notes → Your possession file (already created)
 - Planning docs → `.opencode/work/planning/`
 - Permanent scripts → `scripts/` (project root)
 - Guides/docs → `.opencode/docs/guides/` (when finalized)
 
 **See:** `.opencode/docs/guides/file-organization.md` for complete guidelines.
 
-## CRITICAL: Mission Dismissal Protocol
+## CRITICAL: Possession Dismissal Protocol
 
 **⚠️ EXTREMELY IMPORTANT - READ CAREFULLY ⚠️**
 
-**DO NOT end your mission unless the Director explicitly dismisses you.** You will know you are being dismissed when:
+**DO NOT end your possession unless the Director explicitly dismisses you.** You will know you are being dismissed when:
 
 1. The Director uses the `/dismiss` command
-2. The Director explicitly says "you're dismissed", "end your mission", "close your session", or similar
+2. The Director explicitly says "you're dismissed", "end your possession", "close your session", or similar
 3. The Director indicates the work is complete and you should sign off
 
-**What happens if you end your mission prematurely:**
-- ❌ Your mission will remain in the database with `ACTIVE` or `IDLE` status
+**What happens if you end your possession prematurely:**
+- ❌ Your possession will remain in the database with `ACTIVE` or `IDLE` status
 - ❌ Tasks will be left in inconsistent states
-- ❌ The system will accumulate "zombie" missions
-- ❌ `s9 doctor` will report stale missions (after 8h with no heartbeat)
+- ❌ The system will accumulate "zombie" possessions
+- ❌ `s9 inquisitor` will report stale possessions (after 8h with no heartbeat)
 - ❌ You will cause operational confusion
 
 **When the Director dismisses you (and ONLY then):**
 
-1. **MANDATORY:** Load and execute the `mission-end` skill
-2. **MANDATORY:** Run `s9 mission end <your-mission-id>` to properly close the mission
-3. **MANDATORY:** Follow ALL steps in the mission-end skill completely
+1. **MANDATORY:** Load and execute the `possession-end` skill
+2. **MANDATORY:** Run `s9 daemon exorcise <your-possession-id>` to properly close the possession
+3. **MANDATORY:** Follow ALL steps in the possession-end skill completely
 
 **If you are unsure whether you're being dismissed:**
-- Ask the Director: "Are you dismissing me? Should I end my mission?"
+- Ask the Director: "Are you dismissing me? Should I end my possession?"
 - DO NOT assume silence means dismissal
-- DO NOT end your mission just because the conversation slows down
+- DO NOT end your possession just because the conversation slows down
 
-**Remember:** The Director controls when your mission ends, not you. Stay at your post until explicitly dismissed.
+**Remember:** The Director controls when your possession ends, not you. Stay at your post until explicitly dismissed.
 
-## Mission End
+## Possession End
 
-**ONLY WHEN EXPLICITLY DISMISSED BY THE DIRECTOR**, load and follow the `mission-end` skill:
+**ONLY WHEN EXPLICITLY DISMISSED BY THE DIRECTOR**, load and follow the `possession-end` skill:
 
 ```
-The Director has dismissed me. I will now properly close this mission using the mission-end skill.
+The Director has dismissed me. I will now properly close this possession using the possession-end skill.
 ```
 
-Then load the skill: `skill(name="mission-end")`
+Then load the skill: `skill(name="possession-end")`
 
 ## Future Tool Migration
 
@@ -645,11 +645,11 @@ This skill currently uses `s9` CLI commands. The following migrations are planne
 
 | Current CLI Command | Future Tool | Epic Task |
 |---------------------|-------------|-----------|
-| `s9 mission start` | `mission_init`, `mission_role_record`, `mission_persona_record` | ENG-H-0143, ENG-H-0144, ENG-H-0145 |
-| `s9 mission rename-tui` | `mission_rename_session` | ENG-H-0146 |
-| `s9 persona suggest` | `persona_suggest` (informational use only - auto-claim is atomic) | ENG-H-0159 |
-| `s9 persona show` | `persona_show` | ENG-H-0160 |
-| `s9 persona set-bio` | `persona_set_bio` | ENG-H-0161 |
+| `s9 daemon summon` | `possession_init`, `possession_role_record`, `possession_daemon_record` | ENG-H-0143, ENG-H-0144, ENG-H-0145 |
+| `s9 daemon rename-tui` | `possession_rename_session` | ENG-H-0146 |
+| `s9 daemon suggest` | `daemon_suggest` (informational use only - auto-claim is atomic) | ENG-H-0159 |
+| `s9 daemon show` | `daemon_show` | ENG-H-0160 |
+| `s9 daemon set-bio` | `daemon_set_bio` | ENG-H-0161 |
 | `s9 task claim` | `task_claim` | ENG-H-0152 |
 | `s9 task show` | `task_show` | ENG-H-0151 |
-| `s9 dashboard --role` | `mission_dashboard` | ENG-H-0162 |
+| `s9 dashboard --role` | `possession_dashboard` | ENG-H-0162 |

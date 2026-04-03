@@ -134,8 +134,8 @@ Operator: I'll streamline the workflow:
 # Check database integrity
 sqlite3 .opencode/data/project.db "PRAGMA integrity_check;"
 
-# Run doctor command
-s9 doctor --fix
+# Run doctor command (Director runs this from terminal)
+# s9 doctor --fix
 
 # Create database migration
 # (Add migration script in src/site_nine/migrations/)
@@ -150,12 +150,14 @@ s9 doctor --fix
 
 ## Reporting Broken Commands
 
-When you discover a broken `s9` command, create an Operator task:
+When you discover a broken `s9` command, create an Operator task using the `task_create` tool:
 
-```bash
-s9 task create --role Operator --priority HIGH \
-  --title "Fix broken s9 command: [command-name]" \
-  --description "Command: s9 [command-name] [subcommand]
+```typescript
+task_create({
+  title: "Fix broken s9 command: [command-name]",
+  role: "Operator",
+  priority: "HIGH",
+  description: `Command: s9 [command-name] [subcommand]
 
 Issue: [Describe what's broken]
 
@@ -167,7 +169,8 @@ Error output: [Paste any error messages]
 
 Steps to reproduce:
 1. [Step 1]
-2. [Step 2]"
+2. [Step 2]`
+})
 ```
 
 ## Related Roles

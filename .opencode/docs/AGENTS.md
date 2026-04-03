@@ -1,5 +1,20 @@
 # Site-Nine Agent Guide
 
+> **⛔ AGENTS: NEVER USE THE `s9` CLI ⛔**
+>
+> The `s9` command-line tool is **for the Director (human) only**. Agents must **never** invoke it under any
+> circumstances — not for task management, not for missions, not for any reason.
+>
+> **Every site-nine operation has a dedicated OpenCode tool.** Use those tools exclusively:
+> - Task work → `task_claim`, `task_update`, `task_close`, `task_show`
+> - Mission lifecycle → `mission_init`, `mission_end`, `mission_dashboard`
+> - Personas → `persona_show`, `persona_set_bio`
+> - Workers → `worker_spawn`, `worker_message`, `worker_terminate`
+>
+> Running `s9` commands causes real side effects (unintended summons, duplicate records, session noise) and will
+> be treated as a serious error. If you see `s9` used in an example below, it describes what the **Director**
+> does from the terminal — **you do not run those commands**.
+
 Welcome to site-nine! This guide explains how to work as an agent in the site-nine development environment.
 
 ## Quick Start
