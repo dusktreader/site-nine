@@ -1,193 +1,160 @@
 # Agent Discovery Patterns
 
-This guide explains how agents can discover and coordinate with other agents working on the same epic or in specific roles.
+This guide explains how agents can discover and coordinate with other agents working on the same epic or in
+specific roles.
 
 ## Overview
 
-When working on tasks, you may need help from another agent role (e.g., an Engineer needs an Architect's input). Site-nine provides patterns for discovering which agents are available and how to reach them.
+When you need help from another role (e.g., an Engineer needs Architect input), site-nine provides patterns
+for discovering available agents and reaching them. The two main channels are:
+
+1. **`worker_status`** — Find active desk-mode workers by role
+2. **Director chat** — Ask the Director to summon an agent if none are available
 
 ## Discovery Workflow
 
-### Step 1: Check for Active Agents
+### Step 1: Check for Active Workers
 
-Use `s9 mission list` with filters to find agents in a specific role or epic:
+Use `worker_status` to find active workers for a role:
 
-```bash
-# Find all Architects working on a specific epic
-s9 mission list --role Architect --epic EPC-H-0004 --json
-
-# Find all active missions for a role
-s9 mission list --role Operator --json
-
-# Find all missions on a specific epic
-s9 mission list --epic EPC-H-0005 --json
+```typescript
+worker_status({ role: "Architect" })
 ```
 
-**Why use `--json` flag?**
-- Enables programmatic parsing of results
-- Contains structured data including `desk_mode_active` status
-- Can be processed to make decisions in your workflow
-
-### Step 2: Parse JSON for Desk Mode Status
-
-When you receive JSON output, look for missions with `desk_mode_active: true` or `desk_mode_active: 1`:
-
+Returns:
 ```json
 {
-  "missions": [
+  "workers": [
     {
-      "id": 62,
-      "persona": "daedalus",
+      "possession_id": 62,
+      "daemon": "daedalus",
       "role": "Architect",
       "status": "ACTIVE",
-      "desk_mode_active": 1,
-      "epic_id": "EPC-H-0004"
+      "last_activity": "2026-02-19T00:15:00Z"
     }
   ]
 }
 ```
 
-**Desk mode active = Agent is available for async coordination via messaging**
+### Step 2: Message or Ask Director
 
-If `desk_mode_active` is `1` (true), the agent is monitoring their inbox and can respond to messages.
-
-### Step 3: Send a Message or Ask Director
-
-**If you found an agent in desk mode:**
+**If a worker is available:**
 
 Send them a message directly:
 
-```bash
-s9 comms send --to-mission 62 \
-  --subject "Question about ToolAdapter design" \
-  --body "Should we use singleton or factory pattern for the registry?"
+```typescript
+worker_message({
+  to_possession_id: 62,
+  body: "Question about ToolAdapter design (OPR-H-0067): should we use singleton or factory pattern for the registry? Context: OpenCode might load multiple adapters."
+})
 ```
 
-**If no agent is available (no desk mode active):**
+**If no worker is available:**
 
-Ask the Director in the OpenCode chat:
+Ask the Director in OpenCode chat:
 
 ```
-No Architect currently available in desk mode for EPC-H-0004. 
-Should I wait for a response, or would you like to summon an Architect?
+No Architect is currently available in desk mode for EPC-H-0004.
+Should I wait, or would you like to summon one?
 ```
 
-The Director can then:
-- Summon a new agent: `/summon architect`
-- Tell you to wait for an existing agent to enter desk mode
-- Provide guidance directly
+The Director can then summon a new agent or provide guidance directly.
 
 ## Complete Example Workflows
 
 ### Example 1: Engineer Needs Architect Input
 
-```bash
-# 1. Check for available Architects on the epic
-s9 mission list --role Architect --epic EPC-H-0004 --json
+```typescript
+// 1. Check for available Architects
+worker_status({ role: "Architect" })
+// Returns: possession_id: 62, daemon: "daedalus", ACTIVE
 
-# 2. Parse output - found mission #62 with desk_mode_active: 1
+// 2. Send message
+worker_message({
+  to_possession_id: 62,
+  body: "I'm implementing ToolRegistry (OPR-H-0067). Should it be a singleton or support multiple instances? OpenCode might have multiple adapters loaded."
+})
 
-# 3. Send message
-s9 comms send --to-mission 62 \
-  --subject "Registry pattern decision needed" \
-  --body "I'm implementing the ToolRegistry (OPR-H-0067). Should this be a singleton or allow multiple instances? Context: OpenCode might have multiple adapters loaded."
+// 3. Continue with other work while waiting
 
-# 4. Continue with other work while waiting for response
-
-# 5. Check inbox later
-s9 comms inbox
-
-# 6. Read reply when it arrives
-s9 comms show MSG-M-0205
+// 4. Watch for response
+watch_inbox()
+// Architect replies: "Use singleton — one registry per process, adapters register on load."
 ```
 
 ### Example 2: No Agent Available
 
-```bash
-# 1. Check for available Testers
-s9 mission list --role Tester --epic EPC-H-0004 --json
-
-# 2. Parse output - no missions found or all have desk_mode_active: 0
-
-# 3. Ask Director in chat
+```typescript
+// 1. Check for available Testers
+worker_status({ role: "Tester" })
+// Returns: empty workers array
 ```
 
-**In OpenCode chat:**
+In OpenCode chat:
 ```
-I'm ready to start testing (TST-H-0069) but no Tester is currently available 
-in desk mode for EPC-H-0004. Should I wait or would you like to summon a Tester?
-```
-
-### Example 3: Broadcasting to All Agents in a Role
-
-Sometimes you need to ask a question to anyone in a role, not a specific mission:
-
-```bash
-# Send to all Operators
-s9 comms send --to-role Operator \
-  --subject "Best practice question: Error handling in CLI" \
-  --body "What's our preferred pattern for error handling in s9 commands? I see both raise and sys.exit patterns in the codebase."
+I'm ready to start TST-H-0069 but no Tester is in desk mode for EPC-H-0004.
+Should I wait or would you like to summon a Tester?
 ```
 
-**Note:** When sending to a role, all active missions in that role will receive the message in their inbox.
+### Example 3: Admin Spawning a Worker on Demand
+
+If you're an Admin and need a role that isn't available, spawn it yourself:
+
+```typescript
+worker_status({ role: "Tester" })
+// Returns: empty
+
+const tst = summon_minion({ role: "Tester" })
+worker_message({
+  to_possession_id: tst.possession_id,
+  body: "Validate ENG-H-0150 rate limiting implementation. Run make qa and report results."
+})
+```
 
 ## When to Use Discovery vs. Director
 
-### Use Discovery + Messaging When:
-- You need technical input from a specific role
-- The question can wait for an async response
+**Use `worker_status` + messaging when:**
+- You need technical input and the question can wait for async response
 - You're coordinating on epic-level work
-- Multiple agents might benefit from the discussion
+- Multiple workers might be relevant
 
-### Ask Director Directly When:
+**Ask Director directly when:**
 - You need immediate guidance
 - You're blocked and can't proceed
-- You need another agent summoned
-- The decision affects project direction (not just technical details)
+- You need another agent summoned (if you're not an Admin)
+- The decision affects project direction
 
-## Integration with Messaging
+**Spawn a worker yourself (Admin only) when:**
+- The Director has delegated orchestration to you
+- You have a concrete task ready to assign
 
-Discovery patterns work with the message-driven coordination system:
+## Tips for Effective Discovery
 
-- **Worker coordination** - Admin spawns workers and assigns work via messages
-- **Discovery + Messaging** - For coordination while both agents are actively working  
-- **Director chat** - For immediate needs and summoning
-
-**See:** ADR-014 for complete message-driven coordination architecture.
+1. **Check before asking Director** — `worker_status` is faster than a chat interruption
+2. **Be specific in messages** — Include task IDs, epic context, and a clear question
+3. **Don't block unnecessarily** — Use `watch_inbox` after sending; continue other work in the meantime
+4. **One question per message** — Don't bundle multiple questions; workers answer and report back per message
 
 ## Director CLI Reference
 
 These commands are for the **Director (human) only**. Agents use tools instead.
 
 ```bash
-# Discovery commands
-s9 mission list --role <Role> --json
-s9 mission list --epic <EPIC-ID> --json
-s9 mission list --role <Role> --epic <EPIC-ID> --json
+# View active possessions
+s9 possession list --role Architect
+s9 possession list --epic EPC-H-0004
 
-# Messaging commands
-s9 comms send --to-mission <ID> --subject "..." --body "..."
-s9 comms send --to-role <Role> --subject "..." --body "..."
+# Summon a desk-mode worker
+s9 summon <role> --desk
+
+# Messaging
 s9 comms inbox
 s9 comms show <MSG-ID>
-s9 comms reply <MSG-ID> "..."
-
-# Desk workers (Director spawns headless workers)
-s9 summon <role> --desk
 ```
-
-## Tips for Effective Discovery
-
-1. **Always check before asking Director** - Discovery is more efficient for finding existing help
-2. **Use --json for parsing** - Enables automated decision-making in your workflow
-3. **Check desk_mode_active** - Only message agents who are actively monitoring
-4. **Be specific in messages** - Include context, epic ID, task ID, and clear questions
-5. **Follow up** - Check your inbox periodically if you're expecting a response
 
 ## See Also
 
-- **ADR-009** (lines 238-250, 503-531): Agent coordination patterns and discovery workflow
-- **ADR-014**: Message-Driven Coordination Architecture
-- **Communication Channels**: See mission-start skill Step 7.5 for channel usage patterns
-- **Messaging System**: See ADR-008 for complete messaging system design
-- **Desk Mode**: `.opencode/docs/guides/desk-mode-orchestration.md`
+- **admin-orchestration.md**: Practical Admin guide for spawning and coordinating workers
+- **desk-mode-orchestration.md**: Reference guide for worker lifecycle management
+- **ADR-014**: Message-driven coordination architecture
+- **ADR-008**: Agent messaging system design

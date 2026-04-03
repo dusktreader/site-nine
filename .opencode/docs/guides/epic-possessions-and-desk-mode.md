@@ -1,32 +1,32 @@
-# Epic Mission Workflows and Desk Mode
+# Epic Possession Workflows and Desk Mode
 
-This guide explains how to work on epic-scoped missions and coordinate through desk
+This guide explains how to work on epic-scoped possessions and coordinate through desk
 mode workers.
 
 ## Overview
 
-**Epic missions** are long-running missions where an agent works through multiple
-tasks within a single epic. Instead of ending the mission after each task, the agent
-continues claiming tasks until the epic is complete or they choose to end the mission.
+**Epic possessions** are long-running possessions where an agent works through multiple
+tasks within a single epic. Instead of ending the possession after each task, the agent
+continues claiming tasks until the epic is complete or they choose to end the possession.
 
 **Desk mode** is a headless background worker mode where an agent runs as an
 asynchronous worker, processing messages from an Admin orchestrator. Desk workers are
-spawned by Admin agents using `worker_spawn` — they don't enter desk mode themselves.
+spawned by Admin agents using `summon_minion` — they don't enter desk mode themselves.
 
-## Epic Mission Workflow
+## Epic Possession Workflow
 
-### Starting an Epic Mission
+### Starting an Epic Possession
 
-The Director scopes a mission to an epic at summon time:
+The Director scopes a possession to an epic at summon time:
 
 ```bash
 s9 summon architect --epic EPC-H-0004
 ```
 
-This scopes your mission to the epic and enables:
+This scopes your possession to the epic and enables:
 
 - Using `task_next` to auto-claim the next task in the epic
-- Mission continuity across multiple related tasks
+- Possession continuity across multiple related tasks
 - Coordinating with other agents working the same epic
 
 ### Working Through Epic Tasks
@@ -58,7 +58,7 @@ task_close({ task_id: "ARC-H-0057", status: "COMPLETE" })
 
 // Auto-claim next task in the epic for your role
 task_next()
-// Finds next TODO task matching: mission.epic_id + mission.role
+// Finds next TODO task matching: possession.epic_id + possession.role
 ```
 
 **Benefits of `task_next`:**
@@ -68,16 +68,16 @@ task_next()
 - Ensures you stay within your epic scope
 - Faster workflow for sequential work
 
-### When to End an Epic Mission
+### When to End an Epic Possession
 
-End your epic mission when:
+End your epic possession when:
 
 1. **Epic is complete** — all tasks for your role in the epic are done
 2. **Context switch needed** — you need to work on a different epic
 3. **Extended break** — you're stopping work for an extended period
 4. Director dismisses you with `/dismiss`
 
-**Important:** Don't end the mission between every task. Epic missions are designed
+**Important:** Don't end the possession between every task. Epic possessions are designed
 for continuity.
 
 ## Desk Mode Workers
@@ -92,7 +92,7 @@ worker:
 - Sends status updates back to Admin as it works
 - Stays alive between messages, retaining full conversational context
 
-**Desk mode workers are spawned by Admin agents using `worker_spawn`** — they don't
+**Desk mode workers are spawned by Admin agents using `summon_minion`** — they don't
 enter desk mode on their own. The Director does not interact with them directly.
 
 ### The Architecture
@@ -107,11 +107,11 @@ Director
 
 ### Spawning Desk Mode Workers (Admin)
 
-Admin agents use `worker_spawn` to launch background workers:
+Admin agents use `summon_minion` to launch background workers:
 
 ```typescript
-worker_spawn({ role: "engineer", persona: "hephaestus" })
-// Returns: { mission_id: 83, codename: "iron-nexus" }
+summon_minion({ role: "engineer", daemon: "hephaestus" })
+// Returns: { possession_id: 83 }
 ```
 
 Workers are invisible to the Director. Admin manages them autonomously.
@@ -132,19 +132,19 @@ If you are running in desk mode (the Director spawned you as a background worker
 **You don't need to manage the polling loop.** The desk-worker infrastructure sends
 messages to your session and invokes your responses.
 
-## Complete Epic Mission Example (Admin Orchestrating Workers)
+## Complete Epic Possession Example (Admin Orchestrating Workers)
 
 ```typescript
 // 1. Admin spawns workers for the epic
-worker_spawn({ role: "architect", persona: "daedalus" })
-// Returns: { mission_id: 82 }
+summon_minion({ role: "architect", daemon: "daedalus" })
+// Returns: { possession_id: 82 }
 
-worker_spawn({ role: "engineer", persona: "hephaestus" })
-// Returns: { mission_id: 83 }
+summon_minion({ role: "engineer", daemon: "hephaestus" })
+// Returns: { possession_id: 83 }
 
 // 2. Assign epic tasks to Architect
 worker_message({
-  to_mission_id: 82,
+  to_possession_id: 82,
   body: "Design the ToolAdapter protocol (ARC-H-0057). Document in ADR format."
 })
 
@@ -154,7 +154,7 @@ watch_inbox()
 
 // 4. Assign implementation to Engineer
 worker_message({
-  to_mission_id: 83,
+  to_possession_id: 83,
   body: "Implement ToolAdapter wrapper (OPR-H-0066). See ADR-009 section 4."
 })
 
@@ -163,8 +163,8 @@ watch_inbox()
 // Engineer reports: "Implementation complete"
 
 // 6. Clean up
-worker_terminate({ to_mission_id: 82 })
-worker_terminate({ to_mission_id: 83 })
+exorcise_minion({ to_possession_id: 82 })
+exorcise_minion({ to_possession_id: 83 })
 ```
 
 ## Discovery: Finding Agents
@@ -181,9 +181,8 @@ Returns:
 {
   "workers": [
     {
-      "mission_id": 82,
-      "persona": "daedalus",
-      "codename": "swift-forge",
+      "possession_id": 82,
+      "daemon": "daedalus",
       "status": "ACTIVE",
       "last_activity": "2026-03-01T00:15:00Z",
       "current_task": "ARC-H-0057"
@@ -196,11 +195,11 @@ Returns:
 
 ## Best Practices
 
-### Epic Missions
+### Epic Possessions
 
 1. **Start with epic scope** — Director uses `--epic` flag at summon time
 2. **Use `task_next`** — more efficient than manual claiming
-3. **Don't end between tasks** — keep mission alive for continuity
+3. **Don't end between tasks** — keep possession alive for continuity
 4. **Update task artifacts** — document progress as you complete each task
 
 ### Desk Mode Workers (Admin)
@@ -208,7 +207,7 @@ Returns:
 1. **Spawn only what you need** — each worker consumes resources
 2. **Give clear work assignments** — include task IDs, context, acceptance criteria
 3. **Wait for responses** — use `watch_inbox` instead of polling continuously
-4. **Terminate when done** — always call `worker_terminate` when work is complete
+4. **Terminate when done** — always call `exorcise_minion` when work is complete
 
 ### Coordination
 
@@ -224,11 +223,11 @@ Returns:
 | `task_claim` | Claim a specific task | `task_claim({ task_id: "ARC-H-0057" })` |
 | `task_close` | Close a task when done | `task_close({ task_id: "ARC-H-0057", status: "COMPLETE" })` |
 | `task_next` | Auto-claim next epic task | `task_next()` |
-| `worker_spawn` | Launch a desk mode worker | `worker_spawn({ role: "engineer" })` |
-| `worker_message` | Send work to a worker | `worker_message({ to_mission_id: 83, body: "..." })` |
+| `summon_minion` | Launch a desk mode worker | `summon_minion({ role: "engineer" })` |
+| `worker_message` | Send work to a worker | `worker_message({ to_possession_id: 83, body: "..." })` |
 | `worker_status` | Check active workers | `worker_status({ role: "engineer" })` |
 | `watch_inbox` | Wait for worker responses | `watch_inbox()` |
-| `worker_terminate` | End a worker's mission | `worker_terminate({ to_mission_id: 83 })` |
+| `exorcise_minion` | End a worker's possession | `exorcise_minion({ to_possession_id: 83 })` |
 
 ## Troubleshooting
 
@@ -238,7 +237,7 @@ Returns:
 
 **Solution:**
 
-- Spawn a new worker with `worker_spawn`
+- Spawn a new worker with `summon_minion`
 - Ask Director to investigate if spawn fails
 
 ### Worker not responding
@@ -247,11 +246,11 @@ Returns:
 
 **Solution:**
 
-- Send a status ping: `worker_message({ to_mission_id: 83, body: "Status?" })`
+- Send a status ping: `worker_message({ to_possession_id: 83, body: "Status?" })`
 - Check `worker_status` for last_activity timestamp
 - Terminate and restart if truly unresponsive
 
-### Worker finished but mission still open
+### Worker finished but possession still open
 
 This is normal. Desk workers stay alive after finishing a task and wait for the next
 assignment. Send them another task or terminate them when no more work is needed.

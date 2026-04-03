@@ -4,7 +4,7 @@
 **Date:** 2026-02-16
 **Deciders:** Tucker (Director), Aruru (Architect)
 **Related Tasks:** ARC-H-0131
-**Related Skills:** session-start
+**Related Skills:** possession-start
 
 ## Context
 
@@ -24,7 +24,7 @@ The `session-start` skill currently performs all initialization steps within the
 
 **The core issue is not token cost - it's context pollution.**
 
-When session-start completes, the main agent's context is cluttered with initialization artifacts that are irrelevant to actual work:
+When possession-start completes, the main agent's context is cluttered with initialization artifacts that are irrelevant to actual work:
 
 **Bio Generation Pollution:**
 - Mythology research: "Aruru is the Mesopotamian goddess who created Enkidu..."
@@ -35,12 +35,12 @@ When session-start completes, the main agent's context is cluttered with initial
 
 **Operational Noise:**
 - UUID generation debug output: `session-marker-2d78f77df6f043d2`
-- Database operation confirmations: "Mission #115 created"
-- File path details: `.opencode/work/missions/2026-02-16.20:55:57...`
+- Database operation confirmations: "Possession #115 created"
+- File path details: `.opencode/work/possessions/2026-02-16.20:55:57...`
 - Session rename logs
 - **Impact:** First ~4,000 tokens of context are setup noise, not work context
 
-**Mission File Initialization (Epic-scoped):**
+**Possession File Initialization (Epic-scoped):**
 - Epic query results (all task details)
 - Task list formatting
 - File structure decisions
@@ -48,9 +48,9 @@ When session-start completes, the main agent's context is cluttered with initial
 
 ### The Core Insight
 
-**After session-start completes, the Director only needs the agent to:**
-1. Know who they are (persona name, role)
-2. Know their mission (codename, objective)
+**After possession-start completes, the Director only needs the agent to:**
+1. Know who they are (daemon name, role)
+2. Know their possession (codename, objective)
 3. See available work (dashboard results)
 4. Start working (clean context)
 
@@ -58,30 +58,30 @@ When session-start completes, the main agent's context is cluttered with initial
 - How the bio was generated
 - Why that mythology was interesting
 - What UUID was created for session renaming
-- How the mission file was structured
+- How the possession file was structured
 
 **Subagents solve this by discarding their context after completion.**
 
 ### Context Pollution Measurements
 
-Based on actual analysis from this session (mission #115):
+Based on actual analysis from this session (possession #115):
 
 **Current Session Initialization Context Pollution:**
-- First-time persona: ~3,850 tokens total
+- First-time daemon: ~3,850 tokens total
   - Bio generation noise: ~600 tokens (mythology research, creative iteration, save confirmations)
   - Operational noise: ~200 tokens (UUIDs, database confirmations, file paths)
   - Useful context: ~3,050 tokens
-- Existing persona: ~3,250 tokens total
+- Existing daemon: ~3,250 tokens total
   - Operational noise: ~200 tokens
   - Useful context: ~3,050 tokens
 
 **With Subagent Delegation:**
 - Bio generation: 600 tokens of noise (in subagent, discarded) → 150 tokens of result (useful)
-- Mission file init: 800 tokens of noise (in subagent, discarded) → 50 tokens of result (useful)
+- Possession file init: 800 tokens of noise (in subagent, discarded) → 50 tokens of result (useful)
 
 **Context Cleanliness Improvement:**
-- First-time persona: ~1,200 tokens of noise removed from main context (450 tokens of research noise eliminated)
-- Epic-scoped mission: ~1,800 tokens of noise removed from main context (750 tokens of operational noise eliminated)
+- First-time daemon: ~1,200 tokens of noise removed from main context (450 tokens of research noise eliminated)
+- Epic-scoped possession: ~1,800 tokens of noise removed from main context (750 tokens of operational noise eliminated)
 
 **The value is that the agent starts work with a clean, focused context - not carrying irrelevant initialization artifacts.**
 
@@ -122,7 +122,7 @@ We will **selectively use subagents for initialization steps that pollute contex
 
 #### 1. Bio Generation (DELEGATE - if missing)
 
-**Trigger:** Persona exists but `bio IS NULL`
+**Trigger:** Daemon exists but `bio IS NULL`
 
 **Current cost:** ~600 tokens (research + craft + save)
 
@@ -131,14 +131,14 @@ We will **selectively use subagents for initialization steps that pollute contex
 # Main agent detects missing bio
 Task(
   subagent_type="general",
-  description="Generate persona bio",
+  description="Generate daemon bio",
   prompt="""
-  Generate and save a whimsical first-person bio for persona 'aruru' (Mesopotamian, Architect role).
+  Generate and save a whimsical first-person bio for daemon 'aruru' (Mesopotamian, Architect role).
   
   Requirements:
   - Research: Aruru is the Mesopotamian goddess who created Enkidu from clay
   - Style: 3-5 sentences, whimsical, first-person, relevant to role
-  - Save: Run `s9 persona set-bio aruru "<bio-text>"`
+  - Save: Use the daemon_set_bio tool: daemon_set_bio({ name: "aruru", bio: "<bio-text>" })
   
   Return ONLY the bio text (not the command output).
   """
@@ -158,40 +158,40 @@ I am Aruru, the Mesopotamian mother goddess who shaped Enkidu from clay...
 
 **Main agent displays:**
 ```
-📖 **A bit about me...**
+A bit about me...
 
 [Bio text from subagent]
 ```
 
-#### 2. Mission File Initial Documentation (DELEGATE - if --epic or complex scope)
+#### 2. Possession File Initial Documentation (DELEGATE - if --epic or complex scope)
 
-**Trigger:** Mission started with --epic flag or complex multi-task objective
+**Trigger:** Possession started with --epic flag or complex multi-task objective
 
-**Current cost:** Mission file created but empty (~200 tokens), updates would add more
+**Current cost:** Possession file created but empty (~200 tokens), updates would add more
 
 **Subagent approach:**
 ```bash
-# After mission registration, if epic-scoped
+# After possession registration, if epic-scoped
 Task(
   subagent_type="general",
-  description="Initialize mission file",
+  description="Initialize possession file",
   prompt="""
-  Initialize mission file for mission #115 (omega-nexus).
+  Initialize possession file for possession #115 (omega-nexus).
   
   Context:
-  - Persona: aruru (Architect)
+  - Daemon: aruru (Architect)
   - Epic: EPC-H-0004 (Multi-Tool Adapter System)
-  - Mission file: .opencode/work/missions/2026-02-16.12:56:14.architect.aruru.omega-nexus.md
+  - Possession file: .opencode/work/possessions/2026-02-16.12:56:14.architect.aruru.omega-nexus.md
   
   Tasks:
   1. Read epic details: `s9 epic show EPC-H-0004`
   2. Read available tasks: `s9 task list --epic EPC-H-0004 --role Architect`
-  3. Update mission file with:
+  3. Update possession file with:
      - Epic overview
      - Task list with status
      - Initial approach notes
   
-  Return: "Mission file initialized with [N] tasks from epic EPC-H-0004"
+  Return: "Possession file initialized with [N] tasks from epic EPC-H-0004"
   """
 )
 ```
@@ -201,16 +201,16 @@ Task(
 - Result in main: ~50 tokens (simple confirmation message)
 - Context pollution eliminated: ~750 tokens of epic metadata and task lists
 
-**Trade-off:** Only worth it for epic-scoped missions where there's significant context to delegate, not simple task claims
+**Trade-off:** Only worth it for epic-scoped possessions where there's significant context to delegate, not simple task claims
 
 #### 3. What STAYS in Main Agent
 
-**Persona selection** (~200 tokens):
+**Daemon selection** (~200 tokens):
 - Director might need to make decisions (conflicts, clarifications)
 - Needs to show suggestions to Director
 - Already efficient
 
-**Mission registration** (~200 tokens):
+**Possession registration** (~200 tokens):
 - Quick database operation
 - Result needed immediately for subsequent steps
 - Already efficient
@@ -239,84 +239,80 @@ Task(
 **Bio Generation Subagent:**
 ```python
 Input: {
-  "persona_name": str,
+  "daemon_name": str,
   "role": str,
   "mythology": str,
   "description": str
 }
 
 Tasks:
-1. Research mythology and persona background
+1. Research mythology and daemon background
 2. Craft 3-5 sentence first-person bio
-3. Save with: s9 persona set-bio <name> "<bio>"
+3. Save with: daemon_set_bio tool
 4. Return bio text only
 
 Output: str  # Just the bio text
 ```
 
-**Mission File Initialization Subagent:**
+**Possession File Initialization Subagent:**
 ```python
 Input: {
-  "mission_id": int,
+  "possession_id": int,
   "codename": str,
-  "persona_name": str,
+  "daemon_name": str,
   "role": str,
   "epic_id": str | None,
-  "mission_file_path": str
+  "possession_file_path": str
 }
 
 Tasks:
 1. Query epic details (if epic_id)
 2. Query available tasks
-3. Write initial mission file structure
+3. Write initial possession file structure
 4. Return confirmation
 
-Output: str  # "Mission file initialized with [N] tasks"
+Output: str  # "Possession file initialized with [N] tasks"
 ```
 
-### Updated Session-Start Flow
+### Updated Possession-Start Flow
 
 ```
 Step 1: Dashboard (MAIN AGENT)
-  └─> s9 dashboard
+  └─> possession_dashboard
 
-Step 2: Persona Selection (MAIN AGENT)
-  └─> s9 persona suggest [Role]
-  └─> Auto-select or use --persona flag
+Step 2: Daemon Selection (MAIN AGENT)
+  └─> daemon_suggest [Role]
+  └─> Auto-select or use --daemon flag
 
 Step 3: Check Bio (MAIN AGENT + SUBAGENT)
-  ├─> s9 persona show <persona>
+  ├─> daemon_show <daemon>
   ├─> IF bio IS NULL:
   │   └─> SUBAGENT: Generate and save bio (parallel with Step 4-6)
   └─> IF bio EXISTS: Display immediately
 
-Step 4: Mission Registration (MAIN AGENT)
-  └─> s9 mission start <persona> --role <role> [--epic/--task]
+Step 4: Possession Registration (MAIN AGENT)
+  └─> possession_init + possession_role_record + possession_daemon_record
 
 Step 5: Session Rename (MAIN AGENT)
-  └─> s9 mission generate-session-uuid
-  └─> s9 mission rename-tui ...
-
-Step 6: Heartbeat (MAIN AGENT)
-  └─> s9 mission heartbeat <id>
+  └─> possession_rename_session
 
 [PARALLEL: Bio subagent completes, main agent displays result]
 
-Step 7: Mission File Init (CONDITIONAL SUBAGENT)
+Step 6: Possession File Init (CONDITIONAL SUBAGENT)
   ├─> IF --epic flag:
-  │   └─> SUBAGENT: Initialize mission file with epic context
-  └─> ELSE: Skip (simple mission)
+  │   └─> SUBAGENT: Initialize possession file with epic context
+  └─> ELSE: Skip (simple possession)
 
-Step 8: Handoffs (MAIN AGENT)
+Step 7: Handoffs (MAIN AGENT)
   └─> s9 handoff list --role [Role]
 
-Step 9: Reviews (MAIN AGENT - Admin only)
+Step 8: Reviews (MAIN AGENT - Admin only)
   └─> s9 review list --status pending
 
-Step 10: Dashboard (MAIN AGENT)
-  └─> s9 dashboard --role [Role]
+Step 9: Dashboard (MAIN AGENT)
+  └─> possession_dashboard
 
-Step 11: Auto-Assign (MAIN AGENT)
+Step 10: Auto-Assign (MAIN AGENT)
   └─> IF --auto-assign or --task: Claim and start work
 ```
 

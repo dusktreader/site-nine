@@ -5,7 +5,7 @@ Architectural overview of site-nine, including core components, patterns, and pl
 
 ## Overview
 
-Site-nine is a universal AI coding workflow system that manages tasks, missions, and agent coordination. The 
+Site-nine is a universal AI coding workflow system that manages tasks, possessions, and agent coordination. The 
 architecture is designed to be tool-agnostic while currently optimized for OpenCode integration.
 
 
@@ -24,7 +24,7 @@ architecture is designed to be tool-agnostic while currently optimized for OpenC
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         CLI Layer                                │
-│  s9 init, s9 task, s9 mission, s9 dashboard, s9 summon, etc.    │
+│  s9 init, s9 task, s9 possession, s9 dashboard, s9 summon, etc.  │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              │ uses
@@ -111,10 +111,9 @@ architecture is designed to be tool-agnostic while currently optimized for OpenC
 
 SQLite database storing:
 - Tasks (id, title, status, priority, role, etc.)
-- Missions (id, persona, role, objective, start/end times)
-- Personas (name, role, mythology, bio)
+- Possessions (id, daemon, role, objective, start/end times)
+- Daemons (name, role, mythology, bio)
 - Messages (agent-to-agent coordination)
-- Handoffs (task transfers between roles)
 - Epics (larger bodies of work)
 
 **See:** Database schema in `src/site_nine/db/schema.sql`
@@ -134,17 +133,16 @@ Tasks are work items assigned to agent roles with statuses tracking progress.
 **See:** `.opencode/docs/guides/tasks.md`
 
 
-### Mission system
+### Possession system
 
-Missions track agent work sessions with persona, role, and lifecycle management.
+Possessions track agent work sessions with daemon, role, and lifecycle management.
 
 **States:**
-- `ROLE_PENDING` - Mission created, waiting for role
-- `PERSONA_PENDING` - Role set, waiting for persona
+- `ROLE_PENDING` - Possession created, waiting for role
+- `DAEMON_PENDING` - Role set, waiting for daemon
 - `ACTIVE` - Working on tasks
 - `SUSPENDED` - Session closed unexpectedly
-- `COMPLETE` - Ended successfully
-- `ABANDONED` - Ended without completion
+- `EXORCISED` - Ended successfully
 
 **Scopes:**
 - **Task-scoped** - Single task focus
@@ -174,8 +172,8 @@ Skills are workflow guides for agents, providing instructions for complex multi-
 **Format:** Markdown documents with instructions
 
 **Examples:**
-- `mission-start` - Initialize missions
-- `mission-end` - End missions properly
+- `possession-start` - Initialize possessions
+- `possession-end` - End possessions properly
 - `task-claim` - Claim and start tasks
 - `task-update` - Update task progress and notes
 
@@ -381,7 +379,7 @@ The ToolRegistry auto-detects the active tool using this cascade:
 - Update documentation (README, ADRs, guides, API docs)
 - Update bootstrapping/init templates
 - Update .opencode/ agent directions and skills
-- Update all open tasks and missions
+    - Update all open tasks and possessions
 - Verify no broken references remain
 
 **See:** ADR-001 lines 180-211
@@ -458,7 +456,7 @@ OpenCode integration:
 
 - **Tasks** - `.opencode/docs/guides/tasks.md`
 - **Agent Discovery** - `.opencode/docs/guides/agent-discovery.md`
-- **Epic Missions & Desk Mode** - `.opencode/docs/guides/epic-missions-and-desk-mode.md`
+- **Epic Possessions & Desk Mode** - `.opencode/docs/guides/epic-possessions-and-desk-mode.md`
 - **Tool Adapters** - `.opencode/docs/guides/tool-adapters.md` (planned)
 
 ### Code locations

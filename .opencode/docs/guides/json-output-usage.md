@@ -299,6 +299,6 @@ s9 task list --priority HIGH --status TODO --json | \
 ## See Also
 
 - **Agent Discovery Guide**: `agent-discovery.md` for discovery workflow examples
-- **Epic Missions Guide**: `epic-missions-and-desk-mode.md` for coordination patterns
+- **Epic Possessions Guide**: `epic-possessions-and-desk-mode.md` for coordination patterns
 - **ADR-008** (lines 985-999): JSON output flag design rationale
 - **Task OPR-M-0074**: Implementation of --json flags across all s9 commands
