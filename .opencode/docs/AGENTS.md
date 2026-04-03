@@ -391,7 +391,8 @@ Understanding the difference is important:
 
 - **Task Management**: `.opencode/docs/guides/tasks.md`
 - **Agent Discovery**: `.opencode/docs/guides/agent-discovery.md`
-- **Desk Mode Orchestration**: `.opencode/docs/guides/desk-mode-orchestration.md`
+- **Admin Orchestration**: `.opencode/docs/guides/admin-orchestration.md` (for Admin role)
+- **Desk Mode Orchestration**: `.opencode/docs/guides/desk-mode-orchestration.md` (worker reference)
 - **JSON Output Usage**: `.opencode/docs/guides/json-output-usage.md`
 - **Commit Guidelines**: `.opencode/docs/guides/commit-guidelines.md`
 - **Python Usage Policy**: `.opencode/docs/guides/python-usage-policy.md` (REQUIRED: always use `uv run`)

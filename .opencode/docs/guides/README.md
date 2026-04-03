@@ -71,8 +71,14 @@ JSON output guidelines: when to use `--json` vs. table mode, parsing patterns, c
 
 ### [desk-mode-orchestration.md](./desk-mode-orchestration.md)
 
-Desk mode orchestration for Admin/Operator agents: summoning background workers, sending work via messages, monitoring
-worker status, coordination patterns, termination procedures.
+Desk mode orchestration reference for Admin agents: spawning background workers, sending work via messages,
+monitoring worker status, coordination patterns, termination procedures.
+
+
+### [admin-orchestration.md](./admin-orchestration.md)
+
+Practical Admin orchestration guide: breaking down Director goals, assigning work with context, sequential and
+parallel workflow patterns, handling worker problems, and reporting back to Director.
 
 
 ## Architecture & Design
@@ -113,7 +119,7 @@ Markdown formatting rules: 120-char line wrap, ATX headings, title case, blank l
 | Finding other agents to coordinate  | agent-discovery.md                                            |
 | Working on epic-scoped missions     | epic-missions-and-desk-mode.md                                |
 | Using --json vs table output        | json-output-usage.md                                          |
-| Orchestrating background workers    | desk-mode-orchestration.md                                    |
+| Orchestrating background workers    | desk-mode-orchestration.md, admin-orchestration.md            |
 | Understanding system architecture   | architecture.md                                               |
 | Working with tool adapters          | tool-adapters.md                                              |
 | Learning site-nine's code patterns  | [site-nine-dev/coding-patterns.md](../../site-nine-dev/coding-patterns.md) |
