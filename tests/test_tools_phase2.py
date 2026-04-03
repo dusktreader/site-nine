@@ -1,14 +1,15 @@
 """Unit tests for all Phase 2 OpenCode tool scripts.
 
 Tools under test (.opencode/tools/):
-  Mission lifecycle (7): mission_init, mission_role_record, mission_persona_record,
-                          mission_rename_session, mission_rename_dismissed,
-                          mission_end, mission_summary
-  Task management  (6): task_claim, task_release, task_close, task_update,
-                          task_show, task_create
-  Handoff          (3): handoff_create, handoff_list, handoff_delete
-  Persona          (3): persona_show, persona_suggest, persona_set_bio
-  Dashboard        (1): mission_dashboard
+  Possession lifecycle (8): possession_init, possession_role_record, possession_daemon_record,
+                             possession_rename_session, possession_rename_exorcised,
+                             possession_end, possession_summary, possession_dashboard
+  Task management     (6): task_claim, task_release, task_close, task_update,
+                             task_show, task_create
+  Daemon              (3): daemon_show, daemon_suggest, daemon_set_bio
+
+Note: The old mission_*/persona_* tools were removed in ENG-H-0253. Tests for those
+tools are marked @_SKIP_REMOVED and left in place as documentation.
 
 Testing strategy:
 - Each tool's main() function is called directly (no subprocess).
@@ -92,13 +93,7 @@ def call_tool(name: str, payload: dict[str, Any], db_path: Path) -> dict:
 
 @pytest.fixture
 def tool_db(tmp_path):
-    """Initialised database with seed daemons and a couple of test tasks.
-
-    The schema.sql in the package does not yet include the ``blocks`` table
-    or the ``deleted_at`` column on ``handoffs`` (those live in the application
-    but haven't been merged into the base schema yet).  We add them manually
-    here so that the managers that reference them work correctly in tests.
-    """
+    """Initialised database with seed daemons and a couple of test tasks."""
     import sqlite3
 
     db_dir = tmp_path / ".opencode" / "data"
@@ -108,9 +103,8 @@ def tool_db(tmp_path):
     with Database(db_path) as db:
         db.initialize_schema()
 
-        # Apply missing DDL that hasn't landed in schema.sql yet.
+        # Ensure the blocks table exists (may not be in base schema yet).
         with sqlite3.connect(str(db_path)) as conn:
-            # blocks table (used by BlockManager / task_claim)
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS blocks (
@@ -124,11 +118,6 @@ def tool_db(tmp_path):
                 )
                 """
             )
-            # deleted_at column on handoffs (used by HandoffManager soft-delete)
-            try:
-                conn.execute("ALTER TABLE handoffs ADD COLUMN deleted_at TEXT")
-            except sqlite3.OperationalError:
-                pass  # column already exists (idempotent)
             conn.commit()
 
         # Daemons (replaces old personas seeding)
@@ -782,27 +771,6 @@ class TestTaskCreate:
         )
         task_id = result["task_id"]
         assert task_id.startswith("TST-H-")
-
-
-# ===========================================================================
-# HANDOFF TOOLS — REMOVED (ADR-014 Phase 1)
-# handoff_create, handoff_list, handoff_delete tools were removed per ADR-014.
-# Remaining handoff table references are kept for FK integrity but tool tests
-# are not applicable. See ENG-H-0224 for full handoff reference cleanup.
-# ===========================================================================
-
-
-@pytest.fixture
-def tool_db_with_handoff(tool_db_with_mission):
-    """Add a handoff record for testing — kept for fixture compatibility."""
-    with Database(tool_db_with_mission) as db:
-        db.execute_update(
-            """
-            INSERT INTO handoffs (task_id, from_possession_id, to_role, summary, created_at)
-            VALUES ('ENG-H-0001', 1, 'Tester', 'Ready for review', datetime('now'))
-            """
-        )
-    return tool_db_with_mission
 
 
 # ===========================================================================

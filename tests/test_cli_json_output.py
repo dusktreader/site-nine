@@ -170,24 +170,7 @@ def test_handoff_list_json(initialized_project: Path):
 
 def test_handoff_show_json(initialized_project: Path):
     """Test handoff show with JSON output"""
-    # First, list handoffs to get an ID
-    list_result = runner.invoke(app, ["handoff", "list", "--json"])
-
-    if list_result.exit_code == 0:
-        list_data = json.loads(list_result.stdout)
-
-        # If there are handoffs, test show command
-        if list_data["count"] > 0:
-            handoff_id = list_data["data"][0]["id"]
-            result = runner.invoke(app, ["handoff", "show", str(handoff_id), "--json"])
-
-            assert result.exit_code == 0, f"Command failed: {result.stdout}"
-
-            data = json.loads(result.stdout)
-            assert "data" in data
-            assert "timestamp" in data
-            assert isinstance(data["data"], dict)
-            assert "id" in data["data"]
+    pytest.skip("handoff CLI command removed")
 
 
 def test_review_list_json(initialized_project: Path):

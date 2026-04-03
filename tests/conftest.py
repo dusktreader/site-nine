@@ -40,8 +40,8 @@ def test_db(temp_dir: Path) -> Generator[Database, None, None]:
 
 @pytest.fixture
 def test_db_with_data(test_db: Database) -> Generator[Database, None, None]:
-    """Create a test database with tasks and possessions for handoff tests"""
-    # Add test tasks for handoff tests
+    """Create a test database with tasks and possessions."""
+    # Add test tasks
     test_db.execute_update("""
         INSERT INTO tasks (id, title, description, status, priority, role, file_path, created_at)
         VALUES 
@@ -50,7 +50,7 @@ def test_db_with_data(test_db: Database) -> Generator[Database, None, None]:
             ('ENG-M-0003', 'Test task 3', 'Description 3', 'TODO', 'MEDIUM', 'Tester', '.opencode/work/tasks/ENG-M-0003.md', datetime('now'))
     """)
 
-    # Add test possessions for handoff tests
+    # Add test possessions
     test_db.execute_update("""
         INSERT INTO possessions (id, daemon_name, role, possession_log, start_time, created_at, updated_at)
         VALUES 
