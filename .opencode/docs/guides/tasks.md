@@ -119,8 +119,44 @@ s9 task report --format markdown
 Task data stored in `.opencode/data/project.db` (SQLite).
 
 
+## QA Workflow After Task Completion
+
+When an Engineer closes a task, the Administrator decides how much follow-up QA to run based on scope and risk.
+Three tiers cover most situations:
+
+**Full QA** — for CRITICAL/HIGH features and architectural changes:
+1. Engineer completes implementation + unit tests → closes task COMPLETE
+2. Admin assigns Tester to validate end-to-end behavior
+3. Tester closes verification task with findings
+4. Admin assigns Documentarian to update guides and ADRs
+5. Admin assigns Inspector for code review (if high-risk change)
+
+**Standard QA** — for MEDIUM priority bugs and enhancements:
+1. Engineer completes with tests → closes task
+2. Admin assigns Tester to spot-check
+3. Documentarian update only if user-facing behavior changed
+
+**Minimal QA** — for LOW priority and isolated fixes:
+1. Engineer completes with tests → closes task
+2. Admin reviews output directly; no separate Tester pass needed
+3. Docs and changelog can be batched with other work
+
+**Decision criteria:**
+
+| Criteria     | Full QA        | Standard QA    | Minimal QA         |
+|--------------|----------------|----------------|--------------------|
+| Priority     | CRITICAL, HIGH | MEDIUM         | LOW                |
+| Scope        | New features   | Bug fixes      | Typos, minor fixes |
+| Risk         | User-facing    | Internal       | Isolated, safe     |
+| Tester pass  | Always         | Usually        | Rarely             |
+| Docs update  | Always         | If user-facing | Batch later        |
+
+For the Admin orchestration pattern used to run these workflows, see
+`.opencode/docs/roles/administrator.md`.
+
+
 ## See Also
 
 **Skills:** task-create, task-query, task-claim, task-update, task-close, task-management
 
-**Guides:** [task-sizing.md](./task-sizing.md), [roles/README.md](../roles/README.md)
+**Guides:** [task-sizing.md](./task-sizing.md), [roles/README.md](../roles/README.md), [roles/administrator.md](../roles/administrator.md)
