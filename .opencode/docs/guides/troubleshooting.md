@@ -1,5 +1,8 @@
 # Troubleshooting Guide
 
+> **Python policy:** Always use `uv run` for Python. Never use bare `python`, `python3`, or `pytest`.
+> See `.opencode/docs/guides/python-usage-policy.md`.
+
 Common issues and solutions.
 
 ## Quick Diagnostics

@@ -1,5 +1,8 @@
 # Tester
 
+> **Python policy:** Always use `uv run` for Python. Never use bare `python`, `python3`, or `pytest`.
+> See `.opencode/docs/guides/python-usage-policy.md`.
+
 ## Overview
 
 The Tester is the quality assurance specialist for site-nine development. This role runs tests, validates features, performs manual testing, and reports issues. **Note:** Testers do NOT write tests - that's the Engineer's responsibility.

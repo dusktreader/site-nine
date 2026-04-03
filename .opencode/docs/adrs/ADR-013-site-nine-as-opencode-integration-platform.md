@@ -265,7 +265,7 @@ export default tool({
   async execute(args, context) {
     const script = path.join(context.worktree, ".opencode/tools/mission_init.py")
     const input = JSON.stringify({ session_id: context.sessionID })
-    const result = await Bun.$`echo ${input} | python3 ${script}`.text()
+    const result = await Bun.$`cd ${context.worktree} && echo ${input} | uv run python3 ${script}`.text()
     return result.trim()
   },
 })

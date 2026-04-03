@@ -1170,7 +1170,7 @@ export default tool({
     const script = path.join(worktree, ".opencode/skills/mission-init/execute.py")
 
     const input = JSON.stringify({ sessionID })
-    const result = await Bun.$`echo ${input} | python3 ${script}`.text()
+    const result = await Bun.$`cd ${worktree} && echo ${input} | uv run python3 ${script}`.text()
     return result.trim()
   },
 })

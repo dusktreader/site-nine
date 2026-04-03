@@ -1,5 +1,8 @@
 # Engineer
 
+> **Python policy:** Always use `uv run` for Python. Never use bare `python`, `python3`, or `pytest`.
+> See `.opencode/docs/guides/python-usage-policy.md`.
+
 ## Overview
 
 The Engineer is the implementation specialist for site-nine development. This role writes code, implements features, fixes bugs, and creates tests (both unit and integration).

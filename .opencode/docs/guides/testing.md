@@ -1,5 +1,7 @@
 # Testing Guide
 
+> **Python policy:** Always use `uv run pytest` — never bare `pytest`. See `.opencode/docs/guides/python-usage-policy.md`.
+
 Testing patterns for site-nine.
 
 

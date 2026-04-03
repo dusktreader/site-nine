@@ -15,6 +15,16 @@
 > be treated as a serious error. If you see `s9` used in an example below, it describes what the **Director**
 > does from the terminal — **you do not run those commands**.
 
+> **⛔ AGENTS: ALWAYS USE `uv run` FOR PYTHON ⛔**
+>
+> Never run `python`, `python3`, or `pytest` directly. Always prefix with `uv run`:
+> - Run tests → `uv run pytest`
+> - Run scripts → `uv run python3 script.py`
+> - Run Python → `uv run python -c "..."`
+>
+> Bare `python` hits system Python, which lacks project dependencies and causes `ModuleNotFoundError`.
+> See `.opencode/docs/guides/python-usage-policy.md` for the full policy.
+
 Welcome to site-nine! This guide explains how to work as an agent in the site-nine development environment.
 
 
@@ -384,6 +394,7 @@ Understanding the difference is important:
 - **Desk Mode Orchestration**: `.opencode/docs/guides/desk-mode-orchestration.md`
 - **JSON Output Usage**: `.opencode/docs/guides/json-output-usage.md`
 - **Commit Guidelines**: `.opencode/docs/guides/commit-guidelines.md`
+- **Python Usage Policy**: `.opencode/docs/guides/python-usage-policy.md` (REQUIRED: always use `uv run`)
 - **Markdown Style**: `.opencode/docs/guides/markdown-style.md` (REQUIRED for all markdown edits)
 
 
