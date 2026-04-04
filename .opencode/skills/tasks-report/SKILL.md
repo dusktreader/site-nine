@@ -27,7 +27,7 @@ This skill uses:
 - **`task_list` tool** - List and filter tasks
 - **`task_show` tool** - View individual task details
 
-All tools return clean JSON results and automatically receive mission context from OpenCode.
+All tools return clean JSON results and automatically receive possession context from OpenCode.
 
 ## When to Use Me
 

@@ -35,15 +35,15 @@ Invoke task_claim tool with task_id="TASK_ID"
 - `task_id` - The task to claim (e.g., "ENG-H-0037")
 
 **Automatic:**
-- Mission ID - Retrieved automatically from your current session context
-- Role - Retrieved automatically from your mission record
+- Possession ID - Retrieved automatically from your current session context
+- Role - Retrieved automatically from your possession record
 
-The tool automatically determines your mission ID and role from the current OpenCode session, so you don't need to provide them manually.
+The tool automatically determines your possession ID and role from the current OpenCode session, so you don't need to provide them manually.
 
 ## What Happens When You Claim
 
 1. ✅ Status changes: `TODO` → `UNDERWAY`
-2. ✅ `mission_id` set to your mission ID (retrieved automatically from session)
+2. ✅ `possession_id` set to your possession ID (retrieved automatically from session)
 3. ✅ `claimed_at` timestamp recorded
 4. ✅ Markdown file header updated in `.opencode/work/tasks/`
 
@@ -62,8 +62,8 @@ Finding and claiming a task:
    ```
 
    The tool will:
-   - Automatically retrieve your mission ID from the current session
-   - Automatically retrieve your role from your mission record
+   - Automatically retrieve your possession ID from the current session
+   - Automatically retrieve your role from your possession record
    - Claim the task and update its status to UNDERWAY
    - Return confirmation that the task was claimed
 
@@ -74,7 +74,7 @@ Finding and claiming a task:
    Output will show:
    ```
    Status: UNDERWAY
-   Mission: [your-mission-id]
+   Possession: [your-possession-id]
    Claimed: [timestamp]
    ```
 
@@ -92,16 +92,16 @@ The database prevents race conditions:
 If a task is already claimed, the tool will return an error:
 
 ```
-Error: Task ENG-H-0037 is already claimed by mission 42
+Error: Task ENG-H-0037 is already claimed by possession 42
 ```
 
 **What to do:**
-1. Check which mission claimed it using the `task_show` tool:
+1. Check which possession claimed it using the `task_show` tool:
    ```
    task_show({ task_id: "ENG-H-0037" })
    ```
 
-2. Coordinate with the other mission/agent if needed
+2. Coordinate with the other possession/agent if needed
 
 3. Choose a different task and invoke the tool again with the new task ID
 
@@ -180,12 +180,12 @@ Tasks are assigned to specific roles:
 ### "Task already claimed"
 - Someone else is working on it
 - Check using `task_show` tool: `task_show({ task_id: "TASK_ID" })`
-- Choose a different task or coordinate with the other mission
+- Choose a different task or coordinate with the other possession
 
-### "No active mission found"
-- The tool cannot find your mission from the session context
-- Make sure you initialized your mission with the `mission-start` skill
-- Contact the Director if your mission appears to be corrupted
+### "No active possession found"
+- The tool cannot find your possession from the session context
+- Make sure you initialized your possession with the `possession-start` skill
+- Contact the Director if your possession appears to be corrupted
 
 ### "Role mismatch"
 - Your role doesn't match the task's assigned role

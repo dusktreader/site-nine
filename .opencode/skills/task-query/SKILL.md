@@ -19,7 +19,7 @@ This skill uses:
 - **`task_list` tool** - List and filter tasks by various criteria
 - **`task_report` tool** - Generate formatted reports
 
-All tools return clean JSON results and automatically receive mission context from OpenCode.
+All tools return clean JSON results and automatically receive possession context from OpenCode.
 
 ## List Available Tasks
 

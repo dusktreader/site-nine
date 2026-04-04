@@ -372,8 +372,8 @@ All task data is stored in:
 This SQLite database contains:
 
 - Tasks (status, priority, role, times)
-- Agents/personas
-- Missions
+- Agents/daemons
+- Possessions
 - Task relationships
 
 **See `.opencode/data/README.md` for complete database reference.**

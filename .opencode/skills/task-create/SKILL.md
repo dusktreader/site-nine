@@ -18,7 +18,7 @@ This skill uses the **`task_create` tool**, which:
 - Creates tasks in the s9 database
 - Auto-generates task IDs based on role and priority
 - Returns clean JSON results
-- Automatically receives mission context from OpenCode
+- Automatically receives possession context from OpenCode
 
 ## When to Create Tasks
 
@@ -43,7 +43,7 @@ task_create(
 
 **Note:** Task IDs are **auto-generated** based on role and priority. You do not need to provide a task ID.
 
-**Session Context:** Mission ID and role are automatically provided by OpenCode's session context - you don't need to specify them.
+**Session Context:** Possession ID and role are automatically provided by OpenCode's session context - you don't need to specify them.
 
 ## Task ID Format
 

@@ -3,7 +3,7 @@
 Guidelines and checklist for code reviews in s9-powered projects.
 
 > **Note:** This guide provides general code review best practices in lieu of an s9-native review framework. It may be
-> replaced in the future with a workflow that integrates with s9 tasks and missions.
+> replaced in the future with a workflow that integrates with s9 tasks and possessions.
 
 **Use this guide for:**
 - Reviewing code written by other agents

@@ -35,7 +35,7 @@ task_close(
 - `notes` - Summary of why closing with this status
 
 The tool automatically:
-- Looks up your current mission from the OpenCode session context
+- Looks up your current possession from the OpenCode session context
 - Records the `closed_at` timestamp
 - Updates the task status
 - Appends final notes to the task
@@ -89,7 +89,7 @@ When you call the `task_close` tool:
 3. ✅ Final notes appended (not replaced)
 4. ✅ Markdown file header updated in `.opencode/work/tasks/`
 5. ✅ Task removed from active work queue
-6. ✅ Mission association maintained via session context
+6. ✅ Possession association maintained via session context
 
 ## Example Workflows
 

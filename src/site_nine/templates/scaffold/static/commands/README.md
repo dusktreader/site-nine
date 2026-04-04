@@ -621,9 +621,9 @@ Your changes are now in the remote repository!
 
 ---
 
-#### `/handoff` - Hand Off to Another Persona
+#### `/handoff` - Hand Off to Another Daemon
 
-**Purpose:** Transfer work to another persona with full context and documentation.
+**Purpose:** Transfer work to another daemon with full context and documentation.
 
 **Usage:**
 ```
@@ -631,7 +631,7 @@ Your changes are now in the remote repository!
 ```
 
 **What it does:**
-1. Identifies your current role and persona
+1. Identifies your current role and daemon
 2. Determines target role (or asks if not specified)
 3. Gathers current state (git status, active tasks, recent commits)
 4. Creates structured handoff document with:
@@ -641,8 +641,8 @@ Your changes are now in the remote repository!
    - Files to review
    - Approach and constraints
    - Acceptance criteria
-5. Saves handoff as `.pending.md` file in `.opencode/work/missions/handoffs/`
-6. Updates your mission file with handoff info
+5. Saves handoff as `.pending.md` file in `.opencode/work/possessions/handoffs/`
+6. Updates your possession file with handoff info
 7. Provides instructions for recipient
 
 **Example interaction:**
@@ -670,7 +670,7 @@ Agent: Creating handoff document...
 **Created:** 2026-01-29 16:30:00
 
 **Handoff Document:**
-.opencode/work/missions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md
+.opencode/work/possessions/handoffs/2026-01-29.16:30:00.manager-ishtar.engineer.pending.md
 
 **Summary:**
 - Task: H040 - Implement database query caching
@@ -680,13 +680,13 @@ Agent: Creating handoff document...
 - Files to review: 4 files
 - Acceptance criteria: 7 items
 
-**For Next Persona:**
+**For Next Daemon:**
 When Engineer starts with `/summon`, they'll be notified of this handoff
 and can read the full context.
 
 **Your Options:**
 - Continue working on other tasks
-- Use `/dismiss` to end your mission
+- Use `/dismiss` to end your possession
 - Create another handoff if needed
 
 Handoff document includes:
@@ -716,7 +716,7 @@ Handoff document includes:
 - **Resources:** Files to review, docs to read, related work
 
 **Handoff lifecycle:**
-1. **Created (`.pending.md`)** - Waiting for recipient persona
+1. **Created (`.pending.md`)** - Waiting for recipient daemon
 2. **Accepted (`.accepted.md`)** - Recipient started work (via `/summon`)
 3. **Completed (`.completed.md`)** - Work finished (via `/dismiss`)
 
@@ -733,17 +733,17 @@ Handoff document includes:
 
 1. **User types command:** `/summon`
 2. **OpenCode loads command file:** `.opencode/commands/summon.md`
-3. **Command tells agent:** "Load the session-start skill"
-4. **Agent calls skill tool:** `skill({ name: "session-start" })`
-5. **OpenCode loads skill:** `.opencode/skills/session-start/SKILL.md`
-6. **Agent follows skill instructions:** Role selection → naming → mission creation → doc reading
+3. **Command tells agent:** "Load the possession-start skill"
+4. **Agent calls skill tool:** `skill({ name: "possession-start" })`
+5. **OpenCode loads skill:** `.opencode/skills/possession-start/SKILL.md`
+6. **Agent follows skill instructions:** Role selection → naming → possession creation → doc reading
 
 ### Why This Design?
 
 **Commands** provide:
 - ✅ Easy discoverability (users can type `/` to see all commands)
 - ✅ Simple invocation (just `/summon` instead of explaining the process)
-- ✅ Consistent entry points across all personas
+- ✅ Consistent entry points across all daemons
 
 **Skills** provide:
 - ✅ Detailed, step-by-step instructions
@@ -876,7 +876,7 @@ Add your command to this README with:
 
 ### For Both
 
-- ✅ Test with actual personas before committing
+- ✅ Test with actual daemons before committing
 - ✅ Keep instructions up to date
 - ✅ Version control both files together
 - ✅ Document in this README
@@ -885,7 +885,7 @@ Add your command to this README with:
 
 ## Skill Permissions
 
-You can control which skills personas can access in `opencode.json`:
+You can control which skills daemons can access in `opencode.json`:
 
 ```json
 {
@@ -954,9 +954,9 @@ Want to add one? Follow the guide above and submit a PR!
 .opencode/
 ├── commands/              # Slash commands
 │   ├── README.md         # This file
-│   ├── summon.md         # /summon - Start mission
-│   ├── dismiss.md        # /dismiss - End mission
-│   ├── handoff.md        # /handoff - Hand off to another persona
+│   ├── summon.md         # /summon - Start possession
+│   ├── dismiss.md        # /dismiss - End possession
+│   ├── handoff.md        # /handoff - Hand off to another daemon
 │   ├── commit.md         # /commit - Commit & push changes
 │   ├── tasks.md          # /tasks - Show task queue report
 │   ├── create-task.md    # /create-task - Create new task
@@ -964,11 +964,11 @@ Want to add one? Follow the guide above and submit a PR!
 │   ├── update-task.md    # /update-task - Update progress
 │   └── close-task.md     # /close-task - Close task
 ├── skills/               # Reusable instruction sets
-│   ├── session-start/    # Session initialization skill
+│   ├── possession-start/ # Possession initialization skill
 │   │   └── SKILL.md
-│   ├── session-end/      # Session closure skill
+│   ├── possession-end/   # Possession closure skill
 │   │   └── SKILL.md
-│   ├── handoff-workflow/ # Persona handoff skill
+│   ├── handoff-workflow/ # Daemon handoff skill
 │   │   └── SKILL.md
 │   ├── commit-workflow/  # Commit and push workflow
 │   │   └── SKILL.md
@@ -979,8 +979,8 @@ Want to add one? Follow the guide above and submit a PR!
 ├── templates/            # Document templates
 │   └── handoff-template.md  # Handoff document template
 └── work/
-    └── missions/
-        └── handoffs/     # Persona handoff documents
+    └── possessions/
+        └── handoffs/     # Daemon handoff documents
             ├── *.pending.md   # Waiting for recipient
             ├── *.accepted.md  # Work in progress
             └── *.completed.md # Work finished
@@ -992,5 +992,5 @@ Want to add one? Follow the guide above and submit a PR!
 
 - [OpenCode Commands Documentation](https://opencode.ai/docs/commands)
 - [OpenCode Skills Documentation](https://opencode.ai/docs/skills)
-- `.opencode/work/missions/README.md` - Mission file format
+- `.opencode/work/possessions/README.md` - Possession file format
 - `.opencode/tasks/README.md` - Task management system

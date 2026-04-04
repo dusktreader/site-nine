@@ -62,7 +62,7 @@ The Designer is the user experience specialist for site-nine development. This r
 User: Design the s9 dashboard command output
 Designer: I'll design the dashboard:
   1. Information architecture:
-     - Active missions (table with status)
+     - Active possessions (table with status)
      - Available tasks (grouped by priority)
      - Quick stats (panel)
   2. Visual design:

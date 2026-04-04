@@ -74,32 +74,32 @@ Operator: I'll create the Security Auditor agent:
   2. Define responsibilities and skills
   3. Add workflows for common audit tasks
   4. Update .opencode/docs/roles/README.md
-  5. Add security-auditor to persona database
+   5. Add security-auditor to daemon database
   6. Test with a sample audit task
   7. Document usage examples
 ```
 
-### Example 2: Fixing s9 mission Command
+### Example 2: Fixing s9 possession Command
 
 ```
-User: s9 mission start --session-file doesn't work
+User: s9 possession start --session-file doesn't work
 Operator: I'll fix the broken command:
   1. Reproduce error: parameter not defined
-  2. Fix in src/site_nine/cli/mission.py:
+  2. Fix in src/site_nine/cli/possession.py:
      - Add session_file parameter to start()
      - Implement file linking logic
-  3. Add test: tests/cli/test_mission.py
+  3. Add test: tests/cli/test_possession.py
   4. Run make qa to verify
   5. Update docs if parameter was undocumented
-  6. Commit: fix(cli): add --session-file to mission start
+  6. Commit: fix(cli): add --session-file to possession start
 ```
 
 ### Example 3: Improving Development Workflow
 
 ```
-User: The session start process is too manual
+User: The possession start process is too manual
 Operator: I'll streamline the workflow:
-  1. Create skill: .opencode/skills/session-start/
+  1. Create skill: .opencode/skills/possession-start/
   2. Write automated workflow:
      - Role selection
      - Persona naming with suggestions

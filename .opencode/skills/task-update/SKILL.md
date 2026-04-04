@@ -42,7 +42,7 @@ task_update(
 - `notes` - Progress notes to append
 
 The tool automatically:
-- Looks up your current mission from the OpenCode session context
+- Looks up your current possession from the OpenCode session context
 - Updates the task in the database
 - Updates the markdown file in `.opencode/work/tasks/`
 - Records timestamp for the update
@@ -207,7 +207,7 @@ When you call the `task_update` tool:
 2. ✅ Markdown file updated in `.opencode/work/tasks/`
 3. ✅ Timestamp recorded for update
 4. ✅ Notes appended (not replaced)
-5. ✅ Mission association maintained automatically via session context
+5. ✅ Possession association maintained automatically via session context
 
 ## Tips and Best Practices
 
