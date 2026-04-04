@@ -130,7 +130,7 @@ def test_doctor_database_integrity_passes(initialized_project: Path):
 
 def test_doctor_handles_missing_sqlite3(initialized_project: Path):
     """Test doctor handles missing sqlite3 command gracefully"""
-    with patch("site_nine.doctor.checks.subprocess.run", side_effect=FileNotFoundError("sqlite3 not found")):
+    with patch("site_nine.inquisitor.checks.subprocess.run", side_effect=FileNotFoundError("sqlite3 not found")):
         result = runner.invoke(app, ["inquisitor"])
         assert result.exit_code == 0
         assert "sqlite3 command not found" in result.stdout.lower()
@@ -140,7 +140,7 @@ def test_doctor_handles_sqlite3_errors(initialized_project: Path):
     """Test doctor handles sqlite3 errors gracefully"""
     import subprocess as sp
 
-    with patch("site_nine.doctor.checks.subprocess.run", side_effect=sp.CalledProcessError(1, "sqlite3", "error")):
+    with patch("site_nine.inquisitor.checks.subprocess.run", side_effect=sp.CalledProcessError(1, "sqlite3", "error")):
         result = runner.invoke(app, ["inquisitor"])
         assert "integrity check" in result.stdout.lower()
 
@@ -151,7 +151,7 @@ def test_doctor_database_integrity_failed(initialized_project: Path):
     mock_result.stdout = "database disk image is malformed\n"
     mock_result.returncode = 0
 
-    with patch("site_nine.doctor.checks.subprocess.run", return_value=mock_result):
+    with patch("site_nine.inquisitor.checks.subprocess.run", return_value=mock_result):
         result = runner.invoke(app, ["inquisitor"])
 
     normalized = " ".join(result.stdout.split())
@@ -240,8 +240,8 @@ def _create_temp_files_with_mock_db(initialized_project: Path, suffixes: list[st
     mock_proc.returncode = 0
 
     with (
-        patch("site_nine.cli.doctor.Database", return_value=mock_db),
-        patch("site_nine.doctor.checks.subprocess.run", return_value=mock_proc),
+        patch("site_nine.cli.inquisitor.Database", return_value=mock_db),
+        patch("site_nine.inquisitor.checks.subprocess.run", return_value=mock_proc),
     ):
         result = runner.invoke(app, invoke_args)
 
@@ -466,7 +466,7 @@ def test_doctor_detects_missing_mission_file(initialized_project: Path):
     """Doctor check 8b is stubbed; always passes (full rewrite is ENG-M-0246)."""
     result = runner.invoke(app, ["inquisitor", "--verbose"])
     assert result.exit_code == 0
-    assert "All possession log files exist" in result.stdout
+    assert "All active possession log files exist" in result.stdout
 
 
 # --- Check 9a: Daemon incarnation counts (STUBBED) ---
@@ -581,7 +581,7 @@ def test_doctor_detects_stale_mission(initialized_project: Path):
     """Doctor check 10c is stubbed; always passes (full rewrite is ENG-M-0246)."""
     result = runner.invoke(app, ["inquisitor", "--verbose"])
     assert result.exit_code == 0
-    assert "No stale SUSPENDED or ACTIVE possessions" in result.stdout
+    assert "No rogue ACTIVE/IDLE possessions with stale heartbeats" in result.stdout
 
 
 # --- Check 11: Missing task file (warning) ---
