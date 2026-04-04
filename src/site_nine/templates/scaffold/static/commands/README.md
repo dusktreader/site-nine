@@ -21,48 +21,46 @@ Together, they provide a powerful way to standardize and simplify common develop
 
 ### Session Management
 
-#### `/summon` - Start New Mission
+#### `/summon` - Start New Possession
 
-**Purpose:** Initialize a new development mission with proper role selection and persona naming.
+**Purpose:** Initialize a new agent possession with proper role selection and daemon naming.
 
 **Usage:**
 ```
 /summon
 /summon <role>
-/summon <role> --auto-name
 /summon <role> --auto-assign
-/summon <role> --auto-name --auto-assign
 /summon <role> --task TASK-ID
+/summon <role> --daemon <name>
 ```
 
 **Examples:**
-- `/summon` - Interactive mode: asks you to choose a role and persona name
-- `/summon operator` - Direct mode: starts an Operator session immediately with persona selection
-- `/summon operator --auto-name` - Fully automated: auto-selects first unused persona name
-- `/summon operator --auto-assign` - Automated task assignment: auto-claims and starts work on top priority task
-- `/summon operator --auto-name --auto-assign` - Fully automated: auto-selects persona and auto-assigns top priority task
-- `/summon operator --task OPR-H-0065` - Direct task assignment: auto-names persona, claims specific task, and starts work immediately
+- `/summon` - Interactive mode: asks you to choose a role; daemon is auto-selected
+- `/summon operator` - Direct mode: starts an Operator possession immediately
+- `/summon operator --auto-assign` - Automated: auto-selects daemon, auto-claims top priority task
+- `/summon operator --task OPR-H-0065` - Direct task assignment: auto-selects daemon, claims specific task, starts work immediately
+- `/summon operator --daemon malphas` - Uses the specified daemon name
 
 **What it does:**
-1. (If no role provided) Asks you to choose a role (Administrator, Architect, Engineer, Tester, etc.)
-2. Suggests a persona name from mythology appropriate to your role
-3. Checks for name conflicts with existing missions
-4. Creates a mission file with proper metadata
-5. Reads essential project documentation
-6. Shows available tasks for your role
-7. (If `--auto-assign` flag) Auto-claims the top priority task for your role
-8. (If `--task TASK-ID` flag) Auto-claims the specific task and starts work immediately
+1. Calls `possession_init` to register the possession in the database
+2. Calls `possession_role_record` with the chosen role
+3. Calls `possession_daemon_record` to atomically assign a daemon (least-recently-used)
+4. Displays the daemon's bio (generates one if missing)
+5. Renames the OpenCode session title via `possession_rename_session`
+6. Shows available tasks via `possession_dashboard`
+7. (If `--auto-assign` flag) Claims the top priority task for your role
+8. (If `--task TASK-ID` flag) Claims the specific task and starts work immediately
 
 **Flags:**
-- `--auto-name` - Automatically select the first unused persona name (skips persona selection prompt)
-- `--auto-assign` - Automatically claim and start work on the top priority task for the role (requires role to be specified)
-- `--task TASK-ID` - Claim a specific task and start work immediately (implies `--auto-name`, mutually exclusive with `--auto-assign`, requires role to be specified)
+- `--daemon <name>` - Request a specific daemon name instead of auto-selection
+- `--auto-assign` - Automatically claim and start work on the top priority task for the role
+- `--task TASK-ID` - Claim a specific task and start work immediately (mutually exclusive with `--auto-assign`)
 
 **Example interaction (interactive mode):**
 ```
 User: /summon
 
-Agent: Which role should I assume for this mission?
+Agent: Which role should I assume for this possession?
 - Administrator (coordination & delegation)
 - Architect (design & planning)
 - Engineer (implementation)
@@ -74,45 +72,39 @@ Agent: Which role should I assume for this mission?
 
 User: Engineer
 
-Agent: I suggest the persona "goibniu" for this Engineer mission.
-(Goibniu is the Celtic god of metalworking and craft)
+Agent: A bit about me...
 
-Would you like to use this persona, or choose a different one?
+I am Malphas, builder of high towers and strong holds, architect of the impossible...
 
-User: That's perfect!
+Possession initialized.
 
-Agent: ✅ Mission initialized!
+I'm Malphas, your Engineer agent on possession "iron-citadel". Ready to help.
 
-I'm Goibniu, your Engineer persona for this mission.
-
-[Session continues...]
+What would you like me to work on?
 ```
 
 **Example interaction (direct mode):**
 ```
 User: /summon operator
 
-Agent: I suggest the persona "hemera" for this Operator mission.
-(Hemera is the Greek goddess of day)
+Agent: A bit about me...
 
-Would you like to use this persona, or choose a different one?
+I am Amon, lord of the west wind, who knows all things past and future...
 
-User: yes
+Possession initialized.
 
-Agent: ✅ Mission initialized!
+I'm Amon, your Operator agent on possession "amber-gale". Ready to help.
 
-I'm Hemera, your Operator persona for this mission.
-
-[Session continues...]
+What would you like me to work on?
 ```
 
 **Pro tip:** Use direct mode (`/summon <role>`) to skip the role selection and start working faster!
 
 ---
 
-#### `/dismiss` - End Current Mission
+#### `/dismiss` - End Current Possession
 
-**Purpose:** Properly close a development mission with cleanup and documentation.
+**Purpose:** Properly close an agent possession with cleanup and documentation.
 
 **Usage:**
 ```
@@ -129,114 +121,93 @@ I'm Hemera, your Operator persona for this mission.
 
 **What it does:**
 1. Captures optional thank you message from the Director
-2. Locates your mission file
+2. Locates your possession file
 3. Gathers information about work completed (git status, commits, tasks)
-4. Updates mission file with:
+4. Updates possession file with:
    - End time and duration
    - Files changed
    - Outcomes (✅ completed, ⚠️ partial, ❌ blocked)
    - Dismissal message (if provided)
    - Next steps for future work
 5. Closes any open tasks in the task database
-6. Verifies task artifacts are updated
-7. Commits the mission file
-8. Provides a summary of the mission
-9. Displays the Director's message (if provided)
+6. Commits the possession file
+7. Calls `possession_end` to close the possession in the database
+8. Calls `possession_rename_exorcised` to mark the session as exorcised
+9. Provides a summary of the possession
 10. Says goodbye
 
 **Example interaction (with message):**
 ```
 User: /dismiss great work today! thank you
 
-Agent: Closing mission...
+Agent: Closing possession...
 
 [Agent checks git status, recent commits, open tasks...]
 
-I've updated the mission file with:
-- End time: 15:30:00
-- Duration: ~2.5 hours
-- Status: completed
+✅ Possession Complete!
 
-Files changed:
-- .opencode/commands/dismiss.md - Added message parameter
-- .opencode/skills/session-end/SKILL.md - Added dismissal message handling
-
-Tasks closed:
-- OPR-M-0111: Add optional message parameter to /dismiss command (COMPLETE)
-
-✅ Mission closed successfully!
-
-**Summary:**
+Summary:
 - Duration: ~2.5 hours
 - Files changed: 2 files
-- Tasks completed: OPR-M-0111
-- Status: completed
+- Task completed: OPR-M-0111 - Add optional message parameter to /dismiss command
+- Commits: 1 commit (a3f1b2c)
 
-**What was accomplished:**
+What was accomplished:
 - ✅ Added message parameter to /dismiss command
-- ✅ Updated session-end skill to handle messages
+- ✅ Updated possession-end skill to handle messages
 - ✅ Documentation updated
 
-**Next steps:**
+Next steps:
 - None - work complete
 
-Mission file updated: .opencode/work/missions/2026-02-04.15:44:19.operator.dumuzid.titanium-nexus.md
+Possession file: .opencode/work/possessions/2026-02-04.15:44:19.operator.dumuzid.titanium-nexus.md
 
-💬 **From the Director:**
+💬 From the Director:
 > great work today! thank you
 
-Thank you for working with me! I'm Dumuzid, signing off.
+Thank you for working with me! I'm Dumuzid, daemon of the sacred flocks, signing off.
 
 I descend once more to the sacred flocks, my cycle renewed as the seasons turn eternal.
+
+🌾 [EXORCISED]
 ```
 
 **Example interaction (without message):**
 ```
 User: /dismiss
 
-Agent: Closing mission...
+Agent: Closing possession...
 
 [Agent checks git status, recent commits, open tasks...]
 
-I've updated the mission file with:
-- End time: 15:30:00
-- Duration: ~2.5 hours
-- Status: completed
+✅ Possession Complete!
 
-Files changed:
-- src/s9/main.py - Added rate limiting
-- tests/test_auth.py - Added rate limiting tests  
-- .opencode/data/tasks/H027.md - Updated task artifact
-
-Tasks closed:
-- H027: Implement Authentication Rate Limiting (COMPLETE)
-
-✅ Mission closed successfully!
-
-**Summary:**
+Summary:
 - Duration: ~2.5 hours
 - Files changed: 3 files
-- Tasks completed: H027
-- Status: completed
+- Task completed: ENG-H-0027 - Implement Authentication Rate Limiting
+- Commits: 2 commits (b4c2d1e, a9f3c7b)
 
-**What was accomplished:**
+What was accomplished:
 - ✅ Rate limiting implemented and tested
-- ✅ All tests passing (313 tests, 100% pass rate)
+- ✅ All tests passing
 - ✅ Documentation updated
 
-**Next steps:**
+Next steps:
 - None - work complete
 
-Mission file updated: .opencode/work/missions/2026-01-29.14:30:00.engineer.goibniu.rate-limiting.md
+Possession file: .opencode/work/possessions/2026-01-29.14:30:00.engineer.malphas.iron-citadel.md
 
-Thank you for working with me! I'm Goibniu, signing off.
+Thank you for working with me! I'm Malphas, builder of towers, signing off.
 
-I return to my forge in the halls of the Tuatha Dé Danann, my craft complete.
+I return to the heights of my citadel, my work in the mortal realm complete.
+
+🏰 [EXORCISED]
 ```
 
 **When to use:**
-- ✅ You're done with your work mission
-- ✅ Handing off to another persona
+- ✅ You're done with your possession
+- ✅ Handing off to another agent
 - ✅ User says "we're done for now"
 - ✅ User says "goodbye" or "thanks"
 

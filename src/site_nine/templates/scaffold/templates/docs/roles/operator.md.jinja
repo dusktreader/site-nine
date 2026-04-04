@@ -79,35 +79,31 @@ Operator: I'll create the Security Auditor agent:
   7. Document usage examples
 ```
 
-### Example 2: Fixing s9 mission Command
+### Example 2: Fixing a Broken `s9` Command
 
 ```
-User: s9 mission start --session-file doesn't work
+User: s9 task list --role Engineer returns an error
 Operator: I'll fix the broken command:
-  1. Reproduce error: parameter not defined
-  2. Fix in src/{{ project_name_underscore }}/cli/mission.py:
-     - Add session_file parameter to start()
-     - Implement file linking logic
-  3. Add test: tests/cli/test_mission.py
+  1. Reproduce error: column not found
+  2. Fix in src/{{ project_name_underscore }}/cli/task.py:
+     - Update column reference to match current schema
+     - Add migration if schema change required
+  3. Add test: tests/cli/test_task.py
   4. Run make qa to verify
-  5. Update docs if parameter was undocumented
-  6. Commit: fix(cli): add --session-file to mission start
+  5. Update docs if behaviour was undocumented
+  6. Commit: fix(cli): correct column reference in task list command
 ```
 
 ### Example 3: Improving Development Workflow
 
 ```
-User: The session start process is too manual
+User: The possession start process is too manual
 Operator: I'll streamline the workflow:
-  1. Create skill: .opencode/skills/session-start/
-  2. Write automated workflow:
-     - Role selection
-     - Persona naming with suggestions
-     - Session file creation
-     - Documentation reading
-  3. Add command: /summon with skill invocation
-  4. Test end-to-end
-  5. Update .opencode/README.md with new flow
+  1. Review current possession-start skill: .opencode/skills/possession-start/
+  2. Identify friction points in the init sequence
+  3. Update SKILL.md with clearer step descriptions
+  4. Test end-to-end with a fresh /summon
+  5. Update .opencode/README.md with improved flow
   6. Create examples in documentation
 ```
 
@@ -134,9 +130,6 @@ Operator: I'll streamline the workflow:
 # Check database integrity
 sqlite3 .opencode/data/project.db "PRAGMA integrity_check;"
 
-# Run doctor command
-s9 doctor --fix
-
 # Create database migration
 # (Add migration script in src/{{ project_name_underscore }}/migrations/)
 ```
@@ -150,24 +143,15 @@ s9 doctor --fix
 
 ## Reporting Broken Commands
 
-When you discover a broken `s9` command, create an Operator task:
+When you discover a broken `s9` command, create an Operator task using the `task_create` tool:
 
-```bash
-s9 task create --role Operator --priority HIGH \
-  --title "Fix broken s9 command: [command-name]" \
-  --description "Command: s9 [command-name] [subcommand]
-
-Issue: [Describe what's broken]
-
-Expected behavior: [What should happen]
-
-Actual behavior: [What actually happens]
-
-Error output: [Paste any error messages]
-
-Steps to reproduce:
-1. [Step 1]
-2. [Step 2]"
+```
+task_create({
+  role: "Operator",
+  priority: "HIGH",
+  title: "Fix broken s9 command: [command-name]",
+  description: "Command: s9 [command-name] [subcommand]\n\nIssue: [Describe what's broken]\n\nExpected behavior: [What should happen]\n\nActual behavior: [What actually happens]\n\nError output: [Paste any error messages]\n\nSteps to reproduce:\n1. [Step 1]\n2. [Step 2]"
+})
 ```
 
 ## Related Roles

@@ -60,7 +60,7 @@ Use your **daemon name** from the session, not your role:
 
 **How to find your daemon name:**
 - Check your session file name (e.g., `2026-02-05.engineer.goibniu.md`)
-- Use `s9 persona suggest <Role>` to generate a new name
+- Use `daemon_suggest({ role: "<Role>" })` to generate a new name
 
 ## Example: Claiming a Task
 
