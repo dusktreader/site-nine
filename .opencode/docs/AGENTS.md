@@ -94,7 +94,27 @@ s9 possession resume <id>
 ## Working with tasks
 
 
-### Claiming tasks
+### Finding available tasks
+
+Use `task_show` with role and status filters to find work. This queries the database directly
+and returns authoritative status values:
+
+```typescript
+// Find TODO tasks for your role — canonical pattern
+task_show({ role: "Documentarian", status: "TODO" })
+
+// Narrow by priority if the list is long
+task_show({ role: "Documentarian", status: "TODO", priority: "HIGH" })
+```
+
+**Never run `task_show({ report: true })` and then re-filter or re-categorize the output.**
+The `status` field is an enum value from the database. Report it verbatim. If the tool says
+a task is `COMPLETE`, it is complete — do not move it to a different list because you expected
+otherwise.
+
+`possession_dashboard` is called once at possession start by the `possession-start` skill. Do
+not call it again during the session to find work; use `task_show` with filters instead.
+
 
 Use the `task_claim` tool to claim tasks:
 
@@ -372,13 +392,15 @@ Understanding the difference is important:
 ❌ **Don't send heartbeats** — The OpenCode plugin tracks activity automatically
 ❌ **Don't manually suspend possessions** — Plugin handles this when sessions close
 ❌ **Don't end possession without dismissal** — Wait for Director to dismiss you
+❌ **Don't re-categorize task query results** — the `status` field is authoritative; report it verbatim
+❌ **Don't use `task_show(report=True)` to find available work** — use `task_show({ role, status: "TODO" })` instead
 
 
 ### What you SHOULD do
 
 ✅ **Use tools for all operations** — They're designed for agents
 ✅ **Follow skills for guidance** — They orchestrate complex workflows
-✅ **Check your task dashboard** — possession-start skill shows available work
+✅ **Find available tasks with** `task_show({ role: "YourRole", status: "TODO" })` — queries the database directly
 ✅ **Update task progress** — Use task_update tool to document work
 ✅ **Ask Director when unclear** — Use OpenCode chat for guidance
 ✅ **Coordinate with other agents** — Use messaging for async communication

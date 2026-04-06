@@ -10,33 +10,44 @@ metadata:
 
 ## What I Do
 
-I provide comprehensive instructions for finding, listing, and reporting on tasks in the s9 task database using the `task_show` and `task_list` tools. Use this skill to discover available work, view task details, and generate reports.
+I provide comprehensive instructions for finding, listing, and reporting on tasks in the s9
+task database using the `task_show` tool. Use this skill to discover available work, view task
+details, and generate reports.
 
 ## Tool Overview
 
-This skill uses:
-- **`task_show` tool** - Get full details for a specific task
-- **`task_list` tool** - List and filter tasks by various criteria
-- **`task_report` tool** - Generate formatted reports
+This skill uses the **`task_show` tool**, which queries tasks with optional filters:
 
-All tools return clean JSON results and automatically receive possession context from OpenCode.
+- `task_id` — returns full details for a single task
+- `role`, `status`, `priority` — filter the task list
+- `possession_id` — returns tasks owned by a specific possession
+- `report=True` — generates a full summary report (large output; avoid for routine queries)
+
+All calls return clean JSON and automatically receive possession context from OpenCode.
+
+## The Authoritative Rule
+
+**Never re-categorize or re-list tasks.** The `status` field returned by `task_show` is an
+enum value backed by the database. It is authoritative. If the tool says a task is `COMPLETE`,
+it is complete. Do not move it to a different grouping because you expected it to be `TODO`.
+
+Running `task_show(report=True)` over a large dataset and then mentally filtering the output
+is the most common source of task status errors. Use targeted queries instead.
 
 ## List Available Tasks
 
 ### By Status
 
 ```python
-task_list(status="TODO")
-task_list(status="UNDERWAY")
-task_list(status="TODO,UNDERWAY")
-task_list(status="COMPLETE")
+task_show(status="TODO")
+task_show(status="UNDERWAY")
+task_show(status="COMPLETE")
 ```
 
 **Available statuses:**
 - `TODO` - Not started
 - `UNDERWAY` - In progress
 - `BLOCKED` - Can't proceed
-- `PAUSED` - Temporarily stopped
 - `REVIEW` - Awaiting review
 - `COMPLETE` - Finished
 - `ABORTED` - Cancelled
@@ -44,9 +55,9 @@ task_list(status="COMPLETE")
 ### By Role
 
 ```python
-task_list(role="Engineer", status="TODO")
-task_list(role="Administrator", status="TODO")
-task_list(role="Tester")
+task_show(role="Engineer", status="TODO")
+task_show(role="Administrator", status="TODO")
+task_show(role="Tester", status="TODO")
 ```
 
 **Available roles:**
@@ -60,53 +71,17 @@ task_list(role="Tester")
 - Operator
 - Historian
 
-### By Priority
-
-```python
-task_list(priority="CRITICAL,HIGH", status="TODO")
-task_list(priority="HIGH")
-task_list(priority="MEDIUM,LOW")
-```
-
-**Priority levels:**
-- `CRITICAL` - Immediate action required
-- `HIGH` - Important, do soon
-- `MEDIUM` - Nice to have
-- `LOW` - Do when time permits
-
-### Active Tasks Only
-
-Show only TODO and UNDERWAY tasks:
-
-```python
-task_list(active_only=True)
-```
-
-This is the most common query for finding work.
-
-### By Agent
-
-See tasks claimed by specific agent:
-
-```python
-task_list(agent="Goibniu")
-task_list(agent="Ishtar", status="UNDERWAY")
-task_list(agent="Ptah", status="COMPLETE")
-```
-
 ### Combining Filters
-
-Filters can be combined:
 
 ```python
 # High priority Engineer tasks that are TODO
-task_list(role="Engineer", priority="HIGH", status="TODO")
+task_show(role="Engineer", priority="HIGH", status="TODO")
 
-# Active tasks assigned to Goibniu
-task_list(agent="Goibniu", active_only=True)
+# Tasks owned by a specific possession
+task_show(possession_id=42, status="UNDERWAY")
 
 # Completed tasks for a specific role
-task_list(role="Tester", status="COMPLETE")
+task_show(role="Tester", status="COMPLETE")
 ```
 
 ## View Task Details
@@ -153,74 +128,37 @@ task_show(task_id="ENG-H-0037")
 }
 ```
 
-## Generate Reports
-
-### Markdown Report
-
-```python
-task_report(format="markdown")
-```
-
-Generates markdown-formatted report of all tasks, suitable for documentation.
-
-### Table Format
-
-```python
-task_report(format="table")
-```
-
-Generates ASCII table suitable for terminal display.
-
-### JSON Format
-
-```python
-task_report(format="json")
-```
-
-Generates JSON output for programmatic processing.
-
-### Filter Reports
-
-Reports can be filtered by role:
-
-```python
-task_report(role="Engineer", format="markdown")
-task_report(role="Administrator", format="table")
-```
-
 ## Finding Work
 
-### Find Available Work for Your Role
+### The Canonical Available-Work Query
+
+To find tasks available for your role, use `task_show` with `role` and `status` filters:
 
 ```python
-# Find TODO tasks for your role
-task_list(role="Engineer", status="TODO")
+# Standard pattern — use this at possession start and when looking for next work
+task_show(role="Engineer", status="TODO")
 
-# Find high-priority TODO tasks
-task_list(role="Engineer", priority="CRITICAL,HIGH", status="TODO")
-
-# Find any active work
-task_list(role="Engineer", active_only=True)
+# Narrow by priority if the list is long
+task_show(role="Engineer", status="TODO", priority="HIGH")
 ```
+
+This returns a database-filtered list. The status values are accurate and require no
+post-processing. Report them as-is.
 
 ### Find Critical/Urgent Work
 
 ```python
 # Critical tasks across all roles
-task_list(priority="CRITICAL", status="TODO")
+task_show(priority="CRITICAL", status="TODO")
 
 # High priority tasks needing attention
-task_list(priority="HIGH", status="TODO,UNDERWAY")
+task_show(priority="HIGH", status="TODO")
 ```
 
 ### Find Blocked Tasks
 
 ```python
-# See what's blocked
-task_list(status="BLOCKED")
-
-# Check your blocked tasks
-task_list(agent="YourName", status="BLOCKED")
+task_show(status="BLOCKED")
 ```
 
 ### Check Dependencies
@@ -242,26 +180,23 @@ dep_result = task_show(task_id="ENG-H-0037")
 
 ```python
 # What am I working on?
-task_list(agent="YourName", status="UNDERWAY")
+task_show(possession_id=<your-id>, status="UNDERWAY")
 
 # What's next to work on?
-task_list(role="YourRole", priority="HIGH", status="TODO")
+task_show(role="YourRole", status="TODO")
 
 # What's blocked?
-task_list(status="BLOCKED")
+task_show(status="BLOCKED")
 ```
 
 ### Finding Next Task
 
 ```python
 # 1. Check critical tasks first
-task_list(priority="CRITICAL", status="TODO")
+task_show(priority="CRITICAL", status="TODO")
 
-# 2. Then high priority for your role
-task_list(role="YourRole", priority="HIGH", status="TODO")
-
-# 3. Look at medium priority if nothing urgent
-task_list(role="YourRole", priority="MEDIUM", status="TODO")
+# 2. Then tasks for your role
+task_show(role="YourRole", status="TODO")
 ```
 
 #### When to Auto-Claim vs. Ask
@@ -277,50 +212,50 @@ task_list(role="YourRole", priority="MEDIUM", status="TODO")
 - "Show me unclaimed tasks" → Show list, then ask if they want to claim
 - "List tasks for [role]" → Show list, then ask if they want to claim
 
-The key distinction: imperative commands ("find", "get", "claim") indicate the user wants you to take action. Inquiry commands ("what", "show", "list") indicate the user wants information first.
+The key distinction: imperative commands ("find", "get", "claim") indicate the user wants you
+to take action. Inquiry commands ("what", "show", "list") indicate the user wants information
+first.
 
 ### Progress Check
 
 ```python
-# How many tasks completed?
-task_list(status="COMPLETE")
+# Active tasks for your role
+task_show(role="YourRole", status="UNDERWAY")
 
-# How many tasks in progress?
-task_list(status="UNDERWAY")
-
-# How much work left?
-task_list(status="TODO")
+# Work remaining
+task_show(role="YourRole", status="TODO")
 ```
 
 ### Team Visibility
 
 ```python
 # What is each agent working on?
-task_list(status="UNDERWAY")
+task_show(status="UNDERWAY")
 
 # What has been completed?
-task_list(status="COMPLETE")
+task_show(status="COMPLETE")
 
-# Generate status report
-task_report(format="markdown")
+# Full report (large output — Director use or one-off summaries only)
+task_show(report=True)
 ```
 
 ## Tips and Best Practices
 
 ### Do
-- ✅ Use `active_only=True` for quick work discovery
+- ✅ Use `task_show(role=..., status="TODO")` to find available work
+- ✅ Report the `status` field verbatim from tool results — it is authoritative
 - ✅ Check dependencies before claiming tasks
-- ✅ Filter by role and priority to focus
-- ✅ Use `task_show` to understand task fully before claiming
-- ✅ Generate reports for team status updates
+- ✅ Filter by role and status to get an accurate, scoped result
+- ✅ Use `task_show(task_id=...)` to understand a task fully before claiming
 - ✅ Auto-claim when user gives imperative commands ("find next task", "get next task")
 - ✅ Distinguish between inquiry ("what tasks?") and action requests ("find next task")
 
 ### Don't
-- ❌ Don't list all tasks without filters (too much noise)
+- ❌ Don't run `task_show(report=True)` and then mentally re-filter the output
+- ❌ Don't re-categorize tasks from a broad result — the status enum is authoritative
+- ❌ Don't construct secondary task lists that contradict what the tool returned
 - ❌ Don't ignore CRITICAL tasks
 - ❌ Don't claim tasks without checking dependencies
-- ❌ Don't forget to check who's working on what
 - ❌ Don't ask "Would you like me to claim this?" after imperative commands
 - ❌ Don't auto-claim when user is just browsing tasks
 
@@ -365,25 +300,18 @@ Full task details including:
 
 ### "No tasks found"
 - Check your filters aren't too restrictive
-- Try `task_list()` without filters to see all tasks
+- Try `task_show(role="YourRole")` without a status filter to see all tasks for the role
 - Verify tasks exist for that role/status/priority
 
 ### "Task not found"
 - Check task ID spelling and case
-- Use `task_list()` to find available tasks
+- Use `task_show(role="YourRole", status="TODO")` to find available tasks
 - Make sure you're using the full task ID (e.g., ENG-H-0037)
 
 ### "Invalid filter value"
 - Check spelling of status/priority/role
 - See valid values sections above
 - Use exact capitalization
-
-## Performance Tips
-
-- Use filters to reduce output
-- Use `active_only=True` instead of listing all statuses
-- Use `task_show` for single task details
-- Generate reports periodically, not constantly
 
 ## See Also
 
@@ -392,7 +320,6 @@ Full task details including:
 - `task-claim` - Claiming tasks found through queries
 - `task-update` - Updating tasks after claiming
 - `task-close` - Closing tasks when complete
-- `task-management` - Overview of task system
 
 **Documentation:**
 - `.opencode/data/README.md` - Complete s9 system reference
