@@ -132,18 +132,25 @@ task_show(task_id="ENG-H-0037")
 
 ### The Canonical Available-Work Query
 
-To find tasks available for your role, use `task_show` with `role` and `status` filters:
+**This is the only correct way to find available work for a role.** Do not use
+`report=True` for this purpose — it returns everything and requires mental filtering,
+which is the primary cause of task-status errors.
 
 ```python
-# Standard pattern — use this at possession start and when looking for next work
+# Canonical pattern — use this at possession start and whenever looking for next work
 task_show(role="Engineer", status="TODO")
 
 # Narrow by priority if the list is long
 task_show(role="Engineer", status="TODO", priority="HIGH")
 ```
 
-This returns a database-filtered list. The status values are accurate and require no
-post-processing. Report them as-is.
+This returns a database-filtered list of tasks that are genuinely available. The
+`status` values come directly from the database and require no post-processing.
+Report them as-is.
+
+**Do not use `report=True` for role-scoped queries.** The report output is large and
+must be mentally filtered, which introduces categorization errors. Reserve it for
+Director-level overviews only.
 
 ### Find Critical/Urgent Work
 
@@ -235,7 +242,7 @@ task_show(status="UNDERWAY")
 # What has been completed?
 task_show(status="COMPLETE")
 
-# Full report (large output — Director use or one-off summaries only)
+# Full report (large output — Director or one-off summaries only; never for finding available work)
 task_show(report=True)
 ```
 
