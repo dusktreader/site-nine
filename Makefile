@@ -30,10 +30,10 @@ qa/format:  ## Run code formatter
 docs: docs/serve  ## Shortcut for docs/serve
 
 docs/build:  ## Build the documentation
-	@uv run mkdocs build --config-file=docs/mkdocs.yaml
+	@uv run zensical build --config-file=docs/zensical.toml
 
 docs/serve:  ## Build the docs and start a local dev server
-	@uv run mkdocs serve --config-file=docs/mkdocs.yaml --dev-addr=localhost:10000
+	@uv run zensical serve --config-file=docs/zensical.toml --dev-addr=localhost:10000
 
 
 ## ==== Other Commands =================================================================================================
@@ -57,6 +57,7 @@ clean:  ## Clean up build artifacts and other junk
 	@rm -rf .ruff_cache
 	@rm -rf .pytest_cache
 	@rm -rf .mypy_cache
+	@rm -rf .opencode/tools/__pycache__
 	@rm -f .coverage*
 	@rm -f .junit.xml
 
