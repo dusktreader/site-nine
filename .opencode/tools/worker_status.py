@@ -23,7 +23,7 @@ def possession_to_dict(possession) -> dict:
         "daemon_name": possession.daemon_name,
         "role": possession.role,
         "status": possession.status.value if hasattr(possession.status, "value") else str(possession.status),
-        "desk_mode_active": possession.desk_mode_active,
+        "minion_mode_active": possession.minion_mode_active,
         "last_active_at": possession.last_heartbeat_at.isoformat() if possession.last_heartbeat_at else None,
         "start_time": possession.start_time,
     }

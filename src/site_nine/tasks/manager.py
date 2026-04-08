@@ -53,9 +53,13 @@ class TaskManager:
         status: str | None = None,
         role: str | None = None,
         possession_id: int | None = None,
+        include_finished: bool = False,
     ) -> list[Task]:
         """
         List tasks with optional filtering.
+
+        By default, finished tasks (COMPLETE and ABORTED) are excluded. Pass
+        ``include_finished=True`` to include them.
 
         Tasks are ordered by:
         1. Priority (descending): CRITICAL > HIGH > MEDIUM > LOW
@@ -68,6 +72,8 @@ class TaskManager:
         if status:
             query += " AND status = :status"
             params["status"] = status
+        elif not include_finished:
+            query += " AND status NOT IN ('COMPLETE', 'ABORTED')"
 
         if role:
             query += " AND role = :role"

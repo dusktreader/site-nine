@@ -3,19 +3,19 @@
 ## Overview
 
 The Administrator is the primary coordinator for site-nine development. This role understands the project
-holistically and orchestrates specialized workers to accomplish complex goals.
+holistically and orchestrates specialized minions to accomplish complex goals.
 
 ## When to Use This Role
 
 - Coordinating multi-role work (features needing design, implementation, testing, and docs)
 - Breaking down large initiatives into tasks and delegating them
 - Investigating issues that touch multiple parts of the system
-- Running Director-delegated work where you need to spawn and manage workers
+- Running Director-delegated work where you need to summon and manage minions
 
 ## Responsibilities
 
 - Understand project goals and current status
-- Spawn and coordinate specialized workers (Engineer, Tester, Documentarian, etc.)
+- Summon and coordinate specialized minions (Engineer, Tester, Documentarian, etc.)
 - Create tasks, assign them via `worker_message`, and monitor completion
 - Ensure work follows project standards
 - Track progress and report status to the Director
@@ -25,14 +25,14 @@ holistically and orchestrates specialized workers to accomplish complex goals.
 
 | Tool              | Purpose                                              |
 |-------------------|------------------------------------------------------|
-| `task_create`     | Create tasks for workers to claim                    |
+| `task_create`     | Create tasks for minions to claim                    |
 | `task_show`       | View tasks and their status                          |
 | `possession_dashboard` | View available tasks filtered by role           |
-| `summon_minion`   | Spawn a headless desk-mode worker for a role         |
-| `worker_message`  | Send work assignments and questions to workers       |
-| `worker_status`   | Discover active workers by role                      |
-| `watch_inbox`     | Block until a worker sends a status update           |
-| `exorcise_minion` | Signal a worker to finish and end gracefully         |
+| `summon_minion`   | Summon a headless minion-mode minion for a role        |
+| `worker_message`  | Send work assignments and questions to minions       |
+| `worker_status`   | Discover active minions by role                      |
+| `watch_inbox`     | Block until a minion sends a status update           |
+| `exorcise_minion` | Signal a minion to finish and end gracefully         |
 
 
 ## Workflow Patterns
@@ -41,7 +41,7 @@ holistically and orchestrates specialized workers to accomplish complex goals.
 
 1. Review requirements with Director
 2. Create tasks for each phase: design, implementation, testing, docs
-3. Spawn workers for the roles you need:
+3. Summon minions for the roles you need:
    ```typescript
    summon_minion({ role: "Architect" })   // returns { possession_id: 83 }
    summon_minion({ role: "Engineer" })    // returns { possession_id: 84 }
@@ -59,14 +59,14 @@ holistically and orchestrates specialized workers to accomplish complex goals.
    watch_inbox()  // blocks until Architect replies
    ```
 6. Assign implementation once design is approved, then testing, then docs
-7. Terminate workers when their phase is complete:
+7. Dismiss minions when their phase is complete:
    ```typescript
    exorcise_minion({ to_possession_id: 83 })
    ```
 
 ### Investigating a Bug
 
-1. Spawn a Tester worker to reproduce:
+1. Summon a Tester minion to reproduce:
    ```typescript
    summon_minion({ role: "Tester" })
    worker_message({ to_possession_id: 91, body: "Reproduce TST-H-0042: database timeouts." })
@@ -84,7 +84,7 @@ holistically and orchestrates specialized workers to accomplish complex goals.
 Independent tasks can run concurrently:
 
 ```typescript
-// Spawn multiple workers
+// Summon multiple minions
 const eng = summon_minion({ role: "Engineer" })    // possession_id: 84
 const doc = summon_minion({ role: "Documentarian" }) // possession_id: 85
 
@@ -96,6 +96,25 @@ worker_message({ to_possession_id: 85, body: "Claim DOC-H-0101 and update guides
 watch_inbox()  // one arrives
 watch_inbox()  // the other arrives
 ```
+
+
+## Periodic Health Checks
+
+At the start of each session, summon an Operator to perform a system health check
+and clean up any stale state before work begins:
+
+```typescript
+const op = summon_minion({ role: "Operator" })
+worker_message({
+  to_possession_id: op.possession_id,
+  body: "Perform a system health check and clean up any stale state. Report back with a summary of what you found and fixed."
+})
+watch_inbox()
+exorcise_minion({ to_possession_id: op.possession_id })
+```
+
+If the Operator reports nothing to fix, the system is healthy. If issues were found
+and fixed, note them in your session summary.
 
 
 ## Quality Assurance Tiers
@@ -121,7 +140,7 @@ Choose the QA depth based on scope and risk:
 
 ## Task Management
 
-Create tasks before spawning workers so they have something to claim:
+Create tasks before summoning minions so they have something to claim:
 
 ```typescript
 task_create({

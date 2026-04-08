@@ -16,7 +16,7 @@ handoffs to explicit message-based orchestration.
 **Message-Driven Architecture (ADR-014):**
 - Message-driven coordination system replacing handoffs
 - Director → Admin → Workers coordination pattern
-- Admin agents orchestrate desk-mode workers via messaging
+- Admin agents orchestrate minion-mode workers via messaging
 - Worker spawning via `worker_spawn()` tool (agents never use CLI)
 - Worker coordination tools: `worker_message()`, `worker_status()`, `worker_terminate()`
 
@@ -31,7 +31,7 @@ handoffs to explicit message-based orchestration.
 
 **Agent Coordination:**
 - Comprehensive agent discovery patterns
-- Desk mode orchestration for background workers
+- Minion mode orchestration for background workers
 - Message-based work assignment (self-contained, stateless messages)
 - Task claiming and release mechanisms
 - Persona management tools: `persona_suggest()`, `persona_show()`, `persona_set_bio()`
@@ -40,8 +40,8 @@ handoffs to explicit message-based orchestration.
 - AGENTS.md: Complete agent onboarding guide (389 lines)
 - ADR-014: Message-Driven Coordination Architecture (309 lines)
 - Agent discovery guide with JSON output patterns (192 lines)
-- Desk mode orchestration guide (485 lines)
-- Epic missions and desk mode guide (381 lines)
+- Minion mode orchestration guide (485 lines)
+- Epic missions and minion mode guide (381 lines)
 - JSON output usage guide (304 lines)
 - System architecture guide (470 lines)
 - Tool adapters design guide (583 lines)
@@ -55,8 +55,8 @@ handoffs to explicit message-based orchestration.
 
 **Developer Tools:**
 - Complete OpenCode custom tool suite (20+ tools)
-- Python worker module: `src/site_nine/workers/desk_worker.py`
-- Comprehensive test coverage for missions, messaging, tools, desk workers
+- Python worker module: `src/site_nine/workers/minion_worker.py`
+- Comprehensive test coverage for missions, messaging, tools, minion workers
 - Migration scripts for mission system fields
 
 ### Changed
@@ -78,7 +78,7 @@ handoffs to explicit message-based orchestration.
 **Command Updates:**
 - `/summon` command now triggers mission-start skill
 - `/dismiss` command now triggers mission-end skill
-- Updated summon flags: --persona, --auto-assign, --task, --desk
+- Updated summon flags: --persona, --auto-assign, --task, --minion
 
 ### Removed
 
@@ -103,7 +103,7 @@ handoffs to explicit message-based orchestration.
 
 **Testing:**
 - 1,047 lines of new tool tests (test_tools_phase2.py)
-- 654 lines of desk worker tests
+- 654 lines of minion worker tests
 - 561 lines of mission initialization E2E tests
 - 425 lines of mission CLI tests
 - 190 lines of enhanced summon tests
@@ -123,20 +123,20 @@ handoffs to explicit message-based orchestration.
 - Replace `handoff_list()` with explicit worker status checking
 - Replace `task_release()` + handoff with direct message to specific worker
 - Use Admin agents to orchestrate multi-agent work
-- Follow new coordination patterns in desk-mode-orchestration.md guide
+- Follow new coordination patterns in minion-mode-orchestration.md guide
 
 **For Agents:**
 - Use tools exclusively (mission_init, task_claim, etc.)
 - Never use `s9` CLI commands directly
 - Follow mission-start skill for initialization
 - Use agent-discovery.md patterns for finding other agents
-- Check desk_mode_active status before messaging
+- Check minion_mode_active status before messaging
 
 ### See Also
 
 - ADR-014: Complete architectural rationale and migration plan
 - AGENTS.md: Agent onboarding and workflow guide
-- desk-mode-orchestration.md: Admin orchestration patterns
+- minion-mode-orchestration.md: Admin orchestration patterns
 - agent-discovery.md: Finding and coordinating with agents
 
 ## v0.2.0 - 2026-02-02

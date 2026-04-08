@@ -13,7 +13,7 @@ s9 init
 This interactive wizard will:
 - Create the `.opencode/` directory structure
 - Initialize the SQLite database
-- Populate persona names
+- Populate daemon names
 - Render templates and configuration files
 
 ### View Project Status
@@ -23,7 +23,7 @@ s9 dashboard
 ```
 
 Shows an overview including:
-- Active missions and personas
+- Active possessions and daemons
 - Task summary by status
 - Epic progress
 - Recent activity
@@ -74,37 +74,37 @@ s9 task next --role Operator    # Suggest for specific role
 s9 task report                  # Summary report of all tasks
 ```
 
-## Mission Management
+## Possession Management
 
-### List Missions
+### List Possessions
 
 ```bash
-s9 mission list                 # All missions
-s9 mission list --active-only   # Only active missions
-s9 mission list --role Operator # Filter by role
+s9 possession list                 # All possessions
+s9 possession list --active-only   # Only active possessions
+s9 possession list --role Operator # Filter by role
 ```
 
-### View Mission Details
+### View Possession Details
 
 ```bash
-s9 mission show 42
+s9 possession show 42
 ```
 
-### Generate Mission Summary
+### Generate Possession Summary
 
 ```bash
-s9 mission summary 42
+s9 possession summary 42
 ```
 
 Shows:
-- Files changed since mission start
-- Commits made (filtered by persona)
+- Files changed since possession start
+- Commits made (filtered by daemon)
 - Tasks claimed and their status
 
 ### List OpenCode Sessions
 
 ```bash
-s9 mission list-opencode-sessions
+s9 possession list-opencode-sessions
 ```
 
 Helpful for finding active OpenCode sessions for this project.
@@ -227,7 +227,7 @@ Most commands support `--json` output for scripting:
 
 ```bash
 s9 task list --json
-s9 mission list --json
+s9 possession list --json
 s9 dashboard --json
 ```
 

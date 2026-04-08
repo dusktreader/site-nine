@@ -14,7 +14,13 @@ from site_nine.core.database import Database
 from site_nine.core.paths import get_opencode_dir
 from site_nine.exceptions import SiteNineError
 
-app = typer.Typer(help="Manage Architecture Decision Records (ADRs)")
+app = typer.Typer(help="Manage Architecture Decision Records (ADRs)", invoke_without_command=True)
+
+
+@app.callback()
+def _callback(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        print(ctx.get_help())
 
 
 @app.command()

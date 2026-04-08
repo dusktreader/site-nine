@@ -2,82 +2,31 @@
 
 This page covers commands primarily used by AI agents during automated workflows.
 
-## Mission Lifecycle
+## Possession Lifecycle
 
-### Starting a Mission
+Agent possessions are managed through OpenCode skills, not CLI commands. The `possession-start` skill handles initialization atomically when a new session begins, and `possession-end` handles cleanup. See [OpenCode Integration](../opencode-integration.md) for the full lifecycle description.
 
-```bash
-s9 mission start <persona-name> --role <Role> --task "<objective>"
-```
-
-Example:
+The `s9` CLI provides read-only inspection of possessions for reference:
 
 ```bash
-s9 mission start cronos --role Operator --task "System maintenance and improvements"
-```
-
-### Displaying Available Roles
-
-```bash
-s9 mission roles
-```
-
-Shows formatted list of all available agent roles and their responsibilities. Used during session initialization.
-
-### Updating Mission Metadata
-
-```bash
-s9 mission update <mission-id> --task "<new-objective>"
-s9 mission update <mission-id> --role <NewRole>
-```
-
-Example:
-
-```bash
-s9 mission update 77 --task "Focus on database optimization"
-```
-
-### Ending a Mission
-
-```bash
-s9 mission end <mission-id>
-```
-
-Example:
-
-```bash
-s9 mission end 77
+s9 possession list                    # List all possessions
+s9 possession list --active-only      # Only active possessions
+s9 possession show <possession-id>    # View possession details
 ```
 
 ## Session Management
 
-### Generate Session UUID
+The `possession-start` skill renames the OpenCode TUI session automatically as part of initialization. If you need to rename manually:
 
 ```bash
-s9 mission generate-session-uuid
+s9 possession rename-tui <daemon-name> <Role> --session-id <session-id>
 ```
 
-Outputs a UUID that OpenCode captures in session data. This allows reliable session detection when multiple sessions are active.
-
-Usage pattern:
-1. Agent calls `s9 mission generate-session-uuid`
-2. OpenCode captures the UUID in this session's data
-3. Agent captures the UUID from output
-4. Agent calls `s9 mission rename-tui` with the UUID
-
-### Rename OpenCode Session
+To find the correct session ID when multiple sessions are open:
 
 ```bash
-s9 mission rename-tui <persona-name> <Role> --uuid-marker <uuid>
+s9 possession list-opencode-sessions
 ```
-
-Example:
-
-```bash
-s9 mission rename-tui cronos Operator --uuid-marker session-marker-abc123
-```
-
-This renames the current OpenCode TUI session to match the agent's identity.
 
 ## Task Execution
 
@@ -93,7 +42,7 @@ Example:
 s9 task claim OPR-H-0065
 ```
 
-Claims the task for the current active mission.
+Claims the task for the current active possession.
 
 ### Updating Task Status
 
@@ -156,7 +105,7 @@ Example:
 s9 handoff accept 3
 ```
 
-This claims the associated task for the active mission.
+This claims the associated task for the active possession.
 
 ### Completing Handoffs
 
@@ -196,32 +145,16 @@ s9 review create \
 
 The task's status is automatically changed to REVIEW.
 
-## Persona Management
+## Daemon Management
 
-### Suggesting Persona Names
+Daemon selection and biography are managed through OpenCode tools, not CLI commands. Use the `daemon_suggest` tool to find available daemon names and `daemon_set_bio` to record a daemon's biography. These are invoked automatically by the `possession-start` skill.
 
-```bash
-s9 persona suggest <Role> --count <number>
-```
-
-Example:
+To inspect daemon usage history from the CLI:
 
 ```bash
-s9 persona suggest Operator --count 3
-```
-
-Returns unused persona names for the specified role.
-
-### Setting Persona Biography
-
-```bash
-s9 persona set-bio <persona-name> "<biography-text>"
-```
-
-Example:
-
-```bash
-s9 persona set-bio cronos "I am Cronos, the Titan of time itself..."
+s9 daemon list                        # List all daemons
+s9 daemon list --role Engineer        # Filter by role
+s9 daemon usage <daemon-name>         # Show usage history for a daemon
 ```
 
 ## Information & Inspection
@@ -229,13 +162,13 @@ s9 persona set-bio cronos "I am Cronos, the Titan of time itself..."
 These shared commands are useful for agents to check status:
 
 ```bash
-s9 mission show <mission-id>    # View mission details
-s9 task show <task-id>          # View task details
-s9 task list                    # List all tasks
-s9 task list --role Operator    # List tasks for specific role
-s9 task mine                    # Show tasks claimed by active mission
+s9 possession show <possession-id>  # View possession details
+s9 task show <task-id>              # View task details
+s9 task list                        # List all tasks
+s9 task list --role Operator        # List tasks for specific role
+s9 task mine                        # Show tasks claimed by active possession
 s9 handoff list --role Operator --status pending  # Check for pending handoffs
-s9 review show <review-id>      # View review details
+s9 review show <review-id>          # View review details
 ```
 
 ## JSON Output
@@ -243,7 +176,7 @@ s9 review show <review-id>      # View review details
 All commands support `--json` output for programmatic parsing:
 
 ```bash
-s9 mission show 77 --json
+s9 possession show 77 --json
 s9 task list --json
 s9 handoff list --json
 ```
@@ -252,25 +185,15 @@ s9 handoff list --json
 
 ### Session Start Workflow
 
-```bash
-# 1. Get role suggestions
-s9 mission roles
+Possession initialization is handled atomically by the `possession-start` skill. It runs automatically when `s9 summon <role>` opens a new OpenCode session. The skill:
 
-# 2. Get persona suggestion
-s9 persona suggest Operator --count 3
+1. Calls `possession_init` to create a ROLE_PENDING possession
+2. Calls `possession_role_record` to set the role
+3. Calls `possession_daemon_record` to claim or invent a daemon name (3-day LRU)
+4. Calls `possession_rename_session` to rename the TUI session
+5. Checks for pending handoffs
 
-# 3. Start mission
-s9 mission start cronos --role Operator --task "System improvements"
-
-# 4. Generate session UUID
-s9 mission generate-session-uuid
-
-# 5. Rename OpenCode session
-s9 mission rename-tui cronos Operator --uuid-marker <captured-uuid>
-
-# 6. Check for pending handoffs
-s9 handoff list --role Operator --status pending
-```
+You generally do not need to invoke these steps manually.
 
 ### Task Execution Workflow
 

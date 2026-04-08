@@ -4,7 +4,7 @@ import path from "path"
 export default tool({
   description:
     "Return a list of active worker possessions for a given role. " +
-    "Useful for Admin orchestration to discover which desk-mode workers are currently running.",
+    "Useful for Admin orchestration to discover which minion-mode workers are currently running.",
   args: {
     role: tool.schema
       .string()

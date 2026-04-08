@@ -456,7 +456,7 @@ OpenCode integration:
 
 - **Tasks** - `.opencode/docs/guides/tasks.md`
 - **Agent Discovery** - `.opencode/docs/guides/agent-discovery.md`
-- **Epic Possessions & Desk Mode** - `.opencode/docs/guides/epic-possessions-and-desk-mode.md`
+- **Epic Possessions & Minion Mode** - `.opencode/docs/guides/epic-possessions-and-minion-mode.md`
 - **Tool Adapters** - `.opencode/docs/guides/tool-adapters.md` (planned)
 
 ### Code locations

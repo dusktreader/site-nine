@@ -531,7 +531,7 @@ def check_rogue_possessions(
                 db.execute_update(
                     """
                     UPDATE possessions
-                    SET status = 'EXORCISED', end_time = :now, desk_mode_active = 0, updated_at = :now
+                    SET status = 'EXORCISED', end_time = :now, minion_mode_active = 0, updated_at = :now
                     WHERE id = :id
                     """,
                     {"id": pid, "now": now},

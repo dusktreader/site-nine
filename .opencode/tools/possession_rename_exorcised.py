@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """
-possession_rename_exorcised tool - Append '[EXORCISED]' to the OpenCode session title when a possession ends.
+possession_rename_exorcised tool - Append '[EXORCISED]' to the OpenCode session title.
 
 This tool:
 1. Receives context.sessionID from OpenCode
-2. Looks up the current session title
-3. Appends '[EXORCISED]' suffix if not already present
-4. Updates the OpenCode session title via OpenCodeSessionManager
-5. Returns the new title and old title
+2. Reads the current session title from the OpenCode DB
+3. Appends '[EXORCISED]' to the title (if not already present)
+4. Updates the OpenCode session title via OpenCodeSessionManager (SQLite write)
+5. Returns the new and old titles
 """
 
 import sys
 import json
+import sqlite3
 from tool_logging import logger
 
 from site_nine.core.paths import get_project_root
@@ -40,8 +41,6 @@ def main():
                     "message": "OpenCode database not found. Cannot rename session.",
                 }
             )
-
-        import sqlite3
 
         conn = sqlite3.connect(str(db_path))
         conn.row_factory = sqlite3.Row
@@ -76,10 +75,11 @@ def main():
 
         new_title = f"{current_title} {EXORCISED_SUFFIX}"
 
+        # Rename the OpenCode session (writes to SQLite so the TUI reflects it)
         result = session_manager.update_session_title(session_id, new_title)
 
         logger.info(
-            "session_renamed_exorcised",
+            "session_exorcised",
             session_id=session_id,
             old_title=result.old_title,
             new_title=result.new_title,

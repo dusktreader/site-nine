@@ -1,4 +1,4 @@
-# ADR-015: Git Worktree Isolation for Desk Workers
+# ADR-015: Git Worktree Isolation for Minion Workers
 
 **Status:** PROPOSED
 **Date:** 2026-03-04
@@ -11,14 +11,14 @@
 
 ### Current State
 
-All desk-mode workers (background OpenCode agents launched via `worker_spawn` or `s9 summon --desk`) run from
-the same working directory: the repo root. The `DeskWorker` class in
-`src/site_nine/workers/desk_worker.py` does not set a `cwd` parameter on `subprocess.Popen`, so every
+All minion-mode workers (background OpenCode agents launched via `worker_spawn` or `s9 summon --minion`) run from
+the same working directory: the repo root. The `MinionWorker` class in
+`src/site_nine/workers/minion_worker.py` does not set a `cwd` parameter on `subprocess.Popen`, so every
 `opencode run` invocation inherits the shell's current directory, which is always the project root.
 
-`worker_spawn.py` does set `cwd=str(repo_root)` when launching `desk_worker.py`, but `desk_worker.py` in
+`worker_spawn.py` does set `cwd=str(repo_root)` when launching `minion_worker.py`, but `minion_worker.py` in
 turn hard-codes no `cwd` on its own `opencode run` calls — they all run from whatever directory the
-`desk-worker` process inherited.
+`minion-worker` process inherited.
 
 This means:
 
@@ -54,7 +54,7 @@ while all workers share the same git history, remote configuration, and object s
 
 ## Problem Statement
 
-The site-nine agent system needs a model for assigning isolated git working environments to desk workers
+The site-nine agent system needs a model for assigning isolated git working environments to minion workers
 such that:
 
 1. **Multiple workers can operate in parallel** without filesystem or git state conflicts
@@ -67,7 +67,7 @@ such that:
 
 ## Decision
 
-We will adopt **per-mission git worktrees for desk workers**. Each desk-mode worker mission is assigned
+We will adopt **per-mission git worktrees for minion workers**. Each minion-mode worker mission is assigned
 a dedicated git worktree for the duration of its work. The worktree is:
 
 - Created by `worker_spawn.py` before the first `opencode run` is invoked for that worker
@@ -76,7 +76,7 @@ a dedicated git worktree for the duration of its work. The worktree is:
 - Passed as `cwd` to all `opencode run` invocations for that worker
 - Removed with `git worktree remove` when the worker mission ends
 
-Interactive (non-desk) missions are **not** affected; they run from wherever the Director launched them.
+Interactive (non-minion) missions are **not** affected; they run from wherever the Director launched them.
 
 
 ## Proposed Design
@@ -86,7 +86,7 @@ Interactive (non-desk) missions are **not** affected; they run from wherever the
 #### Creation
 
 A new `src/site_nine/workers/worktree.py` module provides the lifecycle functions. The worktree is
-created before `DeskWorker.initialize()` is called:
+created before `MinionWorker.initialize()` is called:
 
 ```python
 import os
@@ -187,14 +187,14 @@ def link_venv(worktree_path: Path, repo_root: Path) -> None:
 
 #### Usage (During Worker Lifetime)
 
-`DeskWorker` passes `self.worktree_path` as `cwd` to every `opencode run` subprocess invocation:
+`MinionWorker` passes `self.worktree_path` as `cwd` to every `opencode run` subprocess invocation:
 
 ```python
-# In DeskWorker.initialize():
+# In MinionWorker.initialize():
 cmd = ["opencode", "run", "--format", "json", "--model", self.model, init_message]
 process = subprocess.Popen(cmd, cwd=str(self.worktree_path or self.repo_root), ...)
 
-# In DeskWorker.process_message():
+# In MinionWorker.process_message():
 cmd = ["opencode", "run", "--session", self.session_id, "--model", self.model, message.body]
 process = subprocess.Popen(cmd, cwd=str(self.worktree_path or self.repo_root), ...)
 ```
@@ -204,7 +204,7 @@ automatically resolve paths relative to the worktree. No changes to tool impleme
 
 #### Cleanup (At Worker Shutdown)
 
-`DeskWorker.handle_shutdown()` removes the worktree after the mission ends:
+`MinionWorker.handle_shutdown()` removes the worktree after the mission ends:
 
 ```python
 def cleanup_worktree(self) -> None:
@@ -247,8 +247,8 @@ subprocess.run(
 link_shared_dirs(staging_path, repo_root)
 link_venv(staging_path, repo_root)
 
-# 2. Launch DeskWorker from staging_path
-worker = DeskWorker(role=role, worktree_path=staging_path, repo_root=repo_root, ...)
+# 2. Launch MinionWorker from staging_path
+worker = MinionWorker(role=role, worktree_path=staging_path, repo_root=repo_root, ...)
 worker.initialize()  # runs opencode run; mission_init creates the DB record
 
 # 3. Rename directory and branch to use the real mission ID
@@ -283,7 +283,7 @@ One new column on the `missions` table (added via migration):
 ```sql
 ALTER TABLE missions ADD COLUMN worktree_path TEXT;
 -- NULL for interactive missions and workers using isolated=false
--- Non-NULL for isolated desk workers; cleared (set to NULL) after cleanup
+-- Non-NULL for isolated minion workers; cleared (set to NULL) after cleanup
 ```
 
 `s9 doctor` uses this column to detect stale entries:
@@ -322,7 +322,7 @@ def get_main_worktree_root() -> Path:
 ```
 
 This is used wherever `worker_spawn.py` needs the canonical repo root (for creating new worktrees,
-for locating `desk_worker.py`, and for `cwd` of the spawned worker process).
+for locating `minion_worker.py`, and for `cwd` of the spawned worker process).
 
 ### 5. Branch Strategy
 
@@ -418,7 +418,7 @@ directory still exists) and deletes orphaned branches.
 
 ### Not Changed
 
-- Interactive (non-desk) missions: unaffected
+- Interactive (non-minion) missions: unaffected
 - Shared database: all workers continue to share `project.db` via symlink
 - Tool TypeScript and Python implementations: unchanged
 - `context.worktree` semantics: unchanged; OpenCode continues to pass the worker's CWD
@@ -441,15 +441,15 @@ directory still exists) and deletes orphaned branches.
 **Acceptance criteria:** `provision_worktree()` creates a valid worktree with correct symlinks; DB
 migration runs without error on the existing database.
 
-### Phase 2: DeskWorker Integration
+### Phase 2: MinionWorker Integration
 
 **Tasks:**
-1. Add `worktree_path: Path | None` and `repo_root: Path` parameters to `DeskWorker.__init__()`
+1. Add `worktree_path: Path | None` and `repo_root: Path` parameters to `MinionWorker.__init__()`
 2. Pass `cwd=self.worktree_path or self.repo_root` to all `subprocess.Popen` calls in `initialize()`,
    `process_message()`, and `handle_shutdown()`
 3. Add `cleanup_worktree()` call at the end of `handle_shutdown()`, before `SystemExit`
 
-**Acceptance criteria:** A desk worker started manually with a pre-provisioned worktree runs correctly;
+**Acceptance criteria:** A minion worker started manually with a pre-provisioned worktree runs correctly;
 shutdown removes the worktree; tools resolve paths correctly from the worker's CWD.
 
 ### Phase 3: `worker_spawn` Integration
@@ -460,9 +460,9 @@ shutdown removes the worktree; tools resolve paths correctly from the worker's C
 2. Implement the UUID-staging → mission-ID rename flow in `worker_spawn.py`
 3. Add `isolated: bool = True` argument to `worker_spawn.py` and `worker_spawn.ts`
 4. Store `worktree_path` on the mission record after rename
-5. Pass `worktree_path` and `repo_root` through to `DeskWorker`
+5. Pass `worktree_path` and `repo_root` through to `MinionWorker`
 
-**Acceptance criteria:** `worker_spawn({ role: "Engineer" })` creates a desk worker in an isolated
+**Acceptance criteria:** `worker_spawn({ role: "Engineer" })` creates a minion worker in an isolated
 worktree; `worker_spawn({ role: "Tester", isolated: false })` creates a worker in the repo root
 (current behavior); an Admin agent running inside a worktree can spawn sub-workers correctly.
 
@@ -482,7 +482,7 @@ worktree; `worker_spawn({ role: "Tester", isolated: false })` creates a worker i
 1. End-to-end integration test: Admin spawns two Engineers in parallel; both edit different files;
    Admin merges both branches; no conflicts
 2. Write `.opencode/docs/guides/worker-worktrees.md` guide for Admin agents
-3. Update `mission-start` skill to note that isolated desk workers run in dedicated worktrees
+3. Update `mission-start` skill to note that isolated minion workers run in dedicated worktrees
 4. Update `worker_spawn` tool description to mention the `isolated` flag and branch naming
 
 **Acceptance criteria:** Integration test passes; documentation accurately reflects the implemented
@@ -526,7 +526,7 @@ layout, which is a large disruption. We adopt the worktree approach without the 
 - **ADR-013**: Site-nine as OpenCode Integration Platform — established `context.worktree` as the
   path resolution mechanism for tools
 - **ADR-014**: Message-Driven Coordination Architecture — the coordination model motivating parallel workers
-- **`DeskWorker` implementation**: `src/site_nine/workers/desk_worker.py`
+- **`MinionWorker` implementation**: `src/site_nine/workers/minion_worker.py`
 - **`find_opencode_dir()` / `validate_path_within_project()`**: `src/site_nine/core/paths.py`
 - **`worker_spawn` tool**: `.opencode/tools/worker_spawn.py`, `.opencode/tools/worker_spawn.ts`
 - **Database schema**: `src/site_nine/data/schema.sql`

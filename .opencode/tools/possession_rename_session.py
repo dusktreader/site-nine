@@ -6,8 +6,8 @@ This tool:
 1. Receives context.sessionID from OpenCode
 2. Looks up the active possession bound to this session
 3. Builds the title: "Operation <Daemon> - <Role>"
-4. Updates the OpenCode session title via OpenCodeSessionManager
-5. Returns the new title and old title
+4. Updates the OpenCode session title via OpenCodeSessionManager (SQLite write)
+5. Returns the new and old titles
 """
 
 import sys
@@ -63,11 +63,10 @@ def main():
         daemon = possession["daemon_name"] or "unknown"
         role = possession["role"] or "unknown"
 
-        # Build title: "Operation <Daemon> - <Role>"
         daemon_display = daemon.capitalize() if daemon != "unknown" else "Unknown"
         new_title = f"Operation {daemon_display} - {role}"
 
-        # Rename the OpenCode session
+        # Rename the OpenCode session (writes to SQLite so the TUI reflects it)
         project_root = get_project_root()
         session_manager = OpenCodeSessionManager(project_root)
         result = session_manager.update_session_title(session_id, new_title)

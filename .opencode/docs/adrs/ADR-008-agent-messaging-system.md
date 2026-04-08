@@ -52,7 +52,7 @@ Based on our architectural discussion, the messaging system needs to support:
 
 **Operational modes:**
 - Standard messaging (send/reply as needed)
-- "Desk mode" for agents to monitor and respond to incoming messages
+- "Minion mode" for agents to monitor and respond to incoming messages
 - Integration with mission lifecycle (new missions see relevant messages)
 
 ## Decision
@@ -461,7 +461,7 @@ s9 comms status <message-id>     # Who has read this message
 s9 comms stats                   # Detailed messaging statistics
 s9 dashboard                     # Includes messaging summary section
 
-# Desk mode
+# Minion mode
 # Note: Moved to ADR-009 (Agent Coordination Patterns)
 ```
 
@@ -633,11 +633,11 @@ WHERE cv.conversation_id = 'DISC-0025'
   AND cv.last_viewed_at >= (SELECT MAX(created_at) FROM messages WHERE conversation_id = 'DISC-0025')
 ```
 
-### Desk Mode
+### Minion Mode
 
-**Note:** Desk mode implementation details moved to ADR-009 (Agent Coordination Patterns).
+**Note:** Minion mode implementation details moved to ADR-009 (Agent Coordination Patterns).
 
-Desk mode allows agents to advertise availability and monitor for incoming messages while remaining in OpenCode chat to 
+Minion mode allows agents to advertise availability and monitor for incoming messages while remaining in OpenCode chat to
 communicate with Director.
 ```
 
@@ -672,7 +672,7 @@ communicate with Director.
 - ✅ `s9 comms send`, `discuss`, `reply`
 - ✅ `s9 comms inbox`, `show`, `list`
 - ✅ `s9 comms close`, `status`
-- ✅ `s9 comms desk` (basic interactive mode)
+- ✅ `s9 comms desk` (basic interactive mode — later superseded by minion mode)
 
 **Dashboard integration:**
 - ✅ Unread message count in `s9 dashboard`
@@ -687,7 +687,7 @@ communicate with Director.
 - 📋 Message templates for common scenarios
 - 📋 Auto-messages on events (handoff created, review requested)
 - 📋 Bulk operations (mark all read, archive old)
-- 📋 Rich desk mode with TUI interface
+- 📋 Rich minion mode with TUI interface
 
 **Analytics:**
 - 📋 Response time metrics
@@ -861,7 +861,7 @@ per-message accountability, Director should use OpenCode chat (synchronous) inst
 3. **Thread visualization:** Better UI for nested threads
 4. **Performance optimization:** Query tuning, caching, indexes
 
-**Note:** Desk mode implementation moved to ADR-009 (Agent Coordination Patterns)
+**Note:** Minion mode implementation moved to ADR-009 (Agent Coordination Patterns)
 
 ### Phase 3: Advanced Features
 
@@ -942,7 +942,7 @@ Even after rollback, preserve the design work:
 
 **Keep:**
 - ADR-008 (update status to SUPERSEDED with rollback date/reason)
-- ADR-009 (update to remove desk mode, keep mission scoping)
+- ADR-009 (update to remove minion mode, keep mission scoping)
 - Archived message data (`.opencode/work/messaging-archive/`)
 - Migration files (for historical reference)
 
@@ -959,7 +959,7 @@ If messaging concept is valuable but implementation is wrong, consider pivot:
 - Remove discussions (only keep 1-on-1 conversations)
 - Remove threading (all messages flat)
 - Remove scoping complexity (direct messages only)
-- Remove desk mode (agents just check inbox manually)
+- Remove minion mode (agents just check inbox manually)
 
 This reduces complexity by ~60% while keeping core "ask another agent" capability.
 
@@ -969,7 +969,7 @@ This reduces complexity by ~60% while keeping core "ask another agent" capabilit
 - Related Task: OPR-M-0074 (Add --json output flag to all s9 commands)
 - Related Epic: EPC-H-0004 (Multi-Tool Adapter System)
 - Related ADR: ADR-006 (Entity Model Clarity - Personas, Missions, Agents)
-- Related ADR: ADR-009 (Agent Coordination Patterns - mission scoping, desk mode, Director communication)
+- Related ADR: ADR-009 (Agent Coordination Patterns - mission scoping, minion mode, Director communication)
 - Schema: `src/site_nine/templates/schema.sql`
 - Handoffs implementation: `.opencode/work/migrations/003_add_handoffs_table.sql`
 

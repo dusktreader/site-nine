@@ -1,10 +1,10 @@
 """
-Tests for external desk worker polling script (ENG-M-0185).
+Tests for external minion worker polling script (ENG-M-0185).
 
 Tests cover:
 - Worker initialization and possession creation
 - Session binding and database linkage
-- Desk mode enable/disable
+- Minion mode enable/disable
 - Message polling and processing
 - Priority-based message ordering
 - Signal handling (SIGTERM/SIGINT)
@@ -26,23 +26,23 @@ import pytest
 from site_nine.core.database import Database
 from site_nine.messaging.manager import MessageManager
 
-# Import the desk worker script module
+# Import the minion worker script module
 import sys
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DESK_WORKER_SCRIPT = REPO_ROOT / "src" / "site_nine" / "workers" / "desk_worker.py"
+MINION_WORKER_SCRIPT = REPO_ROOT / "src" / "site_nine" / "workers" / "minion_worker.py"
 
-# Import the desk worker module directly (no need to add to sys.path - it's a proper package now)
+# Import the minion worker module directly (no need to add to sys.path - it's a proper package now)
 
 # Import after adding to path
 import importlib.util
 
-spec = importlib.util.spec_from_file_location("desk_worker", DESK_WORKER_SCRIPT)
-desk_worker = importlib.util.module_from_spec(spec)
-sys.modules["desk_worker"] = desk_worker  # Register so @patch("desk_worker.X") works
-spec.loader.exec_module(desk_worker)
+spec = importlib.util.spec_from_file_location("minion_worker", MINION_WORKER_SCRIPT)
+minion_worker = importlib.util.module_from_spec(spec)
+sys.modules["minion_worker"] = minion_worker  # Register so @patch("minion_worker.X") works
+spec.loader.exec_module(minion_worker)
 
-DeskWorker = desk_worker.DeskWorker
+MinionWorker = minion_worker.MinionWorker
 
 
 # ============================================================================
@@ -96,13 +96,13 @@ def mock_time():
 
 
 # ============================================================================
-# Unit Tests - DeskWorker Class
+# Unit Tests - MinionWorker Class
 # ============================================================================
 
 
-def test_desk_worker_initialization():
-    """Test DeskWorker constructor sets all fields correctly."""
-    worker = DeskWorker(role="Engineer", daemon="hephaestus", model="custom-model", poll_interval=15)
+def test_minion_worker_initialization():
+    """Test MinionWorker constructor sets all fields correctly."""
+    worker = MinionWorker(role="Engineer", daemon="hephaestus", model="custom-model", poll_interval=15)
 
     assert worker.role == "Engineer"
     assert worker.daemon == "hephaestus"
@@ -113,22 +113,22 @@ def test_desk_worker_initialization():
     assert worker.running is True
 
 
-def test_desk_worker_defaults():
-    """Test DeskWorker uses correct defaults."""
-    worker = DeskWorker(role="Architect")
+def test_minion_worker_defaults():
+    """Test MinionWorker uses correct defaults."""
+    worker = MinionWorker(role="Architect")
 
     assert worker.role == "Architect"
     assert worker.daemon is None
-    assert worker.model == DeskWorker.DEFAULT_MODEL
-    assert worker.poll_interval == DeskWorker.DEFAULT_POLL_INTERVAL
+    assert worker.model == MinionWorker.DEFAULT_MODEL
+    assert worker.poll_interval == MinionWorker.DEFAULT_POLL_INTERVAL
 
 
 def test_priority_ordering():
     """Test message priority ordering is correct."""
-    assert DeskWorker.PRIORITY_ORDER["CRITICAL"] == 0
-    assert DeskWorker.PRIORITY_ORDER["HIGH"] == 1
-    assert DeskWorker.PRIORITY_ORDER["MEDIUM"] == 2
-    assert DeskWorker.PRIORITY_ORDER["LOW"] == 3
+    assert MinionWorker.PRIORITY_ORDER["CRITICAL"] == 0
+    assert MinionWorker.PRIORITY_ORDER["HIGH"] == 1
+    assert MinionWorker.PRIORITY_ORDER["MEDIUM"] == 2
+    assert MinionWorker.PRIORITY_ORDER["LOW"] == 3
 
 
 # ============================================================================
@@ -136,7 +136,7 @@ def test_priority_ordering():
 # ============================================================================
 
 
-@patch("desk_worker.get_db_path")
+@patch("minion_worker.get_db_path")
 def test_worker_initialize_success(mock_get_db_path, test_db, mock_subprocess, mock_time):
     """Test successful worker initialization creates possession and retrieves session ID."""
     mock_get_db_path.return_value = test_db
@@ -163,7 +163,7 @@ def test_worker_initialize_success(mock_get_db_path, test_db, mock_subprocess, m
         {},
     )
 
-    worker = DeskWorker(role="Engineer", daemon="hephaestus")
+    worker = MinionWorker(role="Engineer", daemon="hephaestus")
     worker.initialize()
 
     assert worker.possession_id == possession_id
@@ -177,18 +177,18 @@ def test_worker_initialize_success(mock_get_db_path, test_db, mock_subprocess, m
     assert "Engineer" in " ".join(call_args)
 
 
-@patch("desk_worker.get_db_path")
+@patch("minion_worker.get_db_path")
 def test_worker_initialize_no_mission_found(mock_get_db_path, test_db, mock_subprocess, mock_time):
     """Test initialize raises error if possession not created."""
     mock_get_db_path.return_value = test_db
 
-    worker = DeskWorker(role="Engineer")
+    worker = MinionWorker(role="Engineer")
 
     with pytest.raises(RuntimeError, match="Failed to find initialized"):
         worker.initialize()
 
 
-@patch("desk_worker.get_db_path")
+@patch("minion_worker.get_db_path")
 def test_worker_initialize_no_session_id(mock_get_db_path, test_db, mock_subprocess):
     """Test initialize raises error if opencode run produces no session ID."""
     mock_get_db_path.return_value = test_db
@@ -199,15 +199,15 @@ def test_worker_initialize_no_session_id(mock_get_db_path, test_db, mock_subproc
     mock_process.communicate.return_value = ("no session id here\n", "")
     mock_subprocess.return_value = mock_process
 
-    worker = DeskWorker(role="Engineer")
+    worker = MinionWorker(role="Engineer")
 
     with pytest.raises(RuntimeError, match="Failed to extract session ID"):
         worker.initialize()
 
 
-@patch("desk_worker.get_db_path")
-def test_worker_enable_desk_mode(mock_get_db_path, test_db):
-    """Test enable_desk_mode sets desk_mode_active=1."""
+@patch("minion_worker.get_db_path")
+def test_worker_enable_minion_mode(mock_get_db_path, test_db):
+    """Test enable_minion_mode sets minion_mode_active=1."""
     mock_get_db_path.return_value = test_db
 
     db = Database(test_db)
@@ -220,7 +220,7 @@ def test_worker_enable_desk_mode(mock_get_db_path, test_db):
         INSERT INTO possessions (
             daemon_name, role, possession_log,
             opencode_session_id, start_time,
-            status, desk_mode_active, created_at, updated_at
+            status, minion_mode_active, created_at, updated_at
         ) VALUES (
             'test', 'Engineer',
             '.opencode/work/possessions/test.md',
@@ -231,13 +231,13 @@ def test_worker_enable_desk_mode(mock_get_db_path, test_db):
         {},
     )
 
-    worker = DeskWorker(role="Engineer")
+    worker = MinionWorker(role="Engineer")
     worker.possession_id = possession_id
-    worker.enable_desk_mode()
+    worker.enable_minion_mode()
 
     # Verify database updated
-    rows = db.execute_query("SELECT desk_mode_active FROM possessions WHERE id = :pid", {"pid": possession_id})
-    assert rows[0]["desk_mode_active"] == 1
+    rows = db.execute_query("SELECT minion_mode_active FROM possessions WHERE id = :pid", {"pid": possession_id})
+    assert rows[0]["minion_mode_active"] == 1
 
 
 # ============================================================================
@@ -245,7 +245,7 @@ def test_worker_enable_desk_mode(mock_get_db_path, test_db):
 # ============================================================================
 
 
-@patch("desk_worker.get_db_path")
+@patch("minion_worker.get_db_path")
 def test_check_for_messages_empty(mock_get_db_path, test_db):
     """Test check_for_messages returns empty list when no messages."""
     mock_get_db_path.return_value = test_db
@@ -271,14 +271,14 @@ def test_check_for_messages_empty(mock_get_db_path, test_db):
         {},
     )
 
-    worker = DeskWorker(role="Engineer")
+    worker = MinionWorker(role="Engineer")
     worker.possession_id = possession_id
 
     messages = worker.check_for_messages()
     assert messages == []
 
 
-@patch("desk_worker.get_db_path")
+@patch("minion_worker.get_db_path")
 def test_check_for_messages_excludes_own(mock_get_db_path, test_db):
     """Test check_for_messages excludes messages from self."""
     mock_get_db_path.return_value = test_db
@@ -337,7 +337,7 @@ def test_check_for_messages_excludes_own(mock_get_db_path, test_db):
     )
 
     # Check messages for possession 2 BEFORE it replies (should see 1 message from possession 1)
-    worker = DeskWorker(role="Engineer")
+    worker = MinionWorker(role="Engineer")
     worker.possession_id = possession_id_2
 
     messages = worker.check_for_messages()
@@ -347,7 +347,7 @@ def test_check_for_messages_excludes_own(mock_get_db_path, test_db):
     assert messages[0].from_possession_id == possession_id_1
 
 
-@patch("desk_worker.get_db_path")
+@patch("minion_worker.get_db_path")
 def test_check_for_messages_priority_order(mock_get_db_path, test_db):
     """Test messages are sorted by priority (CRITICAL > HIGH > MEDIUM > LOW)."""
     mock_get_db_path.return_value = test_db
@@ -428,7 +428,7 @@ def test_check_for_messages_priority_order(mock_get_db_path, test_db):
     )
 
     # Check messages
-    worker = DeskWorker(role="Engineer")
+    worker = MinionWorker(role="Engineer")
     worker.possession_id = receiver_id
 
     messages = worker.check_for_messages()
@@ -441,7 +441,7 @@ def test_check_for_messages_priority_order(mock_get_db_path, test_db):
     assert messages[3].priority == "LOW"
 
 
-@patch("desk_worker.get_db_path")
+@patch("minion_worker.get_db_path")
 def test_process_message_success(mock_get_db_path, test_db, mock_subprocess):
     """Test process_message executes opencode run and marks message as read."""
     mock_get_db_path.return_value = test_db
@@ -496,7 +496,7 @@ def test_process_message_success(mock_get_db_path, test_db, mock_subprocess):
     )
 
     # Process message
-    worker = DeskWorker(role="Engineer")
+    worker = MinionWorker(role="Engineer")
     worker.possession_id = receiver_id
     worker.session_id = "ses_worker"
 
@@ -524,7 +524,7 @@ def test_process_message_success(mock_get_db_path, test_db, mock_subprocess):
     assert len(views) == 1
 
 
-@patch("desk_worker.get_db_path")
+@patch("minion_worker.get_db_path")
 def test_process_message_failure(mock_get_db_path, test_db, mock_subprocess):
     """Test process_message handles opencode run failure gracefully."""
     mock_get_db_path.return_value = test_db
@@ -585,7 +585,7 @@ def test_process_message_failure(mock_get_db_path, test_db, mock_subprocess):
     )
 
     # Process message
-    worker = DeskWorker(role="Engineer")
+    worker = MinionWorker(role="Engineer")
     worker.possession_id = receiver_id
     worker.session_id = "ses_worker"
 
@@ -599,9 +599,9 @@ def test_process_message_failure(mock_get_db_path, test_db, mock_subprocess):
 # ============================================================================
 
 
-@patch("desk_worker.get_db_path")
+@patch("minion_worker.get_db_path")
 def test_handle_shutdown_cleans_up(mock_get_db_path, test_db, mock_subprocess):
-    """Test handle_shutdown disables desk mode and ends possession."""
+    """Test handle_shutdown disables minion mode and ends possession."""
     mock_get_db_path.return_value = test_db
 
     db = Database(test_db)
@@ -614,7 +614,7 @@ def test_handle_shutdown_cleans_up(mock_get_db_path, test_db, mock_subprocess):
         INSERT INTO possessions (
             daemon_name, role, possession_log,
             opencode_session_id, start_time,
-            status, desk_mode_active, created_at, updated_at
+            status, minion_mode_active, created_at, updated_at
         ) VALUES (
             'worker', 'Engineer',
             '.opencode/work/possessions/test.md',
@@ -625,16 +625,16 @@ def test_handle_shutdown_cleans_up(mock_get_db_path, test_db, mock_subprocess):
         {},
     )
 
-    worker = DeskWorker(role="Engineer")
+    worker = MinionWorker(role="Engineer")
     worker.possession_id = possession_id
     worker.session_id = "ses_test"
 
     with pytest.raises(SystemExit):
         worker.handle_shutdown(signal.SIGTERM, None)
 
-    # Verify desk mode was disabled
-    rows = db.execute_query("SELECT desk_mode_active FROM possessions WHERE id = :pid", {"pid": possession_id})
-    assert rows[0]["desk_mode_active"] == 0
+    # Verify minion mode was disabled
+    rows = db.execute_query("SELECT minion_mode_active FROM possessions WHERE id = :pid", {"pid": possession_id})
+    assert rows[0]["minion_mode_active"] == 0
 
     # Verify opencode run was called to end possession
     assert mock_subprocess.mock_run.called
@@ -649,20 +649,20 @@ def test_handle_shutdown_cleans_up(mock_get_db_path, test_db, mock_subprocess):
 
 def test_main_invalid_role():
     """Test main() exits with error for invalid role."""
-    with patch("sys.argv", ["desk-worker.py", "InvalidRole"]):
+    with patch("sys.argv", ["minion-worker.py", "InvalidRole"]):
         with pytest.raises(SystemExit) as exc_info:
-            desk_worker.main()
+            minion_worker.main()
 
         assert exc_info.value.code == 1
 
 
 def test_main_auto_capitalizes_role(mock_subprocess):
     """Test main() auto-capitalizes role name."""
-    with patch("sys.argv", ["desk-worker.py", "engineer"]):
-        with patch.object(DeskWorker, "run") as mock_run:
-            desk_worker.main()
+    with patch("sys.argv", ["minion-worker.py", "engineer"]):
+        with patch.object(MinionWorker, "run") as mock_run:
+            minion_worker.main()
 
-            # Verify DeskWorker was created with capitalized role
+            # Verify MinionWorker was created with capitalized role
             assert mock_run.called
 
 
@@ -671,7 +671,7 @@ def test_main_parses_arguments_correctly():
     with patch(
         "sys.argv",
         [
-            "desk-worker.py",
+            "minion-worker.py",
             "Engineer",
             "--daemon",
             "hephaestus",
@@ -681,11 +681,11 @@ def test_main_parses_arguments_correctly():
             "15",
         ],
     ):
-        with patch.object(DeskWorker, "run") as mock_run:
-            with patch.object(DeskWorker, "__init__", return_value=None) as mock_init:
-                desk_worker.main()
+        with patch.object(MinionWorker, "run") as mock_run:
+            with patch.object(MinionWorker, "__init__", return_value=None) as mock_init:
+                minion_worker.main()
 
-                # Verify DeskWorker was initialized with correct args
+                # Verify MinionWorker was initialized with correct args
                 mock_init.assert_called_once()
                 call_kwargs = mock_init.call_args[1]
                 assert call_kwargs["role"] == "Engineer"

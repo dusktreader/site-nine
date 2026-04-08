@@ -730,7 +730,7 @@ class MessageManager:
                 EXISTS (
                     SELECT 1 FROM messages m2
                     WHERE m2.conversation_id = c.id
-                    AND datetime(m2.created_at) > datetime(cv.last_viewed_at)
+                    AND datetime(m2.created_at) >= datetime(cv.last_viewed_at)
                 )
             )
             AND (
@@ -802,7 +802,7 @@ class MessageManager:
             WHERE m.conversation_id = :conversation_id
             AND (
                 cv.last_viewed_at IS NULL
-                OR datetime(m.created_at) > datetime(cv.last_viewed_at)
+                OR datetime(m.created_at) >= datetime(cv.last_viewed_at)
             )
             ORDER BY m.created_at ASC
             """,
@@ -832,7 +832,7 @@ class MessageManager:
             WHERE m.conversation_id = :conversation_id
             AND (
                 cv.last_viewed_at IS NULL
-                OR datetime(m.created_at) > datetime(cv.last_viewed_at)
+                OR datetime(m.created_at) >= datetime(cv.last_viewed_at)
             )
             """,
             {"conversation_id": conversation_id, "possession_id": possession_id},

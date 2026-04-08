@@ -13,7 +13,13 @@ from site_nine.cli.utils import CLIError, require_db_path
 from site_nine.core.database import Database
 from site_nine.exceptions import SiteNineError
 
-app = typer.Typer(help="Manage external blockers for tasks")
+app = typer.Typer(help="Manage external blockers for tasks", invoke_without_command=True)
+
+
+@app.callback()
+def _callback(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        print(ctx.get_help())
 
 
 @app.command()

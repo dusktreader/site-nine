@@ -8,7 +8,13 @@ from typerdrive import handle_errors, terminal_message
 from site_nine.cli.utils import CLIError, open_in_editor, require_opencode_dir
 from site_nine.exceptions import SiteNineError
 
-app = typer.Typer(help="List and edit guide documents")
+app = typer.Typer(help="List and edit guide documents", invoke_without_command=True)
+
+
+@app.callback()
+def _callback(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        print(ctx.get_help())
 
 
 def _guides_dir():

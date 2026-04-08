@@ -1,6 +1,6 @@
 # CLI Overview
 
-The `s9` command-line tool is the primary interface for interacting with site-nine. It provides commands for managing missions, tasks, epics, reviews, and more.
+The `s9` command-line tool is the primary interface for interacting with site-nine. It provides commands for managing possessions, tasks, epics, reviews, and more.
 
 ## Installation
 
@@ -22,9 +22,9 @@ s9 <command> --help    # Show help for a specific command
 The s9 CLI is designed to serve two primary audiences:
 
 - **Human developers** use s9 for project oversight, planning, and coordination (creating tasks, reviewing work, managing epics, viewing dashboards)
-- **AI agents** use s9 for automated workflows (starting missions, claiming tasks, creating handoffs, updating status)
+- **AI agents** use s9 for automated workflows (claiming tasks, creating handoffs, updating status)
 
-Some commands are useful to both audiences (like viewing task details or listing missions), while others are optimized for one or the other.
+Some commands are useful to both audiences (like viewing task details or listing possessions), while others are optimized for one or the other.
 
 ### Where to Go Next
 

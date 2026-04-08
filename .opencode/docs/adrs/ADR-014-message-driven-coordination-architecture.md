@@ -2,22 +2,27 @@
 
 **Status**: Proposed  
 **Date**: 2026-02-28  
-**Deciders**: Tucker Beck, Dagon (Mission 150)  
+**Deciders**: Tucker Beck, Dagon (Possession 150)  
 **Related**: ADR-008 (Agent Messaging System), ADR-009 (Agent Coordination Patterns)
+
+> **Implementation Note (2026-04-07):** The `worker_spawn` tool referenced throughout this ADR was renamed to
+> `summon_minion` after this document was written. Wherever this ADR says `worker_spawn`, the current tool name
+> is `summon_minion`. The return value `status: "spawned"` was also updated to `status: "summoned"`. No other
+> behaviour changed.
 
 ## Context
 
 Site-nine currently has two overlapping coordination mechanisms:
 
 1. **Handoffs** - Agents create handoff documents and DB records, next agent discovers via `handoff_list()`
-2. **Messages** - Agents send messages to specific missions via `worker_message()`
+2. **Messages** - Agents send messages to specific possessions via `worker_message()`
 
-During testing of desk mode workers (ADM-H-0202, Mission 150), we discovered fundamental problems with the handoff system in a message-driven orchestration model:
+During testing of minion mode workers (ADM-H-0202, Possession 150), we discovered fundamental problems with the handoff system in a message-driven orchestration model:
 
-- **Race conditions**: Multiple desk workers polling for handoffs create ambiguity about who claims what
+- **Race conditions**: Multiple minion workers polling for handoffs create ambiguity about who claims what
 - **Unclear lifecycle**: When does a worker stop looking for handoffs? Who decides when work is done?
 - **Redundancy**: Messages can carry the same context/instructions that handoffs provide
-- **Pattern confusion**: Handoffs imply sequential work (A→B→C), desk mode implies parallel work (Admin→1,2,3 simultaneously)
+- **Pattern confusion**: Handoffs imply sequential work (A→B→C), minion mode implies parallel work (Admin→1,2,3 simultaneously)
 - **Discovery overhead**: Handoffs require polling/checking, messages are explicit delivery
 
 The original vision for site-nine assumed Director would summon agents one-by-one in interactive sessions. Handoffs made sense for this sequential model. However, the actual usage pattern has evolved toward:
@@ -26,7 +31,7 @@ The original vision for site-nine assumed Director would summon agents one-by-on
 
 Where:
 - Director interacts with a single Admin agent
-- Admin orchestrates multiple desk mode workers
+- Admin orchestrates multiple minion mode workers
 - Workers execute tasks in parallel via message-driven coordination
 
 In this model, handoffs add complexity without providing value.
@@ -42,9 +47,9 @@ Director (Human)
     ↓
   Admin Agent (Interactive, summoned by Director)
     ↓
-  ├─ Worker 1 (desk mode, message-driven)
-  ├─ Worker 2 (desk mode, message-driven)
-  └─ Worker 3 (desk mode, message-driven)
+  ├─ Worker 1 (minion mode, message-driven)
+  ├─ Worker 2 (minion mode, message-driven)
+  └─ Worker 3 (minion mode, message-driven)
 ```
 
 **Core principles:**
@@ -52,7 +57,7 @@ Director (Human)
 1. **Director summons Admin** - The entry point is always an Administrator agent in interactive mode
 2. **Admin orchestrates workers** - Admin uses `worker_spawn()` tool to spawn workers as needed
 3. **Messages are the coordination mechanism** - All work assignment via `worker_message()` tool
-4. **Explicit addressing** - Messages target specific `mission_id`, no discovery/polling for work
+4. **Explicit addressing** - Messages target specific `possession_id`, no discovery/polling for work
 5. **Workers are stateless** - Each message is self-contained with full context needed to complete work
 6. **Agents never use CLI** - All coordination via tools (`worker_spawn`, `worker_message`, etc.)
 
@@ -63,21 +68,21 @@ Director (Human)
 | Context document in `.opencode/work/handoffs/` | Message body (markdown, full context) |
 | `handoff_create()` with summary | `worker_message()` with detailed instructions |
 | `handoff_list()` for discovery | Admin explicitly assigns via `worker_message()` |
-| Role-based routing | Admin checks `worker_status()`, sends to specific mission |
+| Role-based routing | Admin checks `worker_status()`, sends to specific possession |
 | Task association | Message includes `task_id` parameter |
 
 ### Worker Spawning
 
-Admin agents use the `worker_spawn()` tool to create desk-mode workers:
+Admin agents use the `worker_spawn()` tool to create minion-mode workers:
 
 ```typescript
 // Spawn a worker
 const result = worker_spawn({ 
   role: "Engineer",
-  persona: "hephaestus",  // optional - auto-selected if omitted
+  daemon: "hephaestus",  // optional - auto-selected if omitted
   poll_interval: 30  // optional - seconds between message checks
 })
-// Returns: { mission_id: 123, role: "Engineer", persona: "hephaestus", status: "spawned" }
+// Returns: { possession_id: 123, role: "Engineer", daemon: "hephaestus", status: "spawned" }
 ```
 
 **Important:** Agents must NEVER use `s9 summon` CLI. The `worker_spawn` tool is the only way for agents to spawn workers. CLI is for Director only.
@@ -96,7 +101,7 @@ handoff_create({
 })
 task_release({ task_id: "ENG-H-0150" })
 
-// Later... Agent B starts mission
+// Later... Agent B starts possession
 handoff_list({ role: "Engineer" })  // Discovers handoff
 // Reads handoff document
 task_claim({ task_id: "ENG-H-0150" })
@@ -108,12 +113,12 @@ handoff_delete({ handoff_id: 1 })
 ```typescript
 // Admin spawns worker
 const worker = worker_spawn({ role: "Engineer" })
-// Returns: { mission_id: 123, persona: "wayland", ... }
+// Returns: { possession_id: 123, daemon: "wayland", ... }
 
 // Admin sends work directly
 worker_message({
-  from_mission_id: 150,
-  to_mission_id: 123,
+  from_possession_id: 150,
+  to_possession_id: 123,
   task_id: "ENG-H-0150",
   priority: "HIGH",
   body: `
@@ -132,8 +137,8 @@ worker_message({
 // Worker receives message, does work
 // Worker optionally sends status back to admin
 worker_message({
-  from_mission_id: 123,
-  to_mission_id: 150,
+  from_possession_id: 123,
+  to_possession_id: 150,
   body: "Task ENG-H-0150 complete. All tests passing."
 })
 ```
@@ -167,10 +172,10 @@ This is a major architectural change requiring coordinated work across multiple 
    - Agents must NEVER use `s9 summon` CLI (CLI is Director-only)
    - Create `.opencode/tools/worker_spawn.ts` (TypeScript)
    - Create `.opencode/tools/worker_spawn.py` (Python implementation)
-   - Spawns desk-worker.py via subprocess.Popen
-   - Returns spawned mission_id for subsequent worker_message calls
-   - Parameters: role, persona (optional), model (optional), poll_interval (optional)
-   - Validates role, waits for mission creation, returns mission details
+   - Spawns minion_worker.py via subprocess.Popen
+   - Returns spawned possession_id for subsequent worker_message calls
+   - Parameters: role, daemon (optional), model (optional), poll_interval (optional)
+   - Validates role, waits for possession creation, returns possession details
 
 ### Phase 2: Documentation Rewrite (HIGH PRIORITY)
 
@@ -181,7 +186,7 @@ This is a major architectural change requiring coordinated work across multiple 
    - Example workflows for common scenarios
    - Troubleshooting guide
 
-7. **Update mission-start skill** (DOC-H-0222)
+7. **Update possession-start skill** (DOC-H-0222)
    - Remove handoff discovery steps (Step 7)
    - Update Step 11 to use worker_spawn tool (not s9 summon CLI)
    - Add message-driven workflow explanation
@@ -200,7 +205,7 @@ This is a major architectural change requiring coordinated work across multiple 
    - Clarify Director→Admin→Workers hierarchy
    - Update coordination examples
 
-10. **Update desk-mode-orchestration.md** (DOC-M-0225)
+10. **Update minion-mode-orchestration.md** (DOC-M-0225)
     - Already mostly message-driven, but refine
     - Remove any handoff references
     - Strengthen Admin orchestration patterns
@@ -216,7 +221,7 @@ This is a major architectural change requiring coordinated work across multiple 
 12. **Remove handoff references from codebase** (ENG-M-0227)
      - Grep for "handoff" references
      - Remove unused imports
-     - Clean up any handoff-related logic in missions/tasks
+     - Clean up any handoff-related logic in possessions/tasks
 
 13. **Update tests** (TST-H-0228)
      - Remove handoff-related tests
@@ -237,7 +242,7 @@ This is a major architectural change requiring coordinated work across multiple 
 - **Simpler mental model**: One coordination mechanism (messages), not two
 - **Explicit coordination**: No ambiguity about who does what
 - **Better for parallel work**: Admin can orchestrate multiple workers simultaneously
-- **No race conditions**: Messages target specific missions, no polling conflicts
+- **No race conditions**: Messages target specific possessions, no polling conflicts
 - **Clearer lifecycle**: Message sent → received → processed → done
 - **More flexible**: Message body can contain arbitrary context/instructions
 - **Better observability**: Message history shows exactly what was assigned to whom
@@ -251,7 +256,7 @@ This is a major architectural change requiring coordinated work across multiple 
   - Mitigation: This is actually better - Admin has full control and visibility
 - **Context documents lost**: `.opencode/work/handoffs/` pattern goes away
   - Mitigation: Message body can contain full markdown context
-  - Alternative: Use task notes or mission notes for persistent context
+  - Alternative: Use task notes or possession notes for persistent context
 
 ### Risks
 
@@ -272,7 +277,7 @@ This is a major architectural change requiring coordinated work across multiple 
 **Keep both handoffs and messages, clarify when to use each**
 
 - Handoffs for sequential interactive work
-- Messages for parallel desk mode work
+- Messages for parallel minion mode work
 
 **Rejected because:**
 - Still confusing (two mechanisms)
@@ -288,7 +293,7 @@ This ADR represents a fundamental shift in site-nine's coordination model:
 **New model**: Director summons Admin, Admin orchestrates workers via messages
 
 This aligns better with:
-- How the system is actually being used (see Mission 150 testing)
+- How the system is actually being used (see Possession 150 testing)
 - Modern distributed system patterns (message-driven, explicit addressing)
 - Reducing cognitive load (one coordination mechanism)
 
@@ -305,5 +310,5 @@ Once approved, create tasks for all implementation phases and assign to appropri
 - ADR-008: Agent Messaging System (foundation for this change)
 - ADR-009: Agent Coordination Patterns (being superseded/refined)
 - ADR-013: Site-nine as OpenCode Integration Platform
-- Mission 150: Desk mode testing that revealed these issues
+- Possession 150: Desk mode testing that revealed these issues
 - Task ADM-H-0202: Inter-agent communication testing

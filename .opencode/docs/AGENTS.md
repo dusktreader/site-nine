@@ -9,7 +9,7 @@
 > - Task work → `task_claim`, `task_update`, `task_close`, `task_show`
 > - Possession lifecycle → `possession_init`, `possession_end`, `possession_dashboard`
 > - Daemons → `daemon_show`, `daemon_set_bio`
-> - Workers → `summon_minion`, `worker_message`, `exorcise_minion`
+> - Minions → `summon_minion`, `worker_message`, `exorcise_minion`
 >
 > Running `s9` commands causes real side effects (unintended summons, duplicate records, session noise) and will
 > be treated as a serious error. If you see `s9` used in an example below, it describes what the **Director**
@@ -203,45 +203,45 @@ Director only.
 
 Agents use messages to coordinate work and communicate explicitly:
 
-| Tool               | Purpose                             | Example                                              |
-|--------------------|-------------------------------------|------------------------------------------------------|
-| `summon_minion`    | Spawn a desk-mode worker for a role | `summon_minion({ role: "Engineer" })`                |
-| `worker_message`   | Send message to another possession  | `worker_message({ to_possession_id: 42, body: "..." })` |
-| `worker_status`    | Check active workers for a role     | `worker_status({ role: "Engineer" })`                |
-| `exorcise_minion`  | Signal a worker to end gracefully   | `exorcise_minion({ to_possession_id: 42 })`          |
+| Tool               | Purpose                              | Example                                              |
+|--------------------|--------------------------------------|------------------------------------------------------|
+| `summon_minion`    | Summon a minion-mode minion for a role | `summon_minion({ role: "Engineer" })`                |
+| `worker_message`   | Send message to another possession   | `worker_message({ to_possession_id: 42, body: "..." })` |
+| `worker_status`    | Check active minions for a role      | `worker_status({ role: "Engineer" })`                |
+| `exorcise_minion`  | Signal a minion to end gracefully    | `exorcise_minion({ to_possession_id: 42 })`          |
 
 **Key principles:**
 
-- Admin orchestrates workers via `summon_minion` tool (never use `s9 summon` CLI)
+- Admin orchestrates minions via `summon_minion` tool (never use `s9 summon` CLI)
 - Admin assigns work explicitly via `worker_message` (not discovery patterns)
-- Workers receive work assignments directly from Admin
+- Minions receive work assignments directly from Admin
 - No polling or discovery — coordination is explicit and deterministic
 
-**See:** `.opencode/docs/guides/desk-mode-orchestration.md` for complete orchestration patterns.
+**See:** `.opencode/docs/guides/minion-mode-orchestration.md` for complete orchestration patterns.
 
 
 ## Agent coordination
 
-Site-nine uses a **Director → Admin → Workers** hierarchy for multi-agent work:
+Site-nine uses a **Director → Admin → Minions** hierarchy for multi-agent work:
 
 - **Director** (human) — summons agents, gives high-level goals, dismisses agents
-- **Admin agent** — orchestrates workers, assigns tasks via messages, monitors progress
-- **Worker agents** — run in desk mode, receive work assignments, report status back to Admin
+- **Admin agent** — orchestrates minions, assigns tasks via messages, monitors progress
+- **Minion agents** — run in minion mode, receive work assignments, report status back to Admin
 
-Workers are invisible to the Director. The Admin manages them autonomously using tools.
+Minions are invisible to the Director. The Admin manages them autonomously using tools.
 
 
 ### Admin orchestration
 
-When the Director delegates complex work to you as Admin, you coordinate workers via tools:
+When the Director delegates complex work to you as Admin, you coordinate minions via tools:
 
-1. **Spawn workers** with `summon_minion` — launches headless background sessions
+1. **Summon minions** with `summon_minion` — launches headless background sessions
 2. **Assign work** with `worker_message` — send task instructions with full context
-3. **Monitor progress** with `worker_status` — check active workers by role
-4. **Wait for updates** with `watch_inbox` — block until a worker sends a response
-5. **Terminate workers** with `exorcise_minion` — clean up when work is done
+3. **Monitor progress** with `worker_status` — check active minions by role
+4. **Wait for updates** with `watch_inbox` — block until a minion sends a response
+5. **Dismiss minions** with `exorcise_minion` — clean up when work is done
 
-**See:** `.opencode/docs/guides/desk-mode-orchestration.md` for complete orchestration patterns.
+**See:** `.opencode/docs/guides/minion-mode-orchestration.md` for complete orchestration patterns.
 
 
 ### Finding other agents
@@ -251,22 +251,22 @@ Use the messaging system to coordinate with other agents asynchronously.
 **Discovery pattern:**
 
 1. Check for available agents using `worker_status`
-2. Send message if agent is in desk mode via `worker_message`
+2. Send message if agent is in minion mode via `worker_message`
 3. Ask Director to summon agent if none available
 
 **See:** `.opencode/docs/guides/agent-discovery.md` for complete patterns.
 
 
-### Desk mode
+### Minion mode
 
-Desk mode workers are headless background agents spawned by Admin:
+Minion mode minions are headless background agents summoned by Admin:
 
-- Workers process messages asynchronously
+- Minions process messages asynchronously
 - Admin assigns work via `worker_message`
-- Workers send status updates back to Admin
+- Minions send status updates back to Admin
 - Admin monitors via `worker_status` and `watch_inbox`
 
-**See:** `.opencode/docs/guides/desk-mode-orchestration.md` for usage guide.
+**See:** `.opencode/docs/guides/minion-mode-orchestration.md` for usage guide.
 
 
 ### Communication channels
@@ -274,7 +274,7 @@ Desk mode workers are headless background agents spawned by Admin:
 You have three communication channels:
 
 1. **OpenCode Chat (Agent ↔ Director)** — For immediate guidance, requesting agent summons, reporting blockers
-2. **Messaging System (Agent ↔ Agent)** — For async technical questions, epic coordination, worker status updates
+2. **Messaging System (Agent ↔ Agent)** — For async technical questions, epic coordination, minion status updates
 3. **Director Observation** — Director can view all messages but doesn't participate
 
 **See:** `possession-start` skill for when to use each channel.
@@ -346,7 +346,7 @@ Understanding the difference is important:
 ```
 1. Director: s9 summon administrator
 2. Admin: Run possession-start skill
-3. Admin: Spawn workers for needed roles
+3. Admin: Summon minions for needed roles
    → summon_minion({ role: "Engineer" })
    → summon_minion({ role: "Tester" })
    → Returns { possession_id: 83 } and { possession_id: 84 }
@@ -358,7 +358,7 @@ Understanding the difference is important:
    → worker_message({ to_possession_id: 84, body: "Validate ENG-H-0150 implementation" })
 7. Admin: Wait for test results
    → watch_inbox()
-8. Admin: Terminate workers when done
+8. Admin: Dismiss minions when done
    → exorcise_minion({ to_possession_id: 83 })
    → exorcise_minion({ to_possession_id: 84 })
 9. Director: /dismiss Admin
@@ -372,7 +372,7 @@ Understanding the difference is important:
 1. You (Engineer): Need Architect input
 2. You: Check for available Architects
    → worker_status({ role: "Architect" })
-3a. If Architect in desk mode:
+3a. If Architect in minion mode:
     → worker_message({ to_possession_id: <id>, body: "Question about X..." })
     → Continue working while waiting for response
 3b. If no Architect available:
@@ -414,7 +414,7 @@ Understanding the difference is important:
 - **Task Management**: `.opencode/docs/guides/tasks.md`
 - **Agent Discovery**: `.opencode/docs/guides/agent-discovery.md`
 - **Admin Orchestration**: `.opencode/docs/guides/admin-orchestration.md` (for Admin role)
-- **Desk Mode Orchestration**: `.opencode/docs/guides/desk-mode-orchestration.md` (worker reference)
+- **Minion Mode Orchestration**: `.opencode/docs/guides/minion-mode-orchestration.md` (minion reference)
 - **JSON Output Usage**: `.opencode/docs/guides/json-output-usage.md`
 - **Commit Guidelines**: `.opencode/docs/guides/commit-guidelines.md`
 - **Python Usage Policy**: `.opencode/docs/guides/python-usage-policy.md` (REQUIRED: always use `uv run`)

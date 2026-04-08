@@ -20,7 +20,13 @@ from site_nine.epics import EpicManager
 from site_nine.exceptions import SiteNineError
 from site_nine.tasks import TaskManager
 
-app = typer.Typer(help="Manage tasks")
+app = typer.Typer(help="Manage tasks", invoke_without_command=True)
+
+
+@app.callback()
+def _callback(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        print(ctx.get_help())
 
 
 @app.command()
@@ -29,9 +35,12 @@ def list(
     role: Annotated[str | None, typer.Option("--role", "-r", help="Filter by role")] = None,
     status: Annotated[str | None, typer.Option("--status", "-s", help="Filter by status")] = None,
     mission: Annotated[int | None, typer.Option("--mission", "-m", help="Filter by mission ID")] = None,
+    all_tasks: Annotated[
+        bool, typer.Option("--all", "-a", help="Include finished tasks (COMPLETE and ABORTED)")
+    ] = False,
     json_output: Annotated[bool, typer.Option("--json", "-j", help="Output in JSON format")] = False,
 ) -> None:
-    """List tasks"""
+    """List tasks. Finished tasks (COMPLETE, ABORTED) are hidden by default; use --all to show them."""
     db_path = require_db_path()
 
     if role:
@@ -41,7 +50,7 @@ def list(
 
     with Database(db_path) as db:
         manager = TaskManager(db)
-        tasks = manager.list_tasks(status=status, role=role, possession_id=mission)
+        tasks = manager.list_tasks(status=status, role=role, possession_id=mission, include_finished=all_tasks)
 
     if not tasks:
         if json_output:

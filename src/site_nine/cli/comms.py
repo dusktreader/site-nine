@@ -17,8 +17,14 @@ from site_nine.exceptions import SiteNineError
 from site_nine.messaging import Message, MessageManager
 from site_nine.possessions import PossessionManager
 
-app = typer.Typer(help="Agent-to-agent messaging and coordination")
+app = typer.Typer(help="Agent-to-agent messaging and coordination", invoke_without_command=True)
 console = Console()
+
+
+@app.callback()
+def _callback(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        print(ctx.get_help())
 
 
 def _get_current_mission_id(db: Database) -> int:
@@ -413,10 +419,10 @@ def inbox(
         mission_id = _get_current_mission_id(db)
         msg_manager = MessageManager(db)
 
-        # Check desk mode status
+        # Check minion mode status
         mission_mgr = PossessionManager(db)
         mission = mission_mgr.get_possession(mission_id)
-        desk_mode = bool(mission and mission.desk_mode_active)
+        minion_mode = bool(mission and mission.minion_mode_active)
 
         if all_conversations:
             # Get all conversations where mission is a participant or in scope
@@ -457,7 +463,7 @@ def inbox(
         output_json(
             format_json_response(
                 {
-                    "desk_mode_active": desk_mode,
+                    "minion_mode_active": minion_mode,
                     "mission_id": mission_id,
                     "conversations": [
                         {

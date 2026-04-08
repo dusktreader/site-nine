@@ -20,7 +20,13 @@ from site_nine.possessions import PossessionManager
 from site_nine.possessions.models import Possession
 from site_nine.possessions.types import PossessionStatus
 
-app = typer.Typer(help="Manage possessions")
+app = typer.Typer(help="Manage possessions", invoke_without_command=True)
+
+
+@app.callback()
+def _callback(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        print(ctx.get_help())
 
 
 @app.command("list")
@@ -56,10 +62,10 @@ def list_possessions(
     def _get_availability(possession: Possession) -> str:
         if possession.status == PossessionStatus.EXORCISED:
             return "Ended"
-        if possession.desk_mode_active:
+        if possession.minion_mode_active:
             if possession.epic_id:
-                return f"Desk ({possession.epic_id})"
-            return "Desk (All)"
+                return f"Minion ({possession.epic_id})"
+            return "Minion (All)"
         mid = possession.id or 0
         current_task_id = possession_task_map.get(mid)
         if possession.epic_id:
@@ -84,7 +90,7 @@ def list_possessions(
                 "codename": "",
                 "status": p.status.value,
                 "epic_id": p.epic_id,
-                "desk_mode_active": p.desk_mode_active,
+                "minion_mode_active": p.minion_mode_active,
                 "current_task_id": possession_task_map.get(p.id or 0),
                 "availability": _get_availability(p),
                 "start_time": p.start_time,

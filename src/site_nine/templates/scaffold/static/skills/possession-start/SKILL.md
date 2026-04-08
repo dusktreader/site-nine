@@ -24,12 +24,12 @@ This skill initializes a site-nine possession. There are two distinct paths:
   Director. Registers the possession, selects a daemon, renders a startup report, then
   waits for the Director's instructions.
 
-- **Minion path** — for desk-mode workers spawned automatically by an orchestrating
+- **Minion path** — for minion-mode workers summoned automatically by an orchestrating
   Admin. Registers the possession, selects a daemon, claims the assigned task, and
   begins work immediately. No dashboard, no report.
 
-If you were spawned by `summon_minion` (or `worker_spawn`), you are on the **Minion
-path**. If the Director summoned you interactively, you are on the **Admin path**.
+If you were summoned by `summon_minion`, you are on the **Minion path**. If the
+Director summoned you interactively, you are on the **Admin path**.
 
 ---
 
@@ -232,10 +232,10 @@ instructions or an exorcism signal.
 
 ---
 
-## Orchestrating Workers (Admin / Operator Only)
+## Orchestrating Minions (Admin / Operator Only)
 
-When the Director asks you to delegate work to desk-mode workers, use `summon_minion`.
-This spawns a background worker that initializes itself with this skill automatically:
+When the Director asks you to delegate work to minion-mode workers, use `summon_minion`.
+This summons a background minion that initializes itself with this skill automatically:
 
 ```
 summon_minion({ role: "Engineer" })
@@ -243,15 +243,15 @@ summon_minion({ role: "Documentarian", daemon: "thoth" })
 summon_minion({ role: "Tester", poll_interval: 15 })
 ```
 
-Returns `{ possession_id, role, daemon, status: "spawned", ... }`. Save the
-`possession_id` to coordinate with the worker.
+Returns `{ possession_id, role, daemon, status: "summoned", ... }`. Save the
+`possession_id` to coordinate with the minion.
 
-After spawning, send the worker its task assignment:
+After summoning, send the minion its task assignment:
 
 ```
 worker_message({
   from_possession_id: <your-id>,
-  to_possession_id: <worker-id>,
+  to_possession_id: <minion-id>,
   body: "Please complete task ENG-H-0042 and report back when done.",
   task_id: "ENG-H-0042"
 })
@@ -263,18 +263,18 @@ Monitor for completion using `watch_inbox`:
 watch_inbox({ possession_id: <your-id>, timeout: 600 })
 ```
 
-When the worker reports completion, either assign more work or exorcise them:
+When the minion reports completion, either assign more work or exorcise them:
 
 ```
 exorcise_minion({
   from_possession_id: <your-id>,
-  to_possession_id: <worker-id>,
+  to_possession_id: <minion-id>,
   reason: "Task ENG-H-0042 complete. No further work needed."
 })
 ```
 
-**Every worker you spawn is your responsibility to exorcise.** Workers never end
-their own possession. If you end your session without exorcising your workers, they
+**Every minion you summon is your responsibility to exorcise.** Minions never end
+their own possession. If you end your session without exorcising your minions, they
 become zombie possessions that the inquisitor will flag after 8 hours.
 
 ---

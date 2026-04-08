@@ -9,13 +9,13 @@ Parameters provided to this command:
 - Daemon flag: $2
 - Auto-assign flag: $3
 - Task flag: $4
-- Desk flag: $5
+- Minion flag: $5
 
 Use these parameters as context when executing the skill steps:
 - If a role was provided, skip role selection (Step 2) and use it directly.
 - If `--daemon <name>` was provided, use that daemon name in Step 3.
 - If `--auto-assign` was provided, claim the top priority task after initialization.
 - If `--task TASK-ID` was provided, claim that specific task after initialization.
-- If `--desk` was provided, operate in headless desk worker mode.
+- If `--minion` was provided, operate in headless minion worker mode.
 
 skill(name="possession-start")

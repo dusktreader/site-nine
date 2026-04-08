@@ -28,9 +28,9 @@ All s9 commands support two output modes:
 **Discovery workflow:**
 ```bash
 # Agent needs to check if Architect is available
-missions=$(s9 mission list --role Architect --epic EPC-H-0004 --json)
+possessions=$(s9 possession list --role Architect --epic EPC-H-0004 --json)
 
-# Parse JSON to check desk_mode_active field
+# Parse JSON to check minion_mode_active field
 # Then make decision: send message or ask Director
 ```
 
@@ -45,13 +45,13 @@ if [ task_count > 0 ]; then
 fi
 ```
 
-**Checking mission status:**
+**Checking possession status:**
 ```bash
-# Get structured data about current mission
-mission_data=$(s9 mission show 124 --json)
+# Get structured data about current possession
+possession_data=$(s9 possession show 124 --json)
 
 # Extract specific fields for logic
-epic_id=$(echo $mission_data | jq -r '.epic_id')
+epic_id=$(echo $possession_data | jq -r '.epic_id')
 ```
 
 ### ✅ Correct: Presenting to Director (Use table mode)
@@ -68,9 +68,9 @@ s9 task list --role Engineer --status TODO
 s9 comms inbox
 ```
 
-**Mission status report:**
+**Possession status report:**
 ```bash
-# Director sees formatted mission details
+# Director sees formatted possession details
 s9 dashboard --role Architect
 ```
 
@@ -82,13 +82,13 @@ These are typically used by agents for coordination logic:
 
 ```bash
 # Find available agents
-s9 mission list --role <Role> --epic <EPIC-ID> --json
+s9 possession list --role <Role> --epic <EPIC-ID> --json
 
 # Check for tasks programmatically
 s9 task list --role <Role> --status TODO --json
 
-# Get mission details for parsing
-s9 mission show <mission-id> --json
+# Get possession details for parsing
+s9 possession show <possession-id> --json
 
 # Check epic details
 s9 epic show <EPIC-ID> --json
@@ -109,8 +109,8 @@ s9 dashboard --role <Role>
 # List tasks for Director to review
 s9 task list --status TODO
 
-# Show mission status
-s9 mission list
+# Show possession status
+s9 possession list
 ```
 
 ### Hybrid: Context Dependent
@@ -132,8 +132,8 @@ When documenting workflows in skills, use this pattern:
 **For agent consumption:**
 ```bash
 # Check for available Architects on this epic
-s9 mission list --role Architect --epic EPC-H-0004 --json
-# Parse desk_mode_active field to find available agents
+s9 possession list --role Architect --epic EPC-H-0004 --json
+# Parse minion_mode_active field to find available agents
 ```
 
 **For Director presentation:**
@@ -145,9 +145,9 @@ s9 task list --role Engineer --status TODO
 **Make it clear why:**
 ```bash
 # Agent parses JSON to make coordination decision
-missions=$(s9 mission list --role Architect --epic EPC-H-0004 --json)
+possessions=$(s9 possession list --role Architect --epic EPC-H-0004 --json)
 
-# IF desk_mode_active == 1: send message
+# IF minion_mode_active == 1: send message
 # ELSE: ask Director to summon agent
 ```
 
@@ -160,13 +160,13 @@ When reviewing skills, check for these patterns:
 **Before:**
 ```bash
 # Find agents working on epic
-s9 mission list --role Architect --epic EPC-H-0004
+s9 possession list --role Architect --epic EPC-H-0004
 ```
 
 **After:**
 ```bash
-# Find agents working on epic (parse for desk_mode_active)
-s9 mission list --role Architect --epic EPC-H-0004 --json
+# Find agents working on epic (parse for minion_mode_active)
+s9 possession list --role Architect --epic EPC-H-0004 --json
 ```
 
 ### Pattern 2: Auto-Claiming Tasks
@@ -208,16 +208,16 @@ s9 task show ENG-H-0037 --json
 
 Understanding the JSON structure helps agents parse correctly:
 
-### Mission List JSON
+### Possession List JSON
 ```json
 {
-  "missions": [
+  "possessions": [
     {
       "id": 62,
-      "persona": "daedalus",
+      "daemon": "daedalus",
       "role": "Architect",
       "status": "ACTIVE",
-      "desk_mode_active": 1,
+      "minion_mode_active": 1,
       "epic_id": "EPC-H-0004",
       "codename": "swift-forge"
     }
@@ -226,9 +226,9 @@ Understanding the JSON structure helps agents parse correctly:
 ```
 
 **Useful fields for agents:**
-- `desk_mode_active`: Is agent available for messages? (0 or 1)
+- `minion_mode_active`: Is agent available for messages? (0 or 1)
 - `epic_id`: What epic is agent working on?
-- `id`: Mission ID for sending messages
+- `id`: Possession ID for sending messages
 
 ### Task List JSON
 ```json
@@ -241,7 +241,7 @@ Understanding the JSON structure helps agents parse correctly:
       "priority": "HIGH",
       "role": "Engineer",
       "epic_id": "EPC-H-0004",
-      "mission_id": null
+      "possession_id": null
     }
   ]
 }
@@ -249,9 +249,9 @@ Understanding the JSON structure helps agents parse correctly:
 
 **Useful fields for agents:**
 - `status`: Is task available to claim?
-- `mission_id`: Is task already claimed?
+- `possession_id`: Is task already claimed?
 - `priority`: For prioritization logic
-- `epic_id`: Match with mission epic
+- `epic_id`: Match with possession epic
 
 ### Task Show JSON
 ```json
@@ -272,16 +272,16 @@ Understanding the JSON structure helps agents parse correctly:
 Agents can use `jq` for parsing JSON output:
 
 ```bash
-# Get all mission IDs with desk mode active
-s9 mission list --role Architect --epic EPC-H-0004 --json | \
-  jq -r '.missions[] | select(.desk_mode_active == 1) | .id'
+# Get all possession IDs with minion mode active
+s9 possession list --role Architect --epic EPC-H-0004 --json | \
+  jq -r '.possessions[] | select(.minion_mode_active == 1) | .id'
 
 # Count TODO tasks
 s9 task list --status TODO --role Engineer --json | \
   jq '.tasks | length'
 
-# Extract epic_id from mission
-s9 mission show 124 --json | jq -r '.epic_id'
+# Extract epic_id from possession
+s9 possession show 124 --json | jq -r '.epic_id'
 
 # Get all task IDs with HIGH priority
 s9 task list --priority HIGH --status TODO --json | \
@@ -299,6 +299,6 @@ s9 task list --priority HIGH --status TODO --json | \
 ## See Also
 
 - **Agent Discovery Guide**: `agent-discovery.md` for discovery workflow examples
-- **Epic Possessions Guide**: `epic-possessions-and-desk-mode.md` for coordination patterns
+- **Epic Possessions Guide**: `epic-possessions-and-minion-mode.md` for coordination patterns
 - **ADR-008** (lines 985-999): JSON output flag design rationale
 - **Task OPR-M-0074**: Implementation of --json flags across all s9 commands

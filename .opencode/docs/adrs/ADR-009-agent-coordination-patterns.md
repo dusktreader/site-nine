@@ -31,21 +31,21 @@ agents coordinate work, discover available help, and interact with the Director.
 - When should agents message vs chat with Director?
 - Director's role as observer vs participant needs clarification
 
-**Desk mode confusion:**
-- Originally conceived as blocking command (`s9 comms desk`)
+**Minion mode confusion:**
+- Originally conceived as blocking command (`s9 comms desk`), later reimplemented as `MinionWorker`
 - But agents need to remain in OpenCode chat to talk to Director
 - Need non-blocking way to advertise availability
 - Need periodic status output so Director knows agent isn't stuck
 
 ## Decision
 
-We will implement a coordination system with three key patterns: **Possession Scoping**, **Desk Mode**, and 
+We will implement a coordination system with three key patterns: **Possession Scoping**, **Minion Mode**, and 
 **Communication Channels**.
 
 ### Core Principles
 
 1. **Possession Scoping:** Possessions can be scoped to tasks, epics, or general work (mutually exclusive)
-2. **Desk Mode:** Possessions can advertise availability without blocking chat
+2. **Minion Mode:** Possessions can advertise availability without blocking chat
 3. **Director Channel:** Director communicates via OpenCode chat, not messaging system
 
 ### Possession Scoping
@@ -123,36 +123,36 @@ s9 task next
 # Error if no tasks available
 ```
 
-### Desk Mode
+### Minion Mode
 
-Desk mode is a **possession attribute** that advertises availability for questions, implemented as a **monitoring 
+Minion mode is a **possession attribute** that advertises availability for questions, implemented as a **monitoring
 command** that provides periodic status output.
 
 **Schema:**
 ```sql
-ALTER TABLE possessions ADD COLUMN desk_mode_active INTEGER DEFAULT 0;
+ALTER TABLE possessions ADD COLUMN minion_mode_active INTEGER DEFAULT 0;
 
-CREATE INDEX idx_possessions_desk_mode ON possessions(desk_mode_active);
+CREATE INDEX idx_possessions_minion_mode ON possessions(minion_mode_active);
 
--- Note: desk_mode scope inferred from possession.epic_id
--- If epic_id IS NOT NULL → desk for that epic
--- If epic_id IS NULL → general desk availability
+-- Note: minion_mode scope inferred from possession.epic_id
+-- If epic_id IS NOT NULL → minion for that epic
+-- If epic_id IS NULL → general minion availability
 ```
 
 **Commands:**
 ```bash
-# Start desk mode (default --start flag)
+# Start minion mode (default --start flag)
 s9 comms desk                      # General availability
 s9 comms desk --epic EPC-H-0004    # Epic-specific (only if possession.epic_id already set)
 s9 comms desk --start              # Explicit
 
-# Stop desk mode
+# Stop minion mode
 s9 comms desk --stop
 ```
 
 **Behavior when starting:**
 ```
-✓ Desk mode enabled for EPC-H-0004
+✓ Minion mode enabled for EPC-H-0004
 Monitoring for messages (checking every 30s)...
 
 [30s later]
@@ -175,7 +175,7 @@ Checking comms... No new messages. (0 unread)
 - Shows Director the agent is alive and monitoring
 - Agent can still interact with Director between status checks
 - Exit with `s9 comms desk --stop` or Ctrl+C
-- Sets `desk_mode_active=1` on start, `0` on stop
+- Sets `minion_mode_active=1` on start, `0` on stop
 - Automatically disabled when possession ends
 
 **Validation:**
@@ -202,7 +202,7 @@ s9 possession list --role Architect --active-only --epic EPC-H-0004
 
 **New filters:**
 - `--epic <epic-id>` - Filter by possessions working on epic
-- (No `--desk-mode` flag - availability shown in output by default)
+- (No `--minion-mode` flag - availability shown in output by default)
 
 **Updated display:**
 ```
@@ -210,8 +210,8 @@ Active Possessions - Architect Role
 ┏━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┓
 ┃ ID    ┃ Daemon      ┃ Codename   ┃ Availability        ┃
 ┡━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━┩
-│ 62    │ ahura-mazda │ swift-...  │ Desk (EPC-H-0004)   │
-│ 58    │ thoth       │ cosmic-... │ Desk (All)          │
+│ 62    │ ahura-mazda │ swift-...  │ Minion (EPC-H-0004) │
+│ 58    │ thoth       │ cosmic-... │ Minion (All)        │
 │ 71    │ ptah        │ iron-...   │ Working (EPC-H-0004)│
 │ 72    │ maat        │ void-...   │ Working (ARC-H-0057)│
 │ 73    │ osiris      │ neon-...   │ Working             │
@@ -220,11 +220,11 @@ Active Possessions - Architect Role
 
 **Availability column logic:**
 ```python
-if possession.desk_mode_active:
+if possession.minion_mode_active:
     if possession.epic_id:
-        return f"Desk ({possession.epic_id})"
+        return f"Minion ({possession.epic_id})"
     else:
-        return "Desk (All)"
+        return "Minion (All)"
 else:
     if possession.epic_id:
         return f"Working ({possession.epic_id})"
@@ -239,7 +239,7 @@ else:
 ```bash
 # Engineer needs architect help
 Engineer: s9 possession list --role Architect --epic EPC-H-0004 --json
-# Parse JSON, check for desk_mode_active=1
+# Parse JSON, check for minion_mode_active=1
 
 # If found, send message
 Engineer: s9 comms send --to-possession 62 "Question about ToolAdapter design..."
@@ -285,7 +285,7 @@ Director: /summon architect
 **Example:**
 ```bash
 Engineer: s9 comms send --to-mission 62 "Question about adapter registry design"
-Architect (in desk mode): s9 comms reply MSG-M-0201 "Use singleton pattern..."
+Architect (in minion mode): s9 comms reply MSG-M-0201 "Use singleton pattern..."
 ```
 
 #### 3. Director Observing Messages
@@ -301,13 +301,13 @@ Architect (in desk mode): s9 comms reply MSG-M-0201 "Use singleton pattern..."
 - Send messages through messaging system (no Possession 0)
 - Receive messages in inbox
 - Participate in discussions
-- Have desk mode
+- Have minion mode
 
 **Director communicates with agents via OpenCode chat only.**
 
 ### Integration with Handoffs
 
-Desk mode complements the existing handoff system (ADR-006):
+Minion mode complements the existing handoff system (ADR-006):
 
 **Handoff workflow:**
 ```bash
@@ -317,7 +317,7 @@ Architect: s9 handoff create OPR-H-0061 --to-role Engineer --summary "Ready for 
 # Administrator sees pending handoff
 Admin: s9 handoff list --role Engineer --status pending
 
-# Admin in desk mode, coordinates
+# Admin in minion mode, coordinates
 Admin: s9 comms discuss --role Engineer "Task OPR-H-0061 ready for implementation"
 
 # Engineer accepts handoff
@@ -338,7 +338,7 @@ Engineer: s9 handoff accept <handoff-id>
 **Cons:**
 - Director lifecycle doesn't match possession lifecycle
 - Director is always available (no start/end)
-- Desk mode doesn't apply to Director
+- Minion mode doesn't apply to Director
 - OpenCode chat already provides better synchronous communication
 - Adds complexity to schema (special case `id=0`)
 
@@ -362,22 +362,22 @@ channel for Director ↔ Agent. Messaging system is for async agent coordination
 
 **Rejected because:** Simple foreign key `possessions.epic_id` provides same information without junction table.
 
-### Alternative 3: Desk Mode as Blocking Interactive Command
+### Alternative 3: Minion Mode as Blocking Interactive Command
 
 **Approach:** `s9 comms desk` runs interactive TUI showing incoming messages, agent handles in UI.
 
 **Pros:**
 - Dedicated interface for message handling
 - Could have rich UI (like email client)
-- Clear "desk mode" vs "normal mode" distinction
+- Clear "minion mode" vs "normal mode" distinction
 
 **Cons:**
 - Blocks OpenCode chat - agent can't talk to Director
 - Requires complex TUI implementation
 - Agent loses conversational flow with Director
-- Can't easily switch between desk work and other tasks
+- Can't easily switch between minion work and other tasks
 
-**Rejected because:** Agent needs to remain available in OpenCode chat to talk to Director. Desk mode must be 
+**Rejected because:** Agent needs to remain available in OpenCode chat to talk to Director. Minion mode must be 
 non-blocking with status output, not a separate interactive mode.
 
 ### Alternative 4: Allow Both Task and Epic Scope on Possession
@@ -403,18 +403,18 @@ possession.
 
 - ✅ **Epic-scoped possessions:** Agents can work through multiple tasks in one possession
 - ✅ **Discovery mechanism:** Agents can see who's available before messaging
-- ✅ **Clear availability:** Desk mode advertises "I'm here to help"
-- ✅ **Director visibility:** Periodic desk mode output shows agent is active
+- ✅ **Clear availability:** Minion mode advertises "I'm here to help"
+- ✅ **Director visibility:** Periodic minion mode output shows agent is active
 - ✅ **Communication clarity:** Three distinct channels (chat, messages, observation)
 - ✅ **Flexible scoping:** Task/epic/general covers all coordination patterns
-- ✅ **No blocking:** Desk mode doesn't prevent Director communication
-- ✅ **Simple schema:** Minimal new fields (epic_id, desk_mode_active)
+- ✅ **No blocking:** Minion mode doesn't prevent Director communication
+- ✅ **Simple schema:** Minimal new fields (epic_id, minion_mode_active)
 
 ### Negative
 
-- ⚠️ **New concepts:** Agents must learn possession scoping and desk mode patterns
+- ⚠️ **New concepts:** Agents must learn possession scoping and minion mode patterns
 - ⚠️ **Validation complexity:** Must enforce mutual exclusivity of scopes
-- ⚠️ **Desk mode polling:** 30s checks could miss urgent messages (acceptable tradeoff)
+- ⚠️ **Minion mode polling:** 30s checks could miss urgent messages (acceptable tradeoff)
 - ⚠️ **Epic possession lifecycle:** Less clear when possession should end (agent decides)
 - ⚠️ **Task claiming logic:** `s9 task next` adds new workflow to learn
 
@@ -424,111 +424,79 @@ possession.
 |------|-----------|
 | **Epic possessions never end** | Add possession duration warnings; Directors can check long-running possessions; Add `s9 possession stats` to show possession age |
 | **Agents claim tasks outside their epic** | Validation: `task.epic_id == possession.epic_id` for epic-scoped possessions; Return clear error |
-| **Desk mode spam** | 30s check interval is reasonable; Add `--interval` flag if needed; Agent can exit with Ctrl+C or `--stop` |
+| **Minion mode spam** | 30s check interval is reasonable; Add `--interval` flag if needed; Agent can exit with Ctrl+C or `--stop` |
 | **Confusion about Director channel** | Clear documentation in skills; Update possession-start to explain channels; Training/onboarding |
 | **Availability column ambiguity** | Show full epic ID for clarity; Could add tooltip/help text; JSON output provides structured data |
 | **Possession scope creep** | Clear validation errors; Documentation of scope semantics; Examples in skills |
 
 ## Implementation Status
 
-### Phase 1: Possession Scoping ✅ (Mostly Complete)
+### Phase 1: Possession Scoping ✅ (Complete)
 
-**Completed:**
 - ✅ **Schema migration** (OPR-H-0091): `possessions.epic_id` field added with foreign key constraint
 - ✅ **Update possession start** (OPR-H-0092): `--epic` flag added, mutual exclusivity validation working
 - ✅ **Epic scoping validation** (OPR-H-0093): Task claims validate epic_id matching in `TaskManager.claim_task()`
 - ✅ **Update possession display**: Epic shown in `s9 possession show` and JSON output
 - ✅ **Testing**: 13 tests covering epic-scoped possessions and task claiming validation
+- ⛔ **`s9 task next`**: Deferred indefinitely — possessions no longer claim task sequences in practice
 
-**Remaining:**
-- ⏸️ **Implement `s9 task next`**: Auto-find and claim next task in possession epic (not yet started)
+### Phase 2: Possession Discovery ⛔ (Superseded)
 
-### Phase 2: Possession Discovery ⏸️ (Not Started)
+The `s9 comms desk` interactive command and possession-list discovery pattern described here were
+**not implemented**. Instead, the architecture evolved (ADR-014) to explicit Admin orchestration via
+`summon_minion` / `worker_message` / `watch_inbox`. Discovery via `s9 possession list --minion-mode`
+is no longer needed — the Admin knows the possession IDs of every worker it spawned.
 
-**Pending:**
-- ⏸️ Add `--epic` filter to `s9 possession list`
-- ⏸️ Update possession list display with Availability column
-- ⏸️ Implement availability logic (desk_mode_active + epic_id + current_task_id)
-- ⏸️ Ensure JSON output includes availability data
-- ⏸️ Testing for discovery queries and filtering
+### Phase 3: Minion Mode ✅ (Implemented via MinionWorker, not `s9 comms desk`)
 
-### Phase 3: Desk Mode ⏸️ (Schema Ready, Command Not Implemented)
+The `s9 comms desk` blocking command described in this ADR was **never built**. Minion mode was
+implemented instead as a persistent Python process (`src/site_nine/workers/minion_worker.py`), launched
+headlessly via `s9 summon --minion`. This diverges from the original design in three ways:
 
-**Completed:**
-- ✅ **Schema migration**: `possessions.desk_mode_active` field added
+- No interactive `s9 comms desk` command; workers are fully headless
+- Polling loop and inbox checking are handled by `MinionWorker`, not the agent itself
+- Admin spawns and coordinates workers via `summon_minion` / `worker_message` / `watch_inbox` tools
 
-**Pending:**
-- ⏸️ Implement `s9 comms desk` command with start/stop flags
-- ⏸️ Periodic status output (30s loop)
-- ⏸️ Inbox integration with message summaries
-- ⏸️ Auto-disable on possession end
-- ⏸️ Testing for desk mode lifecycle
+**Completed (as-built):**
+- ✅ `possessions.minion_mode_active` schema field
+- ✅ `MinionWorker` class with 30s polling loop (`src/site_nine/workers/minion_worker.py`)
+- ✅ `s9 summon --minion` CLI flag that launches `minion_worker.py`
+- ✅ `summon_minion` / `exorcise_minion` OpenCode tools for Admin orchestration
+- ✅ `watch_inbox` tool for Admin to block-wait on worker responses
+- ✅ Graceful shutdown (SIGTERM/SIGINT → possession-end skill)
+- ✅ Log output redirected to `~/.local/state/site-nine/logs/minion-worker-{role}.log`
+- ✅ Inquisitor (ENG-M-0246) auto-exorcises zombie possessions after 8 hours
 
-### Phase 4: Skills Updates ⏸️ (Not Started)
+**Remaining gaps (tracked in ARC-H-0257):**
+- ⏸️ Worker-maintained markdown journal replacing role-scoped log file
+- ⏸️ Admin timeout / crash-detection strategy when `watch_inbox` blocks indefinitely
+- ⏸️ Auto-restart / crash recovery for `minion_worker.py` process itself
+- ⏸️ Git worktree isolation for parallel workers (PROPOSED — ADR-015)
 
-**Pending:**
-- ⏸️ Update possession-start skill
-- ⏸️ Add discovery patterns to skills
-- ⏸️ Document workflows
-- ⏸️ JSON usage examples
-- ⏸️ Testing coordination workflows
+### Phase 4: Skills and Documentation ✅ (Complete)
 
-## Implementation Plan
-
-### Phase 1: Possession Scoping
-
-**Tasks:**
-1. **Schema migration:** Add `possessions.epic_id` field
-2. **Update possession start:** Add `--epic` flag, validate mutual exclusivity with `--task`
-3. **Epic scoping validation:** Prevent task claims outside possession epic
-4. **Implement `s9 task next`:** Find and claim next task in possession epic
-5. **Update possession display:** Show possession scope in `s9 possession show`
-6. **Testing:** Possession scoping workflows, validation edge cases
-
-### Phase 2: Possession Discovery
-
-**Tasks:**
-1. **Add `--epic` filter** to `s9 possession list`
-2. **Update possession list display:** Add Availability column
-3. **Implement availability logic:** desk_mode_active + epic_id + current_task_id
-4. **JSON output:** Ensure availability data in JSON mode (OPR-M-0074 dependency)
-5. **Testing:** Discovery queries, filtering
-
-### Phase 3: Desk Mode
-
-**Tasks:**
-1. **Schema migration:** Add `possessions.desk_mode_active` field
-2. **Implement `s9 comms desk`:** Start/stop flags, periodic checking
-3. **Periodic status output:** 30s loop with "Checking comms..." messages
-4. **Inbox integration:** Check `s9 comms inbox`, display message summaries
-5. **Auto-disable on possession end:** Clear desk_mode_active when possession ends
-6. **Testing:** Desk mode lifecycle, status output, Ctrl+C handling
-
-### Phase 4: Skills Updates
-
-**Tasks:**
-1. **Update possession-start skill:** Explain communication channels
-2. **Add discovery patterns:** Show agents how to find available help
-3. **Document workflows:** Epic possessions, desk mode, asking Director for help
-4. **JSON usage examples:** Update skills to use `--json` for data queries
-5. **Testing:** Run through full coordination workflows
+- ✅ `possession-start` skill updated with Admin orchestration paths (EPC-H-0008)
+- ✅ Minion mode orchestration guide: `.opencode/docs/guides/minion-mode-orchestration.md`
+- ✅ Admin orchestration guide: `.opencode/docs/guides/admin-orchestration.md`
+- ✅ AGENTS.md updated with tool references and Director→Admin→Workers hierarchy
 
 ## References
 
 - Related Task: ARC-H-0057 (Design ToolAdapter protocol)
-- Related Task: OPR-M-0074 (Add --json output flag to all s9 commands)
 - Related Epic: EPC-H-0004 (Multi-Tool Adapter System)
 - Related ADR: ADR-006 (Entity Model Clarity - Daemons, Possessions, Agents)
 - Related ADR: ADR-008 (Agent Messaging System)
-- Handoffs: `.opencode/work/migrations/003_add_handoffs_table.sql`
+- Related ADR: ADR-014 (Message-Driven Coordination Architecture — supersedes handoff patterns and s9 comms desk)
+- Related ADR: ADR-015 (Git Worktree Isolation for Minion Workers — PROPOSED)
+- Open gaps task: ARC-H-0257 (Minion worker robustness and observability)
 
 ## Notes
 
 **Design Philosophy:**
 - Simple scoping: Three clear options (task/epic/general), mutually exclusive
-- Non-blocking coordination: Desk mode doesn't prevent Director communication
+- Non-blocking coordination: Minion mode doesn't block Director communication
 - Clear channels: Chat for Director, messages for agents, observation for Director
-- Explicit availability: Possessions advertise when they're available to help
+- Explicit coordination: Admin knows all worker possession IDs; no discovery polling needed
 
 **Communication Channel Summary:**
 
@@ -538,61 +506,12 @@ possession.
 | **Messaging** | Agent ↔ Agent | Async | Technical questions, discussions |
 | **Observation** | Director → Messages | Read-only | Monitoring, oversight |
 
-**Workflow Examples:**
-
-**Example 1: Engineer needs Architect**
-```bash
-# Check availability
-Engineer: s9 possession list --role Architect --epic EPC-H-0004
-# Shows: ahura-mazda (Possession 62) - Desk (EPC-H-0004)
-
-# Send message
-Engineer: s9 comms send --to-possession 62 "Question about adapter design..."
-
-# Architect (in desk mode) sees it
-[30s check]
-Checking comms... 1 new message!
-- MSG-M-0203 from Possession #71: "Question about adapter design..."
-
-Architect: s9 comms reply MSG-M-0203 "Use singleton pattern for registry..."
-```
-
-**Example 2: No one available**
-```bash
-# Check availability
-Engineer: s9 possession list --role Architect --epic EPC-H-0004
-# Shows: No results
-
-# Ask Director
-Engineer: "No Architect available for EPC-H-0004. Need design help."
-Director: "Let me summon one now"
-Director: /summon architect
-```
-
-**Example 3: Epic-scoped possession**
-```bash
-# Start epic possession
-s9 possession start ahura-mazda --role Architect --epic EPC-H-0004
-
-# Enter desk mode
-s9 comms desk
-✓ Desk mode enabled for EPC-H-0004
-Monitoring for messages (checking every 30s)...
-
-# Work on tasks
-s9 task claim ARC-H-0057
-# work...
-s9 task complete ARC-H-0057
-
-# Next task
-s9 task next
-# Claims ARC-H-0058 automatically
-
-# Continue until epic done
-s9 possession end
-```
+**Note on workflow examples:** The `s9 comms desk` and `s9 possession list --role` patterns described in
+the original ADR were not implemented. The actual coordination pattern is Admin-driven via
+`summon_minion` / `worker_message` / `watch_inbox` tools. See ADR-014 and
+`.opencode/docs/guides/minion-mode-orchestration.md` for current patterns.
 
 ---
 
-**Status:** ACCEPTED  
-**Next Step:** Create implementation tasks
+**Status:** ACCEPTED
+**Last reviewed:** 2026-04-06

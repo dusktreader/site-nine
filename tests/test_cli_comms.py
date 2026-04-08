@@ -10,7 +10,7 @@ Tests cover:
 - s9 comms list: listing conversations
 - s9 comms close: closing conversations
 - s9 comms status: viewing conversation viewers
-- s9 comms desk: desk mode management
+- s9 comms minion: minion mode management (REMOVED — see ENG-H-0212)
 """
 
 import json
@@ -576,38 +576,38 @@ class TestCommsStatus:
         assert result.exit_code != 0
 
 
-@pytest.mark.skip(reason="s9 comms desk command removed (ENG-H-0212)")
-class TestCommsDesk:
-    """Tests for s9 comms desk command."""
+@pytest.mark.skip(reason="s9 comms minion command removed (ENG-H-0212)")
+class TestCommsMinion:
+    """Tests for removed s9 comms minion command (subsumed by minion mode; see ENG-H-0212)."""
 
-    def test_desk_stop(self, initialized_project: Path):
-        """Desk mode stop command works."""
+    def test_minion_stop(self, initialized_project: Path):
+        """Minion mode stop command works."""
         _setup_missions(initialized_project)
 
-        result = runner.invoke(app, ["comms", "desk", "--stop"])
+        result = runner.invoke(app, ["comms", "minion", "--stop"])
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "disabled" in result.output.lower() or "Desk" in result.output
+        assert "disabled" in result.output.lower() or "Minion" in result.output
 
-    def test_desk_stop_json(self, initialized_project: Path):
-        """Desk mode stop with JSON output."""
+    def test_minion_stop_json(self, initialized_project: Path):
+        """Minion mode stop with JSON output."""
         _setup_missions(initialized_project)
 
-        result = runner.invoke(app, ["comms", "desk", "--stop", "--json"])
-
-        assert result.exit_code == 0, f"Command failed: {result.output}"
-        data = json.loads(result.output)
-        assert data["data"]["desk_mode_active"] is False
-
-    def test_desk_start_json(self, initialized_project: Path):
-        """Desk mode start with JSON output (non-blocking)."""
-        _setup_missions(initialized_project)
-
-        result = runner.invoke(app, ["comms", "desk", "--json"])
+        result = runner.invoke(app, ["comms", "minion", "--stop", "--json"])
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
         data = json.loads(result.output)
-        assert data["data"]["desk_mode_active"] is True
+        assert data["data"]["minion_mode_active"] is False
+
+    def test_minion_start_json(self, initialized_project: Path):
+        """Minion mode start with JSON output (non-blocking)."""
+        _setup_missions(initialized_project)
+
+        result = runner.invoke(app, ["comms", "minion", "--json"])
+
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+        data = json.loads(result.output)
+        assert data["data"]["minion_mode_active"] is True
 
 
 class TestCommsWithoutInit:

@@ -48,6 +48,32 @@ def test_list_tasks_all(test_db):
     assert tasks[2].id == "TST-L-0003"
 
 
+def test_list_tasks_excludes_finished_by_default(test_db):
+    """Finished tasks (COMPLETE, ABORTED) are excluded from list_tasks by default"""
+    _create_task(test_db, "ENG-M-0001", status="TODO")
+    _create_task(test_db, "ENG-M-0002", status="UNDERWAY")
+    _create_task(test_db, "ENG-M-0003", status="COMPLETE")
+    _create_task(test_db, "ENG-M-0004", status="ABORTED")
+
+    manager = TaskManager(test_db)
+    tasks = manager.list_tasks()
+
+    assert len(tasks) == 2
+    assert all(t.status in ("TODO", "UNDERWAY") for t in tasks)
+
+
+def test_list_tasks_include_finished(test_db):
+    """include_finished=True returns all tasks regardless of status"""
+    _create_task(test_db, "ENG-M-0001", status="TODO")
+    _create_task(test_db, "ENG-M-0002", status="COMPLETE")
+    _create_task(test_db, "ENG-M-0003", status="ABORTED")
+
+    manager = TaskManager(test_db)
+    tasks = manager.list_tasks(include_finished=True)
+
+    assert len(tasks) == 3
+
+
 def test_list_tasks_filter_by_status(test_db):
     """Test filtering tasks by status"""
     _create_task(test_db, "ENG-M-0001", status="TODO")

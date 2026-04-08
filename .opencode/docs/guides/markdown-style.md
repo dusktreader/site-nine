@@ -2,7 +2,7 @@
 
 Markdown formatting standards for site-nine. **All agents must follow these conventions.**
 
-Applies to: documentation (`docs/source/`), ADRs, mission files, task files, and all markdown files.
+Applies to: documentation (`docs/source/`), ADRs, possession files, task files, and all markdown files.
 
 
 ## Heading Styles
@@ -174,12 +174,12 @@ YAML front matter at file beginning (no blank lines before).
 
 ```markdown
 ---
-id: MISSION-001
-persona: haya-ji
+id: DOC-M-0001
+daemon: marbas
 role: Documentarian
 ---
 
-# Mission Title
+# Possession Title
 ```
 
 

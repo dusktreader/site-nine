@@ -8,7 +8,7 @@ Get up and running with site-nine in 5 minutes.
 
 **The Director** is you - the human orchestrating AI personas to accomplish work. Throughout this documentation, when we say "The Director," we're referring to you and your role in managing and coordinating AI agents through site-nine.
 
-**site-nine** is designed to work with [OpenCode](https://github.com/khulnasoft/opencode), an AI coding assistant. The Director interacts with specialized personas through natural conversation in OpenCode, while site-nine manages project coordination, tasks, and missions behind the scenes.
+**site-nine** is designed to work with [OpenCode](https://github.com/khulnasoft/opencode), an AI coding assistant. The Director interacts with specialized agents through natural conversation in OpenCode, while site-nine manages project coordination, tasks, and possessions behind the scenes.
 
 ## Requirements
 
@@ -45,8 +45,8 @@ This launches an interactive wizard that asks:
 - **Project name** (defaults to directory name)
 - **Project type** (python, typescript, go, rust, other)
 - **Project description**
-- **Features to enable** (task management, mission tracking, etc.)
-- **Persona roles to include**
+- **Features to enable** (task management, possession tracking, etc.)
+- **Daemon roles to include**
 
 ### Using a Config File
 
@@ -83,7 +83,7 @@ Check that the `.opencode` directory was created:
 
 ```bash
 ls .opencode/
-# personas/  data/  guides/  planning/  procedures/  missions/
+# docs/  data/  skills/  work/
 ```
 
 View the dashboard:
@@ -95,59 +95,43 @@ s9 dashboard
 
 ## Next Steps
 
-### Start Working with Personas
+### Start Working with Agents
 
-The Director (you) can summon personas in two ways:
+The Director (you) summons agents using the `s9 summon` command:
 
 #### Option 1: Direct Summon (Recommended)
 
-Use the `s9 summon` command to launch OpenCode with a persona automatically:
+Use the `s9 summon` command to launch OpenCode with an agent automatically:
 
 ```bash
 s9 summon operator
 ```
 
-This will start OpenCode and immediately initialize a mission with the specified role.
+This starts OpenCode and immediately initializes a possession with the specified role. The `possession-start` skill runs automatically, selects a daemon, and renames the session to `Operation <codename>: <Daemon> - <Role>`.
 
-#### Option 2: Manual Summon via OpenCode Slash Commands
+#### Option 2: Manual Launch
 
-Launch OpenCode manually and use the `/summon` slash command:
+Launch OpenCode directly, then ask the agent to load the `possession-start` skill:
 
 ```bash
 opencode
 ```
 
-Then execute the summon slash command to start a mission:
-
-```
-/summon
-```
-
-Or specify a role directly to skip the role selection step:
-
-```
-/summon operator
-/summon engineer
-/summon tester
-```
-
-This will guide the Director through selecting a persona name from mythology. Once summoned, the Director can talk to the persona naturally through conversation.
-
-**OpenCode Slash Commands**: OpenCode provides several slash commands that the Director can use during a session, including `/summon` for starting missions. Type `/help` in OpenCode to see all available commands.
+Once a possession starts, you can talk to the agent naturally through conversation.
 
 
-## Working with Your Persona in OpenCode
+## Working with Your Agent in OpenCode
 
-Once a mission starts, the Director interacts through natural conversation in the OpenCode terminal. Here are some common workflows:
+Once a possession starts, the Director interacts through natural conversation in the OpenCode terminal. Here are some common workflows:
 
 ### Creating Tasks
 
-Simply ask the persona to create tasks:
+Simply ask the agent to create tasks:
 
 **The Director (You):**
 > Create a high-priority task for implementing user authentication
 
-**Persona (Administrator - Ishtar):**
+**Agent (Administrator - Ishtar):**
 > I'll create that task for you.
 > 
 > ✓ Created task ENG-H-0001
@@ -156,16 +140,16 @@ Simply ask the persona to create tasks:
 >   Role: Engineer
 >   Status: TODO
 > 
-> The task has been added to the project database and is ready to be claimed by an Engineer persona.
+> The task has been added to the project database and is ready to be claimed by an Engineer.
 
 ### Investigating Code
 
-Ask personas to explore and explain the codebase:
+Ask agents to explore and explain the codebase:
 
 **The Director (You):**
 > What authentication libraries are we currently using?
 
-**Persona (Inspector - Argus):**
+**Agent (Inspector - Argus):**
 > Let me search the codebase for authentication-related dependencies...
 > 
 > I found the following authentication libraries in your project:
@@ -182,12 +166,12 @@ Ask personas to explore and explain the codebase:
 
 ### Building Features
 
-Direct personas to implement functionality:
+Direct agents to implement functionality:
 
 **The Director (You):**
 > Implement a password reset endpoint
 
-**Persona (Engineer - Goibniu):**
+**Agent (Engineer - Goibniu):**
 > I'll implement a password reset endpoint for you. Let me break this down:
 > 
 > **Plan:**
@@ -208,12 +192,12 @@ Direct personas to implement functionality:
 
 ### Running Tests
 
-Ask personas to validate their work:
+Ask agents to validate their work:
 
 **The Director (You):**
 > Run the authentication tests
 
-**Persona (Tester - Ah-Puch):**
+**Agent (Tester - Ah-Puch):**
 > Running authentication test suite...
 > 
 > ```
@@ -235,7 +219,7 @@ Ask about tasks and progress:
 **The Director (You):**
 > What tasks are pending?
 
-**Persona (Administrator - Marduk):**
+**Agent (Administrator - Marduk):**
 > Let me check the task database...
 > 
 > **Pending Tasks (3):**
@@ -253,18 +237,18 @@ Ask about tasks and progress:
 
 ### Within OpenCode
 
-Personas can help the Director understand available commands and workflows:
+Agents can help the Director understand available commands and workflows:
 
 **The Director (You):**
 > How do I see the dashboard?
 
-**Persona:**
+**Agent:**
 > You can view the project dashboard by running:
 > ```bash
 > s9 dashboard
 > ```
 > 
-> This shows active personas, task summary, and recent activity.
+> This shows active possessions, task summary, and recent activity.
 
 For complete command reference, see the [CLI Reference](cli/overview.md) page.
 

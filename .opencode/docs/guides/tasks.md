@@ -91,12 +91,12 @@ See `.opencode/docs/roles/README.md` for details.
 ```bash
 s9 task list --role YourRole --status TODO
 s9 task list --priority CRITICAL,HIGH --status TODO
-s9 task mine --mission MISSION_ID
+s9 task mine --possession POSSESSION_ID
 ```
 
 **Working on tasks:**
 ```bash
-s9 task claim TASK_ID --mission MISSION_ID --role ROLE
+s9 task claim TASK_ID --possession POSSESSION_ID --role ROLE
 s9 task update TASK_ID --status UNDERWAY --notes "Progress"
 s9 task close TASK_ID --status COMPLETE --notes "Done"
 ```

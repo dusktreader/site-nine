@@ -3,7 +3,7 @@ import path from "path"
 
 export default tool({
   description:
-    "Signal a desk-mode worker mission to terminate gracefully. " +
+    "Signal a minion-mode worker mission to terminate gracefully. " +
     "Sends a high-priority termination message to the target mission, requesting it end its session and close the mission cleanly.",
   args: {
     from_possession_id: tool.schema.number().describe("The possession ID sending the termination signal (typically Admin/Director)"),

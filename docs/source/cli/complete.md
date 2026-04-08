@@ -63,9 +63,9 @@ s9 init --force
 **What it does:**
 1. Creates `.opencode/` directory
 2. Initializes SQLite database at `.opencode/data/project.db`
-3. Populates 145 persona names
-4. Renders 19+ templates (missions, guides, procedures, README, config)
-5. Creates empty directories (missions, planning, scripts)
+3. Populates 145 daemon names
+4. Renders 19+ templates (possessions, docs, procedures, README, config)
+5. Creates empty directories (possessions, planning, scripts)
 
 ---
 
@@ -148,7 +148,7 @@ Infrastructure:
 Data integrity:
 - Invalid foreign key references
 - Inconsistent task states
-- Mission data issues
+- Possession data issues
 - Incorrect usage counters
 - Missing files referenced in database
 - Orphaned task dependencies
@@ -173,309 +173,84 @@ s9 doctor --fix
 
 ---
 
-### `s9 mission start`
+### `s9 possession list`
 
-Start a new mission.
-
-```bash
-s9 mission start <name> --role <ROLE> [OPTIONS]
-```
-
-**Arguments:**
-- `name` - Persona name for the mission (e.g., `azazel`, `belial-ii`)
-
-**Options:**
-- `--role ROLE, -r ROLE` - Mission role (required)
-- `--task DESCRIPTION, -t DESCRIPTION` - Task summary
-
-**Valid Roles:**
-- `Administrator` - Project coordination
-- `Architect` - System design
-- `Engineer` - Implementation
-- `Tester` - Quality assurance
-- `Documentarian` - Documentation
-- `Designer` - UI/UX design
-- `Inspector` - Code review
-- `Operator` - Operations/deployment
-
-**Examples:**
-
-Start a Engineer mission:
-```bash
-s9 mission start azazel --role Engineer --task "Implement authentication"
-```
-
-Start without task description:
-```bash
-s9 mission start belial --role Administrator
-```
-
-Start with suffix (for second instance):
-```bash
-s9 mission start azazel-ii --role Engineer
-```
-
-**Output:**
-```
-✓ Started mission #1
-  Name: azazel
-  Role: Engineer
-  Task: Implement authentication
-```
-
----
-
-### `s9 mission list`
-
-List missions with optional filters.
+List possessions with optional filters.
 
 ```bash
-s9 mission list [OPTIONS]
+s9 possession list [OPTIONS]
 ```
 
 **Options:**
-- `--active-only` - Show only in-progress missions
+- `--active-only` - Show only active possessions
 - `--role ROLE, -r ROLE` - Filter by role
 
 **Examples:**
 
-List all missions:
+List all possessions:
 ```bash
-s9 mission list
+s9 possession list
 ```
 
-List active missions only:
+List active possessions only:
 ```bash
-s9 mission list --active-only
+s9 possession list --active-only
 ```
 
 Filter by role:
 ```bash
-s9 mission list --role Engineer
+s9 possession list --role Engineer
 ```
 
 **Output:**
 ```
-                  Missions                  
-┏━━━━┳━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┓
-┃ ID ┃ Name   ┃ Role    ┃ Status      ┃ Start Time ┃
-┡━━━━╇━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━┩
-│ 1  │ azazel │ Engineer │ in-progress │ 14:30:15   │
-│ 2  │ belial │ Administrator │ completed   │ 13:20:00   │
-└────┴────────┴─────────┴─────────────┴────────────┘
+                  Possessions                  
+┏━━━━┳━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┓
+┃ ID ┃ Daemon     ┃ Role    ┃ Status      ┃ Start Time ┃
+┡━━━━╇━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━┩
+│ 1  │ Azazel     │ Engineer │ ACTIVE      │ 14:30:15   │
+│ 2  │ Mephistopheles │ Administrator │ EXORCISED  │ 13:20:00   │
+└────┴────────────┴─────────┴─────────────┴────────────┘
 ```
 
 ---
 
-### `s9 mission show`
+### `s9 possession show`
 
-Show detailed information about a mission.
+Show detailed information about a possession.
 
 ```bash
-s9 mission show <mission-id>
+s9 possession show <possession-id>
 ```
 
 **Arguments:**
-- `mission-id` - Mission ID (integer)
+- `possession-id` - Possession ID (integer)
 
 **Example:**
 ```bash
-s9 mission show 1
+s9 possession show 1
 ```
 
 **Output:**
 ```
-Mission #1
-  Name: azazel
-  Base Name: azazel
+Possession #1
+  Daemon: Azazel
   Role: Engineer
-  Status: in-progress
-  Mission Date: 2026-01-30
+  Status: ACTIVE
+  Date: 2026-01-30
   Start Time: 14:30:15
-  Mission File: .opencode/missions/2026-01-30.14:30:15.engineer.azazel.md
-  Task: Implement authentication
+  File: .opencode/work/possessions/2026-01-30.14-30-15.engineer.Azazel.md
+  Objective: Implement authentication
 ```
 
 ---
 
-### `s9 mission end`
-
-End a mission.
-
-```bash
-s9 mission end <mission-id> [OPTIONS]
-```
-
-**Arguments:**
-- `mission-id` - Mission ID (integer)
-
-**Options:**
-- `--status STATUS` - End status (default: `completed`)
-
-**Valid Statuses:**
-- `completed` - Successfully finished (default)
-- `paused` - Temporarily stopped
-- `failed` - Failed to complete
-- `aborted` - Cancelled
-
-**Examples:**
-
-End with default status:
-```bash
-s9 mission end 1
-```
-
-End with specific status:
-```bash
-s9 mission end 1 --status failed
-```
-
-**Output:**
-```
-✓ Ended mission #1 with status: completed
-```
-
----
-
-### `s9 mission pause`
-
-Pause an active mission.
-
-```bash
-s9 mission pause <mission-id> [OPTIONS]
-```
-
-**Arguments:**
-- `mission-id` - Mission ID (integer)
-
-**Options:**
-- `--reason TEXT` - Reason for pausing (optional)
-
-**Examples:**
-
-Pause a mission:
-```bash
-s9 mission pause 1
-```
-
-With reason:
-```bash
-s9 mission pause 1 --reason "Taking a break for lunch"
-```
-
-**Output:**
-```
-✓ Paused mission #1
-  Reason: Taking a break for lunch
-```
-
-**Use cases:**
-- Taking a break during work
-- Switching to another urgent task
-- End of workday (resume tomorrow)
-- Waiting for external dependencies
-
----
-
-### `s9 mission resume`
-
-Resume a paused mission.
-
-```bash
-s9 mission resume <mission-id>
-```
-
-**Arguments:**
-- `mission-id` - Mission ID (integer)
-
-**Example:**
-```bash
-s9 mission resume 1
-```
-
-**Output:**
-```
-✓ Resumed mission #1
-  Duration paused: 1h 23m
-```
-
----
-
-### `s9 mission update`
-
-Update mission metadata.
-
-```bash
-s9 mission update <mission-id> [OPTIONS]
-```
-
-**Arguments:**
-- `mission-id` - Mission ID (integer)
-
-**Options:**
-- `--task TEXT, -t TEXT` - Update task summary
-- `--role ROLE, -r ROLE` - Update role
-
-**Examples:**
-
-Update task summary:
-```bash
-s9 mission update 1 --task "Implement OAuth instead of JWT"
-```
-
-Change role (if scope changed):
-```bash
-s9 mission update 1 --role Architect --task "Design authentication system"
-```
-
-**Output:**
-```
-✓ Updated mission #1
-  Task: Implement OAuth instead of JWT
-```
-
-**Use cases:**
-- Task requirements changed mid-mission
-- Realized different role is more appropriate
-- Refining task description for clarity
-
----
-
-### `s9 mission roles`
-
-Display available mission roles with descriptions.
-
-```bash
-s9 mission roles
-```
-
-**Output:**
-```
-Which role should I assume for this mission?
-
-  • Administrator: coordinate and delegate to other personas
-  • Architect: design systems and make technical decisions
-  • Engineer: implement features and write code
-  • Tester: write tests and validate functionality
-  • Documentarian: create documentation and guides
-  • Designer: design user interfaces and experiences
-  • Inspector: review code and audit security
-  • Operator: deploy systems and manage infrastructure
-```
-
-**Use case:**
-- Quick reference for available roles during mission start
-- Part of the mission initialization workflow
-- Standardized role descriptions across all missions
-
----
-
-### `s9 mission list-opencode-sessions`
+### `s9 possession list-opencode-sessions`
 
 List OpenCode TUI sessions for the current project.
 
 ```bash
-s9 mission list-opencode-sessions
+s9 possession list-opencode-sessions
 ```
 
 **Output:**
@@ -483,36 +258,36 @@ s9 mission list-opencode-sessions
 OpenCode sessions for site-nine:
 
   ses_3e0a14315ffeEfMd0wqN7EZm84 (quiet-squid) - modified 1h ago
-    Review summon.md in .opencode/docs/commands
+    Review possession-start skill
 
   ses_3e058ebd6ffebwwd2lKOcGt1iw (hidden-wolf) - modified 3m ago
-    Session-start skill usage
+    Engineer: Azazel - working on auth
 
   ses_3e0432d71ffeA20XUhe8XxyG8e (hidden-panda) - modified 25s ago
-    Session-start skill creation
+    Administrator: Mephistopheles - task planning
 
 To rename a session, use:
-  s9 mission rename-tui <name> <role> --session-id <session-id>
+  s9 possession rename-tui <daemon-name> <role> --session-id <session-id>
 ```
 
 **Use case:**
 - Find the correct session ID when you have multiple OpenCode sessions open
 - Verify which session corresponds to your current work
-- Used before renaming a session to match persona identity
+- Used before renaming a session to match daemon identity
 
 ---
 
-### `s9 mission rename-tui`
+### `s9 possession rename-tui`
 
-Rename the OpenCode TUI session to match persona identity.
+Rename the OpenCode TUI session to match daemon identity.
 
 ```bash
-s9 mission rename-tui <name> <role> [OPTIONS]
+s9 possession rename-tui <name> <role> [OPTIONS]
 ```
 
 **Arguments:**
-- `name` - Persona name (e.g., `calliope`, `atlas-ii`)
-- `role` - Persona role (e.g., `Documentarian`, `Engineer`)
+- `name` - Daemon name (e.g., `Calliope`, `Atlas`)
+- `role` - Agent role (e.g., `Documentarian`, `Engineer`)
 
 **Options:**
 - `--session-id ID, -s ID` - OpenCode session ID (if multiple sessions open)
@@ -521,28 +296,23 @@ s9 mission rename-tui <name> <role> [OPTIONS]
 
 Auto-detect and rename current session:
 ```bash
-s9 mission rename-tui calliope Documentarian
+s9 possession rename-tui Calliope Documentarian
 ```
 
 Rename specific session:
 ```bash
-s9 mission rename-tui atlas Engineer --session-id ses_3e058ebd6ffebwwd2lKOcGt1iw
+s9 possession rename-tui Atlas Engineer --session-id ses_3e058ebd6ffebwwd2lKOcGt1iw
 ```
 
 **Output:**
 ```
-✅ Renamed OpenCode session to "calliope - Documentarian"
+✓ Renamed OpenCode session to "Operation Nightfall: Calliope - Documentarian"
 ```
 
 **What it does:**
-- Updates the OpenCode TUI session title to `<Name> - <Role>`
-- Makes it easy to identify which persona you're working with
+- Updates the OpenCode TUI session title to `Operation <codename>: <Daemon> - <Role>`
+- Makes it easy to identify which agent is working in which session
 - Changes take effect immediately (no TUI restart needed)
-
-**Use case:**
-- Part of the mission initialization workflow
-- Helps track which persona is working in which OpenCode session
-- Useful when managing multiple missions simultaneously
 
 ---
 
@@ -557,7 +327,7 @@ s9 task list [OPTIONS]
 **Options:**
 - `--status STATUS, -s STATUS` - Filter by status
 - `--role ROLE, -r ROLE` - Filter by role
-- `--persona NAME, -p NAME` - Filter by persona name
+- `--daemon NAME, -d NAME` - Filter by daemon name
 
 **Valid Statuses:**
 - `TODO`, `UNDERWAY`, `BLOCKED`, `PAUSED`, `REVIEW`, `COMPLETE`, `ABORTED`
@@ -579,20 +349,20 @@ Filter by role:
 s9 task list --role Engineer
 ```
 
-Filter by persona:
+Filter by daemon:
 ```bash
-s9 task list --persona azazel
+s9 task list --daemon Azazel
 ```
 
 **Output:**
 ```
                        Tasks                       
-┏━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━┓
-┃ ID   ┃ Title       ┃ Status ┃ Priority ┃ Persona ┃
-┡━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━┩
-│ T001 │ Auth system │ TODO   │ HIGH     │         │
-│ T002 │ Write tests │ UNDER… │ MEDIUM   │ azazel  │
-└──────┴─────────────┴────────┴──────────┴─────────┘
+┏━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┓
+┃ ID   ┃ Title       ┃ Status ┃ Priority ┃ Daemon   ┃
+┡━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━┩
+│ T001 │ Auth system │ TODO   │ HIGH     │          │
+│ T002 │ Write tests │ UNDER… │ MEDIUM   │ Azazel   │
+└──────┴─────────────┴────────┴──────────┴──────────┘
 ```
 
 ---
@@ -629,31 +399,31 @@ Task T001
 
 ### `s9 task claim`
 
-Claim a task for a mission.
+Claim a task for a possession.
 
 ```bash
-s9 task claim <task-id> --mission <id>
+s9 task claim <task-id> --possession <id>
 ```
 
 **Arguments:**
 - `task-id` - Task ID (string)
 
 **Options:**
-- `--mission ID, -m ID` - Mission ID (required)
+- `--possession ID, -p ID` - Possession ID (required)
 
 **Example:**
 ```bash
-s9 task claim T001 --mission 1
+s9 task claim T001 --possession 1
 ```
 
 **What it does:**
 - Sets task status to `UNDERWAY`
-- Records mission ID
+- Records possession ID
 - Sets `claimed_at` timestamp
 
 **Output:**
 ```
-✓ Task T001 claimed for mission 1
+✓ Task T001 claimed for possession 1
 ```
 
 ---
@@ -745,23 +515,23 @@ s9 task close T001 --status ABORTED --notes "Requirements changed"
 
 ### `s9 task mine`
 
-Show tasks claimed by a specific mission.
+Show tasks claimed by a specific possession.
 
 ```bash
-s9 task mine --mission <id>
+s9 task mine --possession <id>
 ```
 
 **Options:**
-- `--mission ID, -m ID` - Mission ID (required)
+- `--possession ID, -p ID` - Possession ID (required)
 
 **Example:**
 ```bash
-s9 task mine --mission 1
+s9 task mine --possession 1
 ```
 
 **Output:**
 ```
-Tasks claimed by mission 1:
+Tasks claimed by possession 1:
 
                      Tasks                      
 ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┓
@@ -1400,12 +1170,12 @@ s9 task unlink ENG-H-0059
 
 ---
 
-### `s9 persona list`
+### `s9 daemon list`
 
-List persona names with optional filters.
+List daemon names with optional filters.
 
 ```bash
-s9 persona list [OPTIONS]
+s9 daemon list [OPTIONS]
 ```
 
 **Options:**
@@ -1417,39 +1187,39 @@ s9 persona list [OPTIONS]
 
 List all names:
 ```bash
-s9 persona list
+s9 daemon list
 ```
 
 List unused Engineer names:
 ```bash
-s9 persona list --role Engineer --unused-only
+s9 daemon list --role Engineer --unused-only
 ```
 
 Sort by most-used:
 ```bash
-s9 persona list --by-usage
+s9 daemon list --by-usage
 ```
 
 **Output:**
 ```
-                     Persona Names                     
+                     Daemon Names                     
 ┏━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━┓
 ┃ Name          ┃ Role     ┃ Mythology  ┃ Usage Count ┃
 ┡━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━┩
-│ azazel        │ Inspec…  │ Judaism    │ 2           │
-│ calliope      │ Document │ Greek      │ 1           │
-│ atlas         │ Engineer  │ Greek      │ 0           │
+│ Azazel        │ Inspec…  │ Judaism    │ 2           │
+│ Calliope      │ Document │ Greek      │ 1           │
+│ Atlas         │ Engineer │ Greek      │ 0           │
 └───────────────┴──────────┴────────────┴─────────────┘
 ```
 
 ---
 
-### `s9 persona suggest`
+### `s9 daemon suggest`
 
-Suggest unused persona names for a specific role.
+Suggest least-recently-used daemon names for a specific role, using the 3-day LRU algorithm.
 
 ```bash
-s9 persona suggest <role> [OPTIONS]
+s9 daemon suggest <role> [OPTIONS]
 ```
 
 **Arguments:**
@@ -1462,49 +1232,49 @@ s9 persona suggest <role> [OPTIONS]
 
 Get 3 suggestions for Engineer:
 ```bash
-s9 persona suggest Engineer
+s9 daemon suggest Engineer
 ```
 
 Get 5 suggestions:
 ```bash
-s9 persona suggest Documentarian --count 5
+s9 daemon suggest Documentarian --count 5
 ```
 
 **Output:**
 ```
-Suggested names for Engineer:
+Suggested daemons for Engineer:
 
-1. hephaestus (Greek) - unused
+1. Hephaestus (Greek) - last used 8 days ago
    Greek god of blacksmiths and craftsmen
 
-2. goibniu (Celtic) - unused
+2. Goibniu (Celtic) - never used
    Celtic god of smithcraft
 
-3. vulcan (Roman) - unused
+3. Vulcan (Roman) - never used
    Roman god of fire and metalworking
 ```
 
 ---
 
-### `s9 persona usage`
+### `s9 daemon usage`
 
-Show usage history for a persona name.
+Show usage history for a daemon name.
 
 ```bash
-s9 persona usage <name>
+s9 daemon usage <name>
 ```
 
 **Arguments:**
-- `name` - Persona name to check (required)
+- `name` - Daemon name to check (required)
 
 **Example:**
 ```bash
-s9 persona usage atlas
+s9 daemon usage Atlas
 ```
 
 **Output:**
 ```
-Persona name: atlas
+Daemon: Atlas
   Mythology: Greek
   Primary role: Engineer
   Description: Titan who holds up the sky
@@ -1513,23 +1283,23 @@ Usage history:
   Times used: 2
   Last used: 2026-01-30 14:30:15
 
-Missions:
-  #15 - atlas    - Engineer (2026-01-30 14:30:15)
-  #8  - atlas-ii - Engineer (2026-01-29 09:15:00)
+Possessions:
+  #15 - Atlas    - Engineer (2026-01-30 14:30:15)
+  #8  - Atlas    - Engineer (2026-01-29 09:15:00)
 ```
 
 ---
 
-### `s9 persona add`
+### `s9 daemon add`
 
-Add a new persona name to the database.
+Add a new daemon name to the database.
 
 ```bash
-s9 persona add <name> --role <ROLE> --mythology <MYTHOLOGY> --description <DESCRIPTION>
+s9 daemon add <name> --role <ROLE> --mythology <MYTHOLOGY> --description <DESCRIPTION>
 ```
 
 **Arguments:**
-- `name` - Persona name (lowercase, required)
+- `name` - Daemon name (required)
 
 **Options:**
 - `--role ROLE, -r ROLE` - Primary role for this name (required)
@@ -1538,7 +1308,7 @@ s9 persona add <name> --role <ROLE> --mythology <MYTHOLOGY> --description <DESCR
 
 **Example:**
 ```bash
-s9 persona add sekhmet \
+s9 daemon add Sekhmet \
   --role Tester \
   --mythology Egyptian \
   --description "Lion-headed goddess of war and destruction"
@@ -1546,7 +1316,7 @@ s9 persona add sekhmet \
 
 **Output:**
 ```
-✓ Added persona name 'sekhmet'
+✓ Added daemon 'Sekhmet'
   Role: Tester
   Mythology: Egyptian
 ```
@@ -1645,9 +1415,9 @@ Cache statistics:
   Last cleared: 2026-01-30 14:30:15
 
 Recent entries:
-  - persona_names: 145 entries
+  - daemon_names: 145 entries
   - task_templates: 8 entries
-  - missions: 12 entries
+  - possessions: 12 entries
 ```
 
 #### `s9 cache clear`
@@ -1755,9 +1525,9 @@ project:
 
 features:
   pm_system: boolean        # Enable task management (default: true)
-  mission_tracking: boolean # Enable mission tracking (default: true)
+  possession_tracking: boolean # Enable possession tracking (default: true)
   commit_guidelines: boolean # Include commit guidelines (default: true)
-  persona_naming: boolean    # Use persona names (default: true)
+  daemon_naming: boolean    # Use daemon names (default: true)
 
 agent_roles:
   - name: string           # Role name (required)
@@ -1765,7 +1535,7 @@ agent_roles:
     description: string    # Custom description (optional)
 
 customization:
-  persona_names: string     # Naming theme (default: "mythology")
+  daemon_names: string     # Naming theme (default: "mythology")
   template_dir: string     # Custom template directory (optional)
   variables:               # Custom template variables (optional)
     key: value
@@ -1779,37 +1549,35 @@ Currently, s9 does not use environment variables for configuration.
 
 The SQLite database at `.opencode/data/project.db` has the following schema:
 
-### `personas` Table
+### `daemons` Table
 
-Stores 145+ mythology-based persona names.
+Stores 145+ mythology-based daemon names.
 
 | Column | Type | Description |
 |--------|------|-------------|
-| name | TEXT | Unique persona name |
+| name | TEXT | Unique daemon name |
 | role | TEXT | Default role (CHECK constraint) |
 | mythology | TEXT | Source mythology |
 | description | TEXT | Name description |
 | usage_count | INTEGER | Times used |
 | last_used_at | TEXT | Last usage timestamp |
 
-### `missions` Table
+### `possessions` Table
 
-Tracks missions.
+Tracks possessions.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | INTEGER | Primary key |
-| persona_name | TEXT | Full name with suffix |
-| base_name | TEXT | Base name (FK to personas) |
-| suffix | TEXT | Roman numeral suffix |
-| role | TEXT | Mission role |
-| codename | TEXT | Mission codename |
-| mission_file | TEXT | Log file path |
-| mission_date | TEXT | Date (YYYY-MM-DD) |
+| daemon_name | TEXT | Daemon name (FK to daemons) |
+| role | TEXT | Possession role |
+| codename | TEXT | Operation codename |
+| possession_file | TEXT | Session file path |
+| possession_date | TEXT | Date (YYYY-MM-DD) |
 | start_time | TEXT | Start time (HH:MM:SS) |
 | end_time | TEXT | End time or NULL |
-| status | TEXT | Mission status |
-| objective | TEXT | Mission objective |
+| status | TEXT | Possession status |
+| objective | TEXT | Possession objective |
 | created_at | TEXT | Creation timestamp |
 | updated_at | TEXT | Update timestamp |
 
@@ -1825,8 +1593,8 @@ Manages tasks.
 | priority | TEXT | Priority level |
 | role | TEXT | Required role |
 | category | TEXT | Task category |
-| persona_name | TEXT | Assigned persona |
-| mission_id | INTEGER | FK to missions table |
+| daemon_name | TEXT | Assigned daemon |
+| possession_id | INTEGER | FK to possessions table |
 | claimed_at | TEXT | Claim timestamp |
 | closed_at | TEXT | Close timestamp |
 | paused_at | TEXT | Pause timestamp |

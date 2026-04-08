@@ -1,4 +1,4 @@
-"""Tests for doctor CLI commands"""
+"""Tests for inquisitor CLI commands"""
 
 import sqlite3
 from pathlib import Path
@@ -49,21 +49,21 @@ def _raw_query(db_path: Path, sql: str, params: tuple = ()):
 # =============================================================================
 
 
-def test_doctor_without_init(tmp_path: Path, monkeypatch):
-    """Test doctor command fails without initialization"""
+def test_inquisitor_without_init(tmp_path: Path, monkeypatch):
+    """Test inquisitor command fails without initialization"""
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(app, ["inquisitor"])
     assert result.exit_code != 0
 
 
-def test_doctor_without_database(project_dir: Path):
-    """Test doctor command fails without database"""
+def test_inquisitor_without_database(project_dir: Path):
+    """Test inquisitor command fails without database"""
     result = runner.invoke(app, ["inquisitor"])
     assert result.exit_code != 0
 
 
-def test_doctor_basic_check(project_dir: Path, test_db):
-    """Test basic doctor health check"""
+def test_inquisitor_basic_check(project_dir: Path, test_db):
+    """Test basic inquisitor health check"""
     db_path = project_dir / ".opencode" / "data" / "project.db"
     import shutil
 
@@ -74,8 +74,8 @@ def test_doctor_basic_check(project_dir: Path, test_db):
     assert "Running diagnostics" in result.stdout
 
 
-def test_doctor_verbose_mode(project_dir: Path, test_db):
-    """Test doctor with verbose flag"""
+def test_inquisitor_verbose_mode(project_dir: Path, test_db):
+    """Test inquisitor with verbose flag"""
     db_path = project_dir / ".opencode" / "data" / "project.db"
     import shutil
 
@@ -86,8 +86,8 @@ def test_doctor_verbose_mode(project_dir: Path, test_db):
     assert "Running diagnostics" in result.stdout
 
 
-def test_doctor_fix_mode(project_dir: Path, test_db):
-    """Test doctor with fix flag"""
+def test_inquisitor_fix_mode(project_dir: Path, test_db):
+    """Test inquisitor with fix flag"""
     db_path = project_dir / ".opencode" / "data" / "project.db"
     import shutil
 
@@ -98,8 +98,8 @@ def test_doctor_fix_mode(project_dir: Path, test_db):
     assert "Running diagnostics" in result.stdout
 
 
-def test_doctor_with_verbose_and_fix(project_dir: Path, test_db):
-    """Test doctor with both verbose and fix flags"""
+def test_inquisitor_with_verbose_and_fix(project_dir: Path, test_db):
+    """Test inquisitor with both verbose and fix flags"""
     db_path = project_dir / ".opencode" / "data" / "project.db"
     import shutil
 
@@ -114,30 +114,30 @@ def test_doctor_with_verbose_and_fix(project_dir: Path, test_db):
 # =============================================================================
 
 
-def test_doctor_checks_database_exists(initialized_project: Path):
-    """Test doctor reports database file existence"""
+def test_inquisitor_checks_database_exists(initialized_project: Path):
+    """Test inquisitor reports database file existence"""
     result = runner.invoke(app, ["inquisitor"])
     assert result.exit_code == 0
     assert "Database file exists" in result.stdout
 
 
-def test_doctor_database_integrity_passes(initialized_project: Path):
-    """Test doctor runs SQLite PRAGMA integrity_check"""
+def test_inquisitor_database_integrity_passes(initialized_project: Path):
+    """Test inquisitor runs SQLite PRAGMA integrity_check"""
     result = runner.invoke(app, ["inquisitor"])
     assert result.exit_code == 0
     assert "integrity check passed" in result.stdout
 
 
-def test_doctor_handles_missing_sqlite3(initialized_project: Path):
-    """Test doctor handles missing sqlite3 command gracefully"""
+def test_inquisitor_handles_missing_sqlite3(initialized_project: Path):
+    """Test inquisitor handles missing sqlite3 command gracefully"""
     with patch("site_nine.inquisitor.checks.subprocess.run", side_effect=FileNotFoundError("sqlite3 not found")):
         result = runner.invoke(app, ["inquisitor"])
         assert result.exit_code == 0
         assert "sqlite3 command not found" in result.stdout.lower()
 
 
-def test_doctor_handles_sqlite3_errors(initialized_project: Path):
-    """Test doctor handles sqlite3 errors gracefully"""
+def test_inquisitor_handles_sqlite3_errors(initialized_project: Path):
+    """Test inquisitor handles sqlite3 errors gracefully"""
     import subprocess as sp
 
     with patch("site_nine.inquisitor.checks.subprocess.run", side_effect=sp.CalledProcessError(1, "sqlite3", "error")):
@@ -145,8 +145,8 @@ def test_doctor_handles_sqlite3_errors(initialized_project: Path):
         assert "integrity check" in result.stdout.lower()
 
 
-def test_doctor_database_integrity_failed(initialized_project: Path):
-    """Test doctor reports integrity failure when sqlite3 returns non-ok result"""
+def test_inquisitor_database_integrity_failed(initialized_project: Path):
+    """Test inquisitor reports integrity failure when sqlite3 returns non-ok result"""
     mock_result = Mock()
     mock_result.stdout = "database disk image is malformed\n"
     mock_result.returncode = 0
@@ -159,8 +159,8 @@ def test_doctor_database_integrity_failed(initialized_project: Path):
     assert "restore from backup" in normalized.lower()
 
 
-def test_doctor_detects_missing_gitignore_patterns(initialized_project: Path):
-    """Test doctor detects missing .gitignore patterns"""
+def test_inquisitor_detects_missing_gitignore_patterns(initialized_project: Path):
+    """Test inquisitor detects missing .gitignore patterns"""
     gitignore = initialized_project / ".gitignore"
     gitignore.write_text("# Empty gitignore\n*.pyc\n")
 
@@ -171,8 +171,8 @@ def test_doctor_detects_missing_gitignore_patterns(initialized_project: Path):
     assert ".opencode/data/*.db" in normalized
 
 
-def test_doctor_passes_with_correct_gitignore(initialized_project: Path):
-    """Test doctor passes when .gitignore has recommended patterns"""
+def test_inquisitor_passes_with_correct_gitignore(initialized_project: Path):
+    """Test inquisitor passes when .gitignore has recommended patterns"""
     gitignore = initialized_project / ".gitignore"
     gitignore.write_text(
         "# Database files\n.opencode/data/*.db\n.opencode/data/*.db-journal\n.opencode/data/*.db-wal\n"
@@ -184,8 +184,8 @@ def test_doctor_passes_with_correct_gitignore(initialized_project: Path):
     assert "All recommended .gitignore patterns present" in result.stdout
 
 
-def test_doctor_warns_no_gitignore(in_temp_dir: Path):
-    """Test doctor warns when no .gitignore exists"""
+def test_inquisitor_warns_no_gitignore(in_temp_dir: Path):
+    """Test inquisitor warns when no .gitignore exists"""
     runner.invoke(app, ["init"], input="\n" * 10)
 
     gitignore = in_temp_dir / ".gitignore"
@@ -198,16 +198,16 @@ def test_doctor_warns_no_gitignore(in_temp_dir: Path):
     assert "No .gitignore file found" in result.stdout
 
 
-def test_doctor_warns_about_no_backups(initialized_project: Path):
-    """Test doctor warns when no backups exist"""
+def test_inquisitor_warns_about_no_backups(initialized_project: Path):
+    """Test inquisitor warns when no backups exist"""
     result = runner.invoke(app, ["inquisitor"])
 
     assert result.exit_code == 0
     assert "No backup files found" in result.stdout
 
 
-def test_doctor_detects_backup_files(initialized_project: Path):
-    """Test doctor detects existing backup files"""
+def test_inquisitor_detects_backup_files(initialized_project: Path):
+    """Test inquisitor detects existing backup files"""
     backup_dir = initialized_project / ".opencode" / "data"
     backup_file = backup_dir / "project.db.backup"
     backup_file.write_text("backup")
@@ -219,7 +219,7 @@ def test_doctor_detects_backup_files(initialized_project: Path):
 
 
 def _create_temp_files_with_mock_db(initialized_project: Path, suffixes: list[str], invoke_args: list[str]) -> str:
-    """Helper: create temp files and run doctor with mocked Database and subprocess.
+    """Helper: create temp files and run inquisitor with mocked Database and subprocess.
 
     Both SQLAlchemy (via Database) and the sqlite3 subprocess call remove temp files
     when they open the database, so we must mock both to prevent cleanup.
@@ -250,26 +250,26 @@ def _create_temp_files_with_mock_db(initialized_project: Path, suffixes: list[st
     return normalized
 
 
-def test_doctor_detects_journal_file(initialized_project: Path):
-    """Test doctor detects project.db-journal temp file"""
+def test_inquisitor_detects_journal_file(initialized_project: Path):
+    """Test inquisitor detects project.db-journal temp file"""
     normalized = _create_temp_files_with_mock_db(initialized_project, ["-journal"], ["inquisitor"])
     assert "project.db-journal" in normalized
 
 
-def test_doctor_detects_wal_file(initialized_project: Path):
-    """Test doctor detects project.db-wal temp file"""
+def test_inquisitor_detects_wal_file(initialized_project: Path):
+    """Test inquisitor detects project.db-wal temp file"""
     normalized = _create_temp_files_with_mock_db(initialized_project, ["-wal"], ["inquisitor"])
     assert "project.db-wal" in normalized
 
 
-def test_doctor_detects_shm_file(initialized_project: Path):
-    """Test doctor detects project.db-shm temp file"""
+def test_inquisitor_detects_shm_file(initialized_project: Path):
+    """Test inquisitor detects project.db-shm temp file"""
     normalized = _create_temp_files_with_mock_db(initialized_project, ["-shm"], ["inquisitor"])
     assert "project.db-shm" in normalized
 
 
-def test_doctor_detects_multiple_temp_files(initialized_project: Path):
-    """Test doctor detects multiple SQLite temp files at once"""
+def test_inquisitor_detects_multiple_temp_files(initialized_project: Path):
+    """Test inquisitor detects multiple SQLite temp files at once"""
     normalized = _create_temp_files_with_mock_db(initialized_project, ["-journal", "-wal", "-shm"], ["inquisitor"])
     assert "project.db-journal" in normalized
     assert "project.db-wal" in normalized
@@ -284,8 +284,8 @@ def test_doctor_detects_multiple_temp_files(initialized_project: Path):
 # --- Check 6a: Possession daemon refs (STUBBED) ---
 
 
-def test_doctor_detects_invalid_mission_persona(initialized_project: Path):
-    """Doctor check 6a is stubbed; always passes (full rewrite is ENG-M-0246)."""
+def test_inquisitor_detects_invalid_possession_daemon(initialized_project: Path):
+    """Inquisitor check 6a is stubbed; always passes (full rewrite is ENG-M-0246)."""
     result = runner.invoke(app, ["inquisitor", "--verbose"])
     assert result.exit_code == 0
     assert "All possession daemon references are valid" in result.stdout
@@ -294,8 +294,8 @@ def test_doctor_detects_invalid_mission_persona(initialized_project: Path):
 # --- Check 6b: Orphaned task possession ref (fixable) ---
 
 
-def test_doctor_detects_orphaned_task_mission_ref(initialized_project: Path):
-    """Doctor detects task referencing non-existent possession."""
+def test_inquisitor_detects_orphaned_task_possession_ref(initialized_project: Path):
+    """Inquisitor detects task referencing non-existent possession."""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -312,8 +312,8 @@ def test_doctor_detects_orphaned_task_mission_ref(initialized_project: Path):
     assert "non-existent possession" in result.stdout
 
 
-def test_doctor_fixes_orphaned_task_mission_ref(initialized_project: Path):
-    """Doctor --fix nullifies orphaned task possession reference."""
+def test_inquisitor_fixes_orphaned_task_possession_ref(initialized_project: Path):
+    """Inquisitor --fix nullifies orphaned task possession reference."""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -336,8 +336,8 @@ def test_doctor_fixes_orphaned_task_mission_ref(initialized_project: Path):
 # --- Check 6c: Invalid task dependencies (fixable) ---
 
 
-def test_doctor_detects_invalid_dependencies(initialized_project: Path):
-    """Doctor detects task dependency referencing non-existent task."""
+def test_inquisitor_detects_invalid_dependencies(initialized_project: Path):
+    """Inquisitor detects task dependency referencing non-existent task."""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -361,8 +361,8 @@ def test_doctor_detects_invalid_dependencies(initialized_project: Path):
     assert "invalid dependencies" in result.stdout
 
 
-def test_doctor_fixes_invalid_dependencies(initialized_project: Path):
-    """Doctor --fix removes invalid dependencies."""
+def test_inquisitor_fixes_invalid_dependencies(initialized_project: Path):
+    """Inquisitor --fix removes invalid dependencies."""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -391,8 +391,8 @@ def test_doctor_fixes_invalid_dependencies(initialized_project: Path):
 # --- Check 7a: COMPLETE without closed_at (fixable) ---
 
 
-def test_doctor_detects_complete_without_closed_at(initialized_project: Path):
-    """Doctor detects task marked COMPLETE but missing closed_at."""
+def test_inquisitor_detects_complete_without_closed_at(initialized_project: Path):
+    """Inquisitor detects task marked COMPLETE but missing closed_at."""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -409,8 +409,8 @@ def test_doctor_detects_complete_without_closed_at(initialized_project: Path):
     assert "missing closed_at" in result.stdout
 
 
-def test_doctor_fixes_complete_without_closed_at(initialized_project: Path):
-    """Doctor --fix adds closed_at timestamp to completed tasks."""
+def test_inquisitor_fixes_complete_without_closed_at(initialized_project: Path):
+    """Inquisitor --fix adds closed_at timestamp to completed tasks."""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -431,8 +431,8 @@ def test_doctor_fixes_complete_without_closed_at(initialized_project: Path):
 # --- Check 7b: UNDERWAY without claimed_at (warning) ---
 
 
-def test_doctor_detects_underway_without_claimed_at(initialized_project: Path):
-    """Doctor detects UNDERWAY task missing claimed_at."""
+def test_inquisitor_detects_underway_without_claimed_at(initialized_project: Path):
+    """Inquisitor detects UNDERWAY task missing claimed_at."""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -452,8 +452,8 @@ def test_doctor_detects_underway_without_claimed_at(initialized_project: Path):
 # --- Check 8a: Possession data (STUBBED) ---
 
 
-def test_doctor_detects_mission_missing_start_time(initialized_project: Path):
-    """Doctor check 8a is stubbed; always passes (full rewrite is ENG-M-0246)."""
+def test_inquisitor_detects_possession_missing_start_time(initialized_project: Path):
+    """Inquisitor check 8a is stubbed; always passes (full rewrite is ENG-M-0246)."""
     result = runner.invoke(app, ["inquisitor", "--verbose"])
     assert result.exit_code == 0
     assert "All possessions have valid data structure" in result.stdout
@@ -462,8 +462,8 @@ def test_doctor_detects_mission_missing_start_time(initialized_project: Path):
 # --- Check 8b: Possession log files (STUBBED) ---
 
 
-def test_doctor_detects_missing_mission_file(initialized_project: Path):
-    """Doctor check 8b is stubbed; always passes (full rewrite is ENG-M-0246)."""
+def test_inquisitor_detects_missing_possession_file(initialized_project: Path):
+    """Inquisitor check 8b is stubbed; always passes (full rewrite is ENG-M-0246)."""
     result = runner.invoke(app, ["inquisitor", "--verbose"])
     assert result.exit_code == 0
     assert "All active possession log files exist" in result.stdout
@@ -472,15 +472,15 @@ def test_doctor_detects_missing_mission_file(initialized_project: Path):
 # --- Check 9a: Daemon incarnation counts (STUBBED) ---
 
 
-def test_doctor_detects_wrong_mission_count(initialized_project: Path):
-    """Doctor check 9a is stubbed; always passes (full rewrite is ENG-M-0246)."""
+def test_inquisitor_detects_wrong_incarnation_count(initialized_project: Path):
+    """Inquisitor check 9a is stubbed; always passes (full rewrite is ENG-M-0246)."""
     result = runner.invoke(app, ["inquisitor", "--verbose"])
     assert result.exit_code == 0
     assert "All daemon incarnation counts are correct" in result.stdout
 
 
-def test_doctor_fixes_wrong_mission_count(initialized_project: Path):
-    """Doctor check 9a is stubbed; --fix finds nothing to fix."""
+def test_inquisitor_fixes_wrong_incarnation_count(initialized_project: Path):
+    """Inquisitor check 9a is stubbed; --fix finds nothing to fix."""
     result = runner.invoke(app, ["inquisitor", "--fix", "--verbose"])
     assert result.exit_code == 0
     assert "All daemon incarnation counts are correct" in result.stdout
@@ -489,8 +489,8 @@ def test_doctor_fixes_wrong_mission_count(initialized_project: Path):
 # --- Check 9b: Last possession dates (STUBBED) ---
 
 
-def test_doctor_detects_wrong_last_mission_at(initialized_project: Path):
-    """Doctor check 9b is stubbed; always passes (full rewrite is ENG-M-0246)."""
+def test_inquisitor_detects_wrong_last_possession_at(initialized_project: Path):
+    """Inquisitor check 9b is stubbed; always passes (full rewrite is ENG-M-0246)."""
     result = runner.invoke(app, ["inquisitor", "--verbose"])
     assert result.exit_code == 0
     assert "All last_possession timestamps are correct" in result.stdout
@@ -499,8 +499,8 @@ def test_doctor_detects_wrong_last_mission_at(initialized_project: Path):
 # --- Check 10a: Abandoned task (UNDERWAY on exorcised possession, fixable) ---
 
 
-def test_doctor_detects_abandoned_task(initialized_project: Path):
-    """Doctor detects UNDERWAY task on exorcised possession."""
+def test_inquisitor_detects_abandoned_task(initialized_project: Path):
+    """Inquisitor detects UNDERWAY task on exorcised possession."""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -525,8 +525,8 @@ def test_doctor_detects_abandoned_task(initialized_project: Path):
     assert "has been exorcised" in result.stdout
 
 
-def test_doctor_fixes_abandoned_task(initialized_project: Path):
-    """Doctor --fix nullifies possession reference for abandoned tasks."""
+def test_inquisitor_fixes_abandoned_task(initialized_project: Path):
+    """Inquisitor --fix nullifies possession reference for abandoned tasks."""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -555,8 +555,8 @@ def test_doctor_fixes_abandoned_task(initialized_project: Path):
 # --- Check 10b: Orphaned UNDERWAY (warning) ---
 
 
-def test_doctor_detects_orphaned_underway(initialized_project: Path):
-    """Doctor detects UNDERWAY task not claimed by any possession."""
+def test_inquisitor_detects_orphaned_underway(initialized_project: Path):
+    """Inquisitor detects UNDERWAY task not claimed by any possession."""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -577,8 +577,8 @@ def test_doctor_detects_orphaned_underway(initialized_project: Path):
 # --- Check 10c: Stale active possession (STUBBED) ---
 
 
-def test_doctor_detects_stale_mission(initialized_project: Path):
-    """Doctor check 10c is stubbed; always passes (full rewrite is ENG-M-0246)."""
+def test_inquisitor_detects_stale_possession(initialized_project: Path):
+    """Inquisitor check 10c is stubbed; always passes (full rewrite is ENG-M-0246)."""
     result = runner.invoke(app, ["inquisitor", "--verbose"])
     assert result.exit_code == 0
     assert "No rogue ACTIVE/IDLE possessions with stale heartbeats" in result.stdout
@@ -587,8 +587,8 @@ def test_doctor_detects_stale_mission(initialized_project: Path):
 # --- Check 11: Missing task file (warning) ---
 
 
-def test_doctor_detects_missing_task_file(initialized_project: Path):
-    """Doctor detects task with non-existent file_path."""
+def test_inquisitor_detects_missing_task_file(initialized_project: Path):
+    """Inquisitor detects task with non-existent file_path."""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -608,8 +608,8 @@ def test_doctor_detects_missing_task_file(initialized_project: Path):
 # --- Summary and fix mode ---
 
 
-def test_doctor_summary_with_issues(initialized_project: Path):
-    """Doctor shows summary with fixable/warning/error counts."""
+def test_inquisitor_summary_with_issues(initialized_project: Path):
+    """Inquisitor shows summary with fixable/warning/error counts."""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -626,8 +626,8 @@ def test_doctor_summary_with_issues(initialized_project: Path):
     assert "--fix" in result.stdout
 
 
-def test_doctor_summary_no_issues(initialized_project: Path):
-    """Doctor shows all-clear when no issues found."""
+def test_inquisitor_summary_no_issues(initialized_project: Path):
+    """Inquisitor shows all-clear when no issues found."""
     # Set up gitignore with all recommended patterns
     gitignore = initialized_project / ".gitignore"
     gitignore.write_text(".opencode/data/*.db\n.opencode/data/*.db-journal\n.opencode/data/*.db-wal\n")
@@ -641,8 +641,8 @@ def test_doctor_summary_no_issues(initialized_project: Path):
     assert "All checks passed" in result.stdout
 
 
-def test_doctor_fix_with_errors(initialized_project: Path):
-    """Doctor --fix reports both successful and error issues."""
+def test_inquisitor_fix_with_errors(initialized_project: Path):
+    """Inquisitor --fix reports both successful and error issues."""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     # Add a fixable issue (task missing closed_at)
@@ -659,8 +659,8 @@ def test_doctor_fix_with_errors(initialized_project: Path):
     assert "Applying fixes" in result.stdout
 
 
-def test_doctor_detects_orphaned_tasks(initialized_project: Path):
-    """Test doctor runs successfully even with orphaned tasks"""
+def test_inquisitor_detects_orphaned_tasks(initialized_project: Path):
+    """Test inquisitor runs successfully even with orphaned tasks"""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -675,14 +675,14 @@ def test_doctor_detects_orphaned_tasks(initialized_project: Path):
     assert result.exit_code == 0
 
 
-def test_doctor_detects_invalid_persona_refs(initialized_project: Path):
-    """Test doctor runs successfully even with invalid possession daemon references (check is stubbed)."""
+def test_inquisitor_detects_invalid_daemon_refs(initialized_project: Path):
+    """Test inquisitor runs successfully even with invalid possession daemon references (check is stubbed)."""
     result = runner.invoke(app, ["inquisitor"])
     assert result.exit_code == 0
 
 
-def test_doctor_checks_task_status_consistency(initialized_project: Path):
-    """Test doctor runs successfully even with task status inconsistencies"""
+def test_inquisitor_checks_task_status_consistency(initialized_project: Path):
+    """Test inquisitor runs successfully even with task status inconsistencies"""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(
@@ -697,8 +697,8 @@ def test_doctor_checks_task_status_consistency(initialized_project: Path):
     assert result.exit_code == 0
 
 
-def test_doctor_fix_repairs_issues(initialized_project: Path):
-    """Test doctor --fix runs successfully"""
+def test_inquisitor_fix_repairs_issues(initialized_project: Path):
+    """Test inquisitor --fix runs successfully"""
     db_path = initialized_project / ".opencode" / "data" / "project.db"
 
     _raw_execute(

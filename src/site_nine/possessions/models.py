@@ -50,8 +50,8 @@ class Possession:
         status: Lifecycle status
         last_heartbeat_at: Timestamp of last agent heartbeat
         epic_id: Epic ID for epic-scoped possessions (None if not epic-scoped)
-        desk_mode_active: Whether possession is in desk mode
-        mode: Interaction mode ('interactive' or 'desk')
+        minion_mode_active: Whether possession is in minion mode
+        mode: Interaction mode ('interactive' or 'minion')
         opencode_session_id: Linked OpenCode session ID
         suspension_time: When possession was suspended
         suspension_reason: Why possession was suspended
@@ -68,7 +68,7 @@ class Possession:
     status: PossessionStatus
     last_heartbeat_at: pendulum.DateTime | None
     epic_id: str | None
-    desk_mode_active: bool
+    minion_mode_active: bool
     mode: str
     opencode_session_id: str | None
     suspension_time: str | None
@@ -93,7 +93,7 @@ class Possession:
             status=PossessionStatus(row.get("status", "ACTIVE")),
             last_heartbeat_at=last_heartbeat_at,
             epic_id=row.get("epic_id"),
-            desk_mode_active=bool(row.get("desk_mode_active", 0)),
+            minion_mode_active=bool(row.get("minion_mode_active", 0)),
             mode=row.get("mode", "interactive"),
             opencode_session_id=row.get("opencode_session_id"),
             suspension_time=row.get("suspension_time"),

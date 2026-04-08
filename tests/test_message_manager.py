@@ -1,4 +1,4 @@
-"""Tests for messaging.manager module — desk mode and inbox integration"""
+"""Tests for messaging.manager module — minion mode and inbox integration"""
 
 import pytest
 
@@ -196,7 +196,7 @@ class TestGetUnreadMessages:
 
 
 class TestGetUnreadConversations:
-    """Tests for get_unread_conversations used by desk mode."""
+    """Tests for get_unread_conversations used by minion mode."""
 
     def test_unread_conversations_returned(self, test_db):
         """Conversations with unread messages are returned."""
@@ -223,11 +223,11 @@ class TestGetUnreadConversations:
         assert len(convs) == 0
 
 
-class TestDeskModeInboxIntegration:
-    """Tests for desk mode + inbox integration logic."""
+class TestMinionModeInboxIntegration:
+    """Tests for minion mode + inbox integration logic."""
 
-    def test_desk_mode_collects_all_unread_across_conversations(self, test_db):
-        """Desk mode should show all unread messages across all conversations."""
+    def test_minion_mode_collects_all_unread_across_conversations(self, test_db):
+        """Minion mode should show all unread messages across all conversations."""
         _create_missions(test_db, 3)
         _create_conversation(test_db, "CONV-0001", 1, 2, subject="Design question")
         _create_conversation(test_db, "CONV-0002", 3, 2, subject="Test plan")
@@ -236,7 +236,7 @@ class TestDeskModeInboxIntegration:
 
         mgr = MessageManager(test_db)
 
-        # Simulate desk mode: get unread conversations, then messages
+        # Simulate minion mode: get unread conversations, then messages
         conversations = mgr.get_unread_conversations(2)
         all_unread = []
         for conv in conversations:
@@ -255,8 +255,8 @@ class TestDeskModeInboxIntegration:
             assert msg.from_possession_id in (1, 3)
             assert msg.subject in ("Question about design", "Need clarification")
 
-    def test_desk_mode_shows_nothing_when_all_read(self, test_db):
-        """Desk mode shows no messages when all are read."""
+    def test_minion_mode_shows_nothing_when_all_read(self, test_db):
+        """Minion mode shows no messages when all are read."""
         _create_missions(test_db, 2)
         _create_conversation(test_db, "CONV-0001", 1, 2)
         _create_message(test_db, "MSG-M-0001", "CONV-0001", 1, subject="Hello")
@@ -267,27 +267,27 @@ class TestDeskModeInboxIntegration:
         conversations = mgr.get_unread_conversations(2)
         assert len(conversations) == 0
 
-    def test_inbox_and_desk_use_consistent_logic(self, test_db):
-        """Inbox and desk mode should use the same underlying data."""
+    def test_inbox_and_minion_use_consistent_logic(self, test_db):
+        """Inbox and minion mode should use the same underlying data."""
         _create_missions(test_db, 2)
         _create_conversation(test_db, "CONV-0001", 1, 2, subject="Question")
         _create_message(test_db, "MSG-M-0001", "CONV-0001", 1, subject="Help needed")
 
         mgr = MessageManager(test_db)
 
-        # Both inbox (get_unread_conversations) and desk polling use same method
+        # Both inbox (get_unread_conversations) and minion polling use same method
         inbox_convs = mgr.get_unread_conversations(2)
-        desk_convs = mgr.get_unread_conversations(2)
+        minion_convs = mgr.get_unread_conversations(2)
 
-        assert len(inbox_convs) == len(desk_convs)
-        assert inbox_convs[0].id == desk_convs[0].id
+        assert len(inbox_convs) == len(minion_convs)
+        assert inbox_convs[0].id == minion_convs[0].id
 
         # Both should get same unread messages
         inbox_msgs = mgr.get_unread_messages("CONV-0001", 2)
-        desk_msgs = mgr.get_unread_messages("CONV-0001", 2)
+        minion_msgs = mgr.get_unread_messages("CONV-0001", 2)
 
-        assert len(inbox_msgs) == len(desk_msgs)
-        assert inbox_msgs[0].id == desk_msgs[0].id
+        assert len(inbox_msgs) == len(minion_msgs)
+        assert inbox_msgs[0].id == minion_msgs[0].id
 
     def test_unread_count_matches_unread_messages(self, test_db):
         """get_unread_message_count and get_unread_messages return consistent results."""

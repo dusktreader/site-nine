@@ -110,6 +110,168 @@ def render_epic_subtasks_table(subtasks: list[Task]) -> Table:
     return table
 
 
+def render_available_tasks_tree(
+    active_epics: list[Epic],
+    available_tasks: list[Task],
+    get_subtasks: Callable[[str], list[Task]],
+) -> Tree:
+    """Render a Rich Tree of available (TODO) tasks grouped under their epics.
+
+    Epics that have at least one TODO subtask appear as branches.  Their node
+    label shows ID, task count, priority and title.  Each leaf shows the task
+    ID, role, status and title.  Individual tasks not linked to any epic appear
+    as root-level leaves.
+
+    Args:
+        active_epics: Active epics (TODO / UNDERWAY status).
+        available_tasks: Orphan TODO tasks (no epic_id).
+        get_subtasks: Callable that returns all subtasks for an epic ID.
+
+    Returns:
+        A Rich Tree ready to print.
+    """
+    root = Tree("[bold cyan]Available Tasks[/bold cyan]")
+
+    sorted_epics = sorted(
+        active_epics,
+        key=lambda e: (PRIORITY_ORDER.get(e.priority, 99), e.id),
+    )
+
+    for epic in sorted_epics:
+        subtasks = [t for t in get_subtasks(epic.id) if t.status.value == "TODO"]
+        if not subtasks:
+            continue
+
+        subtasks.sort(key=lambda t: (PRIORITY_ORDER.get(t.priority, 99), t.id))
+
+        priority_color = PRIORITY_COLORS.get(epic.priority, "white")
+        status_color = STATUS_COLORS.get(epic.status or "", "white")
+        child_count = len(subtasks)
+        epic_label = (
+            f"[cyan]{epic.id}[/cyan]  "
+            f"[dim]{child_count} task{'s' if child_count != 1 else ''}[/dim]  "
+            f"[{status_color}]{epic.status}[/{status_color}]  "
+            f"[{priority_color}]{epic.priority}[/{priority_color}]  "
+            f"[white]{epic.title}[/white]"
+        )
+        branch = root.add(epic_label)
+
+        for task in subtasks:
+            task_status_color = TASK_STATUS_COLORS.get(task.status.value, "white")
+            role_str = f"[green]{task.role}[/green]" if task.role else "[dim]—[/dim]"
+            leaf_label = (
+                f"[cyan]{task.id}[/cyan]  "
+                f"{role_str}  "
+                f"[{task_status_color}]{task.status}[/{task_status_color}]  "
+                f"[white]{task.title}[/white]"
+            )
+            branch.add(leaf_label)
+
+    # Orphan TODO tasks — root-level leaves
+    sorted_orphans = sorted(
+        available_tasks,
+        key=lambda t: (PRIORITY_ORDER.get(t.priority, 99), t.id),
+    )
+    for task in sorted_orphans:
+        task_status_color = TASK_STATUS_COLORS.get(task.status.value, "white")
+        role_str = f"[green]{task.role}[/green]" if task.role else "[dim]—[/dim]"
+        leaf_label = (
+            f"[cyan]{task.id}[/cyan]  "
+            f"{role_str}  "
+            f"[{task_status_color}]{task.status}[/{task_status_color}]  "
+            f"[white]{task.title}[/white]"
+        )
+        root.add(leaf_label)
+
+    return root
+
+
+def render_underway_tasks_tree(
+    active_epics: list[Epic],
+    orphan_underway: list[Task],
+    get_subtasks: Callable[[str], list[Task]],
+    possession_entries: list["PossessionEntry"],
+) -> Tree:
+    """Render a Rich Tree of underway tasks grouped under their epics.
+
+    Epics appear only when they have at least one UNDERWAY subtask.  Each leaf
+    shows the task ID, assigned daemon (if any), role, status and title.
+    Orphan UNDERWAY tasks (no epic) appear as root-level leaves.
+
+    Args:
+        active_epics: Active epics (TODO / UNDERWAY status).
+        orphan_underway: Orphan UNDERWAY tasks (no epic_id).
+        get_subtasks: Callable that returns all subtasks for an epic ID.
+        possession_entries: Active possessions used to resolve daemon names.
+
+    Returns:
+        A Rich Tree ready to print.
+    """
+    daemon_by_possession: dict[int, str] = {
+        pe.possession.id: pe.possession.daemon_name for pe in possession_entries if pe.possession.id is not None
+    }
+
+    root = Tree("[bold yellow]Underway Tasks[/bold yellow]")
+
+    sorted_epics = sorted(
+        active_epics,
+        key=lambda e: (PRIORITY_ORDER.get(e.priority, 99), e.id),
+    )
+
+    for epic in sorted_epics:
+        subtasks = get_subtasks(epic.id)
+        underway = [t for t in subtasks if t.status.value == "UNDERWAY"]
+        if not underway:
+            continue
+
+        underway.sort(key=lambda t: (PRIORITY_ORDER.get(t.priority, 99), t.id))
+
+        priority_color = PRIORITY_COLORS.get(epic.priority, "white")
+        status_color = STATUS_COLORS.get(epic.status or "", "white")
+        child_count = len(underway)
+        epic_label = (
+            f"[cyan]{epic.id}[/cyan]  "
+            f"[dim]{child_count} task{'s' if child_count != 1 else ''}[/dim]  "
+            f"[{status_color}]{epic.status}[/{status_color}]  "
+            f"[{priority_color}]{epic.priority}[/{priority_color}]  "
+            f"[white]{epic.title}[/white]"
+        )
+        branch = root.add(epic_label)
+
+        for task in underway:
+            daemon_name = daemon_by_possession.get(task.current_possession_id) if task.current_possession_id else None
+            daemon_str = f"[magenta]{daemon_name}[/magenta]" if daemon_name else "[dim]unassigned[/dim]"
+            role_str = f"[green]{task.role}[/green]" if task.role else "[dim]—[/dim]"
+            leaf_label = (
+                f"[cyan]{task.id}[/cyan]  "
+                f"{daemon_str}  "
+                f"{role_str}  "
+                f"[yellow bold]{task.status}[/yellow bold]  "
+                f"[white]{task.title}[/white]"
+            )
+            branch.add(leaf_label)
+
+    # Orphan UNDERWAY tasks — root-level leaves
+    sorted_orphans = sorted(
+        orphan_underway,
+        key=lambda t: (PRIORITY_ORDER.get(t.priority, 99), t.id),
+    )
+    for task in sorted_orphans:
+        daemon_name = daemon_by_possession.get(task.current_possession_id) if task.current_possession_id else None
+        daemon_str = f"[magenta]{daemon_name}[/magenta]" if daemon_name else "[dim]unassigned[/dim]"
+        role_str = f"[green]{task.role}[/green]" if task.role else "[dim]—[/dim]"
+        leaf_label = (
+            f"[cyan]{task.id}[/cyan]  "
+            f"{daemon_str}  "
+            f"{role_str}  "
+            f"[yellow bold]{task.status}[/yellow bold]  "
+            f"[white]{task.title}[/white]"
+        )
+        root.add(leaf_label)
+
+    return root
+
+
 def render_epic_tables(
     active_epics: list[Epic],
     get_subtasks: Callable[[str], list[Task]],
@@ -533,12 +695,36 @@ def _render_full_dashboard(
 ) -> list[str | Table | Tree]:
     items: list[str | Table | Tree] = []
 
-    items.extend(render_epic_tables(data.active_epics, get_subtasks))
+    # Split orphan tasks by status
+    orphan_todo = [t for t in data.available_tasks if t.status.value == "TODO"]
+    orphan_underway = [t for t in data.available_tasks if t.status.value == "UNDERWAY"]
 
-    if data.available_tasks:
-        items.append(render_available_tasks_table(data.available_tasks))
-    else:
-        items.append("[green]No available tasks - all work complete![/green]")
+    # Cache subtask lookups shared across both trees
+    _subtask_cache: dict[str, list[Task]] = {}
+
+    def _cached_subtasks(epic_id: str) -> list[Task]:
+        if epic_id not in _subtask_cache:
+            _subtask_cache[epic_id] = get_subtasks(epic_id)
+        return _subtask_cache[epic_id]
+
+    # Available Tasks tree — epics with TODO subtasks + orphan TODO tasks
+    items.append(
+        render_available_tasks_tree(
+            data.active_epics,
+            orphan_todo,
+            _cached_subtasks,
+        )
+    )
+
+    # Underway Tasks tree — epics with UNDERWAY subtasks + orphan UNDERWAY tasks
+    items.append(
+        render_underway_tasks_tree(
+            data.active_epics,
+            orphan_underway=orphan_underway,
+            get_subtasks=_cached_subtasks,
+            possession_entries=data.possession_entries,
+        )
+    )
 
     items.append(render_open_missions_table(data.possession_entries))
     items.append(render_stats_table(data.stats))

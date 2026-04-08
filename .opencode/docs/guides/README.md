@@ -54,13 +54,13 @@ Common development issues: environment setup, test failures, database issues.
 
 ### [agent-discovery.md](./agent-discovery.md)
 
-Agent discovery patterns: finding available agents, using `--json` flags, desk mode status, messaging vs. asking
+Agent discovery patterns: finding available agents, using `--json` flags, minion mode status, messaging vs. asking
 Director.
 
 
-### [epic-possessions-and-desk-mode.md](./epic-possessions-and-desk-mode.md)
+### [epic-possessions-and-minion-mode.md](./epic-possessions-and-minion-mode.md)
 
-Epic possession workflows: starting possessions with `--epic`, using `s9 task next`, desk mode usage, periodic
+Epic possession workflows: starting possessions with `--epic`, using `s9 task next`, minion mode usage, periodic
 status checks, responding to messages.
 
 
@@ -69,16 +69,16 @@ status checks, responding to messages.
 JSON output guidelines: when to use `--json` vs. table mode, parsing patterns, command examples, jq usage.
 
 
-### [desk-mode-orchestration.md](./desk-mode-orchestration.md)
+### [minion-mode-orchestration.md](./minion-mode-orchestration.md)
 
-Desk mode orchestration reference for Admin agents: spawning background workers, sending work via messages,
-monitoring worker status, coordination patterns, termination procedures.
+Minion mode orchestration reference for Admin agents: summoning background minions, sending work via messages,
+monitoring minion status, coordination patterns, termination procedures.
 
 
 ### [admin-orchestration.md](./admin-orchestration.md)
 
 Practical Admin orchestration guide: breaking down Director goals, assigning work with context, sequential and
-parallel workflow patterns, handling worker problems, and reporting back to Director.
+parallel workflow patterns, handling minion problems, and reporting back to Director.
 
 
 ## Architecture & Design
@@ -117,9 +117,9 @@ Markdown formatting rules: 120-char line wrap, ATX headings, title case, blank l
 | Editing any markdown file           | markdown-style.md                                             |
 | Fixing an issue                     | troubleshooting.md                                            |
 | Finding other agents to coordinate  | agent-discovery.md                                            |
-| Working on epic-scoped possessions  | epic-possessions-and-desk-mode.md                             |
+| Working on epic-scoped possessions  | epic-possessions-and-minion-mode.md                           |
 | Using --json vs table output        | json-output-usage.md                                          |
-| Orchestrating background workers    | desk-mode-orchestration.md, admin-orchestration.md            |
+| Orchestrating background minions    | minion-mode-orchestration.md, admin-orchestration.md          |
 | Understanding system architecture   | architecture.md                                               |
 | Working with tool adapters          | tool-adapters.md                                              |
 | Learning site-nine's code patterns  | [site-nine-dev/coding-patterns.md](../../site-nine-dev/coding-patterns.md) |

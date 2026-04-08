@@ -36,6 +36,27 @@ The Operator is the meta-development specialist for site-nine development. This 
 
 ## Workflow Patterns
 
+### Performing a System Health Check
+
+When summoned by the Administrator for a health check, run the inquisitor to
+detect and repair stale state:
+
+1. Run the health check with auto-fix enabled:
+   ```bash
+   s9 inquisitor --fix
+   ```
+   This auto-exorcises ACTIVE possessions whose heartbeat has gone silent,
+   releases any tasks they were holding back to TODO, and checks for other
+   integrity issues: orphaned foreign keys, inconsistent task states, missing
+   files, and abandoned work.
+
+2. Review the output. Note any issues found and whether they were fixed
+   automatically or require manual attention.
+
+3. Report back to the Administrator with a plain summary: what was checked,
+   what was found, what was fixed. If nothing needed fixing, say so.
+
+
 ### Updating Agent Configuration
 
 1. Review current agent definitions

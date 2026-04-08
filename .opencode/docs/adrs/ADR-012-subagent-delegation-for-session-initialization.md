@@ -8,12 +8,12 @@
 
 ## Context
 
-The `session-start` skill currently performs all initialization steps within the main agent's context, including:
+The `possession-start` skill currently performs all initialization steps within the main agent's context, including:
 
 1. **Dashboard display** - Project status overview
-2. **Persona selection/creation** - Auto-selecting from suggestions or using --persona flag
+2. **Daemon selection/creation** - Auto-selecting from suggestions or using --daemon flag
 3. **Bio generation** - Researching mythology and crafting whimsical first-person narrative (if missing)
-4. **Mission registration** - Creating mission record and generating codename
+4. **Possession registration** - Creating possession record and generating codename
 5. **Session renaming** - UUID generation and TUI session title update
 6. **Handoff checking** - Querying and reviewing pending handoffs
 7. **Review checking** - Administrator-only, checking pending reviews
@@ -99,7 +99,7 @@ Subagents:
 
 ## Decision
 
-We will **selectively use subagents for initialization steps that pollute context** while keeping the core session-start flow in the main agent.
+We will **selectively use subagents for initialization steps that pollute context** while keeping the core possession-start flow in the main agent.
 
 ### Core Principles
 
@@ -109,8 +109,8 @@ We will **selectively use subagents for initialization steps that pollute contex
    - Are self-contained (don't require Director decisions)
    - Produce compact results (Director only needs summary)
 
-2. **Keep flow in main agent**: Session-start logic stays in main agent because:
-   - Director may need to make decisions (persona conflicts, task selection)
+2. **Keep flow in main agent**: Possession-start logic stays in main agent because:
+   - Director may need to make decisions (daemon conflicts, task selection)
    - Flow control is contextual (flags, conditions, errors)
    - Most steps are already efficient (~100-200 tokens)
 
@@ -318,43 +318,43 @@ Step 10: Auto-Assign (MAIN AGENT)
 
 ### Context Pollution Impact Analysis
 
-**Scenario 1: First-time persona, task-scoped mission**
+**Scenario 1: First-time daemon, task-scoped possession**
 - Current: 3,850 tokens (600 tokens of bio research noise)
 - Proposed: 3,400 tokens (bio noise eliminated)
 - Context pollution reduced: ~450 tokens of mythology research and creative iteration
 
-**Scenario 2: Existing persona, task-scoped mission**
+**Scenario 2: Existing daemon, task-scoped possession**
 - Current: 3,250 tokens
 - Proposed: 3,250 tokens (no bio needed, no delegation)
 - Context pollution reduced: 0 tokens (already clean)
 
-**Scenario 3: First-time persona, epic-scoped mission**
-- Current: 4,650 tokens (600 bio noise + 800 mission file noise)
+**Scenario 3: First-time daemon, epic-scoped possession**
+- Current: 4,650 tokens (600 bio noise + 800 possession file noise)
 - Proposed: 2,850 tokens (both noise sources eliminated)
 - Context pollution reduced: ~1,400 tokens of research, queries, and operational details
 
-**Scenario 4: Existing persona, epic-scoped mission**
-- Current: 4,050 tokens (800 tokens of mission file noise)
-- Proposed: 3,300 tokens (mission file noise eliminated)
+**Scenario 4: Existing daemon, epic-scoped possession**
+- Current: 4,050 tokens (800 tokens of possession file noise)
+- Proposed: 3,300 tokens (possession file noise eliminated)
 - Context pollution reduced: ~750 tokens of epic queries and task list formatting
 
 ### When Delegation Triggers
 
 **Bio Generation Subagent:**
-- ✅ Trigger: `bio IS NULL` after persona show
+- ✅ Trigger: `bio IS NULL` after daemon show
 - ✅ Skip: `bio IS NOT NULL` (already exists)
-- ✅ Parallel: Can run while Steps 4-6 execute
-- ✅ Blocking: Main agent waits to display result before Step 8
+- ✅ Parallel: Can run while Steps 4-5 execute
+- ✅ Blocking: Main agent waits to display result before Step 7
 
-**Mission File Subagent:**
+**Possession File Subagent:**
 - ✅ Trigger: `--epic` flag present
-- ✅ Skip: Task-scoped or general missions (minimal context needed)
-- ✅ Parallel: Can run after Step 6
-- ✅ Non-blocking: Main agent continues to Steps 8-10 while subagent works
+- ✅ Skip: Task-scoped or general possessions (minimal context needed)
+- ✅ Parallel: Can run after Step 5
+- ✅ Non-blocking: Main agent continues to Steps 7-9 while subagent works
 
 ## Alternatives Considered
 
-### Alternative 1: Delegate Entire Session-Start to Subagent
+### Alternative 1: Delegate Entire Possession-Start to Subagent
 
 **Approach:** Main agent immediately delegates to subagent, receives final summary.
 
@@ -365,13 +365,13 @@ Step 10: Auto-Assign (MAIN AGENT)
 
 **Cons:**
 - Loses Director interaction during initialization
-- Can't handle --persona conflicts or decisions
+- Can't handle --daemon conflicts or decisions
 - Can't show progress (Director sees nothing until complete)
-- Flags (--auto-assign, --task, --persona) harder to handle
+- Flags (--auto-assign, --task, --daemon) harder to handle
 - Error handling more complex
 - Session rename may not work (TUI session detection)
 
-**Rejected because:** Session-start has decision points that require Director visibility and interaction. The value is in selective delegation of noisy sub-steps, not wholesale outsourcing.
+**Rejected because:** Possession-start has decision points that require Director visibility and interaction. The value is in selective delegation of noisy sub-steps, not wholesale outsourcing.
 
 ### Alternative 2: Keep Everything in Main Agent (Status Quo)
 
@@ -384,34 +384,34 @@ Step 10: Auto-Assign (MAIN AGENT)
 
 **Cons:**
 - Context pollution from bio generation (~450 tokens of mythology research)
-- Epic mission initialization accumulates query noise (~750 tokens)
+- Epic possession initialization accumulates query noise (~750 tokens)
 - Main context polluted with operational details
 - No parallelization opportunities
 - Agent carries irrelevant artifacts into actual work
 
-**Rejected because:** Bio generation clearly pollutes context with research that's never needed again. Epic missions would benefit from delegating file initialization noise.
+**Rejected because:** Bio generation clearly pollutes context with research that's never needed again. Epic possessions would benefit from delegating file initialization noise.
 
 ### Alternative 3: Pre-generate All Bios
 
-**Approach:** Run batch script to generate bios for all 256 personas upfront.
+**Approach:** Run batch script to generate bios for all 256 daemons upfront.
 
 **Pros:**
 - No runtime bio generation cost
 - Consistent bio quality
-- All personas ready to use
+- All daemons ready to use
 
 **Cons:**
-- Upfront context cost: 256 personas × 600 tokens = ~153,600 tokens of wasted effort
+- Upfront context cost: 256 daemons × 600 tokens = ~153,600 tokens of wasted effort
 - Quality varies (bulk generation less thoughtful)
 - No agent review or iteration
-- Personas never used still cost effort
+- Daemons never used still cost effort
 - Can't incorporate new mythologies without re-running batch
 
-**Rejected because:** Lazy generation is more efficient overall. Most personas won't be used. Current approach generates bios just-in-time with full context and care. This doesn't solve the pollution problem - it just front-loads it.
+**Rejected because:** Lazy generation is more efficient overall. Most daemons won't be used. Current approach generates bios just-in-time with full context and care. This doesn't solve the pollution problem - it just front-loads it.
 
-### Alternative 4: Cache Session-Start Results
+### Alternative 4: Cache Possession-Start Results
 
-**Approach:** Cache entire session-start output, replay for subsequent sessions.
+**Approach:** Cache entire possession-start output, replay for subsequent sessions.
 
 **Pros:**
 - Zero context cost for repeated summons
@@ -515,26 +515,26 @@ The agent doesn't need to "remember" how the bio was crafted or what mythology w
 2. Implement subagent delegation for bio generation
 3. Handle bio result display
 4. Add fallback for subagent failure
-5. Test with new persona (e.g., bes, atum)
+5. Test with new daemon (e.g., bes, atum)
 
 **Success criteria:**
 - Bio generated by subagent and saved correctly
 - Main agent displays result without showing research process
-- Context pollution reduced by ~450 tokens for first-time persona
+- Context pollution reduced by ~450 tokens for first-time daemon
 
-### Phase 2: Mission File Delegation (Epic-Scoped)
+### Phase 2: Possession File Delegation (Epic-Scoped)
 
 **Tasks:**
-1. Create mission file initialization subagent prompt template
-2. Update session-start Step 7 to conditionally delegate
+1. Create possession file initialization subagent prompt template
+2. Update possession-start Step 6 to conditionally delegate
 3. Implement epic context gathering (epic details, task list)
-4. Write mission file with structured initial content
-5. Test with epic-scoped mission
+4. Write possession file with structured initial content
+5. Test with epic-scoped possession
 
 **Success criteria:**
-- Mission file created with epic overview and task list
+- Possession file created with epic overview and task list
 - Main agent continues to other steps while subagent works
-- Context pollution reduced by ~750 tokens for epic missions
+- Context pollution reduced by ~750 tokens for epic possessions
 
 ### Phase 3: Monitoring & Refinement
 
@@ -547,13 +547,13 @@ The agent doesn't need to "remember" how the bio was crafted or what mythology w
 
 **Success criteria:**
 - Context cleanliness validated through monitoring
-- No regressions in session-start functionality
+- No regressions in possession-start functionality
 - Director experience improved or neutral
 
 ## References
 
-- **Skill:** session-start (.opencode/skills/session-start/SKILL.md)
-- **Related ADR:** ADR-006 (Entity Model Clarity - Personas, Missions, Agents)
+- **Skill:** possession-start (.opencode/skills/possession-start/SKILL.md)
+- **Related ADR:** ADR-006 (Entity Model Clarity - Daemons, Possessions, Agents)
 - **Related ADR:** ADR-009 (Agent Coordination Patterns)
 - **OpenCode Task Tool:** For subagent delegation
 - **Token Budget:** 1M tokens per session (plenty of headroom for optimization experiments)
@@ -563,18 +563,18 @@ The agent doesn't need to "remember" how the bio was crafted or what mythology w
 ### Design Philosophy
 
 **Selective delegation over wholesale outsourcing:**
-- Session-start remains in main agent for Director interaction
+- Possession-start remains in main agent for Director interaction
 - Only noisy, self-contained steps delegated
 - Context cleanliness realized without sacrificing visibility
 
 **Optimize for context quality, not just token count:**
 - Bio generation: 600 tokens of process noise → 150 tokens of clean result (4x compression)
 - Dashboard display: 1,500 tokens → stays in main (Director needs to see it, and it's useful context)
-- Mission registration: 200 tokens → stays in main (already clean and efficient)
+- Possession registration: 200 tokens → stays in main (already clean and efficient)
 
 **Parallelization where safe:**
-- Bio generation can happen during mission registration
-- Mission file initialization can happen during handoff checking
+- Bio generation can happen during possession registration
+- Possession file initialization can happen during handoff checking
 - No shared state, no race conditions
 
 ### Future Extensions
@@ -602,12 +602,12 @@ This pattern could extend to other expensive skill steps:
 
 **Bio Generation:**
 ```
-Generate and save a whimsical first-person bio for persona 'bes' (Egyptian, Architect role).
+Generate and save a whimsical first-person bio for daemon 'bes' (Egyptian, Architect role).
 
 Steps:
 1. Research: Bes is the Egyptian protective craftsman deity
 2. Style: 3-5 sentences, first-person, whimsical, relevant to architecture
-3. Save: s9 persona set-bio bes "<bio-text>"
+3. Save: daemon_set_bio tool: daemon_set_bio({ name: "bes", bio: "<bio-text>" })
 
 Return ONLY the bio text (not command output or explanations).
 
@@ -616,35 +616,35 @@ Example style:
 [How this relates to technical role]. [Personality quirk or memorable detail]."
 ```
 
-**Mission File Initialization:**
+**Possession File Initialization:**
 ```
-Initialize mission file for epic-scoped mission.
+Initialize possession file for epic-scoped possession.
 
 Context:
-- Mission ID: 115
+- Possession ID: 115
 - Codename: omega-nexus
-- Persona: aruru (Architect)
+- Daemon: aruru (Architect)
 - Role: Architect  
 - Epic: EPC-H-0004 (Multi-Tool Adapter System)
-- Mission file: .opencode/work/missions/2026-02-16.12:56:14.architect.aruru.omega-nexus.md
+- Possession file: .opencode/work/possessions/2026-02-16.12:56:14.architect.aruru.omega-nexus.md
 
 Tasks:
 1. Get epic details: s9 epic show EPC-H-0004 --json
 2. Get tasks: s9 task list --epic EPC-H-0004 --role Architect --json
-3. Write mission file with:
+3. Write possession file with:
    - Epic title and description
    - Task list (ID, title, status)
    - Initial approach section (placeholder)
    - Work log section (empty, ready for updates)
 
-Return: "Mission file initialized with [N] tasks from epic EPC-H-0004"
+Return: "Possession file initialized with [N] tasks from epic EPC-H-0004"
 ```
 
 ### Open Questions
 
-1. **Should mission file delegation be opt-in (--init-mission-file) or automatic for --epic?**
+1. **Should possession file delegation be opt-in (--init-possession-file) or automatic for --epic?**
    - Leaning toward automatic for --epic (sensible default)
-   - Can add --skip-mission-file flag if Director wants minimal setup
+   - Can add --skip-possession-file flag if Director wants minimal setup
 
 2. **Should we show subagent work in progress to Director?**
    - Current proposal: No, just show result
@@ -657,7 +657,7 @@ Return: "Mission file initialized with [N] tasks from epic EPC-H-0004"
    - Leaning toward fallback (robustness over context pollution)
 
 4. **Should context cleanliness improvements be logged/reported?**
-   - Could add to mission end summary: "Context optimization: eliminated ~450 tokens of initialization noise"
+   - Could add to possession end summary: "Context optimization: eliminated ~450 tokens of initialization noise"
    - Useful for monitoring, but may be noise
    - Leaning toward silent optimization (Director doesn't care about internals)
 

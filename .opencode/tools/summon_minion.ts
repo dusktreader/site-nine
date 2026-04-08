@@ -3,15 +3,15 @@ import path from "path"
 
 export default tool({
   description:
-    "Spawn a desk-mode worker for a given role. The worker runs in the background, " +
-    "polls for messages, and stays alive for continuous work. Returns the spawned possession ID " +
+    "Spawn a minion-mode worker for a given role. The minion runs in the background, " +
+    "polls for messages, and stays alive for continuous work. Returns the summoned possession ID " +
     "for subsequent coordination via worker_message. This is the ONLY way for agents to " +
-    "spawn workers - never use 's9 summon' CLI directly.",
+    "summon minions - never use 's9 summon' CLI directly.",
   args: {
     role: tool.schema
       .string()
       .describe(
-        "Worker role to spawn: Administrator, Architect, Engineer, Tester, Documentarian, Designer, Inspector, Operator, or Historian"
+        "Minion role to summon: Administrator, Architect, Engineer, Tester, Documentarian, Designer, Inspector, Operator, or Historian"
       ),
     daemon: tool.schema.string().optional().describe("Optional specific daemon name. If omitted, auto-selected."),
     model: tool.schema.string().optional().describe("Optional OpenCode model to use (default: claude-sonnet-4.6)"),

@@ -19,7 +19,13 @@ from site_nine.possessions.models import Possession as Mission
 from site_nine.possessions.types import PossessionStatus as MissionStatus
 from site_nine.opencode import OpenCodeSessionManager
 
-app = typer.Typer(help="Manage missions")
+app = typer.Typer(help="Manage missions", invoke_without_command=True)
+
+
+@app.callback()
+def _callback(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        print(ctx.get_help())
 
 
 @app.command()
@@ -121,10 +127,10 @@ def list(
         """Compute availability status per ADR-009."""
         if mission.status == MissionStatus.EXORCISED:
             return "Ended"
-        if mission.desk_mode_active:
+        if mission.minion_mode_active:
             if mission.epic_id:
-                return f"Desk ({mission.epic_id})"
-            return "Desk (All)"
+                return f"Minion ({mission.epic_id})"
+            return "Minion (All)"
         mid = mission.id or 0
         current_task_id = mission_task_map.get(mid)
         if mission.epic_id:
@@ -149,7 +155,7 @@ def list(
                 "codename": "",
                 "status": mission.status.value,
                 "epic_id": mission.epic_id,
-                "desk_mode_active": mission.desk_mode_active,
+                "minion_mode_active": mission.minion_mode_active,
                 "current_task_id": mission_task_map.get(mission.id or 0),
                 "availability": _get_availability(mission),
                 "start_time": mission.start_time,

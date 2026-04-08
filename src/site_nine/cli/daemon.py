@@ -18,7 +18,13 @@ from site_nine.exceptions import SiteNineError
 from site_nine.possessions import PossessionManager
 from site_nine.opencode import OpenCodeSessionManager
 
-app = typer.Typer(help="Manage daemons (summon, exorcise, heartbeat)")
+app = typer.Typer(help="Manage daemons (summon, exorcise, heartbeat)", invoke_without_command=True)
+
+
+@app.callback()
+def _callback(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        print(ctx.get_help())
 
 
 @app.command()

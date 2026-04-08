@@ -21,7 +21,7 @@ def _build_instruction_message(
     daemon: str | None,
     auto_assign: bool,
     task: str | None,
-    desk: bool,
+    minion: bool,
 ) -> str:
     """Construct the instruction message to inject into OpenCode on summon.
 
@@ -47,8 +47,8 @@ def _build_instruction_message(
         parts.append("Automatically claim and start work on the top priority task for your role (--auto-assign).")
     if task:
         parts.append(f"Claim and start work on task {task} (--task {task}).")
-    if desk:
-        parts.append("Mode: desk (headless background worker).")
+    if minion:
+        parts.append("Mode: minion (headless background worker).")
 
     return " ".join(parts)
 
@@ -62,8 +62,8 @@ def summon_command(
     ] = False,
     task: Annotated[str | None, typer.Option("--task", "-t", help="Specific task ID to claim and start")] = None,
     model: Annotated[str | None, typer.Option("--model", "-m", help="Model to use (provider/model format)")] = None,
-    desk: Annotated[
-        bool, typer.Option("--desk", help="Spawn a background (headless) desk-mode worker via opencode run")
+    minion: Annotated[
+        bool, typer.Option("--minion", help="Spawn a background (headless) minion-mode worker via opencode run")
     ] = False,
     dry_run: Annotated[
         bool, typer.Option("--dry-run", help="Show command that would be run without executing")
@@ -72,7 +72,7 @@ def summon_command(
     """Launch OpenCode with a possession-start instruction message (typically used by: humans)
 
     Constructs an instruction message and either execs into OpenCode (interactive)
-    or spawns a background headless worker (--desk mode).
+    or spawns a background headless worker (--minion mode).
 
     Examples:
         s9 summon operator
@@ -80,7 +80,7 @@ def summon_command(
         s9 summon operator --auto-assign
         s9 summon operator --task OPR-H-0065
         s9 summon operator --model github-copilot/gpt-5
-        s9 summon engineer --desk
+        s9 summon engineer --minion
     """
     CLIError.require_condition(
         not (auto_assign and task),
@@ -95,12 +95,12 @@ def summon_command(
     )
 
     CLIError.require_condition(
-        not (desk and (auto_assign or task)),
+        not (minion and (auto_assign or task)),
         conjoin(
-            "Cannot use --task or --auto-assign with --desk mode.",
+            "Cannot use --task or --auto-assign with --minion mode.",
             "",
-            "Desk mode workers initialize and wait for messages.",
-            "To assign work to a desk worker, send a message via 's9 comms send'",
+            "Minion workers initialize and wait for messages.",
+            "To assign work to a minion, send a message via 's9 comms send'",
             "or use an orchestrator pattern after the worker is initialized.",
         ),
     )
@@ -116,25 +116,25 @@ def summon_command(
         daemon=daemon,
         auto_assign=auto_assign,
         task=task,
-        desk=desk,
+        minion=minion,
     )
 
-    if desk:
-        # Desk mode: spawn persistent polling worker via desk_worker.py module
+    if minion:
+        # Minion mode: spawn persistent polling worker via minion_worker.py module
         # Get repo root (parent of .opencode directory)
         opencode_dir = get_opencode_dir()
         repo_root = opencode_dir.parent
-        desk_worker_script = repo_root / "src" / "site_nine" / "workers" / "desk_worker.py"
+        minion_worker_script = repo_root / "src" / "site_nine" / "workers" / "minion_worker.py"
 
-        # Build command for desk_worker.py with appropriate arguments
-        cmd = ["uv", "run", "python", str(desk_worker_script), role]
+        # Build command for minion_worker.py with appropriate arguments
+        cmd = ["uv", "run", "python", str(minion_worker_script), role]
         if daemon:
             cmd.extend(["--daemon", daemon])
         if model:
             cmd.extend(["--model", model])
 
         terminal_message(
-            f"Spawning desk-mode worker for role '{role}'...\n"
+            f"Spawning minion-mode worker for role '{role}'...\n"
             f"Worker will poll for messages and stay alive for continuous work.",
             subject="Summon",
         )
@@ -146,22 +146,22 @@ def summon_command(
             )
             return
         try:
-            # Redirect stdout/stderr to a log file so desk worker output
+            # Redirect stdout/stderr to a log file so minion worker output
             # doesn't pollute the terminal. The log lives alongside the
             # typerdrive app logs in ~/.local/state/site-nine/logs/.
             from typerdrive.config import get_typerdrive_config
 
             log_dir = get_typerdrive_config().log_dir
             log_dir.mkdir(parents=True, exist_ok=True)
-            log_file = log_dir / f"desk-worker-{role}.log"
+            log_file = log_dir / f"minion-worker-{role}.log"
             fh = open(log_file, "a")
             subprocess.Popen(cmd, cwd=str(repo_root), stdout=fh, stderr=fh)
             terminal_message(
                 f"Worker output is being logged to: {log_file}",
-                subject="Desk Log",
+                subject="Minion Log",
             )
         except FileNotFoundError:
-            raise CLIError(f"desk_worker.py module not found at {desk_worker_script}")
+            raise CLIError(f"minion_worker.py module not found at {minion_worker_script}")
     else:
         # Interactive mode: exec into OpenCode, replacing the s9 process
         cmd = ["opencode", "--model", model, "--prompt", instruction]

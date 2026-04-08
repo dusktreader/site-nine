@@ -1,31 +1,31 @@
 # Admin Orchestration Guide
 
-This guide covers the Administrator's role as the bridge between the Director's goals and the workers who
+This guide covers the Administrator's role as the bridge between the Director's goals and the minions who
 execute them. It focuses on practical message-driven coordination patterns.
 
 ## Overview
 
-The Administrator sits between the Director (human) and workers (background agents):
+The Administrator sits between the Director (human) and minions (background agents):
 
 ```
 Director (human)
   └─ summons → Administrator (interactive session)
-                 ├─ spawns → Engineer worker (desk mode)
-                 ├─ spawns → Tester worker (desk mode)
-                 └─ spawns → Documentarian worker (desk mode)
+                 ├─ summons → Engineer minion (minion mode)
+                 ├─ summons → Tester minion (minion mode)
+                 └─ summons → Documentarian minion (minion mode)
 ```
 
-The Director gives you a goal. You break it down, spawn workers, assign tasks, monitor progress, and report
-back. Workers are invisible to the Director — you manage them autonomously.
+The Director gives you a goal. You break it down, summon minions, assign tasks, monitor progress, and report
+back. Minions are invisible to the Director — you manage them autonomously.
 
 ## Core Responsibilities
 
 - Break down Director goals into concrete tasks
-- Spawn workers with the right roles for each task
+- Summon minions with the right roles for each task
 - Assign work explicitly via messages with enough context to act
 - Monitor progress via `worker_status` and `watch_inbox`
 - Review completed work before assigning next steps
-- Terminate workers when their phase is done
+- Dismiss minions when their phase is done
 - Report outcomes to the Director
 
 ## Message-Driven Coordination
@@ -34,7 +34,7 @@ back. Workers are invisible to the Director — you manage them autonomously.
 
 Every work assignment should include:
 
-1. **Task ID** — so the worker can claim it
+1. **Task ID** — so the minion can claim it
 2. **Goal** — what success looks like
 3. **Context** — relevant ADRs, prior work, constraints
 4. **Report request** — ask for a reply when done
@@ -55,17 +55,17 @@ Run \`make qa\` when done and reply with results.`
 
 ### Checking for Responses
 
-After assigning work, block until the worker reports back:
+After assigning work, block until the minion reports back:
 
 ```typescript
 watch_inbox()
-// Returns when any worker sends a message
+// Returns when any minion sends a message
 ```
 
-If you have multiple workers running in parallel, call `watch_inbox` once per expected response:
+If you have multiple minions running in parallel, call `watch_inbox` once per expected response:
 
 ```typescript
-// Assign to two workers
+// Assign to two minions
 worker_message({ to_possession_id: 83, body: "Implement ENG-H-0150" })
 worker_message({ to_possession_id: 84, body: "Implement ENG-H-0151" })
 
@@ -76,13 +76,13 @@ watch_inbox()
 
 ### Status Checks
 
-Check which workers are active and their possession IDs:
+Check which minions are active and their possession IDs:
 
 ```typescript
 worker_status({ role: "Engineer" })
 ```
 
-Use this if you need to find a worker's possession ID or verify they're still running.
+Use this if you need to find a minion's possession ID or verify they're still running.
 
 ## Workflow Patterns
 
@@ -134,21 +134,21 @@ watch_inbox()
 
 ### Interactive Refinement
 
-When a worker needs input to continue:
+When a minion needs input to continue:
 
 ```typescript
 worker_message({ to_possession_id: 83, body: "Implement the cache invalidation strategy for task ENG-H-0170." })
 watch_inbox()
-// Worker replies: "Two options: TTL-based or event-driven. Which do you prefer?"
+// Minion replies: "Two options: TTL-based or event-driven. Which do you prefer?"
 
 worker_message({ to_possession_id: 83, body: "Use TTL-based. Set default TTL to 300 seconds, configurable via CACHE_TTL env var." })
 watch_inbox()
-// Worker replies: "Done. ENG-H-0170 complete."
+// Minion replies: "Done. ENG-H-0170 complete."
 ```
 
-## Creating Tasks for Workers
+## Creating Tasks for Minions
 
-Create tasks before spawning workers so they have something to claim:
+Create tasks before summoning minions so they have something to claim:
 
 ```typescript
 task_create({
@@ -172,20 +172,20 @@ possession_dashboard({ role: "Administrator" })
 task_show({ role: "Engineer", status: "TODO" })
 ```
 
-## Handling Worker Problems
+## Handling Minion Problems
 
-### Worker asks a question
+### Minion asks a question
 
 ```typescript
-// Worker sends: "Should I use SQLite or PostgreSQL for the cache?"
+// Minion sends: "Should I use SQLite or PostgreSQL for the cache?"
 worker_message({ to_possession_id: 83, body: "Use SQLite — match existing database choice." })
 watch_inbox()
 ```
 
-### Worker reports a blocker
+### Minion reports a blocker
 
 ```typescript
-// Worker sends: "Missing dependency: redis-py not in pyproject.toml"
+// Minion sends: "Missing dependency: redis-py not in pyproject.toml"
 task_create({
   title: "Add redis-py dependency for cache implementation",
   role: "Engineer",
@@ -195,7 +195,7 @@ task_create({
 worker_message({ to_possession_id: 83, body: "Add redis-py to pyproject.toml yourself — Engineers can modify pyproject.toml. Then continue." })
 ```
 
-### Worker becomes unresponsive
+### Minion becomes unresponsive
 
 ```typescript
 // 1. Check status
@@ -207,7 +207,7 @@ worker_message({ to_possession_id: 83, body: "Status update?" })
 // 3. If still no response after reasonable wait, restart
 exorcise_minion({ to_possession_id: 83 })
 const eng = summon_minion({ role: "Engineer" })
-worker_message({ to_possession_id: eng.possession_id, body: "Resume ENG-H-0150 — prior worker became unresponsive. Task is UNDERWAY; check its notes for progress." })
+worker_message({ to_possession_id: eng.possession_id, body: "Resume ENG-H-0150 — prior minion became unresponsive. Task is UNDERWAY; check its notes for progress." })
 ```
 
 ## Reporting to Director
@@ -224,7 +224,7 @@ Don't over-report — the Director doesn't need updates for every minor step.
 
 When your orchestration goal is complete:
 
-1. Terminate all workers:
+1. Dismiss all minions:
    ```typescript
    exorcise_minion({ to_possession_id: 83 })
    exorcise_minion({ to_possession_id: 84 })
@@ -241,7 +241,7 @@ When your orchestration goal is complete:
 
 ## See Also
 
-- **desk-mode-orchestration.md**: Deep reference for spawning and managing workers
+- **minion-mode-orchestration.md**: Deep reference for summoning and managing minions
 - **AGENTS.md**: Full tool reference
 - **roles/administrator.md**: Administrator role overview and QA tiers
-- **ADR-014**: Message-driven worker coordination architecture
+- **ADR-014**: Message-driven minion coordination architecture

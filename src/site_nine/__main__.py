@@ -14,7 +14,6 @@ from typerdrive.logging.commands import add_logs_subcommand
 
 from site_nine.cli import adr, block, comms, daemon, epic, guide, mission, persona, possession, review, role, task
 from site_nine.cli.dashboard import dashboard_command
-from site_nine.cli.doctor import doctor_command
 from site_nine.cli.inquisitor import inquisitor_command
 from site_nine.cli.init import init_command
 from site_nine.cli.reset import reset_command
@@ -59,8 +58,7 @@ add_logs_subcommand(app)
 
 app.command(name="init")(init_command)
 app.command(name="dashboard")(dashboard_command)
-app.command(name="doctor")(doctor_command)  # backward-compat alias
-app.command(name="inquisitor")(inquisitor_command)  # new name
+app.command(name="inquisitor")(inquisitor_command)
 app.command(name="reset")(reset_command)
 app.command(name="summon")(summon_command)
 app.add_typer(daemon.app, name="daemon")  # new name

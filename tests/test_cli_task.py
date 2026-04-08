@@ -950,6 +950,40 @@ def test_task_list_with_tasks_table_format(initialized_project: Path):
     assert task_id2 in result.output
 
 
+# 4b. task list hides finished tasks by default
+def test_task_list_hides_finished_by_default(initialized_project: Path):
+    """Closed tasks are not shown in task list unless --all is passed"""
+    open_task_id = _create_task(title="Open Task", role="Engineer", priority="HIGH")
+    closed_task_id = _create_task(title="Closed Task", role="Engineer", priority="HIGH")
+
+    # Close the second task
+    close_result = runner.invoke(app, ["task", "close", closed_task_id])
+    assert close_result.exit_code == 0
+
+    # Default list should show the open task but not the closed one
+    result = runner.invoke(app, ["task", "list"])
+    assert result.exit_code == 0
+    assert open_task_id in result.output
+    assert closed_task_id not in result.output
+
+
+# 4c. task list --all shows finished tasks
+def test_task_list_all_shows_finished(initialized_project: Path):
+    """task list --all includes COMPLETE and ABORTED tasks"""
+    open_task_id = _create_task(title="Open Task", role="Engineer", priority="HIGH")
+    closed_task_id = _create_task(title="Closed Task", role="Engineer", priority="HIGH")
+
+    # Close the second task
+    close_result = runner.invoke(app, ["task", "close", closed_task_id])
+    assert close_result.exit_code == 0
+
+    # --all should show both tasks
+    result = runner.invoke(app, ["task", "list", "--all"])
+    assert result.exit_code == 0
+    assert open_task_id in result.output
+    assert closed_task_id in result.output
+
+
 # 5. show with category
 def test_task_show_with_category(initialized_project: Path):
     """Create task with --category feature, then task show <id>, verify 'feature' in output"""

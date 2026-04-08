@@ -12,7 +12,13 @@ from site_nine.exceptions import SiteNineError
 from site_nine.daemons import DaemonManager
 from site_nine.possessions.manager import PossessionManager
 
-app = typer.Typer(help="Manage personas")
+app = typer.Typer(help="Manage personas", invoke_without_command=True)
+
+
+@app.callback()
+def _callback(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        print(ctx.get_help())
 
 
 @app.command()

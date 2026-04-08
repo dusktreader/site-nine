@@ -148,42 +148,42 @@ def test_summon_short_flags(initialized_project: Path):
 
 
 # ---------------------------------------------------------------------------
-# Desk mode tests
+# Minion mode tests
 # ---------------------------------------------------------------------------
 
 
-def test_summon_desk_dry_run_shows_desk_label(initialized_project: Path):
-    """Test that --desk --dry-run shows desk-mode specific output"""
-    result = runner.invoke(app, ["summon", "engineer", "--desk", "--dry-run"])
+def test_summon_minion_dry_run_shows_minion_label(initialized_project: Path):
+    """Test that --minion --dry-run shows minion-mode specific output"""
+    result = runner.invoke(app, ["summon", "engineer", "--minion", "--dry-run"])
 
     assert result.exit_code == 0
     output = " ".join(result.output.split())
-    assert "desk" in output.lower()
+    assert "minion" in output.lower()
     assert "engineer" in output
 
 
-def test_summon_desk_dry_run_uses_opencode_run(initialized_project: Path):
-    """Test that --desk --dry-run shows the desk worker command"""
-    result = runner.invoke(app, ["summon", "engineer", "--desk", "--dry-run"])
+def test_summon_minion_dry_run_uses_opencode_run(initialized_project: Path):
+    """Test that --minion --dry-run shows the minion worker command"""
+    result = runner.invoke(app, ["summon", "engineer", "--minion", "--dry-run"])
 
     assert result.exit_code == 0
     output = " ".join(result.output.split())
-    # Desk mode uses desk_worker.py via uv run python
-    assert "desk" in output.lower() or "worker" in output.lower() or "uv" in output
+    # Minion mode uses minion_worker.py via uv run python
+    assert "minion" in output.lower() or "worker" in output.lower() or "uv" in output
 
 
-def test_summon_desk_instruction_message_contains_desk_mode(initialized_project: Path):
-    """Test that --desk appends 'Mode: desk' to the instruction message"""
-    result = runner.invoke(app, ["summon", "tester", "--desk", "--dry-run"])
+def test_summon_minion_instruction_message_contains_minion_mode(initialized_project: Path):
+    """Test that --minion appends 'Mode: minion' to the instruction message"""
+    result = runner.invoke(app, ["summon", "tester", "--minion", "--dry-run"])
 
     assert result.exit_code == 0
     output = " ".join(result.output.split())
-    assert "desk" in output.lower()
+    assert "minion" in output.lower()
 
 
-def test_summon_desk_dry_run_with_daemon(initialized_project: Path):
-    """Test that --desk --dry-run includes daemon in instruction"""
-    result = runner.invoke(app, ["summon", "engineer", "--desk", "--daemon", "atlas", "--dry-run"])
+def test_summon_minion_dry_run_with_daemon(initialized_project: Path):
+    """Test that --minion --dry-run includes daemon in instruction"""
+    result = runner.invoke(app, ["summon", "engineer", "--minion", "--daemon", "atlas", "--dry-run"])
 
     assert result.exit_code == 0
     output = " ".join(result.output.split())
@@ -191,47 +191,47 @@ def test_summon_desk_dry_run_with_daemon(initialized_project: Path):
     assert "engineer" in output
 
 
-def test_summon_desk_dry_run_with_task(initialized_project: Path):
-    """Test that --desk --task is forbidden (conflicting flags)"""
-    result = runner.invoke(app, ["summon", "engineer", "--desk", "--task", "ENG-H-0001", "--dry-run"])
+def test_summon_minion_dry_run_with_task(initialized_project: Path):
+    """Test that --minion --task is forbidden (conflicting flags)"""
+    result = runner.invoke(app, ["summon", "engineer", "--minion", "--task", "ENG-H-0001", "--dry-run"])
 
-    # --desk and --task are mutually exclusive
+    # --minion and --task are mutually exclusive
     assert result.exit_code != 0
     output = " ".join(result.output.split())
     assert "Cannot use" in output
 
 
-def test_summon_desk_dry_run_with_auto_assign(initialized_project: Path):
-    """Test that --desk --auto-assign is forbidden (conflicting flags)"""
-    result = runner.invoke(app, ["summon", "engineer", "--desk", "--auto-assign", "--dry-run"])
+def test_summon_minion_dry_run_with_auto_assign(initialized_project: Path):
+    """Test that --minion --auto-assign is forbidden (conflicting flags)"""
+    result = runner.invoke(app, ["summon", "engineer", "--minion", "--auto-assign", "--dry-run"])
 
-    # --desk and --auto-assign are mutually exclusive
+    # --minion and --auto-assign are mutually exclusive
     assert result.exit_code != 0
     output = " ".join(result.output.split())
     assert "Cannot use" in output
 
 
 @patch("site_nine.cli.summon.subprocess.Popen")
-def test_summon_desk_spawns_popen(mock_popen, initialized_project: Path):
-    """Test that --desk spawns subprocess.Popen (headless, non-blocking)"""
+def test_summon_minion_spawns_popen(mock_popen, initialized_project: Path):
+    """Test that --minion spawns subprocess.Popen (headless, non-blocking)"""
     mock_popen.return_value = MagicMock()
 
-    result = runner.invoke(app, ["summon", "engineer", "--desk"])
+    result = runner.invoke(app, ["summon", "engineer", "--minion"])
 
     assert result.exit_code == 0
     mock_popen.assert_called_once()
     cmd_args = mock_popen.call_args[0][0]
-    # Desk mode uses: uv run python desk_worker.py <role>
+    # Minion mode uses: uv run python minion_worker.py <role>
     assert cmd_args[0] == "uv"
     assert "python" in cmd_args
 
 
 @patch("site_nine.cli.summon.subprocess.Popen")
-def test_summon_desk_popen_includes_model(mock_popen, initialized_project: Path):
-    """Test that --desk Popen call includes --model flag"""
+def test_summon_minion_popen_includes_model(mock_popen, initialized_project: Path):
+    """Test that --minion Popen call includes --model flag"""
     mock_popen.return_value = MagicMock()
 
-    result = runner.invoke(app, ["summon", "engineer", "--desk", "--model", "github-copilot/gpt-4"])
+    result = runner.invoke(app, ["summon", "engineer", "--minion", "--model", "github-copilot/gpt-4"])
 
     assert result.exit_code == 0
     mock_popen.assert_called_once()
@@ -241,26 +241,26 @@ def test_summon_desk_popen_includes_model(mock_popen, initialized_project: Path)
 
 
 @patch("site_nine.cli.summon.subprocess.Popen")
-def test_summon_desk_popen_includes_instruction(mock_popen, initialized_project: Path):
-    """Test that --desk Popen call includes the role as a positional arg"""
+def test_summon_minion_popen_includes_instruction(mock_popen, initialized_project: Path):
+    """Test that --minion Popen call includes the role as a positional arg"""
     mock_popen.return_value = MagicMock()
 
-    result = runner.invoke(app, ["summon", "tester", "--desk"])
+    result = runner.invoke(app, ["summon", "tester", "--minion"])
 
     assert result.exit_code == 0
     cmd_args = mock_popen.call_args[0][0]
-    # The desk worker command includes the role as an arg
+    # The minion worker command includes the role as an arg
     cmd_str = " ".join(str(a) for a in cmd_args)
     assert "tester" in cmd_str.lower() or "Tester" in cmd_str
 
 
 @patch("site_nine.cli.summon.subprocess.Popen")
-def test_summon_desk_popen_not_execvp(mock_popen, initialized_project: Path):
-    """Test that --desk does NOT use os.execvp (stays non-blocking)"""
+def test_summon_minion_popen_not_execvp(mock_popen, initialized_project: Path):
+    """Test that --minion does NOT use os.execvp (stays non-blocking)"""
     mock_popen.return_value = MagicMock()
 
     with patch("site_nine.cli.summon.os.execvp") as mock_execvp:
-        result = runner.invoke(app, ["summon", "engineer", "--desk"])
+        result = runner.invoke(app, ["summon", "engineer", "--minion"])
 
     assert result.exit_code == 0
     mock_popen.assert_called_once()
@@ -269,7 +269,7 @@ def test_summon_desk_popen_not_execvp(mock_popen, initialized_project: Path):
 
 @patch("site_nine.cli.summon.subprocess.Popen")
 def test_summon_interactive_not_popen(mock_popen, initialized_project: Path):
-    """Test that interactive mode (no --desk) does NOT use subprocess.Popen"""
+    """Test that interactive mode (no --minion) does NOT use subprocess.Popen"""
     with patch("site_nine.cli.summon.os.execvp") as mock_execvp:
         mock_execvp.return_value = None
         result = runner.invoke(app, ["summon", "engineer"])
@@ -279,20 +279,20 @@ def test_summon_interactive_not_popen(mock_popen, initialized_project: Path):
 
 
 @patch("site_nine.cli.summon.subprocess.Popen")
-def test_summon_desk_handles_file_not_found(mock_popen, initialized_project: Path):
-    """Test that --desk raises CLIError when opencode is not found"""
+def test_summon_minion_handles_file_not_found(mock_popen, initialized_project: Path):
+    """Test that --minion raises CLIError when opencode is not found"""
     mock_popen.side_effect = FileNotFoundError()
 
-    result = runner.invoke(app, ["summon", "engineer", "--desk"])
+    result = runner.invoke(app, ["summon", "engineer", "--minion"])
 
     assert result.exit_code != 0
     output = " ".join(result.output.split())
     assert "not found" in output.lower()
 
 
-def test_summon_desk_conflict_auto_assign_and_task(initialized_project: Path):
-    """Test that --desk still enforces --auto-assign / --task exclusion"""
-    result = runner.invoke(app, ["summon", "engineer", "--desk", "--auto-assign", "--task", "ENG-H-0001"])
+def test_summon_minion_conflict_auto_assign_and_task(initialized_project: Path):
+    """Test that --minion still enforces --auto-assign / --task exclusion"""
+    result = runner.invoke(app, ["summon", "engineer", "--minion", "--auto-assign", "--task", "ENG-H-0001"])
 
     assert result.exit_code != 0
     output = " ".join(result.output.split())

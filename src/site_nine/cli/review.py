@@ -16,7 +16,13 @@ from site_nine.core.database import Database
 from site_nine.exceptions import SiteNineError
 from site_nine.reviews import ReviewManager, ReviewOutcome, ReviewType
 
-app = typer.Typer(help="Manage review requests")
+app = typer.Typer(help="Manage review requests", invoke_without_command=True)
+
+
+@app.callback()
+def _callback(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        print(ctx.get_help())
 
 
 @app.command()

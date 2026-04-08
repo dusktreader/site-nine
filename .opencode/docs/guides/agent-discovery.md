@@ -8,14 +8,14 @@ specific roles.
 When you need help from another role (e.g., an Engineer needs Architect input), site-nine provides patterns
 for discovering available agents and reaching them. The two main channels are:
 
-1. **`worker_status`** — Find active desk-mode workers by role
+1. **`worker_status`** — Find active minion-mode minions by role
 2. **Director chat** — Ask the Director to summon an agent if none are available
 
 ## Discovery Workflow
 
-### Step 1: Check for Active Workers
+### Step 1: Check for Active Minions
 
-Use `worker_status` to find active workers for a role:
+Use `worker_status` to find active minions for a role:
 
 ```typescript
 worker_status({ role: "Architect" })
@@ -38,7 +38,7 @@ Returns:
 
 ### Step 2: Message or Ask Director
 
-**If a worker is available:**
+**If a minion is available:**
 
 Send them a message directly:
 
@@ -49,12 +49,12 @@ worker_message({
 })
 ```
 
-**If no worker is available:**
+**If no minion is available:**
 
 Ask the Director in OpenCode chat:
 
 ```
-No Architect is currently available in desk mode for EPC-H-0004.
+No Architect is currently available in minion mode for EPC-H-0004.
 Should I wait, or would you like to summon one?
 ```
 
@@ -92,13 +92,13 @@ worker_status({ role: "Tester" })
 
 In OpenCode chat:
 ```
-I'm ready to start TST-H-0069 but no Tester is in desk mode for EPC-H-0004.
+I'm ready to start TST-H-0069 but no Tester is in minion mode for EPC-H-0004.
 Should I wait or would you like to summon a Tester?
 ```
 
-### Example 3: Admin Spawning a Worker on Demand
+### Example 3: Admin Summoning a Minion on Demand
 
-If you're an Admin and need a role that isn't available, spawn it yourself:
+If you're an Admin and need a role that isn't available, summon one yourself:
 
 ```typescript
 worker_status({ role: "Tester" })
@@ -116,7 +116,7 @@ worker_message({
 **Use `worker_status` + messaging when:**
 - You need technical input and the question can wait for async response
 - You're coordinating on epic-level work
-- Multiple workers might be relevant
+- Multiple minions might be relevant
 
 **Ask Director directly when:**
 - You need immediate guidance
@@ -124,7 +124,7 @@ worker_message({
 - You need another agent summoned (if you're not an Admin)
 - The decision affects project direction
 
-**Spawn a worker yourself (Admin only) when:**
+**Summon a minion yourself (Admin only) when:**
 - The Director has delegated orchestration to you
 - You have a concrete task ready to assign
 
@@ -133,7 +133,7 @@ worker_message({
 1. **Check before asking Director** — `worker_status` is faster than a chat interruption
 2. **Be specific in messages** — Include task IDs, epic context, and a clear question
 3. **Don't block unnecessarily** — Use `watch_inbox` after sending; continue other work in the meantime
-4. **One question per message** — Don't bundle multiple questions; workers answer and report back per message
+4. **One question per message** — Don't bundle multiple questions; minions answer and report back per message
 
 ## Director CLI Reference
 
@@ -144,8 +144,8 @@ These commands are for the **Director (human) only**. Agents use tools instead.
 s9 possession list --role Architect
 s9 possession list --epic EPC-H-0004
 
-# Summon a desk-mode worker
-s9 summon <role> --desk
+# Summon a minion-mode minion
+s9 summon <role> --minion
 
 # Messaging
 s9 comms inbox
@@ -154,7 +154,7 @@ s9 comms show <MSG-ID>
 
 ## See Also
 
-- **admin-orchestration.md**: Practical Admin guide for spawning and coordinating workers
-- **desk-mode-orchestration.md**: Reference guide for worker lifecycle management
+- **admin-orchestration.md**: Practical Admin guide for summoning and coordinating minions
+- **minion-mode-orchestration.md**: Reference guide for minion lifecycle management
 - **ADR-014**: Message-driven coordination architecture
 - **ADR-008**: Agent messaging system design

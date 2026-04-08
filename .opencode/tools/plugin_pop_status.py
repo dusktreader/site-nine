@@ -3,22 +3,22 @@
 plugin_pop_status - Pop pending status messages for the interactive session.
 
 Called by the site-nine OpenCode plugin on session.updated events. Returns
-queued status messages if the session belongs to a non-desk-mode mission (i.e.
+queued status messages if the session belongs to a non-minion-mode possession (i.e.
 the interactive director session). Deletes returned rows from the queue.
 
-If the session has no bound mission (e.g. a fresh human session with no
-mission yet), messages are still popped — the queue is global.
+If the session has no bound possession (e.g. a fresh human session with no
+possession yet), messages are still popped — the queue is global.
 
 Input (stdin, JSON):
     session_id: str
 
 Output (stdout, JSON):
     On messages available:
-        {"status": "messages", "messages": [{"id": <int>, "mission_id": <int>, "persona_name": <str|null>, "message": <str>}, ...]}
+        {"status": "messages", "messages": [{"id": <int>, "possession_id": <int>, "daemon_name": <str|null>, "message": <str>}, ...]}
     On empty queue:
         {"status": "empty"}
-    On desk-mode session (skip toasting):
-        {"status": "desk_mode"}
+    On minion-mode session (skip toasting):
+        {"status": "minion_mode"}
     On error:
         {"status": "error", "message": <str>}
 """
@@ -39,30 +39,30 @@ def main() -> str:
         db_path = get_db_path()
         db = Database(db_path)
 
-        # Check if this session belongs to a desk-mode mission.
-        # Desk-mode sessions should not pop the queue — only the interactive
+        # Check if this session belongs to a minion-mode possession.
+        # Minion-mode sessions should not pop the queue — only the interactive
         # director session should surface toasts.
-        mission_rows = db.execute_query(
+        possession_rows = db.execute_query(
             """
-            SELECT id, desk_mode_active
-            FROM missions
+            SELECT id, minion_mode_active
+            FROM possessions
             WHERE opencode_session_id = :session_id
-              AND status IN ('ROLE_PENDING', 'PERSONA_PENDING', 'ACTIVE', 'IDLE')
+              AND status IN ('ROLE_PENDING', 'DAEMON_PENDING', 'ACTIVE')
             LIMIT 1
             """,
             {"session_id": session_id},
         )
 
-        if mission_rows:
-            mission = mission_rows[0]
-            if mission["desk_mode_active"]:
-                return json.dumps({"status": "desk_mode"})
+        if possession_rows:
+            possession = possession_rows[0]
+            if possession["minion_mode_active"]:
+                return json.dumps({"status": "minion_mode"})
 
         # Pop all pending messages (ordered oldest-first)
         rows = db.execute_query(
-            "SELECT sq.id, sq.mission_id, sq.message, m.persona_name "
+            "SELECT sq.id, sq.possession_id, sq.message, p.daemon_name "
             "FROM status_queue sq "
-            "LEFT JOIN missions m ON m.id = sq.mission_id "
+            "LEFT JOIN possessions p ON p.id = sq.possession_id "
             "ORDER BY sq.created_at ASC",
             {},
         )
@@ -85,8 +85,8 @@ def main() -> str:
         messages = [
             {
                 "id": row["id"],
-                "mission_id": row["mission_id"],
-                "persona_name": row["persona_name"],
+                "possession_id": row["possession_id"],
+                "daemon_name": row["daemon_name"],
                 "message": row["message"],
             }
             for row in rows

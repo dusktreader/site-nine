@@ -3,9 +3,9 @@
 Covers ADR-009 Phase 2:
 - mission list --epic filter (CLI layer)
 - Availability column display logic (all 7 branches)
-- JSON output structure with availability/desk_mode/current_task fields
-- Desk mode missions in list context
-- Edge cases: no missions in epic, multiple desk modes, general availability
+- JSON output structure with availability/minion_mode/current_task fields
+- Minion mode missions in list context
+- Edge cases: no missions in epic, multiple minion modes, general availability
 """
 
 import json
@@ -21,15 +21,15 @@ from site_nine.possessions.manager import PossessionManager
 runner = CliRunner()
 
 
-def _set_desk_mode_via_db(initialized_project, mission_id: int | str, active: bool = True) -> None:
-    """Enable/disable desk mode directly via DB (bypasses comms desk polling loop)."""
+def _set_minion_mode_via_db(initialized_project, mission_id: int | str, active: bool = True) -> None:
+    """Enable/disable minion mode directly via DB (bypasses comms minion polling loop)."""
     from site_nine.cli.utils import require_db_path
     from site_nine.core.database import Database as DB
 
     db_path = require_db_path()
     with DB(db_path) as db:
         db.execute_update(
-            "UPDATE possessions SET desk_mode_active = :active WHERE id = :id",
+            "UPDATE possessions SET minion_mode_active = :active WHERE id = :id",
             {"active": 1 if active else 0, "id": int(mission_id)},
         )
 
@@ -98,7 +98,7 @@ def _create_possession(
     role: str = "Engineer",
     epic_id: str | None = None,
     status: str = "ACTIVE",
-    desk_mode: bool = False,
+    minion_mode: bool = False,
     end_time: str | None = None,
 ) -> int:
     """Insert a possession row and return its ID."""
@@ -108,12 +108,12 @@ def _create_possession(
         INSERT INTO possessions (
             daemon_name, role, possession_log,
             start_time, end_time, epic_id,
-            status, desk_mode_active, created_at, updated_at
+            status, minion_mode_active, created_at, updated_at
         ) VALUES (
             :daemon_name, :role,
             '.opencode/work/possessions/test.md',
             datetime('now'), :end_time, :epic_id,
-            :status, :desk_mode, datetime('now'), datetime('now')
+            :status, :minion_mode, datetime('now'), datetime('now')
         ) RETURNING id
         """,
         {
@@ -121,7 +121,7 @@ def _create_possession(
             "role": role,
             "epic_id": epic_id,
             "status": status,
-            "desk_mode": 1 if desk_mode else 0,
+            "minion_mode": 1 if minion_mode else 0,
             "end_time": end_time,
         },
     )
@@ -299,10 +299,10 @@ class TestAvailabilityDisplay:
         assert len(ended_missions) == 1
         assert ended_missions[0]["availability"] == "Ended"
 
-    def test_availability_desk_epic(self, initialized_project):
-        """Desk mode + epic_id shows 'Desk (EPC-X-NNNN)' availability."""
+    def test_availability_minion_epic(self, initialized_project):
+        """Minion mode + epic_id shows 'Minion (EPC-X-NNNN)' availability."""
         runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
-        runner.invoke(app, ["epic", "create", "--title", "Desk Epic", "--priority", "HIGH"])
+        runner.invoke(app, ["epic", "create", "--title", "Minion Epic", "--priority", "HIGH"])
 
         start_result = runner.invoke(
             app,
@@ -313,18 +313,18 @@ class TestAvailabilityDisplay:
         assert mid_match
         mission_id = mid_match.group(1)
 
-        _set_desk_mode_via_db(initialized_project, mission_id)
+        _set_minion_mode_via_db(initialized_project, mission_id)
 
         result = runner.invoke(app, ["mission", "list", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
 
         mission = next(m for m in data["data"] if m["id"] == int(mission_id))
-        assert mission["availability"] == "Desk (EPC-H-0001)"
-        assert mission["desk_mode_active"] is True
+        assert mission["availability"] == "Minion (EPC-H-0001)"
+        assert mission["minion_mode_active"] is True
 
-    def test_availability_desk_all(self, initialized_project):
-        """Desk mode without epic_id shows 'Desk (All)' availability."""
+    def test_availability_minion_all(self, initialized_project):
+        """Minion mode without epic_id shows 'Minion (All)' availability."""
         runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
@@ -335,19 +335,17 @@ class TestAvailabilityDisplay:
         assert mid_match
         mission_id = mid_match.group(1)
 
-        _set_desk_mode_via_db(initialized_project, mission_id)
+        _set_minion_mode_via_db(initialized_project, mission_id)
 
         result = runner.invoke(app, ["mission", "list", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
 
         mission = next(m for m in data["data"] if m["id"] == int(mission_id))
-        assert mission["availability"] == "Desk (All)"
-        assert mission["desk_mode_active"] is True
+        assert mission["availability"] == "Minion (All)"
+        assert mission["minion_mode_active"] is True
         assert mission["epic_id"] is None
-
-    def test_availability_working_epic(self, initialized_project):
-        """Active mission with epic_id (no desk mode) shows 'Working (EPC-X-NNNN)'."""
+        """Active mission with epic_id (no minion mode) shows 'Working (EPC-X-NNNN)'."""
         runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         runner.invoke(app, ["epic", "create", "--title", "Work Epic", "--priority", "HIGH"])
 
@@ -366,7 +364,7 @@ class TestAvailabilityDisplay:
 
         mission = next(m for m in data["data"] if m["id"] == int(mission_id))
         assert mission["availability"] == f"Working (EPC-H-0001)"
-        assert mission["desk_mode_active"] is False
+        assert mission["minion_mode_active"] is False
 
     def test_availability_working_task(self, initialized_project):
         """Active mission with current task shows 'Working (TASK-ID)'."""
@@ -461,7 +459,7 @@ class TestJSONOutputStructure:
             "codename",
             "status",
             "epic_id",
-            "desk_mode_active",
+            "minion_mode_active",
             "current_task_id",
             "availability",
             "start_time",
@@ -492,7 +490,7 @@ class TestJSONOutputStructure:
         assert isinstance(mission["role"], str)
         assert isinstance(mission["codename"], str)
         assert isinstance(mission["status"], str)
-        assert isinstance(mission["desk_mode_active"], bool)
+        assert isinstance(mission["minion_mode_active"], bool)
         assert isinstance(mission["availability"], str)
         assert mission["end_time"] is None or isinstance(mission["end_time"], str)
         assert mission["epic_id"] is None or isinstance(mission["epic_id"], str)
@@ -564,8 +562,8 @@ class TestJSONOutputStructure:
         assert data["data"] == []
         assert data["count"] == 0
 
-    def test_json_desk_mode_field(self, initialized_project):
-        """JSON output includes desk_mode_active field accurately."""
+    def test_json_minion_mode_field(self, initialized_project):
+        """JSON output includes minion_mode_active field accurately."""
         runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
@@ -579,26 +577,26 @@ class TestJSONOutputStructure:
         result = runner.invoke(app, ["mission", "list", "--json"])
         data = json.loads(result.output)
         mission = next(m for m in data["data"] if m["id"] == int(mission_id))
-        assert mission["desk_mode_active"] is False
+        assert mission["minion_mode_active"] is False
 
-        _set_desk_mode_via_db(initialized_project, mission_id)
+        _set_minion_mode_via_db(initialized_project, mission_id)
 
         result = runner.invoke(app, ["mission", "list", "--json"])
         data = json.loads(result.output)
         mission = next(m for m in data["data"] if m["id"] == int(mission_id))
-        assert mission["desk_mode_active"] is True
+        assert mission["minion_mode_active"] is True
 
 
 # ===========================================================================
-# CLI TESTS: Desk mode missions in list context
+# CLI TESTS: Minion mode missions in list context
 # ===========================================================================
 
 
-class TestDeskModeMissionsInList:
-    """Test desk mode display in mission list."""
+class TestMinionModeMissionsInList:
+    """Test minion mode display in mission list."""
 
-    def test_multiple_desk_mode_missions(self, initialized_project):
-        """Multiple missions can be in desk mode simultaneously."""
+    def test_multiple_minion_mode_missions(self, initialized_project):
+        """Multiple missions can be in minion mode simultaneously."""
         runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
 
         result1 = runner.invoke(
@@ -615,18 +613,18 @@ class TestDeskModeMissionsInList:
         assert result2.exit_code == 0
         mid2 = re.search(r"#(\d+)", result2.output).group(1)
 
-        _set_desk_mode_via_db(initialized_project, mid1)
-        _set_desk_mode_via_db(initialized_project, mid2)
+        _set_minion_mode_via_db(initialized_project, mid1)
+        _set_minion_mode_via_db(initialized_project, mid2)
 
         result = runner.invoke(app, ["mission", "list", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
 
-        desk_missions = [m for m in data["data"] if m["desk_mode_active"]]
-        assert len(desk_missions) == 2
+        minion_missions = [m for m in data["data"] if m["minion_mode_active"]]
+        assert len(minion_missions) == 2
 
-    def test_desk_mode_in_table_output(self, initialized_project):
-        """Desk mode missions show desk availability in table output."""
+    def test_minion_mode_in_table_output(self, initialized_project):
+        """Minion mode missions show minion availability in table output."""
         runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
@@ -635,36 +633,36 @@ class TestDeskModeMissionsInList:
         assert start_result.exit_code == 0
         mid = re.search(r"#(\d+)", start_result.output).group(1)
 
-        _set_desk_mode_via_db(initialized_project, mid)
+        _set_minion_mode_via_db(initialized_project, mid)
 
         result = runner.invoke(app, ["mission", "list"])
         assert result.exit_code == 0
-        assert "Desk" in result.output
+        assert "Minion" in result.output
 
-    def test_desk_mode_off_changes_availability(self, initialized_project):
-        """Turning desk mode off changes availability back."""
+    def test_minion_mode_off_changes_availability(self, initialized_project):
+        """Turning minion mode off changes availability back."""
         runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
-            ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "Toggle desk"],
+            ["mission", "start", "--role", "Engineer", "--name", "atar", "--task", "Toggle minion"],
         )
         assert start_result.exit_code == 0
         mid = re.search(r"#(\d+)", start_result.output).group(1)
 
-        _set_desk_mode_via_db(initialized_project, mid)
+        _set_minion_mode_via_db(initialized_project, mid)
 
         result = runner.invoke(app, ["mission", "list", "--json"])
         data = json.loads(result.output)
         mission = next(m for m in data["data"] if m["id"] == int(mid))
-        assert mission["availability"] == "Desk (All)"
+        assert mission["availability"] == "Minion (All)"
 
-        _set_desk_mode_via_db(initialized_project, mid, active=False)
+        _set_minion_mode_via_db(initialized_project, mid, active=False)
 
         result = runner.invoke(app, ["mission", "list", "--json"])
         data = json.loads(result.output)
         mission = next(m for m in data["data"] if m["id"] == int(mid))
         assert mission["availability"] == "Working"
-        assert mission["desk_mode_active"] is False
+        assert mission["minion_mode_active"] is False
 
 
 # ===========================================================================
@@ -734,8 +732,8 @@ class TestEdgeCases:
         assert results[0].daemon_name == "persona2"
         assert results[1].daemon_name == "persona1"
 
-    def test_availability_priority_desk_over_working(self, initialized_project):
-        """Desk mode takes priority over working status for availability."""
+    def test_availability_priority_minion_over_working(self, initialized_project):
+        """Minion mode takes priority over working status for availability."""
         runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         runner.invoke(app, ["epic", "create", "--title", "Priority Epic", "--priority", "HIGH"])
         start_result = runner.invoke(
@@ -761,16 +759,16 @@ class TestEdgeCases:
             ],
         )
 
-        _set_desk_mode_via_db(initialized_project, mid)
+        _set_minion_mode_via_db(initialized_project, mid)
 
         result = runner.invoke(app, ["mission", "list", "--json"])
         data = json.loads(result.output)
         mission = next(m for m in data["data"] if m["id"] == int(mid))
 
-        assert mission["availability"] == "Desk (EPC-H-0001)"
+        assert mission["availability"] == "Minion (EPC-H-0001)"
 
-    def test_ended_mission_ignores_desk_mode(self, initialized_project):
-        """Ended status takes priority over desk mode for availability."""
+    def test_ended_mission_ignores_minion_mode(self, initialized_project):
+        """Ended status takes priority over minion mode for availability."""
         runner.invoke(app, ["persona", "add", "atar", "--role", "Engineer"])
         start_result = runner.invoke(
             app,
@@ -779,7 +777,7 @@ class TestEdgeCases:
         assert start_result.exit_code == 0
         mid = re.search(r"#(\d+)", start_result.output).group(1)
 
-        _set_desk_mode_via_db(initialized_project, mid)
+        _set_minion_mode_via_db(initialized_project, mid)
         runner.invoke(app, ["mission", "end", mid])
 
         result = runner.invoke(app, ["mission", "list", "--json"])

@@ -8,38 +8,39 @@ A comprehensive reference for key concepts and terminology used throughout site-
 
 ## Core Concepts
 
-### Persona
+### Daemon
 
-A mythology-based name assigned to an AI agent for a specific mission. Each persona represents a unique working session with specialized capabilities based on their assigned role.
+A mythology-based name assigned to an AI agent for a specific possession. Each daemon represents a unique working identity with a character drawn from ancient mythology.
 
 **Examples:** Euterpe (Documentarian), Azazel (Engineer), Eris (Tester)
 
 **Key characteristics:**
 
 - Drawn from world mythology (Greek, Norse, Egyptian, Celtic, etc.)
-- 145+ names available in the persona database
-- Can be reused across multiple missions
-- Each active persona works in a separate OpenCode terminal
+- 256+ names available in the daemon database
+- Selected automatically using a 3-day LRU algorithm
+- Can be reused across multiple possessions over time
+- Each active daemon works in a separate OpenCode terminal
 
 **Usage:**
 ```bash
-# Suggest persona names for a role
-s9 persona suggest Documentarian --count 3
+# Suggest daemon names for a role
+s9 daemon suggest Documentarian --count 3
 ```
 
-**See also:** [Role](#role), [Mission](#mission)
+**See also:** [Role](#role), [Possession](#possession)
 
 ---
 
 ### Role
 
-A specialized function that defines a persona's capabilities, responsibilities, and area of expertise. Roles determine what type of work a persona is best suited to perform.
+A specialized function that defines a daemon's capabilities, responsibilities, and area of expertise. Roles determine what type of work a daemon is best suited to perform.
 
 **Available roles:**
 
 - **Administrator** - Coordinate and delegate to other agents
 - **Architect** - Design systems and make technical decisions
-- **Engineer** (formerly Builder) - Implement features and write code
+- **Engineer** - Implement features and write code
 - **Tester** - Write tests and validate functionality
 - **Documentarian** - Create documentation and guides
 - **Designer** - Design user interfaces and experiences
@@ -51,54 +52,42 @@ A specialized function that defines a persona's capabilities, responsibilities, 
 
 - Each role has specialized knowledge and best practices
 - Tasks are assigned to specific roles
-- Multiple personas can share the same role
+- Multiple daemons can share the same role
 - Role determines default workflows and priorities
 
 **Usage:**
 ```bash
-# Start a mission with a specific role
-/summon documentarian
+# Start a possession with a specific role
+s9 summon documentarian
 
 # View role-filtered dashboard
-s9 dashboard --role Engineer
+s9 dashboard --role Documentarian
 ```
 
-**See also:** [Persona](#persona), [Task](#task), [Agent Roles documentation](agents/roles.md)
+**See also:** [Daemon](#daemon), [Task](#task), [Agent Roles documentation](agents/roles.md)
 
 ---
 
-### Mission
+### Possession
 
-A working session where a persona (AI agent) actively works on project tasks. Each mission has a unique identifier, objective, and tracks the persona's activities.
+A working session where a daemon (AI agent) actively works on project tasks. Each possession has a unique codename, objective, and tracks the daemon's activities.
 
-**Mission lifecycle:**
+**Possession lifecycle:**
 
-1. **Start** - Persona is summoned and mission begins
-2. **Active** - Persona works on tasks and makes changes
-3. **Idle** - Mission exists but persona is not actively working
-4. **Complete** - Mission ends and work is documented
+1. **ROLE_PENDING** - Possession initialized, awaiting role selection
+2. **DAEMON_PENDING** - Role selected, awaiting daemon assignment
+3. **ACTIVE** - Daemon working on tasks and making changes
+4. **SUSPENDED** - Possession exists but daemon is not actively working
+5. **EXORCISED** - Possession ended and work documented
 
 **Key characteristics:**
 
-- Each mission gets a unique codename
+- Each possession gets a unique codename
 - Tracked in the database with status, start time, and objective
-- Generates a mission file at `.opencode/work/missions/YYYY-MM-DD.HH:MM:SS.role.persona.codename.md`
-- Can be paused (IDLE) and resumed
-- Multiple missions can run in parallel (different terminals)
+- Generates a possession file at `.opencode/work/possessions/YYYY-MM-DD.HH-MM-SS.role.Daemon.md`
+- Multiple possessions can run in parallel (different terminals)
 
-**Usage:**
-```bash
-# Start a new mission
-s9 mission start euterpe --role Documentarian --task "Create glossary"
-
-# List active missions
-s9 mission list --status ACTIVE
-
-# End a mission
-s9 mission end <mission-id>
-```
-
-**See also:** [Persona](#persona), [Session](#session), [Codename](#codename)
+**See also:** [Daemon](#daemon), [Session](#session), [Codename](#codename)
 
 ---
 
@@ -111,7 +100,7 @@ A discrete unit of work with a specific objective, priority, assigned role, and 
 - **Task ID** - Unique identifier (e.g., `DOC-M-0056`)
 - **Title** - Brief description of the work
 - **Description** - Detailed context and requirements
-- **Role** - Which type of persona should handle this
+- **Role** - Which type of daemon should handle this
 - **Priority** - CRITICAL, HIGH, MEDIUM, or LOW
 - **Status** - Current state (TODO, UNDERWAY, BLOCKED, etc.)
 - **Dependencies** - Other tasks that must complete first
@@ -152,7 +141,7 @@ An organizational container that groups related tasks under a larger initiative 
 
 **Key characteristics:**
 
-- **Purely organizational** - Not assigned to specific personas
+- **Purely organizational** - Not assigned to specific daemons
 - **One task, one epic** - Tasks belong to at most one epic
 - **Auto-computed status** - Updates automatically based on subtask states
 - **Progress tracking** - Shows completion percentage and task breakdown
@@ -196,20 +185,20 @@ s9 epic abort EPC-H-0001 --reason "Requirements changed"
 
 ### Handoff
 
-A mechanism for transferring work context from one persona to another, ensuring continuity and knowledge sharing across role boundaries.
+A mechanism for transferring work context from one daemon to another, ensuring continuity and knowledge sharing across role boundaries.
 
 **Handoff workflow:**
 
-1. **Create** - Originating persona creates handoff with context
+1. **Create** - Originating daemon creates handoff with context
 2. **Pending** - Handoff awaits acceptance by target role
-3. **Accept** - Receiving persona accepts and claims the work
+3. **Accept** - Receiving daemon accepts and claims the work
 4. **Complete** - Work transition is finished
 
 **Key characteristics:**
 
 - Includes task information, context, and notes
 - Filtered by role (e.g., only Engineers see Engineer handoffs)
-- Checked automatically during mission start
+- Checked automatically during possession start
 - Ensures smooth transitions between specialized roles
 
 **Usage:**
@@ -282,7 +271,7 @@ A structured identifier that uniquely identifies a task and encodes its role and
 - **ROLE** - 3-letter role prefix:
     - `ADM` - Administrator
     - `ARC` - Architect  
-    - `ENG` - Engineer (formerly Builder)
+    - `ENG` - Engineer
     - `TST` - Tester
     - `DOC` - Documentarian
     - `DSN` - Designer
@@ -336,18 +325,18 @@ A structured identifier for epics, similar to Task IDs but with an "EPC" prefix.
 
 ### Codename
 
-A randomly generated, memorable identifier assigned to each mission for easy reference and session naming.
+A randomly generated, memorable identifier assigned to each possession for easy reference and session naming.
 
 **Characteristics:**
 
-- Auto-generated when mission starts
-- Unique per mission
-- Used in mission filenames
+- Auto-generated when possession starts
+- Unique per possession
+- Used in possession filenames
 - Appears in OpenCode session titles
 
 **Examples:** phoenix-delta, nebula-seven, thunder-alpha
 
-**See also:** [Mission](#mission)
+**See also:** [Possession](#possession)
 
 ---
 
@@ -424,13 +413,13 @@ A ranking that indicates the urgency and importance of tasks and epics, helping 
 
 ### Dashboard
 
-A real-time project overview showing active missions, task summaries, epic progress, and quick statistics.
+A real-time project overview showing active possessions, task summaries, epic progress, and quick statistics.
 
 **Information displayed:**
 
-- **Quick Stats** - Active missions, total tasks, completion rates
+- **Quick Stats** - Active possessions, total tasks, completion rates
 - **Active Epics** - Top epics in TODO/UNDERWAY status
-- **Active Missions** - Currently running personas and their work
+- **Active Possessions** - Currently running daemons and their work
 - **Task Summary** - Tasks by status and priority
 - **Recent Activity** - Latest task updates
 
@@ -450,56 +439,56 @@ s9 dashboard --role Documentarian
 **Use cases:**
 
 - Check project health at a glance
-- See what personas are working on
+- See what daemons are working on
 - Identify bottlenecks and blocked work
 - Track epic and task progress
 - Start of day project status review
 
-**See also:** [Mission](#mission), [Epic](#epic), [Task](#task)
+**See also:** [Possession](#possession), [Epic](#epic), [Task](#task)
 
 ---
 
 ### Session
 
-An OpenCode conversation instance where a persona works on tasks. Each session corresponds to one OpenCode terminal window.
+An OpenCode conversation instance where a daemon works on tasks. Each session corresponds to one OpenCode terminal window.
 
 **Key characteristics:**
 
 - One session = one OpenCode terminal
 - Sessions can be named/renamed for organization
 - Multiple sessions can run in parallel
-- Each session has one active persona/mission
-- Session title includes persona name and role
+- Each session has one active daemon/possession
+- Session title includes daemon name, role, and codename
 
 **Session naming:**
 
-When a mission starts, the OpenCode session is automatically renamed to:
+When a possession starts, the OpenCode session is automatically renamed to:
 ```
-<Persona> - <Role>
+Operation <codename>: <Daemon> - <Role>
 ```
 
-Example: `Euterpe - Documentarian`
+Example: `Operation silver-titan: Fukurokuju - Documentarian`
 
 **Multi-session workflows:**
 
-Run multiple personas simultaneously in separate terminals:
+Run multiple daemons simultaneously in separate terminals:
 - Terminal 1: Administrator coordinating work
 - Terminal 2: Architect designing system
 - Terminal 3: Engineer implementing features
 - Terminal 4: Tester validating implementation
 
-**See also:** [Mission](#mission), [Persona](#persona), [Advanced Topics documentation](advanced.md)
+**See also:** [Possession](#possession), [Daemon](#daemon), [Advanced Topics documentation](advanced.md)
 
 ---
 
 ### Database
 
-A SQLite database (`.opencode/data/project.db`) that stores all project management data including tasks, missions, personas, epics, and relationships.
+A SQLite database (`.opencode/data/project.db`) that stores all project management data including tasks, possessions, daemons, epics, and relationships.
 
 **Database tables:**
 
-- `personas` - Available persona names and usage tracking
-- `missions` - Mission history and status
+- `daemons` - Available daemon names and usage tracking
+- `possessions` - Possession history and status
 - `tasks` - Task definitions and metadata
 - `epics` - Epic definitions and progress
 - `dependencies` - Task dependency relationships
@@ -538,30 +527,24 @@ The project directory created by `s9 init` that contains all site-nine configura
 ├── README.md              # Setup guide
 ├── data/                  # Database and storage
 │   └── project.db         # SQLite database
-├── guides/                # Reference documentation
-│   └── PERSONAS.md        # Persona workflow guide
-├── procedures/            # Workflow documentation
-│   ├── COMMIT_GUIDELINES.md
-│   └── TASK_WORKFLOW.md
+├── docs/                  # Agent reference documentation
+├── skills/                # OpenCode skills for possession lifecycle
 ├── tasks/                 # Task markdown files
-├── work/                  # Active work artifacts
-│   ├── missions/          # Mission documentation
-│   └── epics/             # Epic markdown files
-└── missions/              # Historical mission logs
+└── work/                  # Active work artifacts
+    ├── possessions/       # Possession documentation
+    └── epics/             # Epic markdown files
 ```
 
 **What you can edit:**
 
 - `README.md` - Customize for your team
-- `guides/*.md` - Add team-specific documentation
-- `procedures/*.md` - Customize workflows
+- `docs/*.md` - Add team-specific documentation
 
 **What not to edit:**
 
 - `data/project.db` - Use CLI commands instead
 - `tasks/*.md` - Synced with database
-- `work/missions/*.md` - Managed by personas
-- `missions/*` - Historical logs
+- `work/possessions/*.md` - Managed by agents
 
 **See also:** [Database](#database), [Directory Structure documentation](structure.md)
 
@@ -604,15 +587,15 @@ s9 task show ENG-H-0016
 
 ### Claim
 
-The action of a persona taking ownership of a task, indicating they will work on it.
+The action of a daemon taking ownership of a task, indicating they will work on it.
 
 **Claim workflow:**
 
 1. **View available tasks** - Check dashboard or task list
-2. **Claim task** - Persona takes ownership
+2. **Claim task** - Daemon takes ownership
 3. **Status changes** - Task moves from TODO to UNDERWAY
-4. **Work begins** - Persona starts implementation
-5. **Complete task** - Persona closes task when done
+4. **Work begins** - Daemon starts implementation
+5. **Complete task** - Daemon closes task when done
 
 **Usage:**
 ```bash
@@ -636,7 +619,7 @@ s9 task unclaim DOC-M-0056
 
 ### ADR (Architecture Decision Record)
 
-A document that captures an important architectural decision along with its context and consequences. ADRs are typically created by Architect personas.
+A document that captures an important architectural decision along with its context and consequences. ADRs are typically created by Architect daemons.
 
 **ADR structure:**
 
@@ -687,51 +670,48 @@ s9 epic create --help
 
 ---
 
-### /summon Command
+### s9 summon
 
-An OpenCode slash command that starts a new mission by initializing a persona with a specific role.
+The CLI command that starts a new possession by launching OpenCode and triggering the `possession-start` skill for the specified role.
 
-**Usage patterns:**
+**Usage:**
 
 ```bash
-# Interactive - prompts for role and persona selection
-/summon
+s9 summon <role>
+```
 
-# With role specified
-/summon documentarian
-/summon engineer
-/summon tester
-
-# With auto-naming (future feature)
-/summon operator --auto-name
+**Examples:**
+```bash
+s9 summon documentarian
+s9 summon engineer
+s9 summon operator --auto-assign
 ```
 
 **What it does:**
 
-1. Shows project dashboard
-2. Prompts for role selection (if not provided)
-3. Suggests persona names from mythology
-4. Registers mission in database
-5. Renames OpenCode session
-6. Checks for pending handoffs
-7. Shows role-specific dashboard
-8. Ready to work!
+1. Launches OpenCode
+2. Triggers the `possession-start` skill
+3. Initializes a possession in ROLE_PENDING state
+4. Records the role and transitions to DAEMON_PENDING
+5. Auto-claims a daemon via LRU selection
+6. Transitions to ACTIVE, renames the session
+7. Shows role-specific task dashboard
 
-**See also:** [Mission](#mission), [Persona](#persona), [Role](#role)
+**See also:** [Possession](#possession), [Daemon](#daemon), [Role](#role)
 
 ---
 
 ## Best Practices
 
-### Mission File
+### Possession File
 
-A markdown file automatically generated for each mission that documents the persona's work, decisions, and progress.
+A markdown file automatically generated for each possession that documents the daemon's work, decisions, and progress.
 
-**Location:** `.opencode/work/missions/YYYY-MM-DD.HH:MM:SS.role.persona.codename.md`
+**Location:** `.opencode/work/possessions/YYYY-MM-DD.HH-MM-SS.role.Daemon.md`
 
 **Contents:**
 
-- Mission metadata (persona, role, objective, start time)
+- Possession metadata (daemon, role, objective, start time)
 - Work summary and accomplishments
 - Decisions made
 - Files changed
@@ -740,12 +720,11 @@ A markdown file automatically generated for each mission that documents the pers
 
 **Management:**
 
-- Auto-generated when mission starts
-- Updated by persona throughout mission
-- Moved to `.opencode/missions/` when mission ends
+- Auto-generated when possession starts
+- Updated by daemon throughout possession
 - Provides historical record of work
 
-**See also:** [Mission](#mission), [Persona](#persona)
+**See also:** [Possession](#possession), [Daemon](#daemon)
 
 ---
 
@@ -807,7 +786,7 @@ s9 doctor --fix
 - Inconsistent task states
 - Orphaned dependencies
 - Missing referenced files
-- Mission data issues
+- Possession data issues
 
 **See also:** [Database](#database), [CLI Reference](cli/overview.md)
 
@@ -821,14 +800,14 @@ For more detailed information on specific topics:
 - **[Agent Roles](agents/roles.md)** - Detailed role descriptions and best practices
 - **[Directory Structure](structure.md)** - Understanding the .opencode directory
 - **[Epics](epics/overview.md)** - Complete guide to epic workflow
-- **[Advanced Topics](advanced.md)** - Multi-persona workflows and patterns
+- **[Advanced Topics](advanced.md)** - Multi-agent workflows and patterns
 - **[CLI Reference](cli/overview.md)** - Complete command documentation
 
 ---
 
 ## Mythology References
 
-site-nine uses names from world mythology for personas, drawing from diverse cultural traditions:
+site-nine uses names from world mythology for daemons, drawing from diverse cultural traditions:
 
 **Mythological traditions included:**
 
@@ -847,6 +826,6 @@ site-nine uses names from world mythology for personas, drawing from diverse cul
 - Rich cultural heritage
 - Easier to remember than IDs or random strings
 - Adds personality to the workflow
-- 145+ unique names ensure variety
+- 256+ unique names ensure variety
 
-**See also:** `.opencode/guides/PERSONAS.md`
+**See also:** [Daemons documentation](agents/daemons.md)

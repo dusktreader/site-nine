@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Desk Mode Worker Polling Script
+Minion Mode Worker Polling Script
 
-Manages desk agent lifecycle outside agent context. Polls for unread messages,
+Manages minion agent lifecycle outside agent context. Polls for unread messages,
 invokes 'opencode run' for each message, and preserves session context across
 invocations.
 
 Usage:
-    desk-worker.py <role> [--daemon NAME] [--model MODEL] [--poll-interval SECONDS]
+    minion-worker.py <role> [--daemon NAME] [--model MODEL] [--poll-interval SECONDS]
 
 Example:
-    desk-worker.py engineer --daemon halphas
-    desk-worker.py architect --poll-interval 15
+    minion-worker.py engineer --daemon halphas
+    minion-worker.py architect --poll-interval 15
 """
 
 import argparse
@@ -31,8 +31,8 @@ from site_nine.messaging.manager import MessageManager
 from site_nine.possessions.manager import PossessionManager
 
 
-class DeskWorker:
-    """External polling loop for desk mode workers."""
+class MinionWorker:
+    """External polling loop for minion mode workers."""
 
     # Default model to use for opencode run
     DEFAULT_MODEL = "github-copilot/claude-sonnet-4.6"
@@ -51,7 +51,7 @@ class DeskWorker:
         poll_interval: int = DEFAULT_POLL_INTERVAL,
     ):
         """
-        Initialize desk worker.
+        Initialize minion worker.
 
         Args:
             role: Worker role (e.g., 'Engineer', 'Architect', 'Tester')
@@ -86,10 +86,10 @@ class DeskWorker:
             init_parts.append(f"Your daemon is {self.daemon}.")
 
         init_parts.append(
-            "Initialize your possession with the possession-start skill. Mode: desk. "
+            "Initialize your possession with the possession-start skill. Mode: minion. "
             "DO NOT claim any tasks. DO NOT do any work yet. "
             "After your possession is initialized and you have a possession ID, stop immediately. "
-            "The desk-worker wrapper handles message polling and will send you work assignments. "
+            "The minion-worker wrapper handles message polling and will send you work assignments. "
             "IMPORTANT: When you receive a work assignment message, you MUST use the worker_message "
             "tool to send status updates back to the sender (use their possession ID as to_possession_id). "
             "Send a message when you: (1) start a task, (2) complete a task, (3) hit a blocker, "
@@ -242,22 +242,22 @@ class DeskWorker:
             flush=True,
         )
 
-    def enable_desk_mode(self) -> None:
+    def enable_minion_mode(self) -> None:
         """
-        Enable desk mode in database.
+        Enable minion mode in database.
 
-        Sets desk_mode_active=1 for this worker's possession.
+        Sets minion_mode_active=1 for this worker's possession.
 
         Raises:
             RuntimeError: If possession_id is not set
         """
         if self.possession_id is None:
-            raise RuntimeError("Cannot enable desk mode: possession_id is not set")
+            raise RuntimeError("Cannot enable minion mode: possession_id is not set")
 
         db = Database(get_db_path())
         mgr = PossessionManager(db)
-        mgr.set_desk_mode(self.possession_id, active=True)
-        print(f"Desk mode enabled for possession #{self.possession_id}", flush=True)
+        mgr.set_minion_mode(self.possession_id, active=True)
+        print(f"Minion mode enabled for possession #{self.possession_id}", flush=True)
 
     def check_for_messages(self) -> list:
         """
@@ -367,7 +367,7 @@ class DeskWorker:
         """
         Gracefully shutdown on SIGTERM/SIGINT.
 
-        Disables desk mode, ends possession, and exits.
+        Disables minion mode, ends possession, and exits.
 
         Args:
             signum: Signal number
@@ -377,15 +377,15 @@ class DeskWorker:
         print(f"\n\nReceived {signal_name}, shutting down gracefully...", flush=True)
         self.running = False
 
-        # Disable desk mode
+        # Disable minion mode
         try:
             db = Database(get_db_path())
             mgr = PossessionManager(db)
             if self.possession_id is not None:
-                mgr.set_desk_mode(self.possession_id, active=False)
-            print("Desk mode disabled", flush=True)
+                mgr.set_minion_mode(self.possession_id, active=False)
+            print("Minion mode disabled", flush=True)
         except Exception as e:
-            print(f"Warning: Failed to disable desk mode: {e}", file=sys.stderr)
+            print(f"Warning: Failed to disable minion mode: {e}", file=sys.stderr)
 
         # End possession via opencode run
         try:
@@ -415,7 +415,7 @@ class DeskWorker:
         """
         Main polling loop.
 
-        Sets up signal handlers, initializes worker, enables desk mode,
+        Sets up signal handlers, initializes worker, enables minion mode,
         and polls for messages at configured interval.
         """
         # Set up signal handlers for graceful shutdown
@@ -425,10 +425,10 @@ class DeskWorker:
         try:
             # Initialize worker
             self.initialize()
-            self.enable_desk_mode()
+            self.enable_minion_mode()
 
             print(
-                f"\nDesk worker started successfully!\n"
+                f"\nMinion worker started successfully!\n"
                 f"  Role: {self.role}\n"
                 f"  Possession: #{self.possession_id}\n"
                 f"  Session: {self.session_id}\n"
@@ -440,6 +440,18 @@ class DeskWorker:
             # Main polling loop
             while self.running:
                 time.sleep(self.poll_interval)
+
+                # Check if possession has been exorcised (e.g., by the OpenCode session
+                # processing an exorcism signal and calling possession-end)
+                db = Database(get_db_path())
+                status_rows = db.execute_query(
+                    "SELECT status FROM possessions WHERE id = :id",
+                    {"id": self.possession_id},
+                )
+                if status_rows and status_rows[0]["status"] == "EXORCISED":
+                    print("\nPossession has been exorcised. Shutting down polling loop.", flush=True)
+                    self.running = False
+                    break
 
                 try:
                     messages = self.check_for_messages()
@@ -491,7 +503,7 @@ class DeskWorker:
                 try:
                     db = Database(get_db_path())
                     mgr = PossessionManager(db)
-                    mgr.set_desk_mode(self.possession_id, active=False)
+                    mgr.set_minion_mode(self.possession_id, active=False)
                 except Exception:
                     pass
 
@@ -499,23 +511,23 @@ class DeskWorker:
 
 
 def main() -> None:
-    """Parse arguments and start desk worker."""
+    """Parse arguments and start minion worker."""
     parser = argparse.ArgumentParser(
-        description="Desk mode worker for site-nine agents",
+        description="Minion mode worker for site-nine agents",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   # Start engineer worker with auto-selected daemon
-  desk-worker.py Engineer
+  minion-worker.py Engineer
 
   # Start architect worker with specific daemon
-  desk-worker.py Architect --daemon andromalius
+  minion-worker.py Architect --daemon andromalius
 
   # Use custom polling interval
-  desk-worker.py Tester --poll-interval 15
+  minion-worker.py Tester --poll-interval 15
 
   # Use different model
-  desk-worker.py Operator --model github-copilot/claude-opus-4
+  minion-worker.py Operator --model github-copilot/claude-opus-4
         """,
     )
 
@@ -531,15 +543,15 @@ Examples:
 
     parser.add_argument(
         "--model",
-        default=DeskWorker.DEFAULT_MODEL,
-        help=f"OpenCode model to use (default: {DeskWorker.DEFAULT_MODEL})",
+        default=MinionWorker.DEFAULT_MODEL,
+        help=f"OpenCode model to use (default: {MinionWorker.DEFAULT_MODEL})",
     )
 
     parser.add_argument(
         "--poll-interval",
         type=int,
-        default=DeskWorker.DEFAULT_POLL_INTERVAL,
-        help=f"Seconds between message checks (default: {DeskWorker.DEFAULT_POLL_INTERVAL})",
+        default=MinionWorker.DEFAULT_POLL_INTERVAL,
+        help=f"Seconds between message checks (default: {MinionWorker.DEFAULT_POLL_INTERVAL})",
     )
 
     args = parser.parse_args()
@@ -568,7 +580,7 @@ Examples:
         raise SystemExit(1)
 
     # Start worker
-    worker = DeskWorker(
+    worker = MinionWorker(
         role=role,
         daemon=args.daemon,
         model=args.model,

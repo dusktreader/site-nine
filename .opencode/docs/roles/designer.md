@@ -73,9 +73,9 @@ Designer: I'll design the dashboard:
      - Symbols in addition to colors
      - Clear labels
      - High contrast text
-  4. Mockup:
-     ┌─ Active Missions ────────────────────┐
-     │ Name    Role      Status   Started   │
+   4. Mockup:
+     ┌─ Active Possessions ─────────────────┐
+     │ Daemon  Role      Status   Started   │
      │ athena  Engineer  ACTIVE   09:15     │
      └──────────────────────────────────────┘
 ```

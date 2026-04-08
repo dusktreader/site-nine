@@ -17,7 +17,13 @@ from site_nine.core.types import Priority
 from site_nine.epics import Epic, EpicManager, EpicStatus
 from site_nine.exceptions import SiteNineError
 
-app = typer.Typer(help="Manage epics")
+app = typer.Typer(help="Manage epics", invoke_without_command=True)
+
+
+@app.callback()
+def _callback(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        print(ctx.get_help())
 
 
 @app.command()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-plugin_activity_update.py - Update last_activity_at for a mission bound to a session.
+plugin_activity_update.py - Update last_heartbeat_at for a possession bound to a session.
 
 Called by the site-nine OpenCode plugin on session.updated events to track agent
 activity without manual heartbeats (ADR-013).
@@ -10,9 +10,9 @@ Input (stdin, JSON):
 
 Output (stdout, JSON):
     On success:
-        {"status": "updated", "mission_id": <int>, "codename": <str>}
-    On no mission found:
-        {"status": "no_mission", "session_id": <str>}
+        {"status": "updated", "possession_id": <int>, "daemon_name": <str>}
+    On no possession found:
+        {"status": "no_possession", "session_id": <str>}
     On error:
         {"status": "error", "message": <str>}
 """
@@ -36,45 +36,45 @@ def main() -> str:
         db_path = get_db_path()
         db = Database(db_path)
 
-        # Find mission bound to this session that is in an active-ish state
+        # Find possession bound to this session that is in an active-ish state
         rows = db.execute_query(
             """
-            SELECT id, codename, status
-            FROM missions
+            SELECT id, daemon_name, status
+            FROM possessions
             WHERE opencode_session_id = :session_id
-              AND status IN ('ROLE_PENDING', 'PERSONA_PENDING', 'ACTIVE', 'IDLE')
+              AND status IN ('ROLE_PENDING', 'DAEMON_PENDING', 'ACTIVE')
             LIMIT 1
             """,
             {"session_id": session_id},
         )
 
         if not rows:
-            logger.debug("plugin_activity_update_no_mission", session_id=session_id)
-            return json.dumps({"status": "no_mission", "session_id": session_id})
+            logger.debug("plugin_activity_update_no_possession", session_id=session_id)
+            return json.dumps({"status": "no_possession", "session_id": session_id})
 
-        mission = rows[0]
-        mission_id = mission["id"]
-        codename = mission["codename"]
+        possession = rows[0]
+        possession_id = possession["id"]
+        daemon_name = possession["daemon_name"]
         now_str = utc_now()
 
         db.execute_update(
             """
-            UPDATE missions
-            SET last_activity_at = :now, updated_at = :now
-            WHERE id = :mission_id
+            UPDATE possessions
+            SET last_heartbeat_at = :now, updated_at = :now
+            WHERE id = :possession_id
             """,
-            {"mission_id": mission_id, "now": now_str},
+            {"possession_id": possession_id, "now": now_str},
         )
 
         logger.info(
             "plugin_activity_updated",
-            mission_id=mission_id,
-            codename=codename,
+            possession_id=possession_id,
+            daemon_name=daemon_name,
             session_id=session_id,
             timestamp=now_str,
         )
 
-        return json.dumps({"status": "updated", "mission_id": mission_id, "codename": codename})
+        return json.dumps({"status": "updated", "possession_id": possession_id, "daemon_name": daemon_name})
 
     except Exception as e:
         logger.exception("plugin_activity_update_error", error=str(e))

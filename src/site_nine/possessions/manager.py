@@ -168,7 +168,7 @@ class PossessionManager:
                 UPDATE possessions
                 SET end_time = :end_time,
                     status = :status,
-                    desk_mode_active = 0,
+                    minion_mode_active = 0,
                     updated_at = :now
                 WHERE id = :possession_id
                 RETURNING *
@@ -247,12 +247,12 @@ class PossessionManager:
             raise_exc_class=PossessionError,
         )
 
-    def set_desk_mode(self, possession_id: int, active: bool) -> None:
-        """Enable or disable desk mode for a possession.
+    def set_minion_mode(self, possession_id: int, active: bool) -> None:
+        """Enable or disable minion mode for a possession.
 
         Args:
             possession_id: Possession ID.
-            active: True to enable desk mode, False to disable.
+            active: True to enable minion mode, False to disable.
 
         Raises:
             PossessionError: If possession not found or already exorcised.
@@ -264,14 +264,14 @@ class PossessionManager:
         )
         require_condition(
             possession.status != PossessionStatus.EXORCISED,
-            "Cannot change desk mode on an exorcised possession",
+            "Cannot change minion mode on an exorcised possession",
             raise_exc_class=PossessionError,
         )
 
         self.db.execute_update(
             """
             UPDATE possessions
-            SET desk_mode_active = :active, updated_at = :now
+            SET minion_mode_active = :active, updated_at = :now
             WHERE id = :possession_id
             """,
             {"possession_id": possession_id, "active": 1 if active else 0, "now": utc_now()},

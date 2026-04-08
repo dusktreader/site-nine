@@ -1,7 +1,7 @@
-# Epic Possession Workflows and Desk Mode
+# Epic Possession Workflows and Minion Mode
 
-This guide explains how to work on epic-scoped possessions and coordinate through desk
-mode workers.
+This guide explains how to work on epic-scoped possessions and coordinate through minion
+mode minions.
 
 ## Overview
 
@@ -9,9 +9,9 @@ mode workers.
 tasks within a single epic. Instead of ending the possession after each task, the agent
 continues claiming tasks until the epic is complete or they choose to end the possession.
 
-**Desk mode** is a headless background worker mode where an agent runs as an
-asynchronous worker, processing messages from an Admin orchestrator. Desk workers are
-spawned by Admin agents using `summon_minion` — they don't enter desk mode themselves.
+**Minion mode** is a headless background execution model where an agent runs as an
+asynchronous minion, processing messages from an Admin orchestrator. Minion mode minions are
+summoned by Admin agents using `summon_minion` — they don't enter minion mode themselves.
 
 ## Epic Possession Workflow
 
@@ -80,48 +80,48 @@ End your epic possession when:
 **Important:** Don't end the possession between every task. Epic possessions are designed
 for continuity.
 
-## Desk Mode Workers
+## Minion Mode Minions
 
-### What is Desk Mode?
+### What is Minion Mode?
 
-Desk mode is a headless background execution model for agent workers. A desk mode
-worker:
+Minion mode is a headless background execution model for agent minions. A minion mode
+minion:
 
 - Runs in a background OpenCode session (no UI, no Director interaction)
 - Processes work assignments sent by an Admin orchestrator via `worker_message`
 - Sends status updates back to Admin as it works
 - Stays alive between messages, retaining full conversational context
 
-**Desk mode workers are spawned by Admin agents using `summon_minion`** — they don't
-enter desk mode on their own. The Director does not interact with them directly.
+**Minion mode minions are summoned by Admin agents using `summon_minion`** — they don't
+enter minion mode on their own. The Director does not interact with them directly.
 
 ### The Architecture
 
 ```
 Director
   └─ summons → Admin Agent (interactive session)
-                  ├─ spawns → Engineer Worker (desk mode, headless)
-                  ├─ spawns → Tester Worker (desk mode, headless)
+                  ├─ summons → Engineer Minion (minion mode, headless)
+                  ├─ summons → Tester Minion (minion mode, headless)
                   └─ coordinates via worker_message / watch_inbox
 ```
 
-### Spawning Desk Mode Workers (Admin)
+### Summoning Minion Mode Minions (Admin)
 
-Admin agents use `summon_minion` to launch background workers:
+Admin agents use `summon_minion` to launch background minions:
 
 ```typescript
 summon_minion({ role: "engineer", daemon: "hephaestus" })
 // Returns: { possession_id: 83 }
 ```
 
-Workers are invisible to the Director. Admin manages them autonomously.
+Minions are invisible to the Director. Admin manages them autonomously.
 
-**See:** `.opencode/docs/guides/desk-mode-orchestration.md` for the complete
+**See:** `.opencode/docs/guides/minion-mode-orchestration.md` for the complete
 orchestration guide.
 
-### Working as a Desk Mode Worker
+### Working as a Minion Mode Minion
 
-If you are running in desk mode (the Director spawned you as a background worker):
+If you are running in minion mode (the Director summoned you as a background minion):
 
 - You receive work assignments via `worker_message` from your Admin orchestrator
 - Process each message as a task assignment
@@ -129,13 +129,13 @@ If you are running in desk mode (the Director spawned you as a background worker
 - The polling infrastructure handles message delivery automatically — you don't check
   for messages yourself
 
-**You don't need to manage the polling loop.** The desk-worker infrastructure sends
+**You don't need to manage the polling loop.** The minion-worker infrastructure sends
 messages to your session and invokes your responses.
 
-## Complete Epic Possession Example (Admin Orchestrating Workers)
+## Complete Epic Possession Example (Admin Orchestrating Minions)
 
 ```typescript
-// 1. Admin spawns workers for the epic
+// 1. Admin summons minions for the epic
 summon_minion({ role: "architect", daemon: "daedalus" })
 // Returns: { possession_id: 82 }
 
@@ -169,7 +169,7 @@ exorcise_minion({ to_possession_id: 83 })
 
 ## Discovery: Finding Agents
 
-Use `worker_status` to find active desk mode workers for a role:
+Use `worker_status` to find active minion mode minions for a role:
 
 ```typescript
 worker_status({ role: "Architect" })
@@ -202,16 +202,16 @@ Returns:
 3. **Don't end between tasks** — keep possession alive for continuity
 4. **Update task artifacts** — document progress as you complete each task
 
-### Desk Mode Workers (Admin)
+### Minion Mode Minions (Admin)
 
-1. **Spawn only what you need** — each worker consumes resources
+1. **Summon only what you need** — each minion consumes resources
 2. **Give clear work assignments** — include task IDs, context, acceptance criteria
 3. **Wait for responses** — use `watch_inbox` instead of polling continuously
-4. **Terminate when done** — always call `exorcise_minion` when work is complete
+4. **Dismiss when done** — always call `exorcise_minion` when work is complete
 
 ### Coordination
 
-1. **Use worker_status** — check active workers before spawning duplicates
+1. **Use worker_status** — check active minions before summoning duplicates
 2. **Be specific in messages** — include epic ID, task ID, full context
 3. **Escalate when needed** — ask Director if no agents available
 4. **Document decisions** — record coordination outcomes in task artifacts
@@ -223,41 +223,41 @@ Returns:
 | `task_claim` | Claim a specific task | `task_claim({ task_id: "ARC-H-0057" })` |
 | `task_close` | Close a task when done | `task_close({ task_id: "ARC-H-0057", status: "COMPLETE" })` |
 | `task_next` | Auto-claim next epic task | `task_next()` |
-| `summon_minion` | Launch a desk mode worker | `summon_minion({ role: "engineer" })` |
-| `worker_message` | Send work to a worker | `worker_message({ to_possession_id: 83, body: "..." })` |
-| `worker_status` | Check active workers | `worker_status({ role: "engineer" })` |
-| `watch_inbox` | Wait for worker responses | `watch_inbox()` |
-| `exorcise_minion` | End a worker's possession | `exorcise_minion({ to_possession_id: 83 })` |
+| `summon_minion` | Launch a minion mode minion | `summon_minion({ role: "engineer" })` |
+| `worker_message` | Send work to a minion | `worker_message({ to_possession_id: 83, body: "..." })` |
+| `worker_status` | Check active minions | `worker_status({ role: "engineer" })` |
+| `watch_inbox` | Wait for minion responses | `watch_inbox()` |
+| `exorcise_minion` | End a minion's possession | `exorcise_minion({ to_possession_id: 83 })` |
 
 ## Troubleshooting
 
 ### Can't find other agents
 
-**Problem:** `worker_status` returns no workers for a role.
+**Problem:** `worker_status` returns no minions for a role.
 
 **Solution:**
 
-- Spawn a new worker with `summon_minion`
-- Ask Director to investigate if spawn fails
+- Summon a new minion with `summon_minion`
+- Ask Director to investigate if summon fails
 
-### Worker not responding
+### Minion not responding
 
-**Problem:** Sent a message but worker hasn't replied.
+**Problem:** Sent a message but minion hasn't replied.
 
 **Solution:**
 
 - Send a status ping: `worker_message({ to_possession_id: 83, body: "Status?" })`
 - Check `worker_status` for last_activity timestamp
-- Terminate and restart if truly unresponsive
+- Dismiss and restart if truly unresponsive
 
-### Worker finished but possession still open
+### Minion finished but possession still open
 
-This is normal. Desk workers stay alive after finishing a task and wait for the next
-assignment. Send them another task or terminate them when no more work is needed.
+This is normal. Minion mode minions stay alive after finishing a task and wait for the next
+assignment. Send them another task or dismiss them when no more work is needed.
 
 ## See Also
 
-- **Desk Mode Orchestration**: `.opencode/docs/guides/desk-mode-orchestration.md`
+- **Minion Mode Orchestration**: `.opencode/docs/guides/minion-mode-orchestration.md`
 - **Agent Discovery**: `.opencode/docs/guides/agent-discovery.md`
 - **ADR-013**: Site-nine as OpenCode Integration Platform
 - **ADR-014**: Message-Driven Coordination Architecture

@@ -205,7 +205,7 @@ Use conventional commits: `feat:`, `fix:`, `docs:`
 - 145+ pre-populated names in database
 - Suggests unused names first
 - Adds roman numerals for reuse (azazel, azazel-ii, azazel-iii)
-- `s9 persona suggest Engineer` shows unused names for role
+- `s9 daemon suggest Engineer` shows unused names for role
 
 **Trade-off:**
 - ✅ Memorable, distinctive, fun

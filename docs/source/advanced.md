@@ -4,21 +4,15 @@
 
 Advanced techniques and workflows for power users of site-nine.
 
-## Working with Multiple Personas
+## Working with Multiple Agents
 
-The most powerful way to use site-nine is running multiple OpenCode terminals simultaneously, each with a different persona working on related tasks.
+The most powerful way to use site-nine is running multiple OpenCode terminals simultaneously, each with a different agent working on related tasks.
 
 ### Multi-Terminal Workflow
 
-**Terminal 1 - Administrator Persona:**
-```bash
-opencode
-```
-```
-/summon
-# Select: Administrator
-# Choose persona: Mephistopheles
-```
+**Terminal 1 - Administrator:**
+
+Open OpenCode and let the `possession-start` skill run. Select the Administrator role.
 
 **You (in Terminal 1):**
 > We need to implement user authentication for the app. Create tasks to break this down into manageable work.
@@ -57,15 +51,9 @@ opencode
 
 ---
 
-**Terminal 2 - Architect Persona:**
-```bash
-opencode
-```
-```
-/summon
-# Select: Architect
-# Choose persona: Kothar
-```
+**Terminal 2 - Architect:**
+
+Open a second OpenCode terminal and start a new possession with the Architect role.
 
 **You (in Terminal 2):**
 > Claim and work on task ARC-H-0001
@@ -94,7 +82,7 @@ opencode
 > The architecture is documented and ready for implementation. Task ARC-H-0001 is complete.
 
 **You (in Terminal 2):**
-> Hand this off to a Engineer persona to implement
+> Hand this off to an Engineer to implement
 
 **Kothar (Architect):**
 > I'll update the handoff for task ENG-H-0002.
@@ -115,19 +103,13 @@ opencode
 > All design decisions documented in docs/adr/0003-authentication-strategy.md
 > ```
 > 
-> Task ENG-H-0002 is ready for a Engineer to claim.
+> Task ENG-H-0002 is ready for an Engineer to claim.
 
 ---
 
-**Terminal 3 - Engineer Persona:**
-```bash
-opencode
-```
-```
-/summon
-# Select: Engineer
-# Choose persona: Azazel
-```
+**Terminal 3 - Engineer:**
+
+Open a third OpenCode terminal and start a new possession with the Engineer role.
 
 **You (in Terminal 3):**
 > Claim task ENG-H-0002 and implement it based on Kothar's architecture
@@ -159,15 +141,9 @@ opencode
 
 ---
 
-**Terminal 4 - Tester Persona:**
-```bash
-opencode
-```
-```
-/summon
-# Select: Tester
-# Choose persona: Eris
-```
+**Terminal 4 - Tester:**
+
+Open a fourth OpenCode terminal and start a new possession with the Tester role.
 
 **You (in Terminal 4):**
 > Claim task TST-H-0003 and test Azazel's authentication implementation
@@ -210,39 +186,39 @@ opencode
 
 ### Benefits of Multi-Terminal Workflow
 
-1. **Parallel Work** - Multiple personas can work on different parts of the system simultaneously
-2. **Specialization** - Each persona focuses on their area of expertise
-3. **Real-time Coordination** - Personas can reference each other's work
+1. **Parallel Work** - Multiple agents can work on different parts of the system simultaneously
+2. **Specialization** - Each agent focuses on their area of expertise
+3. **Real-time Coordination** - Agents can reference each other's work
 4. **Natural Collaboration** - Mimics how human teams work together
 
 ### Coordination Patterns
 
 **Pattern 1: Engineer → Tester Pipeline**
 
-Have a Engineer implement features in one terminal while a Tester writes tests in another terminal, creating a continuous feedback loop.
+Have an Engineer implement features in one terminal while a Tester writes tests in another terminal, creating a continuous feedback loop.
 
 **Pattern 2: Architect → Engineer Handoff**
 
-Use an Architect to design the system in one terminal, then hand off the specifications to a Engineer in another terminal for implementation.
+Use an Architect to design the system in one terminal, then hand off the specifications to an Engineer in another terminal for implementation.
 
 **Pattern 3: Engineer → Inspector Review**
 
-After a Engineer completes work, bring in an Inspector in a separate terminal to review the code and suggest improvements.
+After an Engineer completes work, bring in an Inspector in a separate terminal to review the code and suggest improvements.
 
 **Pattern 4: Administrator Orchestration**
 
-Keep an Administrator persona running in a dedicated terminal to coordinate tasks, check status, and manage the overall workflow.
+Keep an Administrator agent running in a dedicated terminal to coordinate tasks, check status, and manage the overall workflow.
 
-## Asking Personas for Project Insights
+## Asking Agents for Project Insights
 
-Instead of querying databases or running commands, ask your personas for insights conversationally.
+Instead of querying databases or running commands, ask your agents for insights conversationally.
 
 ### Task Analytics
 
 **You:**
 > What's our task completion rate?
 
-**Persona (Administrator):**
+**Agent (Administrator):**
 > Let me check the task analytics...
 > 
 > **Task Status Breakdown:**
@@ -252,31 +228,31 @@ Instead of querying databases or running commands, ask your personas for insight
 > - REVIEW: 4 tasks (8%)
 > - BLOCKED: 2 tasks (4%)
 > 
-> We're making good progress! Nearly half of all tasks are complete, and only 2 are blocked.
+> Nearly half of all tasks are complete, and only 2 are blocked.
 
-### Persona Activity
+### Agent Activity
 
 **You:**
-> Which personas have been most active on this project?
+> Which agents have been most active on this project?
 
-**Persona (Administrator):**
-> Here's the persona activity summary:
+**Agent (Administrator):**
+> Here's the agent activity summary:
 > 
-> | Persona Name | Missions | Completed |
-> |--------------|----------|-----------|
-> | Azazel       | 12       | 10        |
-> | Eris         | 8        | 7         |
-> | Kothar       | 6        | 6         |
-> | Nabu         | 4        | 3         |
+> | Daemon Name  | Possessions | Completed |
+> |--------------|-------------|-----------|
+> | Azazel       | 12          | 10        |
+> | Eris         | 8           | 7         |
+> | Kothar       | 6           | 6         |
+> | Nabu         | 4           | 3         |
 > 
-> Azazel (Engineer) has been the most active, with a strong completion rate.
+> Azazel (Inspector) has been the most active, with a strong completion rate.
 
 ### Task Dependencies
 
 **You:**
 > Show me which tasks are blocking other work
 
-**Persona (Administrator):**
+**Agent (Administrator):**
 > Let me check the task dependencies...
 > 
 > **Blocked Tasks:**
@@ -293,18 +269,19 @@ Instead of querying databases or running commands, ask your personas for insight
 
 ## Custom Templates
 
-Override default persona behavior by customizing templates.
+Override default agent behavior by customizing templates.
 
-### Customizing Persona Instructions
+### Customizing Role Instructions
 
-1. Copy a persona template:
+1. Edit the role guide in `.opencode/docs/roles/`:
 ```bash
-cp .opencode/personas/engineer.md .opencode/personas/engineer-custom.md
+# Edit the engineer role guide
+$EDITOR .opencode/docs/roles/engineer.md
 ```
 
-2. Edit the template to add project-specific guidelines:
+2. Add project-specific guidelines:
 ```markdown
-# Engineer Persona
+# Engineer Role
 
 ## Project-Specific Guidelines
 
@@ -315,11 +292,10 @@ cp .opencode/personas/engineer.md .opencode/personas/engineer-custom.md
 
 ## Standard Guidelines
 
-[... rest of template ...]
+[... rest of guide ...]
 ```
 
-3. Ask personas to reference the custom template:
-> Use the guidelines in engineer-custom.md for this implementation
+3. Agents load these guides automatically during possession initialization.
 
 ### Project-Specific Workflows
 
@@ -359,14 +335,14 @@ Then reference it in conversations:
 
 ## Task Management Patterns
 
-### Ask Personas to Create Tasks
+### Ask Agents to Create Tasks
 
-Instead of using CLI commands, ask personas to create tasks conversationally:
+Instead of using CLI commands, ask agents to create tasks conversationally:
 
 **You:**
 > Create a high-priority task for implementing rate limiting on the API
 
-**Persona (Administrator):**
+**Agent (Administrator):**
 > I'll create that task for you.
 > 
 > ✓ Created task ENG-H-0015
@@ -375,14 +351,14 @@ Instead of using CLI commands, ask personas to create tasks conversationally:
 >   Role: Engineer
 >   Status: TODO
 > 
-> The task is ready for a Engineer to claim.
+> The task is ready for an Engineer to claim.
 
-### Ask Personas About Dependencies
+### Ask Agents About Dependencies
 
 **You:**
 > What tasks need to be completed before we can deploy to production?
 
-**Persona (Administrator):**
+**Agent (Administrator):**
 > Let me check the task dependencies...
 > 
 > Before deploying to production, these tasks must be complete:
@@ -403,7 +379,7 @@ Instead of using CLI commands, ask personas to create tasks conversationally:
 **You:**
 > We need to add a notification system to the app. This seems like a big feature - can you break it down?
 
-**Persona (Administrator):**
+**Agent (Administrator):**
 > I'll break the notification system into manageable tasks.
 > 
 > ✓ Created task ARC-H-0020
@@ -450,7 +426,7 @@ For large features spanning multiple tasks, use epics to track overall progress:
 **You:**
 > Create an epic for the notification system work
 
-**Persona (Administrator):**
+**Agent (Administrator):**
 > I'll create an epic to group these notification tasks.
 > 
 > ✓ Created epic EPC-H-0005
@@ -473,7 +449,7 @@ For large features spanning multiple tasks, use epics to track overall progress:
 **You:**
 > What's the status of the notification system epic?
 
-**Persona (Administrator):**
+**Agent (Administrator):**
 > Let me check epic EPC-H-0005...
 > 
 > **Epic: Notification System Implementation**
@@ -491,14 +467,14 @@ For large features spanning multiple tasks, use epics to track overall progress:
 > - TST-M-0023 - Test notification delivery
 > - DOC-M-0024 - Document system
 > 
-> We're making good progress! The architecture and backend are done, and the frontend is underway.
+> The architecture and backend are done, and the frontend is underway.
 
 **Benefits of using epics:**
 
 1. **Visibility** - See overall feature progress at a glance
 2. **Organization** - Group related tasks logically
 3. **Auto-status** - Epic status updates automatically as tasks progress
-4. **Coordination** - Easier to coordinate work across multiple personas
+4. **Coordination** - Easier to coordinate work across multiple agents
 5. **Tracking** - Track feature completion from start to finish
 
 See the [Epics guide](epics/overview.md) for detailed information on working with epics.
@@ -508,7 +484,7 @@ See the [Epics guide](epics/overview.md) for detailed information on working wit
 **You:**
 > What's the status of the authentication feature we've been working on?
 
-**Persona (Administrator):**
+**Agent (Administrator):**
 > Let me check the authentication tasks...
 > 
 > **Authentication Feature Status:**
@@ -528,7 +504,7 @@ See the [Epics guide](epics/overview.md) for detailed information on working wit
 **You:**
 > Azazel has been working on ENG-H-0015 for 3 days and seems stuck. Can we reassign it?
 
-**Persona (Administrator):**
+**Agent (Administrator):**
 > Let me check the task status and reassign if needed...
 > 
 > Looking at ENG-H-0015 (Rate limiting implementation):
@@ -549,7 +525,7 @@ See the [Epics guide](epics/overview.md) for detailed information on working wit
 **You:**
 > What other tasks are related to payment processing?
 
-**Persona (Administrator):**
+**Agent (Administrator):**
 > Searching for payment-related tasks...
 > 
 > **Payment Processing Tasks:**
@@ -582,16 +558,16 @@ Currently, both AI agents and humans use the same CLI interface (`s9`). While th
 
 **Python API for Agents:**
 ```python
-from site_nine.api import Mission, Task
+from site_nine.api import Possession, Task
 
 # Type-safe, programmatic interface
-mission = Mission.start(
-    persona="cronos",
+possession = Possession.start(
+    daemon="cronos",
     role="Operator",
     objective="System improvements"
 )
 
-task = Task.claim("OPR-H-0065", mission_id=mission.id)
+task = Task.claim("OPR-H-0065", possession_id=possession.id)
 task.update_status("UNDERWAY")
 task.close("COMPLETE")
 ```
@@ -639,7 +615,7 @@ If this separation is pursued in the future:
 
 4. **Phase 4**: Update agent workflows
    - Migrate agents from CLI to Python API
-   - Update session-start and other skills
+   - Update possession-start and other skills
    - Deprecate agent use of CLI (keep for backwards compatibility)
 
 ### Current Status

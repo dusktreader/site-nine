@@ -3,24 +3,24 @@
 This guide provides practical tips and best practices for Directors (human users) working with AI agents in the site-nine system.
 
 
-## Mission Initialization
+## Possession Initialization
 
-### Use the `/summon` command
+### Use `s9 summon` to start possessions
 
-Always start missions using the `/summon` command in your agentic coding platform (OpenCode, Cursor, Windsurf, etc.). This command loads the `session-start` skill, which handles:
+Always start possessions using the `s9 summon <role>` command. This launches OpenCode and triggers the `possession-start` skill, which handles:
 
-- Role selection (or uses role from `/summon <role>`)
-- Persona selection (automatic or via `--persona` flag)
-- Mission registration in the database
-- Task assignment (via `--task` or `--auto-assign` flags)
-- Setting up the mission file
+- Role selection (or uses the role you specified)
+- Daemon selection via LRU auto-claim
+- Possession registration in the database
+- Session renaming to `Operation <codename>: <Daemon> - <Role>`
+- Task assignment (if you specify `--auto-assign`)
 
-This ensures consistency and accountability across all missions. Each mission creates:
+This ensures consistency and accountability across all possessions. Each possession creates:
 
-- A unique persona identity for the agent
-- Proper tracking in the mission file
-- Registration in the database
-- Commit attribution via `[Persona: Name - Role]` or `[Mission: codename]`
+- A unique daemon identity for the agent
+- A possession file at `.opencode/work/possessions/`
+- Proper tracking in the database
+- Commit attribution via `[Daemon: Name - Role]` or `[Operation: codename]`
 
 
 ## Choosing the Right Role
@@ -95,9 +95,9 @@ Use the **Inspector** role for more than finding bugs:
 
 ## Tracking and Documentation
 
-### Keep agents.md updated
+### Keep the agent docs updated
 
-The file `.opencode/docs/guides/agents.md` contains patterns that agents read before starting work. Keep it updated with:
+The `.opencode/docs/` directory contains patterns and guides that agents read before starting work. Keep these files updated with:
 
 - Project-specific code patterns
 - Lessons learned from previous work
@@ -105,19 +105,18 @@ The file `.opencode/docs/guides/agents.md` contains patterns that agents read be
 - Common pitfalls to avoid
 
 
-### Review mission files
+### Review possession files
 
-Mission files in `.opencode/work/missions/` document:
+Possession files in `.opencode/work/possessions/` document:
 
 - Work performed
 - Decisions made
 - Files changed
-- Time spent
-- Tasks claimed/completed
+- Tasks claimed and completed
 
 Review these files periodically to:
 
-- Track progress across missions
+- Track progress across possessions
 - Understand decisions that were made
 - Identify patterns or recurring issues
 - Generate reports or summaries
@@ -134,12 +133,7 @@ Task artifacts in `.opencode/work/tasks/` provide detailed tracking. Agents upda
 - Important observations or decisions
 - Testing performed
 
-These artifacts are invaluable for:
-
-- Understanding what was done
-- Generating changelogs
-- Knowledge transfer
-- Future troubleshooting
+These artifacts are invaluable for understanding what was done, generating changelogs, knowledge transfer, and future troubleshooting.
 
 
 ### Commit incrementally
@@ -152,13 +146,12 @@ Encourage agents to commit work incrementally, not in one large commit. This:
 - Provides better context in git history
 
 
-### End missions properly
+### End possessions properly
 
-Always use the `/handoff` command or the `session-end` skill to properly close missions. This ensures:
+Always use the `possession-end` skill to properly close possessions. This ensures:
 
-- Mission files are complete
+- Possession files are complete
 - Database records are updated
-- Handoff documentation is created if needed
 - Loose ends are documented
 
 
@@ -188,7 +181,7 @@ For bug fixes, use a focused workflow:
 
 ### Parallel work
 
-You can run multiple missions concurrently using different personas and roles. This is useful for:
+You can run multiple possessions concurrently using different daemons and roles. This is useful for:
 
 - Working on multiple features simultaneously
 - Having one agent investigate while another implements
@@ -197,22 +190,22 @@ You can run multiple missions concurrently using different personas and roles. T
 
 ## Common Pitfalls to Avoid
 
-### Don't skip mission initialization
+### Don't skip possession initialization
 
-Always use `/summon` to start missions. Manual initialization can lead to:
+Always use `s9 summon` to start possessions. Manual initialization can lead to:
 
 - Missing tracking data
-- Inconsistent persona assignment
+- Inconsistent daemon assignment
 - Lack of database registration
 - Poor handoff documentation
 
 
-### Don't mix roles within a mission
+### Don't mix roles within a possession
 
-Each mission should stick to its assigned role. If you need different expertise:
+Each possession should stick to its assigned role. If you need different expertise:
 
-- End the current mission
-- Start a new mission with the appropriate role
+- End the current possession using the `possession-end` skill
+- Start a new possession with the appropriate role
 
 This maintains clear separation of concerns and better tracking.
 
@@ -222,9 +215,9 @@ This maintains clear separation of concerns and better tracking.
 When using Architect to design, always review and approve before moving to implementation. Catching issues in the design phase is much cheaper than after code is written.
 
 
-### Don't ignore mission files
+### Don't ignore possession files
 
-Mission files are not just for agents - they're for you too. Review them to:
+Possession files are not just for agents — they're for you too. Review them to:
 
 - Stay informed about progress
 - Catch issues early
@@ -236,9 +229,8 @@ Mission files are not just for agents - they're for you too. Review them to:
 
 If you're unsure about:
 
-- **Which role to use** - See `.opencode/docs/roles/README.md`
-- **How to use s9 commands** - Run `s9 --help` or see `.opencode/data/README.md`
-- **Workflow patterns** - See `.opencode/docs/procedures/WORKFLOWS.md`
+- **Which role to use** - See `.opencode/docs/roles/`
+- **How to use s9 commands** - Run `s9 --help` or see the [CLI Reference](../cli/overview.md)
+- **Workflow patterns** - See the [Advanced Topics](../advanced.md) guide
 - **Troubleshooting** - See `.opencode/docs/guides/troubleshooting.md`
 
-The agent system is designed to make your development workflow more organized and trackable. Use these best practices to get the most out of it!

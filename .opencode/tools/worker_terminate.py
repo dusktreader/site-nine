@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-worker_terminate tool - Signal a desk-mode worker to terminate gracefully.
+worker_terminate tool - Signal a minion-mode worker to terminate gracefully.
 
 This tool:
 1. Receives from_possession_id, to_possession_id, and optional reason

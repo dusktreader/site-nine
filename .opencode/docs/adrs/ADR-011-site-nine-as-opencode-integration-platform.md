@@ -99,7 +99,7 @@ launched directly remain independent.
 **Key capabilities enabled:**
 1. **Automatic lifecycle management:** Site-nine sessions auto-track missions
 2. **Session-first architecture:** Session ID is ground truth, no detection needed
-3. **Desk mode orchestration:** Background agents await instructions from Admin
+3. **Minion mode orchestration:** Background agents await instructions from Admin
 4. **Rich automation:** Plugin uses session context for summaries, stuck detection, task claiming
 5. **Invisible infrastructure:** Director doesn't think about missions - they just work
 6. **Coexistence:** Regular OpenCode sessions work normally for non-site-nine tasks
@@ -469,7 +469,7 @@ async function suspendMission(missionId: number, reason: string) {
 
 **Current Lifecycle Flow:**
 
-1. Director runs `s9 summon architect` or `s9 summon desk`
+1. Director runs `s9 summon architect` or `s9 summon minion`
 2. Summon command invokes mission-init skill → Creates mission record
 3. Mission-init invokes role-select + persona-select skills → Updates mission with role/persona
 4. OpenCode launches with session ID available via `context.sessionID` in all skill tools
@@ -544,7 +544,7 @@ The `last_activity_at` timestamp serves different purposes:
 `last_activity_at` timestamp is 30 minutes old, but this is perfectly normal - the agent is idle but alive, waiting
 for input.
 
-**Only desk mode has idle timeout** because background workers shouldn't run indefinitely without work. Interactive
+**Only minion mode has idle timeout** because background workers shouldn't run indefinitely without work. Interactive
 sessions can be idle as long as the Director keeps OpenCode open.
 
 
@@ -623,25 +623,25 @@ This design maintains clear separation of concerns compared to the current imple
 - **Suspend ≠ End**: Auto-suspend is safe/resumable, explicit end is final
 
 
-### 3. Desk Mode for Multi-Agent Orchestration
+### 3. Minion Mode for Multi-Agent Orchestration
 
 **The orchestration model:**
 ```
 Director (human)
     ↓ speaks to
 Admin Agent (OpenCode session A, visible)
-    ├─ summons → Engineer (OpenCode session B, background "desk" mode)
-    ├─ summons → Architect (OpenCode session C, background "desk" mode)
-    └─ summons → Operator (OpenCode session D, background "desk" mode)
+    ├─ summons → Engineer (OpenCode session B, background "minion" mode)
+    ├─ summons → Architect (OpenCode session C, background "minion" mode)
+    └─ summons → Operator (OpenCode session D, background "minion" mode)
 
 Admin orchestrates workers via messaging system
 Workers await instructions in background
 Director only interacts with Admin
 ```
 
-**Desk mode characteristics:**
+**Minion mode characteristics:**
 - Background OpenCode session invoked via `opencode run` (no TUI)
-- Mission mode set to "desk" in database
+- Mission mode set to "minion" in database
 - Agent processes messages one at a time, auto-closes after each
 - Python polling script manages the message loop
 - Can be terminated by orchestrator via SIGTERM
@@ -650,31 +650,31 @@ Director only interacts with Admin
 ```sql
 -- Add mode field to missions
 ALTER TABLE missions ADD COLUMN mode TEXT DEFAULT 'interactive';
--- Values: 'interactive' (default), 'desk' (background worker)
+-- Values: 'interactive' (default), 'minion' (background worker)
 
--- Desk mode sessions tracked differently
+-- Minion mode sessions tracked differently
 CREATE INDEX idx_missions_mode ON missions(mode);
 ```
 
-**Summoning desk mode agents:**
+**Summoning minion mode agents:**
 ```bash
-# Admin summons a background worker (role is REQUIRED for --desk mode)
-s9 summon engineer --desk
+# Admin summons a background worker (role is REQUIRED for --minion mode)
+s9 summon engineer --minion
 
 # This spawns a Python script that:
 # 1. Runs: opencode run --title "Mission <codename>" "invoke mission-start skill with role=engineer"
-# 2. Mission created with mode='desk', role set, OpenCode session auto-closes
+# 2. Mission created with mode='minion', role set, OpenCode session auto-closes
 # 3. Python script enters polling loop (checks database for messages)
 # 4. Returns immediately so Admin can continue working
 ```
 
 **Python polling script workflow:**
 
-The `s9 summon <role> --desk` command spawns a background Python process that manages the desk agent lifecycle:
+The `s9 summon <role> --minion` command spawns a background Python process that manages the minion agent lifecycle:
 
 ```python
 #!/usr/bin/env python3
-"""Desk mode polling script - manages message-driven agent lifecycle"""
+"""Minion mode polling script - manages message-driven agent lifecycle"""
 
 import signal
 import subprocess
@@ -695,7 +695,7 @@ def sigterm_handler(signum, frame):
         subprocess.run([
             "opencode", "run",
             "--session", session_id,
-            "invoke mission-end skill with reason='desk agent terminated by orchestrator'"
+            "invoke mission-end skill with reason='minion agent terminated by orchestrator'"
         ])
     sys.exit(0)
 
@@ -705,7 +705,7 @@ signal.signal(signal.SIGTERM, sigterm_handler)
 result = subprocess.run([
     "opencode", "run",
     "--title", f"Mission {codename}",
-    "invoke mission-start skill with role=engineer, mode=desk"
+    "invoke mission-start skill with role=engineer, mode=minion"
 ], capture_output=True, text=True)
 
 # Extract session ID from output or query database
@@ -757,7 +757,7 @@ while running:
 **Admin orchestration commands:**
 ```bash
 # Admin summons worker (spawns background Python process)
-s9 summon engineer --desk
+s9 summon engineer --minion
 # Returns immediately, worker process runs in background
 
 # Admin sends task to worker
@@ -771,7 +771,7 @@ s9 message send \
 # Agent implements feature, opencode exits, plugin auto-suspends
 
 # Admin checks worker status
-s9 mission query --mode desk --status ACTIVE
+s9 mission query --mode minion --status ACTIVE
 
 # Admin terminates worker when done
 s9 summon stop <worker-session-id>
@@ -780,17 +780,17 @@ s9 summon stop <worker-session-id>
 # Mission ends gracefully, Python exits
 ```
 
-**Plugin desk mode handling:**
+**Plugin minion mode handling:**
 
-The plugin does NOT need special desk mode handling because:
+The plugin does NOT need special minion mode handling because:
 
 1. **Each message invocation is short-lived:** `opencode run` processes one message and exits immediately
 2. **Auto-suspend works perfectly:** When `opencode run` exits, `session.deleted` fires → plugin auto-suspends mission
-3. **No idle timeout needed:** Desk agents don't stay running between messages - the Python polling script manages
+3. **No idle timeout needed:** Minion agents don't stay running between messages - the Python polling script manages
    timing
 4. **Graceful termination via SIGTERM:** Python script's signal handler ensures mission-end skill runs before exit
 
-The existing `session.deleted` handler in Section 2 is sufficient for desk mode lifecycle management.
+The existing `session.deleted` handler in Section 2 is sufficient for minion mode lifecycle management.
 
 
 ### 4. Mission Lifecycle: Suspend, Resume, and Stale Detection
@@ -1541,7 +1541,7 @@ Standalone CLI use is supported but not optimized. Most users work in OpenCode, 
 - ✅ **Zero zombie missions:** Impossible to have active mission without active session
 - ✅ **Automatic heartbeats:** Every session activity triggers heartbeat (no manual tracking)
 - ✅ **Rich automation:** Plugin uses session context for summaries, task claiming, stuck detection
-- ✅ **Orchestration unlocked:** Admin can coordinate multiple background workers via desk mode
+- ✅ **Orchestration unlocked:** Admin can coordinate multiple background workers via minion mode
 - ✅ **Reduced cognitive load:** Director doesn't think about missions, they just work
 - ✅ **Better UX:** Invisible infrastructure that works seamlessly
 - ✅ **Leverages platform:** Uses OpenCode capabilities instead of working around them
@@ -1555,7 +1555,7 @@ Standalone CLI use is supported but not optimized. Most users work in OpenCode, 
 - ⚠️ **Workflow change:** Requires learning new summon command (but enables automation)
 - ⚠️ **Plugin complexity:** More sophisticated plugin logic (more code to maintain)
 - ⚠️ **Session context handling:** Skills must properly use `context.sessionID` from OpenCode
-- ⚠️ **Desk mode new concept:** Requires documenting and explaining background workers
+- ⚠️ **Minion mode new concept:** Requires documenting and explaining background workers
 - ⚠️ **Migration effort:** Existing missions may need backfilling session IDs
 
 ### Risks & Mitigation
@@ -1567,10 +1567,10 @@ Standalone CLI use is supported but not optimized. Most users work in OpenCode, 
 | **Bypass via manual commands** | - Document: "Use `s9 summon`, not `opencode` directly"<br>- Plugin can still trigger auto-suspend when sessions close<br>- Manual mission commands still available for debugging<br>- Clear separation: summon = tracked, opencode = untracked |
 | **Non-site-nine sessions accidentally tracked** | - Plugin checks for mission existence before acting<br>- No auto-creation of missions (skills create explicitly)<br>- Default to no-op if no mission found for session<br>- Log when plugin skips non-s9 sessions |
 | **Session ID not unique across projects** | - Include project directory in correlation<br>- Session IDs are globally unique in OpenCode<br>- Query by (session_id, project_path) tuple if needed |
-| **Desk mode sessions leak resources** | - Python polling script manages desk agent lifecycle<br>- SIGTERM handler ensures graceful termination via mission-end skill<br>- `s9 summon stop <session-id>` command to terminate desk agents<br>- Monitor active desk sessions via `s9 mission query --mode desk --status ACTIVE` |
+| **Minion mode sessions leak resources** | - Python polling script manages minion agent lifecycle<br>- SIGTERM handler ensures graceful termination via mission-end skill<br>- `s9 summon stop <session-id>` command to terminate minion agents<br>- Monitor active minion sessions via `s9 mission query --mode minion --status ACTIVE` |
 | **Plugin uses stale session data** | - Cache session context with TTL<br>- Refetch on critical operations<br>- Handle API errors gracefully |
 | **Workflow adoption friction** | - Clear onboarding docs: "Use `s9 summon` not `opencode`"<br>- Add shell alias: `alias s9s='s9 summon'`<br>- Skills can still work manually as fallback<br>- Both modes supported during transition |
-| **Desk mode message polling is inefficient** | - Use exponential backoff for polling<br>- Consider webhook-based messaging (future)<br>- Add rate limiting<br>- Monitor message queue performance |
+| **Minion mode message polling is inefficient** | - Use exponential backoff for polling<br>- Consider webhook-based messaging (future)<br>- Add rate limiting<br>- Monitor message queue performance |
 
 
 ## Implementation Plan
@@ -1614,7 +1614,7 @@ Standalone CLI use is supported but not optimized. Most users work in OpenCode, 
 1. Create migration: Add `opencode_session_id TEXT UNIQUE` to missions table
 2. Create migration: Add `mode TEXT DEFAULT 'interactive'` to missions table
 3. Add indexes: `idx_missions_session_id`, `idx_missions_mode`
-4. Implement: `s9 summon <role> [persona] [--desk]`
+4. Implement: `s9 summon <role> [persona] [--minion]`
 5. Update CLI: Add `--session-id` parameter to mission commands (for debugging)
 6. Implement: `s9 mission get --session-id <id>`
 7. Write tests: Migration, summon command, session-based queries
@@ -1656,7 +1656,7 @@ Standalone CLI use is supported but not optimized. Most users work in OpenCode, 
    last_activity_at, suspend mission, end mission)
 3. Implement `session.updated` handler with throttled activity tracking (max 1/min DB writes)
 4. Implement `session.deleted` handler to auto-suspend missions
-5. Implement `session.idle` handler for desk mode timeout detection (10min max to catch stuck agents)
+5. Implement `session.idle` handler for minion mode timeout detection (10min max to catch stuck agents)
 6. Add comprehensive logging throughout plugin (debug, info, warn, error levels)
 7. Add database migration: `ALTER TABLE missions ADD COLUMN last_activity_at TEXT`
 8. Test plugin loads without errors
@@ -1675,24 +1675,24 @@ Standalone CLI use is supported but not optimized. Most users work in OpenCode, 
 - Database access layer tested and documented
 
 
-### Phase 4: Desk Mode & Orchestration
+### Phase 4: Minion Mode & Orchestration
 
 **Tasks:**
-1. Implement: `s9 summon <role> --desk` command (role required for desk mode)
-2. Create Python polling script that manages desk agent lifecycle
-3. Implement SIGTERM handler for graceful desk agent termination
-4. Add `s9 summon stop <session-id>` command to terminate desk agents
+1. Implement: `s9 summon <role> --minion` command (role required for minion mode)
+2. Create Python polling script that manages minion agent lifecycle
+3. Implement SIGTERM handler for graceful minion agent termination
+4. Add `s9 summon stop <session-id>` command to terminate minion agents
 5. Update messaging system to support session-based addressing
 6. Test `opencode run --session <id>` resume functionality
-7. Write tests: Desk mode summoning, message polling, graceful shutdown
+7. Write tests: Minion mode summoning, message polling, graceful shutdown
 
 **Acceptance criteria:**
-- Admin can summon background workers with `s9 summon <role> --desk`
-- Python polling script successfully manages desk agent lifecycle
+- Admin can summon background workers with `s9 summon <role> --minion`
+- Python polling script successfully manages minion agent lifecycle
 - Workers process messages via `opencode run --session <id>` invocations
 - Each message invocation auto-closes, preventing context blowup
 - Admin can send tasks to workers via messaging system
-- Desk agents can be terminated via `s9 summon stop <session-id>`
+- Minion agents can be terminated via `s9 summon stop <session-id>`
 - SIGTERM handler ensures mission-end skill runs before Python script exits
 - Session context preserved across multiple `opencode run` invocations
 
@@ -1717,12 +1717,12 @@ Standalone CLI use is supported but not optimized. Most users work in OpenCode, 
 
 **Tasks:**
 1. Update all skill documentation to reflect automatic lifecycle
-2. Write desk mode orchestration guide for Admin agents
+2. Write minion mode orchestration guide for Admin agents
 3. Create migration guide for existing missions
 4. Document plugin behavior and configuration options
 5. Create troubleshooting guide for common issues
 6. Announce feature to team with examples
-7. Monitor for 2 weeks: Plugin logs, desk mode usage, automation accuracy
+7. Monitor for 2 weeks: Plugin logs, minion mode usage, automation accuracy
 
 **Acceptance criteria:**
 - All documentation reflects new paradigm
@@ -1738,7 +1738,7 @@ Standalone CLI use is supported but not optimized. Most users work in OpenCode, 
 2. Webhook-based messaging (replace polling)
 3. Multi-level orchestration (Admin → Sub-Admin → Workers)
 4. Session context search (query across all sessions)
-5. Desk mode resource limits (CPU, memory, timeout)
+5. Minion mode resource limits (CPU, memory, timeout)
 6. Plugin configuration UI in OpenCode
 7. Integration with external tools (GitHub, Jira, etc.)
 
@@ -1832,7 +1832,7 @@ s9 mission backfill-sessions
 
 **Orchestration workflow (new capability):**
 1. Director runs: `s9 summon admin admin-prime`
-2. Admin summons workers: `s9 summon engineer --mode desk`
+2. Admin summons workers: `s9 summon engineer --mode minion`
 3. Admin sends tasks via messaging
 4. Workers process in background (claim → work → close → repeat)
 5. Workers' sessions end when orchestrator closes them or timeout occurs
@@ -1860,8 +1860,8 @@ s9 mission backfill-sessions
 
 #### Architecture
 
-1. **~~Desk mode session lifetime~~ (RESOLVED - NO LONGER APPLICABLE):**
-   - Desk agents don't stay running between messages
+1. **~~Minion mode session lifetime~~ (RESOLVED - NO LONGER APPLICABLE):**
+   - Minion agents don't stay running between messages
    - Each `opencode run` invocation processes one message and auto-closes
    - No idle timeout needed - Python polling script manages timing
    - Resource cleanup via SIGTERM handler calling mission-end skill
@@ -1888,18 +1888,18 @@ s9 mission backfill-sessions
    - **Recommendation:** No retries (log and continue), no local state (keep stateless)
    - **Decision needed:** Acceptable to lose heartbeat if DB unavailable?
 
-5. **~~Desk mode implementation~~ (RESOLVED):**
+5. **~~Minion mode implementation~~ (RESOLVED):**
    - ✅ `opencode run` provides headless execution
    - ✅ `opencode run --session <id>` resumes sessions successfully
    - ✅ Python polling script manages lifecycle with SIGTERM handler
    - ✅ Each message invocation auto-closes, preventing context blowup
-   - **Action:** Implement `s9 summon <role> --desk` command in Phase 4
+   - **Action:** Implement `s9 summon <role> --minion` command in Phase 4
 
 6. **Launcher UX:**
    - Should `s9 summon` exec into OpenCode (replace process)?
    - Or spawn OpenCode as child process and exit?
-   - How to capture session ID for desk mode (return to caller)?
-   - **Recommendation:** Spawn and exec for interactive, spawn and return ID for desk mode
+   - How to capture session ID for minion mode (return to caller)?
+   - **Recommendation:** Spawn and exec for interactive, spawn and return ID for minion mode
    - **Decision needed:** Confirm exec behavior acceptable
 
 7. **~~Auto-summary quality~~ (RESOLVED - NO LONGER APPLICABLE)**
@@ -1980,13 +1980,13 @@ OpenCode sessions contain rich context (messages, diffs, tool calls). Use this t
 
 This ADR lays groundwork for **site-nine as multi-agent orchestration platform**:
 
-**Phase 1 (this ADR):** Tight OpenCode integration, automatic lifecycle, desk mode
+**Phase 1 (this ADR):** Tight OpenCode integration, automatic lifecycle, minion mode
 **Phase 2:** Multi-level orchestration (Admin → Sub-Admin → Specialists)
 **Phase 3:** Cross-session collaboration (agents working together on shared tasks)
 **Phase 4:** External integrations (GitHub, Jira, Slack, etc.)
 **Phase 5:** Autonomous agent teams (self-organizing based on task requirements)
 
-The session-first architecture and desk mode orchestration are **foundational building blocks** for this vision.
+The session-first architecture and minion mode orchestration are **foundational building blocks** for this vision.
 
 ---
 

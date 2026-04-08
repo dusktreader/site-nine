@@ -3,7 +3,7 @@ import path from "path"
 
 export default tool({
   description:
-    "Send a message to another active possession (e.g., a desk-mode worker). " +
+    "Send a message to another active possession (e.g., a minion-mode worker). " +
     "Uses the site-nine messaging system to deliver the message via conversation.",
   args: {
     from_possession_id: tool.schema.number().describe("The possession ID of the sender"),

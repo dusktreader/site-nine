@@ -1,12 +1,12 @@
 /**
  * site-nine.ts
  *
- * OpenCode plugin that manages the site-nine mission lifecycle automatically.
+ * OpenCode plugin that manages the site-nine possession lifecycle automatically.
  *
  * Responsibilities (ADR-013, Phase 4):
  *
- * 1. Activity tracking: On session.updated events, update the mission's
- *    last_activity_at timestamp. Throttled to a maximum of one DB write per
+ * 1. Activity tracking: On session.updated events, update the possession's
+ *    last_heartbeat_at timestamp. Throttled to a maximum of one DB write per
  *    minute per session to prevent excessive load.
  *
  * 2. Status toasts: On every session.updated event, pop any pending messages
@@ -14,22 +14,21 @@
  *    Desk-mode sessions are skipped — only the interactive director session
  *    pops the queue. Workers push to the queue via the push_status tool.
  *
- * 3. Auto-suspend on session close: On session.deleted events, look up whether
- *    an active mission is bound to the session and, if so, transition it to
- *    SUSPENDED status. If the DB operation fails, retried with exponential
- *    backoff before giving up.
- *
- * 4. Comprehensive logging: All plugin operations are logged at appropriate
- *    levels so issues can be diagnosed from OpenCode logs.
+ * 3. Auto-exorcise on session close: On session.deleted events, look up whether
+ *    an active possession is bound to the session and, if so, exorcise it
+ *    (set status → EXORCISED, record end_time) and release any UNDERWAY tasks
+ *    back to TODO. If the DB operation fails, retried with exponential backoff
+ *    before giving up.
  *
  * All DB operations are delegated to Python scripts:
- *   - plugin_activity_update.py  (activity timestamp update)
- *   - plugin_pop_status.py       (status queue pop + desk-mode check)
- *   - plugin_session_suspend.py  (session.deleted handler)
+ *   - plugin_activity_update.py     (activity timestamp update)
+ *   - plugin_pop_status.py          (status queue pop + desk-mode check)
+ *   - plugin_session_exorcise.py    (session.deleted handler — exorcise + task release)
  *
- * This plugin supersedes mission-lifecycle.ts, which used the s9 CLI.
- * Agents must never use s9 CLI commands — all business logic goes through
- * Python scripts that import from site_nine directly (ADR-013).
+ * IMPORTANT: This plugin must NEVER write to stderr (no console.warn, .error,
+ * .info, .log) — any stderr output corrupts the OpenCode TUI rendering.
+ * All error handling and logging is done in the Python scripts, which write
+ * to the typerdrive log file (~/.local/state/site-nine/logs/app.log).
  */
 
 import type { Plugin } from "@opencode-ai/plugin"
@@ -42,7 +41,7 @@ const ACTIVITY_THROTTLE_MS = 60_000
  * Exponential backoff configuration for session.deleted retry.
  * Delays (ms): 500, 1000, 2000, 4000 → total ~7.5s of retries.
  */
-const SUSPEND_RETRY_DELAYS_MS = [500, 1_000, 2_000, 4_000]
+const EXORCISE_RETRY_DELAYS_MS = [500, 1_000, 2_000, 4_000]
 
 /** Per-session timestamps of last activity write (for throttling). */
 const lastActivityWriteAt = new Map<string, number>()
@@ -54,25 +53,23 @@ const sleep = (ms: number): Promise<void> =>
 export const SiteNinePlugin: Plugin = async ({ $, worktree, client }) => {
   const activityScript = path.join(worktree, ".opencode/tools/plugin_activity_update.py")
   const popStatusScript = path.join(worktree, ".opencode/tools/plugin_pop_status.py")
-  const suspendScript = path.join(worktree, ".opencode/tools/plugin_session_suspend.py")
+  const exorciseScript = path.join(worktree, ".opencode/tools/plugin_session_exorcise.py")
   const python = path.join(worktree, ".venv/bin/python3")
 
   /**
    * Call a Python script with a JSON payload via stdin.
    * Returns the parsed JSON output, or null on error.
+   * Never writes to stderr — errors are silently swallowed here since
+   * the Python scripts log to the app log file.
    */
   const callPython = async (script: string, payload: Record<string, string>): Promise<Record<string, unknown> | null> => {
     try {
       const input = JSON.stringify(payload)
       const result = await $`echo ${input} | ${python} ${script}`.text()
       const output = result.trim()
-      if (!output) {
-        console.warn(`[site-nine] Empty output from ${path.basename(script)}`)
-        return null
-      }
+      if (!output) return null
       return JSON.parse(output) as Record<string, unknown>
-    } catch (err) {
-      console.error(`[site-nine] Error calling ${path.basename(script)}: ${err}`)
+    } catch {
       return null
     }
   }
@@ -87,21 +84,20 @@ export const SiteNinePlugin: Plugin = async ({ $, worktree, client }) => {
 
     const status = result.status as string
     if (status !== "messages") return
-    // "empty", "desk_mode", and "error" are all silent (error already logged by callPython)
 
     const messages = result.messages as Array<{
       id: number
-      persona_name: string | null
+      daemon_name: string | null
       message: string
     }>
 
     for (const msg of messages) {
-      const sender = msg.persona_name ?? "worker"
+      const sender = msg.daemon_name ?? "worker"
       const preview = msg.message.length > 120 ? msg.message.slice(0, 117) + "…" : msg.message
       try {
         await client.tui.showToast({ body: { message: `[${sender}] ${preview}`, variant: "success" } })
-      } catch (toastErr) {
-        console.warn(`[site-nine] failed to show toast for status_queue id ${msg.id}: ${toastErr}`)
+      } catch {
+        // Toast delivery failed — nothing we can do without stderr
       }
     }
   }
@@ -122,73 +118,38 @@ export const SiteNinePlugin: Plugin = async ({ $, worktree, client }) => {
     }
     lastActivityWriteAt.set(sessionID, now)
 
-    const activityResult = await callPython(activityScript, { session_id: sessionID })
-    if (!activityResult) return
-    if ((activityResult.status as string) === "error") {
-      console.warn(`[site-nine] activity update error for session ${sessionID}: ${activityResult.message}`)
-    }
+    await callPython(activityScript, { session_id: sessionID })
   }
 
   /**
-   * Handle session.deleted: suspend the active mission bound to this session.
+   * Handle session.deleted: exorcise the active possession bound to this session
+   * and release any UNDERWAY tasks back to TODO.
    * Retries with exponential backoff on failure.
    */
   const handleSessionDeleted = async (sessionID: string): Promise<void> => {
-    console.info(`[site-nine] session.deleted — attempting auto-suspend for session ${sessionID}`)
-
     lastActivityWriteAt.delete(sessionID)
 
     const payload = {
       session_id: sessionID,
-      reason: "OpenCode session closed",
     }
 
-    for (let attempt = 0; attempt <= SUSPEND_RETRY_DELAYS_MS.length; attempt++) {
-      const result = await callPython(suspendScript, payload)
+    for (let attempt = 0; attempt <= EXORCISE_RETRY_DELAYS_MS.length; attempt++) {
+      const result = await callPython(exorciseScript, payload)
 
       if (result) {
         const status = result.status as string
 
-        if (status === "suspended") {
-          console.info(
-            `[site-nine] auto-suspended mission ${result.mission_id} (${result.codename}) for session ${sessionID}`
-          )
-          return
-        } else if (status === "no_mission") {
-          console.debug(`[site-nine] no active mission for session ${sessionID}, no suspension needed`)
-          return
-        } else if (status === "skipped") {
-          console.debug(
-            `[site-nine] suspension skipped for mission ${result.mission_id}: ${result.reason}`
-          )
+        if (status === "exorcised" || status === "no_possession" || status === "skipped") {
           return
         } else if (status === "error") {
-          const isLastAttempt = attempt >= SUSPEND_RETRY_DELAYS_MS.length
-          if (isLastAttempt) {
-            console.error(
-              `[site-nine] auto-suspend failed after ${attempt + 1} attempt(s) for session ${sessionID}: ${result.message}`
-            )
-            return
-          }
-          const delayMs = SUSPEND_RETRY_DELAYS_MS[attempt]
-          console.warn(
-            `[site-nine] auto-suspend attempt ${attempt + 1} failed for session ${sessionID}: ${result.message} — retrying in ${delayMs}ms`
-          )
-          await sleep(delayMs)
+          const isLastAttempt = attempt >= EXORCISE_RETRY_DELAYS_MS.length
+          if (isLastAttempt) return
+          await sleep(EXORCISE_RETRY_DELAYS_MS[attempt])
         }
       } else {
-        const isLastAttempt = attempt >= SUSPEND_RETRY_DELAYS_MS.length
-        if (isLastAttempt) {
-          console.error(
-            `[site-nine] auto-suspend gave up after ${attempt + 1} attempt(s) for session ${sessionID} (script call failed)`
-          )
-          return
-        }
-        const delayMs = SUSPEND_RETRY_DELAYS_MS[attempt]
-        console.warn(
-          `[site-nine] auto-suspend attempt ${attempt + 1} failed (script call) for session ${sessionID} — retrying in ${delayMs}ms`
-        )
-        await sleep(delayMs)
+        const isLastAttempt = attempt >= EXORCISE_RETRY_DELAYS_MS.length
+        if (isLastAttempt) return
+        await sleep(EXORCISE_RETRY_DELAYS_MS[attempt])
       }
     }
   }
@@ -203,8 +164,8 @@ export const SiteNinePlugin: Plugin = async ({ $, worktree, client }) => {
           const sessionID = event.properties.info.id
           await handleSessionDeleted(sessionID)
         }
-      } catch (err) {
-        console.error(`[site-nine] Unhandled error in event handler (${event.type}): ${err}`)
+      } catch {
+        // Silently swallow — Python scripts handle their own logging
       }
     },
   }

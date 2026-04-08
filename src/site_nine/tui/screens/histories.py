@@ -147,8 +147,8 @@ class HistoryFullPage(Screen):
             lines.append(f"[bold]Ended:[/bold]      {possession.end_time}")
         if possession.epic_id:
             lines.append(f"[bold]Epic:[/bold]       {possession.epic_id}")
-        if possession.desk_mode_active:
-            lines.append("[bold]Desk Mode:[/bold] [green]active[/green]")
+        if possession.minion_mode_active:
+            lines.append("[bold]Minion Mode:[/bold] [green]active[/green]")
         lines.append(
             f"[dim]Created: {possession.created_at.format('YYYY-MM-DD HH:mm')}  "
             f"Updated: {possession.updated_at.format('YYYY-MM-DD HH:mm')}[/dim]"
@@ -384,8 +384,8 @@ class HistoriesScreen(Screen):
         if possession.epic_id:
             lines.append(f"[bold]Epic:[/bold]      {possession.epic_id}")
 
-        if possession.desk_mode_active:
-            lines.append("[green]● desk mode active[/green]")
+        if possession.minion_mode_active:
+            lines.append("[green]● minion mode active[/green]")
 
         lines.append(f"[dim]Updated: {possession.updated_at.format('YYYY-MM-DD HH:mm')}[/dim]")
         lines.append("")

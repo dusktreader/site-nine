@@ -52,9 +52,9 @@ CREATE TABLE IF NOT EXISTS possessions (
 
     -- OpenCode integration
     opencode_session_id TEXT,             -- OpenCode session ID (binds possession to session)
-    mode TEXT DEFAULT 'interactive'       -- 'interactive' (Admin/Director) or 'desk' (minion)
-        CHECK(mode IN ('interactive', 'desk')),
-    desk_mode_active INTEGER DEFAULT 0,   -- Whether desk mode loop is actively running (0 or 1)
+    mode TEXT DEFAULT 'interactive'       -- 'interactive' (Admin/Director) or 'minion' (background worker)
+        CHECK(mode IN ('interactive', 'minion')),
+    minion_mode_active INTEGER DEFAULT 0,   -- Whether minion mode loop is actively running (0 or 1)
 
     -- Status
     status TEXT NOT NULL DEFAULT 'ACTIVE'
@@ -87,7 +87,7 @@ CREATE INDEX IF NOT EXISTS idx_possessions_role ON possessions(role);
 CREATE INDEX IF NOT EXISTS idx_possessions_status ON possessions(status);
 CREATE INDEX IF NOT EXISTS idx_possessions_epic_id ON possessions(epic_id);
 CREATE INDEX IF NOT EXISTS idx_possessions_mode ON possessions(mode);
-CREATE INDEX IF NOT EXISTS idx_possessions_desk_mode ON possessions(desk_mode_active);
+CREATE INDEX IF NOT EXISTS idx_possessions_minion_mode ON possessions(minion_mode_active);
 CREATE INDEX IF NOT EXISTS idx_possessions_heartbeat ON possessions(last_heartbeat_at);
 CREATE INDEX IF NOT EXISTS idx_possessions_suspended ON possessions(status, suspension_time) WHERE status = 'SUSPENDED';
 CREATE UNIQUE INDEX IF NOT EXISTS idx_possessions_session_id ON possessions(opencode_session_id) WHERE opencode_session_id IS NOT NULL;

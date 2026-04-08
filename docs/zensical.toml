@@ -10,9 +10,9 @@ nav = [
   {"OpenCode Integration" = "opencode-integration.md"},
   {"Working with Agents" = [
     {"Overview" = "agents/overview.md"},
-    {"Missions" = "agents/missions.md"},
+    {"Possessions" = "agents/possessions.md"},
     {"Roles" = "agents/roles.md"},
-    {"Personas" = "agents/personas.md"},
+    {"Daemons" = "agents/daemons.md"},
   ]},
   {"Epics" = [
     {"Overview" = "epics/overview.md"},

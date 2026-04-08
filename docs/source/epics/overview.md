@@ -7,7 +7,7 @@ Epics are organizational containers that help Directors manage complex projects 
 
 An epic represents a high-level project or initiative composed of multiple related tasks. For example, "User Authentication System" might be an epic containing tasks for architecture design, API implementation, frontend integration, testing, and documentation.
 
-Epics are purely organizational tools. They group tasks together for planning and tracking purposes, but aren't directly assigned to agents or worked on during missions. Instead, agents work on the individual tasks that belong to an epic, and the epic automatically tracks progress as those tasks are completed.
+Epics are purely organizational tools. They group tasks together for planning and tracking purposes, but aren't directly assigned to agents or worked on during possessions. Instead, agents work on the individual tasks that belong to an epic, and the epic automatically tracks progress as those tasks are completed.
 
 
 ## Key Characteristics
