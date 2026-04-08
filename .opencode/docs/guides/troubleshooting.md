@@ -3,12 +3,18 @@
 > **Python policy:** Always use `uv run` for Python. Never use bare `python`, `python3`, or `pytest`.
 > See `.opencode/docs/guides/python-usage-policy.md`.
 
+> **Director note:** Sections marked `# Director runs:` use the `s9` CLI, which is for the Director
+> (human) only. Agents use OpenCode tools — never `s9` commands.
+
 Common issues and solutions.
 
 ## Quick Diagnostics
 
 ```bash
+# Director runs:
 s9 --version        # Check installation
+
+# Agents and Directors:
 uv sync             # Verify dependencies
 make qa             # Run quality checks
 git status          # Check git status
@@ -72,12 +78,14 @@ sqlite3 .opencode/data/project.db "SELECT * FROM tasks;"   # Query data
 
 Database doesn't exist:
 ```bash
+# Director runs:
 s9 init
 ls -la .opencode/data/project.db
 ```
 
 Database locked:
 ```bash
+# Director runs:
 ps aux | grep s9    # Find stuck processes
 kill <PID>          # Kill them
 s9 task list        # Retry
@@ -85,6 +93,7 @@ s9 task list        # Retry
 
 Wrong schema:
 ```bash
+# Director runs:
 cp .opencode/data/project.db .opencode/data/project.db.backup
 rm .opencode/data/project.db && s9 init  # WARNING: loses data
 # Or create migration script
@@ -104,8 +113,12 @@ sqlite3 .opencode/data/project.db "SELECT * FROM tasks WHERE id = 'ENG-H-0001';"
 
 ## CLI Not Working
 
+> **Director-only section.** This section covers installing and debugging the `s9` CLI binary. Agents
+> do not install or invoke `s9`.
+
 **Diagnosis:**
 ```bash
+# Director runs:
 which s9                                             # Check if installed
 s9 --version                                         # Check version
 uv run python -c "import sys; print(sys.path)"      # Check Python path
@@ -116,6 +129,8 @@ ls -la src/site_nine/                               # Verify structure
 
 `s9: command not found`:
 ```bash
+# Director runs:
+
 # Option 1: uv tool (recommended)
 uv tool uninstall site-nine
 uv tool install --editable .
@@ -130,6 +145,7 @@ pip install --editable .
 
 `ModuleNotFoundError: No module named 's9'` (old package name):
 ```bash
+# Director runs:
 uv tool uninstall s9
 uv tool uninstall site-nine
 uv tool install --editable .
@@ -138,12 +154,14 @@ s9 --version
 
 CLI hangs/crashes:
 ```bash
+# Director runs:
 ps aux | grep s9                                         # Check for deadlocks
 uv run python -m pdb -m site_nine.cli.main task list   # Debug
 ```
 
 Wrong version:
 ```bash
+# Director runs:
 s9 --version && git branch
 uv tool uninstall site-nine
 uv tool install --editable .
@@ -339,10 +357,12 @@ docker compose up -d
 **Debug commands:**
 ```bash
 uv run python --version
-s9 --version
 git branch && git log -3 --oneline
 uv pip list
 git status && git diff
+
+# Director runs:
+s9 --version
 ```
 
 ## Related Documentation

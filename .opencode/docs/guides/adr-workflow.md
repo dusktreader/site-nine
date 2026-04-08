@@ -1,5 +1,9 @@
 # Architecture Decision Records (ADRs) Workflow
 
+> **Director-only guide.** All commands in this document use the `s9` CLI, which is **for the Director
+> (human) only**. Agents must never run `s9` commands. Agents read ADR markdown files directly from
+> `.opencode/docs/adrs/` — no CLI required.
+
 Database-backed ADR system for tracking architectural decisions and linking them to epics/tasks.
 
 
@@ -23,6 +27,7 @@ presentation, providing bidirectional linking to epics/tasks for traceability.
 ### Create ADR
 
 ```bash
+# Director runs:
 s9 adr create --title "My Architecture Decision" --status PROPOSED
 ```
 
@@ -32,6 +37,7 @@ Creates database entry (ADR-001, ADR-002...) and markdown file in `.opencode/doc
 ### List ADRs
 
 ```bash
+# Director runs:
 s9 adr list                    # All ADRs
 s9 adr list --status ACCEPTED  # Filter by status
 ```
@@ -40,6 +46,7 @@ s9 adr list --status ACCEPTED  # Filter by status
 ### Show Details
 
 ```bash
+# Director runs:
 s9 adr show ADR-001  # Shows metadata, linked epics/tasks
 ```
 
@@ -47,6 +54,7 @@ s9 adr show ADR-001  # Shows metadata, linked epics/tasks
 ### Update Metadata
 
 ```bash
+# Director runs:
 s9 adr update ADR-001 --title "New Title"
 s9 adr update ADR-001 --status ACCEPTED
 s9 adr update ADR-001 --title "New Title" --status ACCEPTED
@@ -56,6 +64,7 @@ s9 adr update ADR-001 --title "New Title" --status ACCEPTED
 ### Sync from Filesystem
 
 ```bash
+# Director runs:
 s9 adr sync  # Import/update ADRs from .opencode/docs/adrs/
 ```
 
@@ -65,6 +74,7 @@ s9 adr sync  # Import/update ADRs from .opencode/docs/adrs/
 ### Epic Links
 
 ```bash
+# Director runs:
 s9 epic link-adr EPC-H-0001 ADR-001    # Link
 s9 epic sync --epic EPC-H-0001          # Update epic file
 s9 epic unlink-adr EPC-H-0001 ADR-001  # Unlink
@@ -74,6 +84,7 @@ s9 epic unlink-adr EPC-H-0001 ADR-001  # Unlink
 ### Task Links
 
 ```bash
+# Director runs:
 s9 task link-adr OPR-H-0063 ADR-006    # Link
 s9 task sync --task OPR-H-0063          # Update task file
 s9 task unlink-adr OPR-H-0063 ADR-006  # Unlink
@@ -85,6 +96,7 @@ s9 task unlink-adr OPR-H-0063 ADR-006  # Unlink
 ### Creating New ADR
 
 ```bash
+# Director runs:
 s9 adr create --title "Use Adapter Pattern for Tool Abstraction"
 # Edit markdown file with decision details
 s9 epic link-adr EPC-H-0004 ADR-007
@@ -96,6 +108,7 @@ s9 adr update ADR-007 --status ACCEPTED
 ### Linking During Implementation
 
 ```bash
+# Director runs:
 s9 task link-adr OPR-H-0065 ADR-001
 s9 task sync --task OPR-H-0065
 ```
@@ -104,6 +117,7 @@ s9 task sync --task OPR-H-0065
 ### Finding Related Work
 
 ```bash
+# Director runs:
 s9 adr show ADR-001  # Shows linked epics and tasks
 ```
 
@@ -111,6 +125,7 @@ s9 adr show ADR-001  # Shows linked epics and tasks
 ### Superseding ADR
 
 ```bash
+# Director runs:
 s9 adr create --title "Revised Adapter Pattern with MCP Support"
 s9 adr update ADR-001 --status SUPERSEDED
 # Reference old ADR in new ADR markdown
@@ -171,22 +186,24 @@ Created ADRs use this template structure:
 - **Update status**: Keep ADR status current
 - **Sync regularly**: Run sync commands after linking ADRs
 - **Reference in code**: Add comments referencing ADR IDs
-- **Review pending**: Use `s9 adr list --status PROPOSED` to review open decisions
+- **Review pending**: Director runs `s9 adr list --status PROPOSED` to review open decisions
 
 
 ## Troubleshooting
 
-**ADR not in epic/task file**: Ensure linking (`s9 epic link-adr` / `s9 task link-adr`) and sync (`s9 epic sync` /
-`s9 task sync`).
+**ADR not in epic/task file**: Director runs linking (`s9 epic link-adr` / `s9 task link-adr`) and sync
+(`s9 epic sync` / `s9 task sync`).
 
-**ADR missing from database**: Run `s9 adr sync` to import from filesystem.
+**ADR missing from database**: Director runs `s9 adr sync` to import from filesystem.
 
-**Can't find ADR**: Use `s9 adr list` or `s9 adr list --status ACCEPTED`.
+**Can't find ADR**: Director runs `s9 adr list` or `s9 adr list --status ACCEPTED`.
 
 
 ## Command Reference
 
 ```bash
+# Director runs — all ADR management is Director-only:
+
 # ADR management
 s9 adr create       # Create new ADR
 s9 adr list         # List ADRs (use --status to filter)

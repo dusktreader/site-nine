@@ -1,259 +1,36 @@
-# JSON Output Usage for Agents
+# Structured Data from Tools
 
-This guide explains when and how to use `--json` flags with s9 commands.
+This guide explains how agents access structured site-nine data using OpenCode tools.
+
+> **Note for Directors:** The `s9` CLI supports a `--json` flag for scripting and automation from the
+> terminal. That is a Director-only feature. Agents must never run `s9` commands — they call OpenCode
+> tools directly instead.
+
 
 ## Overview
 
-All s9 commands support two output modes:
-- **Table mode (default):** Pretty-printed tables for human consumption
-- **JSON mode (`--json`):** Structured data for programmatic parsing
+Agents never parse shell output. Every site-nine operation has a dedicated OpenCode tool that returns
+structured data as a typed result. There is no need for `--json` flags, `jq` parsing, or shell
+variable capture.
 
-## General Rule
 
-**Use `--json` when:**
-- Agent needs to parse/consume the data programmatically
-- Making decisions based on command output
-- Extracting specific fields from results
-- Integrating command output into workflows
+## Querying Tasks
 
-**Use table mode (default) when:**
-- Presenting data to the Director for review
-- Showing status updates to humans
-- Displaying results in skills for Director decision-making
+Use `task_show` to get task data. The tool accepts filters and returns authoritative database values.
 
-## Examples
+```typescript
+// All TODO tasks for your role
+task_show({ role: "Engineer", status: "TODO" })
 
-### ✅ Correct: Agent Consuming Data (Use --json)
+// A specific task by ID
+task_show({ task_id: "ENG-H-0037" })
 
-**Discovery workflow:**
-```bash
-# Agent needs to check if Architect is available
-possessions=$(s9 possession list --role Architect --epic EPC-H-0004 --json)
-
-# Parse JSON to check minion_mode_active field
-# Then make decision: send message or ask Director
+// Narrow by priority
+task_show({ role: "Engineer", status: "TODO", priority: "HIGH" })
 ```
 
-**Auto-claiming next task:**
-```bash
-# Check if tasks are available before claiming
-tasks=$(s9 task list --role Engineer --epic EPC-H-0005 --status TODO --json)
+**Result shape (single task):**
 
-# Parse to see count, then proceed
-if [ task_count > 0 ]; then
-  s9 task next
-fi
-```
-
-**Checking possession status:**
-```bash
-# Get structured data about current possession
-possession_data=$(s9 possession show 124 --json)
-
-# Extract specific fields for logic
-epic_id=$(echo $possession_data | jq -r '.epic_id')
-```
-
-### ✅ Correct: Presenting to Director (Use table mode)
-
-**Showing available tasks:**
-```bash
-# Director sees nicely formatted table
-s9 task list --role Engineer --status TODO
-```
-
-**Displaying inbox:**
-```bash
-# Director sees formatted message summaries
-s9 comms inbox
-```
-
-**Possession status report:**
-```bash
-# Director sees formatted possession details
-s9 dashboard --role Architect
-```
-
-## Command Categories
-
-### Discovery Commands (Use --json)
-
-These are typically used by agents for coordination logic:
-
-```bash
-# Find available agents
-s9 possession list --role <Role> --epic <EPIC-ID> --json
-
-# Check for tasks programmatically
-s9 task list --role <Role> --status TODO --json
-
-# Get possession details for parsing
-s9 possession show <possession-id> --json
-
-# Check epic details
-s9 epic show <EPIC-ID> --json
-```
-
-### Status/Reporting Commands (Use table mode by default)
-
-These are typically for presenting to Director:
-
-```bash
-# Show inbox (human reads it)
-s9 comms inbox
-
-# Display dashboard
-s9 dashboard
-s9 dashboard --role <Role>
-
-# List tasks for Director to review
-s9 task list --status TODO
-
-# Show possession status
-s9 possession list
-```
-
-### Hybrid: Context Dependent
-
-Some commands depend on context:
-
-```bash
-# FOR DIRECTOR (table mode):
-s9 task show ENG-H-0037
-
-# FOR AGENT LOGIC (--json):
-s9 task show ENG-H-0037 --json
-```
-
-## Skills Documentation Pattern
-
-When documenting workflows in skills, use this pattern:
-
-**For agent consumption:**
-```bash
-# Check for available Architects on this epic
-s9 possession list --role Architect --epic EPC-H-0004 --json
-# Parse minion_mode_active field to find available agents
-```
-
-**For Director presentation:**
-```bash
-# Show current task status to Director
-s9 task list --role Engineer --status TODO
-```
-
-**Make it clear why:**
-```bash
-# Agent parses JSON to make coordination decision
-possessions=$(s9 possession list --role Architect --epic EPC-H-0004 --json)
-
-# IF minion_mode_active == 1: send message
-# ELSE: ask Director to summon agent
-```
-
-## Updating Existing Skills
-
-When reviewing skills, check for these patterns:
-
-### Pattern 1: Discovery Workflows
-
-**Before:**
-```bash
-# Find agents working on epic
-s9 possession list --role Architect --epic EPC-H-0004
-```
-
-**After:**
-```bash
-# Find agents working on epic (parse for minion_mode_active)
-s9 possession list --role Architect --epic EPC-H-0004 --json
-```
-
-### Pattern 2: Auto-Claiming Tasks
-
-**Before:**
-```bash
-# Query for next task
-s9 task list --role Engineer --status TODO
-```
-
-**After (if agent will parse it):**
-```bash
-# Query for next task to auto-claim
-s9 task list --role Engineer --status TODO --json
-```
-
-**Or keep table mode if just showing to Director:**
-```bash
-# Show available tasks to Director for selection
-s9 task list --role Engineer --status TODO
-```
-
-### Pattern 3: Decision-Making
-
-**Before:**
-```bash
-# Check task status
-s9 task show ENG-H-0037
-```
-
-**After (if agent parses it):**
-```bash
-# Check task status for automated handling
-s9 task show ENG-H-0037 --json
-# Parse status field to determine next action
-```
-
-## JSON Structure Examples
-
-Understanding the JSON structure helps agents parse correctly:
-
-### Possession List JSON
-```json
-{
-  "possessions": [
-    {
-      "id": 62,
-      "daemon": "daedalus",
-      "role": "Architect",
-      "status": "ACTIVE",
-      "minion_mode_active": 1,
-      "epic_id": "EPC-H-0004",
-      "codename": "swift-forge"
-    }
-  ]
-}
-```
-
-**Useful fields for agents:**
-- `minion_mode_active`: Is agent available for messages? (0 or 1)
-- `epic_id`: What epic is agent working on?
-- `id`: Possession ID for sending messages
-
-### Task List JSON
-```json
-{
-  "tasks": [
-    {
-      "id": "ENG-H-0037",
-      "title": "Implement ToolRegistry",
-      "status": "TODO",
-      "priority": "HIGH",
-      "role": "Engineer",
-      "epic_id": "EPC-H-0004",
-      "possession_id": null
-    }
-  ]
-}
-```
-
-**Useful fields for agents:**
-- `status`: Is task available to claim?
-- `possession_id`: Is task already claimed?
-- `priority`: For prioritization logic
-- `epic_id`: Match with possession epic
-
-### Task Show JSON
 ```json
 {
   "id": "ENG-H-0037",
@@ -263,42 +40,108 @@ Understanding the JSON structure helps agents parse correctly:
   "role": "Engineer",
   "epic_id": "EPC-H-0004",
   "description": "...",
-  "acceptance_criteria": "..."
+  "possession_id": null
 }
 ```
 
-## Parsing JSON with jq
+**Useful fields:**
+- `status` — authoritative enum: `TODO`, `UNDERWAY`, `COMPLETE`, `ABORTED`. Report it verbatim.
+- `possession_id` — non-null means the task is already claimed
+- `priority` — for prioritization logic
 
-Agents can use `jq` for parsing JSON output:
+**Do not re-categorize tool results.** If `task_show` returns a task with `status: "COMPLETE"`, it is
+complete — do not move it to a different list because you expected otherwise.
 
-```bash
-# Get all possession IDs with minion mode active
-s9 possession list --role Architect --epic EPC-H-0004 --json | \
-  jq -r '.possessions[] | select(.minion_mode_active == 1) | .id'
 
-# Count TODO tasks
-s9 task list --status TODO --role Engineer --json | \
-  jq '.tasks | length'
+## Checking Minion Status
 
-# Extract epic_id from possession
-s9 possession show 124 --json | jq -r '.epic_id'
+Use `worker_status` to find active minions for a role:
 
-# Get all task IDs with HIGH priority
-s9 task list --priority HIGH --status TODO --json | \
-  jq -r '.tasks[].id'
+```typescript
+// Find active Engineer minions
+worker_status({ role: "Engineer" })
 ```
 
-## Best Practices
+**Result shape:**
 
-1. **Document intent** - Explain WHY you're using --json in comments
-2. **Parse safely** - Check for null/empty results before using data
-3. **Show to Director** - When presenting results, use table mode
-4. **Test both modes** - Verify commands work in both JSON and table mode
-5. **Update skills** - Document --json usage when agents consume data
+```json
+[
+  {
+    "possession_id": 62,
+    "daemon": "daedalus",
+    "role": "Engineer",
+    "status": "ACTIVE"
+  }
+]
+```
+
+**Useful fields:**
+- `possession_id` — use this to send messages via `worker_message`
+- `status` — `ACTIVE` means the minion is running and available for messages
+
+**Discovery pattern:**
+
+```typescript
+const minions = await worker_status({ role: "Architect" })
+
+if (minions.length > 0) {
+  // Minion is available — send a message
+  worker_message({ to_possession_id: minions[0].possession_id, body: "..." })
+} else {
+  // Ask Director to summon an Architect
+}
+```
+
+
+## Getting Your Task Dashboard
+
+`possession_dashboard` is called once at possession start by the `possession-start` skill. It returns
+your role-filtered view of available tasks.
+
+```typescript
+possession_dashboard({ role: "Engineer" })
+```
+
+Do not call `possession_dashboard` again during a session to find work. Use `task_show` with filters
+instead — it queries the database directly and is faster.
+
+
+## Generating Reports
+
+Use `task_show` with `report: true` to get a summary report:
+
+```typescript
+task_show({ report: true })
+```
+
+**Use report mode only for presenting an overview to the Director.** Do not use it to find your next
+task — use filtered `task_show` queries for that.
+
+
+## Presenting Data to the Director
+
+When the Director asks for a status update, present tool results naturally in prose or a table. You do
+not need special formatting — just describe what the tool returned.
+
+**Example:**
+
+> `task_show({ role: "Engineer", status: "TODO" })` returned 3 tasks: ENG-H-0037 (HIGH), ENG-H-0041
+> (MEDIUM), and ENG-H-0045 (LOW). I'll claim ENG-H-0037 first.
+
+
+## Summary
+
+| Need                        | Tool                                            |
+|-----------------------------|-------------------------------------------------|
+| Find available tasks        | `task_show({ role, status: "TODO" })`           |
+| Get a specific task         | `task_show({ task_id: "..." })`                 |
+| Find active minions         | `worker_status({ role: "..." })`                |
+| Get possession dashboard    | `possession_dashboard({ role: "..." })`         |
+| Generate a summary report   | `task_show({ report: true })`                   |
+
 
 ## See Also
 
-- **Agent Discovery Guide**: `agent-discovery.md` for discovery workflow examples
-- **Epic Possessions Guide**: `epic-possessions-and-minion-mode.md` for coordination patterns
-- **ADR-008** (lines 985-999): JSON output flag design rationale
-- **Task OPR-M-0074**: Implementation of --json flags across all s9 commands
+- **Agent Discovery Guide**: `agent-discovery.md` — patterns for finding and messaging other agents
+- **Admin Orchestration Guide**: `admin-orchestration.md` — coordinating minions via tools
+- **Tasks Guide**: `tasks.md` — full task lifecycle workflow
