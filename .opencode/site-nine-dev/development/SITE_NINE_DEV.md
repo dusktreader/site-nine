@@ -22,24 +22,27 @@ A command is considered broken if:
 
 When you encounter a broken `s9` command:
 
-1. **Create an Operator task immediately:**
-   ```bash
-   s9 task create --role Operator --priority HIGH \
-     --title "Fix broken s9 command: [command-name]" \
-     --description "Command: s9 [command-name] [subcommand]
-   
-   Issue: [Describe what's broken]
-   
-   Expected behavior: [What should happen]
-   
-   Actual behavior: [What actually happens]
-   
-   Error output: [Paste any error messages]
-   
-   Steps to reproduce:
-   1. [Step 1]
-   2. [Step 2]
-   3. [etc.]"
+1. **Create an Operator task immediately** using the `task_create` tool:
+   ```typescript
+   task_create({
+     role: "Operator",
+     priority: "HIGH",
+     title: "Fix broken s9 command: [command-name]",
+     description: `Command: s9 [command-name] [subcommand]
+
+Issue: [Describe what's broken]
+
+Expected behavior: [What should happen]
+
+Actual behavior: [What actually happens]
+
+Error output: [Paste any error messages]
+
+Steps to reproduce:
+1. [Step 1]
+2. [Step 2]
+3. [etc.]`
+   })
    ```
 
 2. **Use the workaround (if available):**
@@ -54,10 +57,12 @@ When you encounter a broken `s9` command:
 
 ### Example: Creating a Task for a Broken Command
 
-```bash
-s9 task create --role Operator --priority HIGH \
-  --title "Fix s9 mission start --session-file parameter" \
-  --description "Command: s9 mission start [name] --role [Role] --session-file [path]
+```typescript
+task_create({
+  role: "Operator",
+  priority: "HIGH",
+  title: "Fix s9 mission start --session-file parameter",
+  description: `Command: s9 mission start [name] --role [Role] --session-file [path]
 
 Issue: The --session-file parameter doesn't exist but is documented in the session-start skill.
 
@@ -74,7 +79,8 @@ Steps to reproduce:
 1. Run: s9 mission start myagent --role Engineer --session-file '.opencode/work/sessions/test.md'
 2. Observe the error
 
-Workaround: Use --task parameter instead, which exists and works."
+Workaround: Use --task parameter instead, which exists and works.`
+})
 ```
 
 ---

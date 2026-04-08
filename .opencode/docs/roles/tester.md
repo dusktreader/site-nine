@@ -90,7 +90,7 @@ User: Users report database timeouts
 Tester: I've reproduced the issue:
   Steps to reproduce:
   1. Start site-nine with SQLite database
-  2. Run: s9 task list --status TODO
+  2. Director runs: s9 task list --status TODO
   3. Make 100 concurrent calls
   4. Timeout occurs after ~30 seconds
   
