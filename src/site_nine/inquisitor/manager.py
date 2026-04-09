@@ -10,6 +10,7 @@ from site_nine.inquisitor.checks import (
     check_backups,
     check_claimed_timestamps,
     check_closed_timestamps,
+    check_crashed_minion_workers,
     check_daemon_incarnations,
     check_daemon_last_possession,
     check_database_exists,
@@ -43,6 +44,7 @@ _PASS_MESSAGES: dict[str, str] = {
     "10a. Abandoned Tasks": "No tasks abandoned by exorcised possessions",
     "10b. Orphaned Tasks": "No orphaned UNDERWAY tasks",
     "10c. Rogue Possessions": "No rogue ACTIVE/IDLE possessions with stale heartbeats",
+    "10d. Crashed Minion Workers": "No crashed minion worker possessions detected",
     "11. Task Files": "All task files exist",
 }
 
@@ -60,6 +62,7 @@ _FAIL_SUMMARIES: dict[str, str] = {
     "10a. Abandoned Tasks": "Found {n} tasks abandoned by exorcised possessions",
     "10b. Orphaned Tasks": "Found {n} orphaned UNDERWAY tasks",
     "10c. Rogue Possessions": "Found {n} rogue possessions (ACTIVE/IDLE with no recent heartbeat)",
+    "10d. Crashed Minion Workers": "Found {n} crashed minion worker possessions",
     "11. Task Files": "Found {n} missing task files",
 }
 
@@ -69,6 +72,9 @@ _FAIL_HINTS: dict[str, list[str]] = {
     "10b. Orphaned Tasks": ["These tasks should be manually reviewed and released or completed."],
     "10c. Rogue Possessions": [
         "Run with --fix to auto-exorcise rogue possessions and release their tasks back to TODO."
+    ],
+    "10d. Crashed Minion Workers": [
+        "Run with --fix to auto-exorcise crashed worker possessions and release their tasks back to TODO."
     ],
     "11. Task Files": ["Run 's9 task sync' to regenerate missing files."],
 }
@@ -82,12 +88,23 @@ class InquisitorManager:
         self.opencode_dir = opencode_dir
         self.db_path = opencode_dir / "data" / "project.db"
 
-    def run_diagnostics(self, *, verbose: bool = False, stale_hours: int = 3) -> DiagnosticReport:
+    def run_diagnostics(
+        self,
+        *,
+        verbose: bool = False,
+        stale_hours: int = 3,
+        stale_minutes_minion: int = 15,
+    ) -> DiagnosticReport:
         """Run all infrastructure and data integrity checks.
 
         Args:
             verbose: Include detailed output in check results.
-            stale_hours: Hours threshold for rogue possession detection (default: 3)
+            stale_hours: Hours threshold for rogue possession detection for
+                interactive (non-minion) possessions (default: 3).
+            stale_minutes_minion: Minutes threshold for rogue possession
+                detection for minion-mode possessions (default: 15).  Minion
+                workers emit a heartbeat every 5 minutes when idle, so 15
+                minutes of silence reliably indicates a crash or stall.
 
         Returns:
             A DiagnosticReport with all results aggregated.
@@ -114,7 +131,10 @@ class InquisitorManager:
             check_daemon_last_possession(self.db, verbose=verbose),
             check_abandoned_tasks(self.db, verbose=verbose),
             check_orphaned_underway(self.db, verbose=verbose),
-            check_rogue_possessions(self.db, verbose=verbose, stale_hours=stale_hours),
+            check_rogue_possessions(
+                self.db, verbose=verbose, stale_hours=stale_hours, stale_minutes_minion=stale_minutes_minion
+            ),
+            check_crashed_minion_workers(self.db, verbose=verbose),
             check_task_files(self.db, self.opencode_dir, verbose=verbose),
         ]
 

@@ -51,6 +51,7 @@ class Possession:
         last_heartbeat_at: Timestamp of last agent heartbeat
         epic_id: Epic ID for epic-scoped possessions (None if not epic-scoped)
         minion_mode_active: Whether possession is in minion mode
+        worker_pid: OS PID of minion_worker.py process (None for interactive, cleared on clean shutdown)
         mode: Interaction mode ('interactive' or 'minion')
         opencode_session_id: Linked OpenCode session ID
         suspension_time: When possession was suspended
@@ -69,6 +70,7 @@ class Possession:
     last_heartbeat_at: pendulum.DateTime | None
     epic_id: str | None
     minion_mode_active: bool
+    worker_pid: int | None
     mode: str
     opencode_session_id: str | None
     suspension_time: str | None
@@ -94,6 +96,7 @@ class Possession:
             last_heartbeat_at=last_heartbeat_at,
             epic_id=row.get("epic_id"),
             minion_mode_active=bool(row.get("minion_mode_active", 0)),
+            worker_pid=row.get("worker_pid"),
             mode=row.get("mode", "interactive"),
             opencode_session_id=row.get("opencode_session_id"),
             suspension_time=row.get("suspension_time"),

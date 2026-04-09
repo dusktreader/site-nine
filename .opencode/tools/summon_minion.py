@@ -11,15 +11,18 @@ This tool:
 This is the ONLY way for Admin agents to summon minions. Never use 's9 summon' CLI directly.
 """
 
+import os
 import sys
 import json
 import subprocess
 import time
+from datetime import datetime
 from pathlib import Path
 from tool_logging import logger
 
 from site_nine.core.database import Database
-from site_nine.core.paths import get_db_path
+from site_nine.core.paths import get_db_path, get_project_root
+from site_nine.workers.journal import DeskWorkerJournal
 
 
 def main():
@@ -82,16 +85,11 @@ def main():
 
         logger.info("summon_minion_starting", role=role, daemon=daemon, command=" ".join(cmd))
 
-        # Redirect worker stdout/stderr to a per-role log file so the process can
-        # run fully detached. Using PIPE would cause the worker to block once the
-        # pipe buffer fills (minion_worker.py produces substantial output during the
-        # opencode-run initialization phase), and the buffer would be orphaned
-        # when summon_minion exits — killing the worker process.
-        log_dir = Path.home() / ".local" / "state" / "site-nine" / "logs"
-        log_dir.mkdir(parents=True, exist_ok=True)
-        log_path = log_dir / f"minion-worker-{role.lower()}.log"
-
-        log_file = open(log_path, "a")
+        # Redirect worker stdout/stderr to /dev/null. The worker manages its own
+        # per-possession markdown journal inside .opencode/work/possessions/ and
+        # does not need a separate log file. Using PIPE would block the worker
+        # once the pipe buffer fills; /dev/null avoids that entirely.
+        devnull = open(os.devnull, "w")
 
         # Spawn worker as a fully detached background process.
         # start_new_session=True detaches it from our process group so it is not
@@ -99,8 +97,8 @@ def main():
         process = subprocess.Popen(
             cmd,
             cwd=str(repo_root),
-            stdout=log_file,
-            stderr=log_file,
+            stdout=devnull,
+            stderr=devnull,
             start_new_session=True,
         )
 
@@ -115,14 +113,10 @@ def main():
 
             # Check if process died unexpectedly (only treat as error after 10s grace period)
             if attempt > 10 and process.poll() is not None:
-                log_file.flush()
-                log_tail = log_path.read_text()[-2000:] if log_path.exists() else "(no log)"
                 return json.dumps(
                     {
                         "error": "worker_died",
                         "message": f"Worker process exited unexpectedly with code {process.returncode}",
-                        "log_tail": log_tail,
-                        "log_path": str(log_path),
                     }
                 )
 
@@ -130,7 +124,7 @@ def main():
             db = Database(get_db_path())
             rows = db.execute_query(
                 """
-                SELECT id, daemon_name FROM possessions
+                SELECT id, daemon_name, created_at FROM possessions
                 WHERE role = :role
                   AND status = 'ACTIVE'
                   AND end_time IS NULL
@@ -143,6 +137,7 @@ def main():
             if rows:
                 possession_id = rows[0]["id"]
                 daemon_name = rows[0]["daemon_name"]
+                possession_created_at = rows[0]["created_at"]
                 logger.info("summon_minion_success", possession_id=possession_id, role=role, daemon=daemon_name)
                 break
 
@@ -157,9 +152,30 @@ def main():
                 {
                     "error": "init_timeout",
                     "message": f"Worker initialization timed out after {max_attempts} seconds. Possession not created.",
-                    "log_path": str(log_path),
                 }
             )
+
+        # Derive the expected journal path from possession metadata
+        try:
+            project_root = get_project_root()
+            possessions_dir = project_root / ".opencode" / "work" / "possessions"
+            raw_ts = possession_created_at
+            if isinstance(raw_ts, str):
+                try:
+                    created_at = datetime.fromisoformat(raw_ts)
+                except ValueError:
+                    created_at = datetime.now()
+            else:
+                created_at = raw_ts if raw_ts is not None else datetime.now()
+            journal_path = DeskWorkerJournal.make_final_path(
+                possessions_dir=possessions_dir,
+                created_at=created_at,
+                role=role,
+                daemon=daemon_name,
+                possession_id=possession_id,
+            )
+        except Exception:
+            journal_path = None
 
         return json.dumps(
             {
@@ -170,7 +186,7 @@ def main():
                 "poll_interval": poll_interval,
                 "status": "summoned",
                 "message": f"Minion summoned successfully. Possession #{possession_id} ({daemon_name}, {role}) is now polling for messages.",
-                "log_path": str(log_path),
+                "journal_path": str(journal_path) if journal_path else None,
             }
         )
 

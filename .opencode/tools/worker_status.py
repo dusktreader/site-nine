@@ -24,6 +24,7 @@ def possession_to_dict(possession) -> dict:
         "role": possession.role,
         "status": possession.status.value if hasattr(possession.status, "value") else str(possession.status),
         "minion_mode_active": possession.minion_mode_active,
+        "worker_pid": possession.worker_pid,
         "last_active_at": possession.last_heartbeat_at.isoformat() if possession.last_heartbeat_at else None,
         "start_time": possession.start_time,
     }

@@ -16,19 +16,22 @@ Example:
 
 import argparse
 import json
+import os
 import signal
 import subprocess
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 # Imports from site_nine package
 # (No path manipulation needed - this module is now properly in src/site_nine/)
 from site_nine.core.database import Database
-from site_nine.core.paths import get_db_path
+from site_nine.core.paths import get_db_path, get_project_root
 from site_nine.messaging.manager import MessageManager
 from site_nine.possessions.manager import PossessionManager
+from site_nine.workers.journal import DeskWorkerJournal
 
 
 class MinionWorker:
@@ -39,6 +42,12 @@ class MinionWorker:
 
     # Default polling interval (seconds)
     DEFAULT_POLL_INTERVAL = 30
+
+    # Idle heartbeat interval (seconds).  When no messages are processed for
+    # this long, the worker touches possessions.last_heartbeat_at so that the
+    # Inquisitor's tightened 15-minute staleness threshold does not incorrectly
+    # exorcise a healthy idle worker.
+    HEARTBEAT_INTERVAL = 300  # 5 minutes
 
     # Priority ordering for message processing
     PRIORITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
@@ -67,6 +76,24 @@ class MinionWorker:
         self.possession_id: Optional[int] = None
         self.running = True
 
+        # Open a pending journal immediately so pre-init output is captured.
+        # The journal is renamed to its final possession-scoped path after
+        # initialize() completes and we know the possession ID and daemon.
+        possessions_dir = self._get_possessions_dir()
+        self.journal: DeskWorkerJournal = DeskWorkerJournal.open_pending(possessions_dir, role)
+
+    @staticmethod
+    def _get_possessions_dir() -> Path:
+        """Return the .opencode/work/possessions directory, creating it if needed."""
+        try:
+            project_root = get_project_root()
+        except FileNotFoundError:
+            # Fall back to cwd if project root not discoverable
+            project_root = Path.cwd()
+        possessions_dir = project_root / ".opencode" / "work" / "possessions"
+        possessions_dir.mkdir(parents=True, exist_ok=True)
+        return possessions_dir
+
     def initialize(self) -> None:
         """
         Initialize worker possession via opencode run.
@@ -77,7 +104,7 @@ class MinionWorker:
         Raises:
             RuntimeError: If possession initialization fails
         """
-        print(f"Initializing {self.role} worker...", flush=True)
+        self.journal.write_entry(f"Worker process started (PID: {os.getpid()})")
 
         # Build initialization message
         init_parts = [f"Your role is {self.role}."]
@@ -138,19 +165,15 @@ class MinionWorker:
                     )
 
                 self.session_id = session_id
-                print(f"Extracted session ID: {session_id}", flush=True)
+                self.journal.write_entry(f"OpenCode session initialized (session: {session_id})")
 
                 if process.returncode != 0:
                     # Non-zero exit is a warning, not fatal — the agent may have exited
                     # after completing init. As long as we got a session ID and the possession
                     # was created in the DB, we can continue.
-                    print(
-                        f"Warning: opencode run exited with code {process.returncode} (may be normal after init)",
-                        file=sys.stderr,
-                        flush=True,
+                    self.journal.write_entry(
+                        f"Warning: opencode run exited with code {process.returncode} (may be normal after init)"
                     )
-                    if stderr:
-                        print(f"Stderr: {stderr[:500]}", file=sys.stderr, flush=True)
 
             except subprocess.TimeoutExpired:
                 process.kill()
@@ -161,7 +184,7 @@ class MinionWorker:
             raise RuntimeError("opencode command not found. Is OpenCode installed and in PATH?")
 
         # Wait for possession to be created in database
-        print("Waiting for possession to be created...", flush=True)
+        self.journal.write_entry("Waiting for possession to be created in database...")
         time.sleep(5)
 
         # Find possession ID from database.
@@ -174,7 +197,7 @@ class MinionWorker:
         for _ in range(30):  # up to 30s
             rows = db.execute_query(
                 """
-                SELECT id, daemon_name FROM possessions
+                SELECT id, daemon_name, created_at FROM possessions
                 WHERE opencode_session_id = :session_id
                   AND status = 'ACTIVE'
                 ORDER BY created_at DESC
@@ -189,11 +212,11 @@ class MinionWorker:
 
         # Phase 2: fall back to role-based lookup (session may not have been bound)
         if possession_row is None:
-            print("Possession not found by session ID, searching by role...", flush=True)
+            self.journal.write_entry("Possession not found by session ID, searching by role...")
             for _ in range(15):  # up to 15s
                 rows = db.execute_query(
                     """
-                    SELECT id, daemon_name FROM possessions
+                    SELECT id, daemon_name, created_at FROM possessions
                     WHERE role = :role
                       AND opencode_session_id IS NULL
                       AND status = 'ACTIVE'
@@ -221,7 +244,7 @@ class MinionWorker:
             "SELECT id FROM possessions WHERE id = :id AND opencode_session_id IS NOT NULL",
             {"id": self.possession_id},
         ):
-            print(f"Binding session {self.session_id} to possession #{self.possession_id}...", flush=True)
+            self.journal.write_entry(f"Binding session {self.session_id} to possession #{self.possession_id}...")
             db.execute_update(
                 """
                 UPDATE possessions
@@ -234,19 +257,45 @@ class MinionWorker:
         if not self.session_id:
             raise RuntimeError(f"Possession #{self.possession_id} has no OpenCode session ID. Session binding failed.")
 
-        print(
-            f"Possession initialized successfully:\n"
-            f"  Possession ID: {self.possession_id}\n"
-            f"  Session ID: {self.session_id}\n"
-            f"  Daemon: {daemon_used}",
-            flush=True,
+        self.journal.write_entry(f"Possession ACTIVE (id: {self.possession_id})")
+
+        # Rename journal from pending to final possession-scoped path
+        raw_created_at = possession_row["created_at"]
+        if isinstance(raw_created_at, str):
+            # SQLite may return a string; parse it
+            try:
+                created_at = datetime.fromisoformat(raw_created_at)
+            except ValueError:
+                created_at = datetime.now()
+        else:
+            created_at = raw_created_at if raw_created_at is not None else datetime.now()
+
+        final_path = DeskWorkerJournal.make_final_path(
+            possessions_dir=self._get_possessions_dir(),
+            created_at=created_at,
+            role=self.role,
+            daemon=daemon_used,
+            possession_id=self.possession_id,
         )
+        self.journal.rename(final_path)
+
+        # Now write the front-matter header (after rename so it lands in the right file)
+        self.journal.write_header(
+            possession_id=self.possession_id,
+            daemon=daemon_used,
+            role=self.role,
+            start_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        # Re-record the key init events in structured form after the header
+        self.journal.write_entry(f"Minion mode enabled. Polling every {self.poll_interval}s.")
 
     def enable_minion_mode(self) -> None:
         """
-        Enable minion mode in database.
+        Enable minion mode in database and register the worker PID.
 
-        Sets minion_mode_active=1 for this worker's possession.
+        Sets minion_mode_active=1 and records os.getpid() in worker_pid for
+        this worker's possession. The Inquisitor uses worker_pid to detect
+        crashes via os.kill(pid, 0) without waiting for heartbeat staleness.
 
         Raises:
             RuntimeError: If possession_id is not set
@@ -257,7 +306,28 @@ class MinionWorker:
         db = Database(get_db_path())
         mgr = PossessionManager(db)
         mgr.set_minion_mode(self.possession_id, active=True)
-        print(f"Minion mode enabled for possession #{self.possession_id}", flush=True)
+
+        # Register worker PID for Inquisitor crash detection (ADR-016, Fix 4)
+        db.execute_update(
+            "UPDATE possessions SET worker_pid = :pid WHERE id = :id",
+            {"pid": os.getpid(), "id": self.possession_id},
+        )
+        self.journal.write_entry(f"Worker PID registered: {os.getpid()}")
+
+    def _emit_heartbeat(self) -> None:
+        """Touch possessions.last_heartbeat_at so the Inquisitor knows this worker is alive.
+
+        Called from the polling loop when no messages have been processed for
+        HEARTBEAT_INTERVAL seconds.  Non-fatal: any exception is logged and
+        swallowed so a transient DB error cannot kill the polling loop.
+        """
+        self.journal.write_entry("Heartbeat — idle, polling for messages")
+        try:
+            db = Database(get_db_path())
+            mgr = PossessionManager(db)
+            mgr.heartbeat(self.possession_id)
+        except Exception as exc:
+            self.journal.write_entry(f"Warning: heartbeat failed: {exc}")
 
     def check_for_messages(self) -> list:
         """
@@ -313,9 +383,16 @@ class MinionWorker:
             message.body,
         ]
 
-        print(f"\nProcessing message {message.id} ({message.priority})...", flush=True)
-        print(f"  Subject: {message.subject}", flush=True)
-        print(f"  From: Possession #{message.from_possession_id}", flush=True)
+        ts = datetime.now().strftime("%H:%M:%S")
+        body_preview = (message.body[:120] + "...") if len(message.body) > 120 else message.body
+        self.journal.write_message_section(
+            timestamp=ts,
+            message_id=str(message.id),
+            from_possession_id=message.from_possession_id,
+            priority=message.priority,
+            body_preview=body_preview,
+        )
+        self.journal.write_entry("Processing started")
 
         try:
             # Use Popen for non-blocking execution
@@ -337,30 +414,20 @@ class MinionWorker:
                     msg_mgr.update_conversation_view(message.conversation_id, self.possession_id)
 
                 if process.returncode == 0:
-                    print(f"  ✓ Processed {message.id} successfully", flush=True)
+                    self.journal.write_entry(f"Processing complete (exit code 0)")
                     return True
                 else:
-                    print(
-                        f"  ✗ Processing failed with exit code {process.returncode}",
-                        file=sys.stderr,
-                        flush=True,
-                    )
-                    if stderr:
-                        print(f"  Error: {stderr}", file=sys.stderr, flush=True)
+                    self.journal.write_entry(f"Processing failed (exit code {process.returncode})")
                     return False
 
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.communicate()
-                print(
-                    f"  ✗ Processing timed out after 20 minutes",
-                    file=sys.stderr,
-                    flush=True,
-                )
+                self.journal.write_entry("Processing timed out after 20 minutes")
                 return False
 
         except Exception as e:
-            print(f"  ✗ Processing failed: {e}", file=sys.stderr, flush=True)
+            self.journal.write_entry(f"Processing error: {e}")
             return False
 
     def handle_shutdown(self, signum: int, frame) -> None:
@@ -374,22 +441,28 @@ class MinionWorker:
             frame: Current stack frame (unused)
         """
         signal_name = "SIGTERM" if signum == signal.SIGTERM else "SIGINT"
-        print(f"\n\nReceived {signal_name}, shutting down gracefully...", flush=True)
+        self.journal.write_section("Shutdown")
+        self.journal.write_entry(f"{signal_name} received. Disabling minion mode.")
         self.running = False
 
-        # Disable minion mode
+        # Disable minion mode and clear worker PID
         try:
             db = Database(get_db_path())
             mgr = PossessionManager(db)
             if self.possession_id is not None:
                 mgr.set_minion_mode(self.possession_id, active=False)
-            print("Minion mode disabled", flush=True)
+                # Clear worker_pid on clean shutdown so Inquisitor knows this was not a crash
+                db.execute_update(
+                    "UPDATE possessions SET worker_pid = NULL WHERE id = :id",
+                    {"id": self.possession_id},
+                )
+                self.journal.write_entry("Worker PID cleared (clean shutdown)")
         except Exception as e:
-            print(f"Warning: Failed to disable minion mode: {e}", file=sys.stderr)
+            self.journal.write_entry(f"Warning: Failed to disable minion mode: {e}")
 
         # End possession via opencode run
         try:
-            print("Ending possession...", flush=True)
+            self.journal.write_entry("Ending possession via opencode run.")
             cmd = [
                 "opencode",
                 "run",
@@ -400,15 +473,11 @@ class MinionWorker:
                 "You are being dismissed. End your possession using the possession-end skill.",
             ]
             subprocess.run(cmd, check=False, timeout=600)  # 10 minute timeout for shutdown
-            print("Possession ended successfully", flush=True)
         except Exception as e:
-            print(
-                f"Warning: Failed to end possession cleanly: {e}",
-                file=sys.stderr,
-                flush=True,
-            )
+            self.journal.write_entry(f"Warning: Failed to end possession cleanly: {e}")
 
-        print("Shutdown complete", flush=True)
+        self.journal.write_entry("Shutdown complete.")
+        self.journal.write_shutdown()
         raise SystemExit(0)
 
     def run(self) -> None:
@@ -427,15 +496,10 @@ class MinionWorker:
             self.initialize()
             self.enable_minion_mode()
 
-            print(
-                f"\nMinion worker started successfully!\n"
-                f"  Role: {self.role}\n"
-                f"  Possession: #{self.possession_id}\n"
-                f"  Session: {self.session_id}\n"
-                f"  Poll interval: {self.poll_interval}s\n",
-                flush=True,
-            )
-            print("Polling for messages...\n", flush=True)
+            self.journal.write_section("Message Log")
+
+            # Track idle heartbeat timing (ADR-016, Fix 3)
+            last_heartbeat_at = time.time()
 
             # Main polling loop
             while self.running:
@@ -449,7 +513,7 @@ class MinionWorker:
                     {"id": self.possession_id},
                 )
                 if status_rows and status_rows[0]["status"] == "EXORCISED":
-                    print("\nPossession has been exorcised. Shutting down polling loop.", flush=True)
+                    self.journal.write_entry("Possession has been exorcised. Shutting down polling loop.")
                     self.running = False
                     break
 
@@ -457,38 +521,28 @@ class MinionWorker:
                     messages = self.check_for_messages()
 
                     if messages:
-                        print(
-                            f"\n{'=' * 60}\nFound {len(messages)} new message(s)!\n{'=' * 60}",
-                            flush=True,
-                        )
+                        self.journal.write_entry(f"Found {len(messages)} new message(s)")
+                        # Reset heartbeat timer — we were active this cycle
+                        last_heartbeat_at = time.time()
 
                         for msg in messages:
                             success = self.process_message(msg)
 
                             if not success:
-                                # Continue processing other messages even if one fails
-                                print(
-                                    f"  Continuing despite failure...",
-                                    file=sys.stderr,
-                                    flush=True,
-                                )
+                                self.journal.write_entry("Message processing failed. Continuing to next message.")
 
-                        print(f"{'=' * 60}\n", flush=True)
                     else:
-                        print(
-                            f"[{time.strftime('%H:%M:%S')}] Checking comms... No new messages. (0 unread)",
-                            flush=True,
-                        )
+                        self.journal.write_entry("Poll cycle — no new messages")
+                        # Emit idle heartbeat if enough time has passed since last one
+                        if time.time() - last_heartbeat_at >= self.HEARTBEAT_INTERVAL:
+                            self._emit_heartbeat()
+                            last_heartbeat_at = time.time()
 
                 except KeyboardInterrupt:
                     # Let signal handler take care of it
                     raise
                 except Exception as e:
-                    print(
-                        f"Error during polling cycle: {e}",
-                        file=sys.stderr,
-                        flush=True,
-                    )
+                    self.journal.write_entry(f"Error during polling cycle: {e}")
                     # Continue polling despite errors
                     continue
 
@@ -496,7 +550,8 @@ class MinionWorker:
             # Signal handler will take care of shutdown
             pass
         except Exception as e:
-            print(f"\nFatal error: {e}", file=sys.stderr, flush=True)
+            self.journal.write_entry(f"Fatal error: {e}")
+            self.journal.write_shutdown()
 
             # Try to clean up
             if self.possession_id:

@@ -60,6 +60,9 @@ CREATE TABLE IF NOT EXISTS possessions (
     status TEXT NOT NULL DEFAULT 'ACTIVE'
         CHECK(status IN ('ACTIVE', 'SUSPENDED', 'EXORCISED', 'ROLE_PENDING', 'DAEMON_PENDING')),
 
+    -- Worker PID (set by minion_worker.py; used by Inquisitor for crash detection)
+    worker_pid INTEGER,                   -- OS PID of minion_worker.py process; NULL for interactive, cleared on clean shutdown
+
     -- Heartbeat (plugin-managed; Inquisitor uses this for rogue detection)
     last_heartbeat_at TEXT,               -- ISO 8601 last heartbeat; Inquisitor exorcises if stale > 3h
 

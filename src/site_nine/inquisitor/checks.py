@@ -6,6 +6,7 @@ The manager calls these and aggregates the results into a DiagnosticReport.
 
 from __future__ import annotations
 
+import os
 import subprocess
 from datetime import timedelta
 from pathlib import Path
@@ -494,35 +495,47 @@ def check_rogue_possessions(
     *,
     verbose: bool = False,
     stale_hours: int = 3,
+    stale_minutes_minion: int = 15,
 ) -> tuple[str, list[DiagnosticIssue]]:
-    """Check 10c: ACTIVE/IDLE possessions with last_heartbeat_at older than stale_hours.
+    """Check 10c: ACTIVE/IDLE possessions with last_heartbeat_at older than threshold.
 
-    These are "rogue" possessions — OpenCode sessions that ended without cleaning up.
-    Auto-exorcises them: sets status to EXORCISED, records end_time, releases their tasks.
+    Two staleness thresholds apply (ADR-016, Fix 3):
+    - Minion-mode possessions (minion_mode_active=1): ``stale_minutes_minion`` minutes
+      (default 15).  These emit an idle heartbeat every 5 minutes, so 15 minutes of
+      silence means the worker has almost certainly crashed or was SIGKILL'd before
+      PID-based detection (Check 10d) could fire.
+    - Interactive possessions (minion_mode_active=0): ``stale_hours`` hours (default 3).
+
+    Auto-exorcises any rogue possession found: sets status to EXORCISED, records
+    end_time, and releases any UNDERWAY tasks back to TODO.
     """
-    cutoff = pendulum.now("UTC").subtract(hours=stale_hours).isoformat()
+    cutoff_interactive = pendulum.now("UTC").subtract(hours=stale_hours).isoformat()
+    cutoff_minion = pendulum.now("UTC").subtract(minutes=stale_minutes_minion).isoformat()
 
     rogue = db.execute_query(
         """
-        SELECT id, daemon_name, role, last_heartbeat_at, status
+        SELECT id, daemon_name, role, last_heartbeat_at, status, minion_mode_active
         FROM possessions
         WHERE status IN ('ACTIVE', 'IDLE')
         AND (
-            last_heartbeat_at IS NULL
-            OR last_heartbeat_at < :cutoff
+            (minion_mode_active = 1 AND (last_heartbeat_at IS NULL OR last_heartbeat_at < :cutoff_minion))
+            OR
+            (minion_mode_active = 0 AND (last_heartbeat_at IS NULL OR last_heartbeat_at < :cutoff_interactive))
         )
         """,
-        {"cutoff": cutoff},
+        {"cutoff_interactive": cutoff_interactive, "cutoff_minion": cutoff_minion},
     )
 
     issues: list[DiagnosticIssue] = []
     if rogue:
         for row in rogue:
             heartbeat = row["last_heartbeat_at"] or "never"
+            is_minion = bool(row["minion_mode_active"])
+            threshold_desc = f"{stale_minutes_minion}min" if is_minion else f"{stale_hours}h"
             desc = (
                 f"Possession #{row['id']} ({row['daemon_name']}, {row['role']}): "
                 f"status is {row['status']} but last heartbeat was {heartbeat} "
-                f"(older than {stale_hours}h) — rogue possession, auto-exorcising"
+                f"(older than {threshold_desc}) — rogue possession, auto-exorcising"
             )
             possession_id = row["id"]
 
@@ -576,4 +589,89 @@ def check_task_files(db: Database, opencode_dir: Path, *, verbose: bool = False)
                 issues.append(DiagnosticIssue(category="task_file", severity=Severity.WARNING, description=desc))
 
     label = "11. Task Files"
+    return label, issues
+
+
+def _is_pid_alive(pid: int) -> bool:
+    """Check whether a process with the given PID is still running on this machine.
+
+    Uses signal 0 which performs an existence check without sending an actual signal.
+
+    Args:
+        pid: OS process ID to check.
+
+    Returns:
+        True if the process exists (or if we lack permission to signal it), False if dead.
+    """
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        # Process exists but we cannot signal it — treat as alive.
+        return True
+
+
+def check_crashed_minion_workers(db: Database, *, verbose: bool = False) -> tuple[str, list[DiagnosticIssue]]:
+    """Check 10d: ACTIVE minion-mode possessions whose worker_pid is no longer alive.
+
+    For every ACTIVE possession with minion_mode_active=1 and a non-NULL worker_pid,
+    check whether that PID is still running via os.kill(pid, 0). If the process is
+    dead, immediately exorcise the possession without waiting for heartbeat staleness.
+
+    This reduces crash-to-detection latency from hours to the next Inquisitor cycle.
+    """
+    candidates = db.execute_query(
+        """
+        SELECT id, daemon_name, role, worker_pid, last_heartbeat_at
+        FROM possessions
+        WHERE status = 'ACTIVE'
+          AND minion_mode_active = 1
+          AND worker_pid IS NOT NULL
+        """
+    )
+
+    issues: list[DiagnosticIssue] = []
+    if candidates:
+        for row in candidates:
+            pid = row["worker_pid"]
+            if not _is_pid_alive(pid):
+                desc = (
+                    f"Possession #{row['id']} ({row['daemon_name']}, {row['role']}): "
+                    f"worker_pid {pid} is no longer alive — minion worker crashed, auto-exorcising"
+                )
+                possession_id = row["id"]
+
+                def make_fix(pid_: int = possession_id) -> None:
+                    now = utc_now()
+                    db.execute_update(
+                        """
+                        UPDATE possessions
+                        SET status = 'EXORCISED', end_time = :now,
+                            minion_mode_active = 0, worker_pid = NULL, updated_at = :now
+                        WHERE id = :id
+                        """,
+                        {"id": pid_, "now": now},
+                    )
+                    # Release any tasks this possession was holding
+                    db.execute_update(
+                        """
+                        UPDATE tasks
+                        SET status = 'TODO', current_possession_id = NULL, claimed_at = NULL
+                        WHERE current_possession_id = :id AND status = 'UNDERWAY'
+                        """,
+                        {"id": pid_},
+                    )
+
+                issues.append(
+                    DiagnosticIssue(
+                        category="crashed_worker",
+                        severity=Severity.FIXABLE,
+                        description=desc,
+                        fix_fn=make_fix,
+                    )
+                )
+
+    label = "10d. Crashed Minion Workers"
     return label, issues
