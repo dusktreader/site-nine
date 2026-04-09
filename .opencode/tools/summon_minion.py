@@ -4,18 +4,26 @@ summon_minion tool - Summon a minion-mode worker for a given role.
 
 This tool:
 1. Receives role, optional daemon, model, and poll_interval
-2. Spawns minion_worker.py as a fully detached background process
-3. Waits for the minion to initialize and create its possession
-4. Returns the summoned possession ID for subsequent coordination
+2. Generates a UUID spawn token and passes it to minion_worker.py
+3. Spawns minion_worker.py as a fully detached background process
+4. Polls for a status file written by the worker after initialization
+5. Returns the summoned possession ID for subsequent coordination
+
+The spawn-token mechanism eliminates the race condition that occurred when two
+same-role workers were spawned concurrently: the old code queried the DB for
+the most recent ACTIVE possession of the given role and could cross-assign IDs.
+Now each spawn uses a unique token, and the worker writes its exact possession
+ID to ``~/.local/state/site-nine/workers/<token>.json`` after initializing.
 
 This is the ONLY way for Admin agents to summon minions. Never use 's9 summon' CLI directly.
 """
 
+import json
 import os
 import sys
-import json
 import subprocess
 import time
+import uuid
 from datetime import datetime
 from pathlib import Path
 from tool_logging import logger
@@ -76,12 +84,21 @@ def main():
                 }
             )
 
+        # --- Spawn-token setup (ADR-016, Fix 5) ---
+        # Generate a unique token for this spawn so the worker can write a
+        # status file we can poll instead of racing on the DB by role.
+        spawn_token = uuid.uuid4().hex
+        status_dir = Path.home() / ".local" / "state" / "site-nine" / "workers"
+        status_dir.mkdir(parents=True, exist_ok=True)
+        status_file = status_dir / f"{spawn_token}.json"
+
         # Build command
         cmd = ["uv", "run", "python", str(minion_worker_script), role]
         if daemon:
             cmd.extend(["--daemon", daemon])
         cmd.extend(["--model", model])
         cmd.extend(["--poll-interval", str(poll_interval)])
+        cmd.extend(["--spawn-token", spawn_token])
 
         logger.info("summon_minion_starting", role=role, daemon=daemon, command=" ".join(cmd))
 
@@ -102,17 +119,21 @@ def main():
             start_new_session=True,
         )
 
-        # Wait for worker to initialize and create possession (up to 120 seconds)
-        logger.debug("summon_minion_waiting_for_init", role=role)
+        # Poll for the spawn-token status file written by the worker after init.
+        # This replaces the role-based DB query that was susceptible to race
+        # conditions when two same-role workers were spawned concurrently.
+        logger.debug("summon_minion_waiting_for_spawn_token", role=role, spawn_token=spawn_token)
 
         possession_id = None
         daemon_name = None
+        possession_created_at = None
         max_attempts = 120
         for attempt in range(max_attempts):
             time.sleep(1)
 
             # Check if process died unexpectedly (only treat as error after 10s grace period)
             if attempt > 10 and process.poll() is not None:
+                _cleanup_status_file(status_file)
                 return json.dumps(
                     {
                         "error": "worker_died",
@@ -120,40 +141,53 @@ def main():
                     }
                 )
 
-            # Check database for newly created ACTIVE possession for this role
-            db = Database(get_db_path())
-            rows = db.execute_query(
-                """
-                SELECT id, daemon_name, created_at FROM possessions
-                WHERE role = :role
-                  AND status = 'ACTIVE'
-                  AND end_time IS NULL
-                ORDER BY created_at DESC
-                LIMIT 1
-                """,
-                {"role": role},
-            )
-
-            if rows:
-                possession_id = rows[0]["id"]
-                daemon_name = rows[0]["daemon_name"]
-                possession_created_at = rows[0]["created_at"]
-                logger.info("summon_minion_success", possession_id=possession_id, role=role, daemon=daemon_name)
-                break
+            # Check for spawn-token status file written by the worker
+            if status_file.exists():
+                try:
+                    data = json.loads(status_file.read_text(encoding="utf-8"))
+                    if data.get("status") == "ready":
+                        possession_id = data["possession_id"]
+                        daemon_name = data["daemon"]
+                        logger.info(
+                            "summon_minion_token_file_found",
+                            possession_id=possession_id,
+                            role=role,
+                            daemon=daemon_name,
+                        )
+                        _cleanup_status_file(status_file)
+                        break
+                except (json.JSONDecodeError, KeyError):
+                    # File may be partially written; try again next cycle
+                    pass
 
         if possession_id is None:
-            # Timeout - kill the process
+            # Timeout - kill the process and clean up
             process.terminate()
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 process.kill()
+            _cleanup_status_file(status_file)
             return json.dumps(
                 {
                     "error": "init_timeout",
                     "message": f"Worker initialization timed out after {max_attempts} seconds. Possession not created.",
                 }
             )
+
+        # Retrieve possession metadata (created_at) from the DB for journal path derivation.
+        db = Database(get_db_path())
+        rows = db.execute_query(
+            "SELECT created_at, daemon_name FROM possessions WHERE id = :id",
+            {"id": possession_id},
+        )
+        if rows:
+            possession_created_at = rows[0]["created_at"]
+            # Prefer the DB daemon name (daemon_name may be None from token file if auto-assigned)
+            if rows[0]["daemon_name"]:
+                daemon_name = rows[0]["daemon_name"]
+
+        logger.info("summon_minion_success", possession_id=possession_id, role=role, daemon=daemon_name)
 
         # Derive the expected journal path from possession metadata
         try:
@@ -193,6 +227,14 @@ def main():
     except Exception as e:
         logger.exception("summon_minion_error", error=str(e))
         return json.dumps({"error": "unexpected_error", "message": str(e)})
+
+
+def _cleanup_status_file(status_file: Path) -> None:
+    """Remove the spawn-token status file if it exists, silently ignoring errors."""
+    try:
+        status_file.unlink(missing_ok=True)
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

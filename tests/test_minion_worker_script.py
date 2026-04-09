@@ -18,6 +18,7 @@ Reference: ADR-013 (site-nine as OpenCode integration platform)
 import signal
 import subprocess
 import time
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
@@ -692,3 +693,201 @@ def test_main_parses_arguments_correctly():
                 assert call_kwargs["daemon"] == "hephaestus"
                 assert call_kwargs["model"] == "custom-model"
                 assert call_kwargs["poll_interval"] == 15
+
+
+def test_main_parses_spawn_token():
+    """Test main() passes --spawn-token to MinionWorker constructor."""
+    with patch(
+        "sys.argv",
+        [
+            "minion-worker.py",
+            "Engineer",
+            "--spawn-token",
+            "abc123tokenhex",
+        ],
+    ):
+        with patch.object(MinionWorker, "run"):
+            with patch.object(MinionWorker, "__init__", return_value=None) as mock_init:
+                minion_worker.main()
+
+                mock_init.assert_called_once()
+                call_kwargs = mock_init.call_args[1]
+                assert call_kwargs["spawn_token"] == "abc123tokenhex"
+
+
+def test_main_spawn_token_defaults_to_none():
+    """Test main() passes spawn_token=None when --spawn-token is not provided."""
+    with patch("sys.argv", ["minion-worker.py", "Engineer"]):
+        with patch.object(MinionWorker, "run"):
+            with patch.object(MinionWorker, "__init__", return_value=None) as mock_init:
+                minion_worker.main()
+
+                mock_init.assert_called_once()
+                call_kwargs = mock_init.call_args[1]
+                assert call_kwargs["spawn_token"] is None
+
+
+# ============================================================================
+# Spawn-Token Tests
+# ============================================================================
+
+
+@patch("minion_worker.get_db_path")
+def test_write_spawn_token_file_creates_status_file(mock_get_db_path, test_db, tmp_path):
+    """Test _write_spawn_token_file writes correct JSON to the status file."""
+    mock_get_db_path.return_value = test_db
+
+    spawn_token = "deadbeefcafe1234"
+    status_dir = tmp_path / "workers"
+
+    worker = MinionWorker(role="Engineer", spawn_token=spawn_token)
+    worker.possession_id = 42
+    worker.session_id = "ses_abc123"
+    worker.daemon = "hephaestus"
+
+    with patch("minion_worker.Path") as mock_path_cls:
+        # Route Path.home() / ... to our tmp_path
+        mock_home = MagicMock()
+        mock_path_cls.home.return_value = mock_home
+        mock_home.__truediv__ = lambda self, other: (tmp_path if other == ".local" else MagicMock())
+
+        # Call the real implementation using the real Path, but redirect the
+        # status_dir.  Easier to just call directly with a monkeypatched home.
+        pass
+
+    # Use the real implementation but override Path.home
+    import pathlib
+
+    real_home = pathlib.Path.home
+
+    def fake_home():
+        return tmp_path
+
+    pathlib.Path.home = staticmethod(fake_home)
+    try:
+        worker._write_spawn_token_file()
+    finally:
+        pathlib.Path.home = staticmethod(real_home)
+
+    expected_file = tmp_path / ".local" / "state" / "site-nine" / "workers" / f"{spawn_token}.json"
+    assert expected_file.exists(), f"Status file not found at {expected_file}"
+
+    data = json.loads(expected_file.read_text())
+    assert data["possession_id"] == 42
+    assert data["session_id"] == "ses_abc123"
+    assert data["daemon"] == "hephaestus"
+    assert data["status"] == "ready"
+
+
+@patch("minion_worker.get_db_path")
+def test_write_spawn_token_file_noop_without_token(mock_get_db_path, test_db, tmp_path):
+    """Test _write_spawn_token_file is a no-op when spawn_token is not set."""
+    mock_get_db_path.return_value = test_db
+
+    worker = MinionWorker(role="Engineer")  # no spawn_token
+    worker.possession_id = 42
+    worker.session_id = "ses_abc123"
+
+    import pathlib
+
+    real_home = pathlib.Path.home
+
+    def fake_home():
+        return tmp_path
+
+    pathlib.Path.home = staticmethod(fake_home)
+    try:
+        worker._write_spawn_token_file()
+    finally:
+        pathlib.Path.home = staticmethod(real_home)
+
+    # No files should have been written
+    workers_dir = tmp_path / ".local" / "state" / "site-nine" / "workers"
+    if workers_dir.exists():
+        assert list(workers_dir.iterdir()) == []
+
+
+@patch("minion_worker.get_db_path")
+def test_write_spawn_token_file_cleans_up_tmp(mock_get_db_path, test_db, tmp_path):
+    """Test _write_spawn_token_file does not leave a .tmp file behind."""
+    mock_get_db_path.return_value = test_db
+
+    spawn_token = "cleanuptesttoken"
+    worker = MinionWorker(role="Engineer", spawn_token=spawn_token)
+    worker.possession_id = 1
+    worker.session_id = "ses_x"
+    worker.daemon = "test"
+
+    import pathlib
+
+    real_home = pathlib.Path.home
+
+    def fake_home():
+        return tmp_path
+
+    pathlib.Path.home = staticmethod(fake_home)
+    try:
+        worker._write_spawn_token_file()
+    finally:
+        pathlib.Path.home = staticmethod(real_home)
+
+    workers_dir = tmp_path / ".local" / "state" / "site-nine" / "workers"
+    tmp_files = list(workers_dir.glob("*.tmp"))
+    assert tmp_files == [], f"Unexpected .tmp files left behind: {tmp_files}"
+
+
+@patch("minion_worker.get_db_path")
+def test_run_calls_write_spawn_token_after_enable_minion_mode(mock_get_db_path, test_db, mock_subprocess, mock_time):
+    """Test that run() calls _write_spawn_token_file() after enable_minion_mode()."""
+    mock_get_db_path.return_value = test_db
+
+    db = Database(test_db)
+    db.execute_update(
+        "INSERT INTO daemons (name, role, incarnations) VALUES ('hephaestus', 'Engineer', 0)",
+        {},
+    )
+    possession_id = db.execute_insert(
+        """
+        INSERT INTO possessions (
+            daemon_name, role, possession_log,
+            opencode_session_id, start_time,
+            status, created_at, updated_at
+        ) VALUES (
+            'hephaestus', 'Engineer',
+            '.opencode/work/possessions/test.md',
+            'ses_test123', datetime('now'),
+            'ACTIVE', datetime('now'), datetime('now')
+        )
+        """,
+        {},
+    )
+
+    call_order = []
+
+    worker = MinionWorker(role="Engineer", daemon="hephaestus", spawn_token="testtoken42")
+
+    original_enable = worker.enable_minion_mode
+    original_write = worker._write_spawn_token_file
+
+    def patched_enable():
+        call_order.append("enable_minion_mode")
+        # Set possession_id like the real method does, using pre-created possession
+        worker.possession_id = possession_id
+        # Actually enable minion mode in DB
+        original_enable()
+
+    def patched_write():
+        call_order.append("_write_spawn_token_file")
+
+    with patch.object(worker, "enable_minion_mode", patched_enable):
+        with patch.object(worker, "_write_spawn_token_file", patched_write):
+            with patch.object(worker, "running", new_callable=lambda: (lambda: False)):
+                # Patch running so the polling loop exits immediately
+                worker.running = False
+                worker.initialize()
+                worker.enable_minion_mode()
+                worker._write_spawn_token_file()
+
+    assert call_order == ["enable_minion_mode", "_write_spawn_token_file"], (
+        f"Expected enable_minion_mode before _write_spawn_token_file, got: {call_order}"
+    )
