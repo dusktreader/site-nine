@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import signal
 import sys
+import time
 from typing import Annotated
 
 import typer
@@ -762,3 +764,147 @@ def status(
             )
 
         console.print(table)
+
+
+@app.command()
+@handle_errors("Failed to run minion mode", handle_exc_class=SiteNineError)
+def minion(
+    stop: Annotated[bool, typer.Option("--stop", help="Disable minion mode")] = False,
+    start: Annotated[bool, typer.Option("--start", help="Enable minion mode (default)")] = False,
+    mission: Annotated[int | None, typer.Option("--mission", "-m", help="Target possession ID")] = None,
+    json_output: Annotated[bool, typer.Option("--json", "-j", help="Output JSON and exit (no polling)")] = False,
+) -> None:
+    """Enable or disable minion mode for the current (or specified) possession.
+
+    Without --stop: enables minion mode and enters a polling loop (interactive),
+    or returns JSON status snapshot (with --json).
+
+    With --stop: disables minion mode and exits.
+    """
+    db_path = require_db_path()
+
+    with Database(db_path) as db:
+        possession_mgr = PossessionManager(db)
+        msg_manager = MessageManager(db)
+
+        # Resolve possession
+        if mission is not None:
+            possession_id = mission
+            possession = possession_mgr.get_possession(possession_id)
+            CLIError.require_condition(
+                possession is not None,
+                f"Possession {possession_id} not found",
+            )
+        else:
+            rows = db.execute_query(
+                """
+                SELECT id FROM possessions
+                WHERE status != 'EXORCISED'
+                ORDER BY start_time DESC, id DESC
+                LIMIT 1
+                """
+            )
+            CLIError.require_condition(
+                bool(rows),
+                "No active possession found. Start a possession first.",
+            )
+            possession_id = rows[0]["id"]
+            possession = possession_mgr.get_possession(possession_id)
+
+        assert possession is not None
+
+        if stop:
+            possession_mgr.set_minion_mode(possession_id, active=False)
+            scope = f"epic {possession.epic_id}" if possession.epic_id else "all"
+            if json_output:
+                output_json(
+                    format_json_response(
+                        {
+                            "mission_id": possession_id,
+                            "minion_mode_active": False,
+                            "scope": scope,
+                            "unread_count": 0,
+                            "unread_messages": [],
+                        }
+                    )
+                )
+            else:
+                terminal_message(
+                    f"Minion mode disabled for possession {possession_id}",
+                    subject="Done",
+                    subject_color="green",
+                )
+            return
+
+        # Enable minion mode
+        possession_mgr.set_minion_mode(possession_id, active=True)
+        scope = f"epic {possession.epic_id}" if possession.epic_id else "all"
+
+        # Build unread message list
+        conversations = msg_manager.get_unread_conversations(possession_id)
+        unread_messages: list[dict] = []
+        for conv in conversations:
+            for msg in msg_manager.get_unread_messages(conv.id, possession_id):
+                if msg.from_possession_id != possession_id:
+                    unread_messages.append(
+                        {
+                            "message_id": msg.id,
+                            "from_mission_id": msg.from_possession_id,
+                            "subject": msg.subject,
+                            "priority": msg.priority,
+                            "conversation_id": conv.id,
+                        }
+                    )
+
+    if json_output:
+        output_json(
+            format_json_response(
+                {
+                    "mission_id": possession_id,
+                    "minion_mode_active": True,
+                    "scope": scope,
+                    "unread_count": len(unread_messages),
+                    "unread_messages": unread_messages,
+                }
+            )
+        )
+        return
+
+    # Interactive polling loop
+    console.print(f"[green]Minion mode enabled for {scope}[/green]  [dim]Press Ctrl+C to stop[/dim]")
+
+    def _cleanup(signum, frame):
+        with Database(db_path) as _db:
+            PossessionManager(_db).set_minion_mode(possession_id, active=False)
+        console.print("\n[yellow]Minion mode disabled.[/yellow]")
+        raise SystemExit(0)
+
+    signal.signal(signal.SIGINT, _cleanup)
+
+    while True:
+        time.sleep(5)
+        with Database(db_path) as db:
+            msg_manager = MessageManager(db)
+            conversations = msg_manager.get_unread_conversations(possession_id)
+            new_msgs: list[dict] = []
+            for conv in conversations:
+                for msg in msg_manager.get_unread_messages(conv.id, possession_id):
+                    if msg.from_possession_id != possession_id:
+                        new_msgs.append(
+                            {
+                                "message_id": msg.id,
+                                "from_mission_id": msg.from_possession_id,
+                                "subject": msg.subject,
+                            }
+                        )
+
+        if new_msgs:
+            for m in new_msgs:
+                console.print(
+                    f"[cyan]{m['message_id']}[/cyan] "
+                    f"Mission #{m['from_mission_id']}: "
+                    f"[white]{m['subject']}[/white]  "
+                    f"[dim]new message[/dim]"
+                )
+        else:
+            console.print("[dim]No new messages[/dim]")

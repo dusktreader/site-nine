@@ -1,0 +1,1 @@
+- **20:35:21** Spawn token file written: cleanuptesttoken.json

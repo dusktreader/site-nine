@@ -1,0 +1,1 @@
+- **20:25:48** Spawn token file written: deadbeefcafe1234.json

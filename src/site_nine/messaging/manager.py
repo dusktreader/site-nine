@@ -644,13 +644,19 @@ class MessageManager:
     # Conversation View Tracking
     # ============================================================================
 
-    def update_conversation_view(self, conversation_id: str, possession_id: int) -> ConversationView:
+    def update_conversation_view(
+        self,
+        conversation_id: str,
+        possession_id: int,
+        viewed_at: str | None = None,
+    ) -> ConversationView:
         """
         Update last viewed timestamp for a conversation.
 
         Args:
             conversation_id: Conversation ID
             possession_id: Possession ID
+            viewed_at: Optional explicit timestamp (defaults to utc_now())
 
         Returns:
             Updated conversation view
@@ -661,6 +667,7 @@ class MessageManager:
             possession_id=possession_id,
         )
 
+        now = viewed_at if viewed_at is not None else utc_now()
         self.db.execute_update(
             """
             INSERT INTO conversation_views (conversation_id, possession_id, last_viewed_at)
@@ -668,7 +675,7 @@ class MessageManager:
             ON CONFLICT(conversation_id, possession_id)
             DO UPDATE SET last_viewed_at = :now
             """,
-            {"conversation_id": conversation_id, "possession_id": possession_id, "now": utc_now()},
+            {"conversation_id": conversation_id, "possession_id": possession_id, "now": now},
         )
 
         view = self.get_conversation_view(conversation_id, possession_id)
@@ -730,7 +737,7 @@ class MessageManager:
                 EXISTS (
                     SELECT 1 FROM messages m2
                     WHERE m2.conversation_id = c.id
-                    AND datetime(m2.created_at) >= datetime(cv.last_viewed_at)
+                    AND datetime(m2.created_at) > datetime(cv.last_viewed_at)
                 )
             )
             AND (
@@ -802,7 +809,7 @@ class MessageManager:
             WHERE m.conversation_id = :conversation_id
             AND (
                 cv.last_viewed_at IS NULL
-                OR datetime(m.created_at) >= datetime(cv.last_viewed_at)
+                OR datetime(m.created_at) > datetime(cv.last_viewed_at)
             )
             ORDER BY m.created_at ASC
             """,
@@ -832,7 +839,7 @@ class MessageManager:
             WHERE m.conversation_id = :conversation_id
             AND (
                 cv.last_viewed_at IS NULL
-                OR datetime(m.created_at) >= datetime(cv.last_viewed_at)
+                OR datetime(m.created_at) > datetime(cv.last_viewed_at)
             )
             """,
             {"conversation_id": conversation_id, "possession_id": possession_id},

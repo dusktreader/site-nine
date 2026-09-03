@@ -102,11 +102,14 @@ def main():
 
         logger.info("summon_minion_starting", role=role, daemon=daemon, command=" ".join(cmd))
 
-        # Redirect worker stdout/stderr to /dev/null. The worker manages its own
-        # per-possession markdown journal inside .opencode/work/possessions/ and
-        # does not need a separate log file. Using PIPE would block the worker
-        # once the pipe buffer fills; /dev/null avoids that entirely.
-        devnull = open(os.devnull, "w")
+        # Redirect worker stdout/stderr to a log file. The worker also manages its own
+        # loguru file sink (via _configure_worker_logging), but capturing the process-level
+        # stdout/stderr here ensures that any crash before loguru is configured (e.g. an
+        # import error) is not silently lost.
+        log_dir = Path.home() / ".local" / "state" / "site-nine" / "workers" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        proc_log_path = log_dir / f"minion-{role.lower()}-{spawn_token[:8]}.proc.log"
+        proc_log_file = open(proc_log_path, "w")
 
         # Spawn worker as a fully detached background process.
         # start_new_session=True detaches it from our process group so it is not
@@ -114,8 +117,8 @@ def main():
         process = subprocess.Popen(
             cmd,
             cwd=str(repo_root),
-            stdout=devnull,
-            stderr=devnull,
+            stdout=proc_log_file,
+            stderr=proc_log_file,
             start_new_session=True,
         )
 
@@ -127,12 +130,13 @@ def main():
         possession_id = None
         daemon_name = None
         possession_created_at = None
-        max_attempts = 120
+        max_attempts = 600  # 10-minute timeout — opencode run with possession-start can take several minutes
         for attempt in range(max_attempts):
             time.sleep(1)
 
-            # Check if process died unexpectedly (only treat as error after 10s grace period)
-            if attempt > 10 and process.poll() is not None:
+            # Check if process died unexpectedly (only treat as error after 60s grace period)
+            # opencode run can take 30-60s to boot, call the model, and complete init.
+            if attempt > 60 and process.poll() is not None:
                 _cleanup_status_file(status_file)
                 return json.dumps(
                     {

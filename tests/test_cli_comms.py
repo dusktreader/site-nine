@@ -576,40 +576,6 @@ class TestCommsStatus:
         assert result.exit_code != 0
 
 
-@pytest.mark.skip(reason="s9 comms minion command removed (ENG-H-0212)")
-class TestCommsMinion:
-    """Tests for removed s9 comms minion command (subsumed by minion mode; see ENG-H-0212)."""
-
-    def test_minion_stop(self, initialized_project: Path):
-        """Minion mode stop command works."""
-        _setup_missions(initialized_project)
-
-        result = runner.invoke(app, ["comms", "minion", "--stop"])
-
-        assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "disabled" in result.output.lower() or "Minion" in result.output
-
-    def test_minion_stop_json(self, initialized_project: Path):
-        """Minion mode stop with JSON output."""
-        _setup_missions(initialized_project)
-
-        result = runner.invoke(app, ["comms", "minion", "--stop", "--json"])
-
-        assert result.exit_code == 0, f"Command failed: {result.output}"
-        data = json.loads(result.output)
-        assert data["data"]["minion_mode_active"] is False
-
-    def test_minion_start_json(self, initialized_project: Path):
-        """Minion mode start with JSON output (non-blocking)."""
-        _setup_missions(initialized_project)
-
-        result = runner.invoke(app, ["comms", "minion", "--json"])
-
-        assert result.exit_code == 0, f"Command failed: {result.output}"
-        data = json.loads(result.output)
-        assert data["data"]["minion_mode_active"] is True
-
-
 class TestCommsWithoutInit:
     """Tests that comms commands fail properly without initialization."""
 

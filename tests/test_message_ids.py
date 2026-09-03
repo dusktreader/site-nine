@@ -155,100 +155,57 @@ def test_get_next_message_number_empty_db(test_db):
     assert result == 1
 
 
-def test_get_next_message_number_with_existing_messages(test_db):
+def test_get_next_message_number_with_existing_messages(test_db_with_data):
     """Test getting next message number with existing messages"""
-    # These tests require inserting data, which may fail if foreign key constraints exist
-    # Skip if messages table has constraints
-    try:
-        result = test_db.execute_query("SELECT sql FROM sqlite_master WHERE type='table' AND name='messages'")
-        if result and result[0]["sql"] and "FOREIGN KEY" in result[0]["sql"]:
-            pytest.skip("Skipping test - messages table has foreign key constraints from migration")
-    except Exception:
-        pass
-
-    # Ensure messages table exists (simplified version without constraints for testing)
-    try:
-        test_db.execute_update(
-            """
-            CREATE TABLE IF NOT EXISTS messages (
-                id TEXT PRIMARY KEY,
-                conversation_id TEXT,
-                from_mission_id INTEGER,
-                subject TEXT,
-                body TEXT,
-                priority TEXT DEFAULT 'MEDIUM',
-                created_at TEXT DEFAULT (datetime('now'))
-            )
-            """
-        )
-    except Exception:
-        pass
-
-    # Create some messages
-    test_db.execute_update(
+    db = test_db_with_data
+    # Insert a conversation and messages using the real schema
+    db.execute_update(
         """
-        INSERT INTO messages (id, conversation_id, from_mission_id, subject, body, priority)
-        VALUES ('MSG-M-0001', 'CONV-0001', 1, 'Test', 'Body', 'MEDIUM')
-        """,
+        INSERT INTO conversations (id, subject, type, status, participant_1_id, participant_2_id)
+        VALUES ('CONV-MID-01', 'Test', 'conversation', 'open', 1, 2)
+        """
+    )
+    db.execute_update(
+        """
+        INSERT INTO messages (id, conversation_id, from_possession_id, subject, body, priority)
+        VALUES ('MSG-M-0001', 'CONV-MID-01', 1, 'Test', 'Body', 'MEDIUM')
+        """
+    )
+    db.execute_update(
+        """
+        INSERT INTO messages (id, conversation_id, from_possession_id, subject, body, priority)
+        VALUES ('MSG-M-0003', 'CONV-MID-01', 1, 'Test', 'Body', 'MEDIUM')
+        """
     )
 
-    test_db.execute_update(
-        """
-        INSERT INTO messages (id, conversation_id, from_mission_id, subject, body, priority)
-        VALUES ('MSG-M-0003', 'CONV-0001', 1, 'Test', 'Body', 'MEDIUM')
-        """,
-    )
-
-    result = get_next_message_number(test_db)
+    result = get_next_message_number(db)
     # Should return 4 (highest is 3)
     assert result == 4
 
 
-def test_get_next_message_number_across_different_priorities(test_db):
+def test_get_next_message_number_across_different_priorities(test_db_with_data):
     """Test that next message number is global across all priorities"""
-    # These tests require inserting data, which may fail if foreign key constraints exist
-    # Skip if messages table has constraints
-    try:
-        result = test_db.execute_query("SELECT sql FROM sqlite_master WHERE type='table' AND name='messages'")
-        if result and result[0]["sql"] and "FOREIGN KEY" in result[0]["sql"]:
-            pytest.skip("Skipping test - messages table has foreign key constraints from migration")
-    except Exception:
-        pass
-
-    # Ensure messages table exists (simplified version without constraints for testing)
-    try:
-        test_db.execute_update(
-            """
-            CREATE TABLE IF NOT EXISTS messages (
-                id TEXT PRIMARY KEY,
-                conversation_id TEXT,
-                from_mission_id INTEGER,
-                subject TEXT,
-                body TEXT,
-                priority TEXT DEFAULT 'MEDIUM',
-                created_at TEXT DEFAULT (datetime('now'))
-            )
-            """
-        )
-    except Exception:
-        pass
-
-    # Create messages with different priorities
-    test_db.execute_update(
+    db = test_db_with_data
+    db.execute_update(
         """
-        INSERT INTO messages (id, conversation_id, from_mission_id, subject, body, priority)
-        VALUES ('MSG-M-0005', 'CONV-0001', 1, 'Test', 'Body', 'MEDIUM')
-        """,
+        INSERT INTO conversations (id, subject, type, status, participant_1_id, participant_2_id)
+        VALUES ('CONV-MID-02', 'Test', 'conversation', 'open', 1, 2)
+        """
+    )
+    db.execute_update(
+        """
+        INSERT INTO messages (id, conversation_id, from_possession_id, subject, body, priority)
+        VALUES ('MSG-M-0005', 'CONV-MID-02', 1, 'Test', 'Body', 'MEDIUM')
+        """
+    )
+    db.execute_update(
+        """
+        INSERT INTO messages (id, conversation_id, from_possession_id, subject, body, priority)
+        VALUES ('MSG-H-0007', 'CONV-MID-02', 1, 'Test', 'Body', 'HIGH')
+        """
     )
 
-    test_db.execute_update(
-        """
-        INSERT INTO messages (id, conversation_id, from_mission_id, subject, body, priority)
-        VALUES ('MSG-H-0007', 'CONV-0001', 1, 'Test', 'Body', 'HIGH')
-        """,
-    )
-
-    result = get_next_message_number(test_db)
+    result = get_next_message_number(db)
     # Should return 8 (highest number globally is 7)
     assert result == 8
 

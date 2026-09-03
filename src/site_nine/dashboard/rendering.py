@@ -156,7 +156,8 @@ def render_available_tasks_tree(
         )
         branch = root.add(epic_label)
 
-        for task in subtasks:
+        max_shown = 10
+        for task in subtasks[:max_shown]:
             task_status_color = TASK_STATUS_COLORS.get(task.status.value, "white")
             role_str = f"[green]{task.role}[/green]" if task.role else "[dim]—[/dim]"
             leaf_label = (
@@ -166,6 +167,8 @@ def render_available_tasks_tree(
                 f"[white]{task.title}[/white]"
             )
             branch.add(leaf_label)
+        if len(subtasks) > max_shown:
+            branch.add(f"[dim italic]... and {len(subtasks) - max_shown} more tasks[/dim italic]")
 
     # Orphan TODO tasks — root-level leaves
     sorted_orphans = sorted(

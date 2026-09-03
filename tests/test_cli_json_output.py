@@ -163,16 +163,6 @@ def test_json_structure_consistency(initialized_project: Path):
                 assert data["count"] == len(data["data"]), f"Count mismatch in {' '.join(cmd)}"
 
 
-def test_handoff_list_json(initialized_project: Path):
-    """Test handoff list with JSON output"""
-    pytest.skip("handoff CLI command removed")
-
-
-def test_handoff_show_json(initialized_project: Path):
-    """Test handoff show with JSON output"""
-    pytest.skip("handoff CLI command removed")
-
-
 def test_review_list_json(initialized_project: Path):
     """Test review list with JSON output"""
     result = runner.invoke(app, ["review", "list", "--json"])

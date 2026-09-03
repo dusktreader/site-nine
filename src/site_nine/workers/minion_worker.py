@@ -25,6 +25,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from loguru import logger
+
 # Imports from site_nine package
 # (No path manipulation needed - this module is now properly in src/site_nine/)
 from site_nine.core.database import Database
@@ -32,6 +34,34 @@ from site_nine.core.paths import get_db_path, get_project_root
 from site_nine.messaging.manager import MessageManager
 from site_nine.possessions.manager import PossessionManager
 from site_nine.workers.journal import DeskWorkerJournal
+
+
+def _configure_worker_logging(role: str, spawn_token: Optional[str] = None) -> Path:
+    """
+    Configure loguru for the minion worker process.
+
+    Removes the default stderr sink and adds a rotating file sink under
+    ~/.local/state/site-nine/workers/logs/.  The log file name includes the
+    role and spawn token (or PID) so concurrent workers don't collide.
+
+    Returns the path to the log file so callers can surface it on error.
+    """
+    log_dir = Path.home() / ".local" / "state" / "site-nine" / "workers" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    suffix = spawn_token[:8] if spawn_token else str(os.getpid())
+    log_path = log_dir / f"minion-{role.lower()}-{suffix}.log"
+
+    logger.remove()  # drop default stderr sink
+    logger.add(
+        str(log_path),
+        level="DEBUG",
+        format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} - {message}",
+        rotation="10 MB",
+        retention=5,
+        enqueue=True,  # async-safe for subprocesses
+    )
+    return log_path
 
 
 class MinionWorker:
@@ -111,6 +141,7 @@ class MinionWorker:
         Raises:
             RuntimeError: If possession initialization fails
         """
+        logger.info("worker_initializing", pid=os.getpid(), role=self.role, model=self.model)
         self.journal.write_entry(f"Worker process started (PID: {os.getpid()})")
 
         # Build initialization message
@@ -137,6 +168,7 @@ class MinionWorker:
 
         # Launch initial session with JSON format to extract session ID
         cmd = ["opencode", "run", "--format", "json", "--model", self.model, init_message]
+        logger.debug("opencode_run_starting", cmd=" ".join(cmd))
 
         try:
             # Use Popen for non-blocking execution
@@ -146,10 +178,18 @@ class MinionWorker:
                 stderr=subprocess.PIPE,
                 text=True,
             )
+            logger.debug("opencode_run_spawned", pid=process.pid)
 
             # Wait for process with a 10-minute timeout for initialization
             try:
                 stdout, stderr = process.communicate(timeout=600)
+                logger.debug(
+                    "opencode_run_completed",
+                    exit_code=process.returncode,
+                    stdout_len=len(stdout),
+                    stderr_len=len(stderr),
+                    stderr_tail=stderr[-500:] if stderr else "",
+                )
 
                 # Extract session ID from JSON output lines
                 session_id = None
@@ -159,11 +199,18 @@ class MinionWorker:
                             event = json.loads(line)
                             if "sessionID" in event:
                                 session_id = event["sessionID"]
+                                logger.debug("session_id_found", session_id=session_id)
                                 break
                         except json.JSONDecodeError:
                             continue
 
                 if not session_id:
+                    logger.error(
+                        "session_id_not_found",
+                        exit_code=process.returncode,
+                        stderr=stderr[:1000] if stderr else "",
+                        stdout_tail=stdout[-500:] if stdout else "",
+                    )
                     raise RuntimeError(
                         f"Failed to extract session ID from opencode run output.\n"
                         f"Exit code: {process.returncode}\n"
@@ -178,19 +225,23 @@ class MinionWorker:
                     # Non-zero exit is a warning, not fatal — the agent may have exited
                     # after completing init. As long as we got a session ID and the possession
                     # was created in the DB, we can continue.
+                    logger.warning("opencode_run_nonzero_exit", exit_code=process.returncode)
                     self.journal.write_entry(
                         f"Warning: opencode run exited with code {process.returncode} (may be normal after init)"
                     )
 
             except subprocess.TimeoutExpired:
+                logger.error("opencode_run_timeout")
                 process.kill()
                 process.communicate()
                 raise RuntimeError("Possession initialization timed out after 10 minutes")
 
         except FileNotFoundError:
+            logger.error("opencode_not_found")
             raise RuntimeError("opencode command not found. Is OpenCode installed and in PATH?")
 
         # Wait for possession to be created in database
+        logger.debug("waiting_for_possession_in_db")
         self.journal.write_entry("Waiting for possession to be created in database...")
         time.sleep(5)
 
@@ -201,7 +252,7 @@ class MinionWorker:
         possession_row: dict | None = None
 
         # Phase 1: look up by session ID (preferred — agent bound the session via possession_init)
-        for _ in range(30):  # up to 30s
+        for attempt in range(30):  # up to 30s
             rows = db.execute_query(
                 """
                 SELECT id, daemon_name, created_at FROM possessions
@@ -214,13 +265,15 @@ class MinionWorker:
             )
             if rows:
                 possession_row = rows[0]
+                logger.debug("possession_found_by_session", attempt=attempt, possession_id=rows[0]["id"])
                 break
             time.sleep(1)
 
         # Phase 2: fall back to role-based lookup (session may not have been bound)
         if possession_row is None:
+            logger.warning("possession_not_found_by_session_id_trying_role_lookup", session_id=self.session_id)
             self.journal.write_entry("Possession not found by session ID, searching by role...")
-            for _ in range(15):  # up to 15s
+            for attempt in range(15):  # up to 15s
                 rows = db.execute_query(
                     """
                     SELECT id, daemon_name, created_at FROM possessions
@@ -234,10 +287,12 @@ class MinionWorker:
                 )
                 if rows:
                     possession_row = rows[0]
+                    logger.debug("possession_found_by_role", attempt=attempt, possession_id=rows[0]["id"])
                     break
                 time.sleep(1)
 
         if possession_row is None:
+            logger.error("possession_not_found", role=self.role, session_id=self.session_id)
             raise RuntimeError(
                 f"Failed to find initialized possession for role {self.role}. "
                 "Check that possession-start completed successfully."
@@ -251,6 +306,7 @@ class MinionWorker:
             "SELECT id FROM possessions WHERE id = :id AND opencode_session_id IS NOT NULL",
             {"id": self.possession_id},
         ):
+            logger.debug("binding_session_to_possession", session_id=self.session_id, possession_id=self.possession_id)
             self.journal.write_entry(f"Binding session {self.session_id} to possession #{self.possession_id}...")
             db.execute_update(
                 """
@@ -264,6 +320,7 @@ class MinionWorker:
         if not self.session_id:
             raise RuntimeError(f"Possession #{self.possession_id} has no OpenCode session ID. Session binding failed.")
 
+        logger.info("possession_active", possession_id=self.possession_id, daemon=daemon_used)
         self.journal.write_entry(f"Possession ACTIVE (id: {self.possession_id})")
 
         # Rename journal from pending to final possession-scoped path
@@ -310,6 +367,7 @@ class MinionWorker:
         if self.possession_id is None:
             raise RuntimeError("Cannot enable minion mode: possession_id is not set")
 
+        logger.debug("enabling_minion_mode", possession_id=self.possession_id, pid=os.getpid())
         db = Database(get_db_path())
         mgr = PossessionManager(db)
         mgr.set_minion_mode(self.possession_id, active=True)
@@ -319,6 +377,7 @@ class MinionWorker:
             "UPDATE possessions SET worker_pid = :pid WHERE id = :id",
             {"pid": os.getpid(), "id": self.possession_id},
         )
+        logger.info("minion_mode_enabled", possession_id=self.possession_id, pid=os.getpid())
         self.journal.write_entry(f"Worker PID registered: {os.getpid()}")
 
     def _write_spawn_token_file(self) -> None:
@@ -354,6 +413,7 @@ class MinionWorker:
         tmp_file.write_text(json.dumps(payload), encoding="utf-8")
         tmp_file.rename(status_file)
 
+        logger.info("spawn_token_file_written", token=self.spawn_token, possession_id=self.possession_id)
         self.journal.write_entry(f"Spawn token file written: {status_file.name}")
 
     def _emit_heartbeat(self) -> None:
@@ -363,12 +423,14 @@ class MinionWorker:
         HEARTBEAT_INTERVAL seconds.  Non-fatal: any exception is logged and
         swallowed so a transient DB error cannot kill the polling loop.
         """
+        logger.debug("heartbeat", possession_id=self.possession_id)
         self.journal.write_entry("Heartbeat — idle, polling for messages")
         try:
             db = Database(get_db_path())
             mgr = PossessionManager(db)
             mgr.heartbeat(self.possession_id)
         except Exception as exc:
+            logger.warning("heartbeat_failed", error=str(exc))
             self.journal.write_entry(f"Warning: heartbeat failed: {exc}")
 
     def check_for_messages(self) -> list:
@@ -402,6 +464,9 @@ class MinionWorker:
         # Sort by priority (CRITICAL > HIGH > MEDIUM > LOW)
         messages.sort(key=lambda m: self.PRIORITY_ORDER.get(m.priority, 99))
 
+        if messages:
+            logger.debug("messages_found", count=len(messages), possession_id=self.possession_id)
+
         return messages
 
     def process_message(self, message) -> bool:
@@ -414,6 +479,13 @@ class MinionWorker:
         Returns:
             True if processing succeeded, False otherwise
         """
+        logger.info(
+            "processing_message",
+            message_id=message.id,
+            from_possession_id=message.from_possession_id,
+            priority=message.priority,
+        )
+
         # Resume session with message as prompt
         cmd = [
             "opencode",
@@ -444,10 +516,17 @@ class MinionWorker:
                 stderr=subprocess.PIPE,
                 text=True,
             )
+            logger.debug("opencode_run_spawned_for_message", pid=process.pid, message_id=message.id)
 
             # Wait for process with 20-minute timeout
             try:
                 stdout, stderr = process.communicate(timeout=1200)
+                logger.debug(
+                    "opencode_run_completed_for_message",
+                    message_id=message.id,
+                    exit_code=process.returncode,
+                    stderr_tail=stderr[-200:] if stderr else "",
+                )
 
                 # Mark conversation as viewed (read)
                 db = Database(get_db_path())
@@ -456,19 +535,23 @@ class MinionWorker:
                     msg_mgr.update_conversation_view(message.conversation_id, self.possession_id)
 
                 if process.returncode == 0:
+                    logger.info("message_processing_complete", message_id=message.id)
                     self.journal.write_entry(f"Processing complete (exit code 0)")
                     return True
                 else:
+                    logger.warning("message_processing_failed", message_id=message.id, exit_code=process.returncode)
                     self.journal.write_entry(f"Processing failed (exit code {process.returncode})")
                     return False
 
             except subprocess.TimeoutExpired:
+                logger.error("message_processing_timeout", message_id=message.id)
                 process.kill()
                 process.communicate()
                 self.journal.write_entry("Processing timed out after 20 minutes")
                 return False
 
         except Exception as e:
+            logger.error("message_processing_error", message_id=message.id, error=str(e))
             self.journal.write_entry(f"Processing error: {e}")
             return False
 
@@ -483,6 +566,7 @@ class MinionWorker:
             frame: Current stack frame (unused)
         """
         signal_name = "SIGTERM" if signum == signal.SIGTERM else "SIGINT"
+        logger.info("shutdown_signal_received", signal=signal_name, possession_id=self.possession_id)
         self.journal.write_section("Shutdown")
         self.journal.write_entry(f"{signal_name} received. Disabling minion mode.")
         self.running = False
@@ -500,6 +584,7 @@ class MinionWorker:
                 )
                 self.journal.write_entry("Worker PID cleared (clean shutdown)")
         except Exception as e:
+            logger.warning("minion_mode_disable_failed", error=str(e))
             self.journal.write_entry(f"Warning: Failed to disable minion mode: {e}")
 
         # End possession via opencode run
@@ -516,6 +601,7 @@ class MinionWorker:
             ]
             subprocess.run(cmd, check=False, timeout=600)  # 10 minute timeout for shutdown
         except Exception as e:
+            logger.warning("possession_end_failed", error=str(e))
             self.journal.write_entry(f"Warning: Failed to end possession cleanly: {e}")
 
         self.journal.write_entry("Shutdown complete.")
@@ -585,6 +671,7 @@ class MinionWorker:
                     # Let signal handler take care of it
                     raise
                 except Exception as e:
+                    logger.error("polling_cycle_error", error=str(e))
                     self.journal.write_entry(f"Error during polling cycle: {e}")
                     # Continue polling despite errors
                     continue
@@ -593,6 +680,7 @@ class MinionWorker:
             # Signal handler will take care of shutdown
             pass
         except Exception as e:
+            logger.critical("fatal_error", error=str(e), role=self.role, possession_id=self.possession_id)
             self.journal.write_entry(f"Fatal error: {e}")
             self.journal.write_shutdown()
 
@@ -687,6 +775,12 @@ Examples:
             file=sys.stderr,
         )
         raise SystemExit(1)
+
+    # Configure loguru file logging before anything else so all startup
+    # errors are captured even if the worker crashes before the journal opens.
+    log_path = _configure_worker_logging(role, args.spawn_token)
+
+    logger.info("minion_worker_main", role=role, model=args.model, poll_interval=args.poll_interval, log=str(log_path))
 
     # Start worker
     worker = MinionWorker(
